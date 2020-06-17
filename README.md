@@ -69,7 +69,7 @@ I0606 12:21:47.031021   93568 main.go:159] Deleted tree GC started
 ```
 ./createtree --admin_server=localhost:8091 > logid
 cat logid
-8829762373747052461
+2587331608088442751
 ```
 
 ### Start the tlog server
