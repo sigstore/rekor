@@ -1,7 +1,9 @@
 # Rekor
 
-Rekor is a (planned to be) cloud native cryptographic, immutable, append only software
-release ledger.
+Rekor is a cryptographic, immutable, append only software release ledger.
+
+It is planned to be used as part of a cloud native build pipeline, but also could be used
+in any context where software packaging (and later planned, files) require attestation.
 
 It uses a trillian backend to store in-toto style metadata into an immutable merkle tree.
 
@@ -17,9 +19,9 @@ developer's signature embedded within the in-toto link file.
 If you had not already noticed, rekor is in very early development, so its not ready for production
 use, however if you would like to contribute, then please do.
 
-Its very simple at the moment, but plans are to work more with link files to allow automation of 
-integrity checks and design how other link file content such as materials can be stored and then
-queried in a useful manner. 
+Its very simple at the moment, but plans are to work more with link files and other manifest structures
+to allow automation of  integrity checks and design how other link file content such as materials can
+be stored and then queried in a useful manner. 
 
 The trillian components are:
 
