@@ -56,24 +56,6 @@ go build ./cmd/createtree/
 
 ```
 
-## Run the log server
-
-```
-trillian_log_server -http_endpoint=localhost:8090 -rpc_endpoint=localhost:8091 --logtostderr ...
-I0606 12:21:47.030302   93568 quota_provider.go:48] Using MySQL QuotaManager
-I0606 12:21:47.030642   93568 main.go:150] RPC server starting on localhost:8090
-I0606 12:21:47.030696   93568 main.go:134] HTTP server starting on localhost:8091
-I0606 12:21:47.031021   93568 main.go:159] Deleted tree GC started
-```
-
-## Create t-log (note the return value, you need this for `tlog_id`)
-
-```
-./createtree --admin_server=localhost:8091 > logid
-cat logid
-2587331608088442751
-```
-
 ### Start the tlog server
 
 ```
@@ -84,6 +66,14 @@ trillian_log_server -http_endpoint=localhost:8090 -rpc_endpoint=localhost:8091 -
 
 ```
 trillian_log_signer --logtostderr --force_master --http_endpoint=localhost:8190 -rpc_endpoint=localhost:8191  --batch_size=1000 --sequencer_guard_window=0 --sequencer_interval=200ms
+```
+
+## Create a tree (note the return value, you need this for the "tlog_id" flag)
+
+```
+./createtree --admin_server=localhost:8091 > logid
+cat logid
+2587331608088442751
 ```
 
 ### Make an entry:
