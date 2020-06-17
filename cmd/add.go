@@ -71,7 +71,7 @@ var addCmd = &cobra.Command{
 For more information, visit [domain]`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		log_rpc_server := viper.GetString("log_rpc_server")
+		logRpcServer := viper.GetString("log_rpc_server")
 		tLogID := viper.GetInt64("tlog_id")
 		linkfile := viper.GetString("linkfile")
 
@@ -80,7 +80,7 @@ For more information, visit [domain]`,
 		defer cancel()
 
 		// Set up and test connection to rpc server
-		conn, err := grpc.DialContext(ctx, log_rpc_server, grpc.WithInsecure())
+		conn, err := grpc.DialContext(ctx, logRpcServer, grpc.WithInsecure())
 		if err != nil {
 			fmt.Println("Failed to connect to log server:", err)
 		}
