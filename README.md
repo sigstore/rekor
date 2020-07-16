@@ -1,9 +1,20 @@
 # Rekor
 
-Rekor is a cryptographic, immutable, append only software release ledger.
+## Early Development / Experimental use only.
 
-It is planned to be used as part of a cloud native build pipeline, but also could be used
-in any context where software packaging (and later planned, files) require attestation.
+Attestation and provenance of software, its generated artefacts and information on tools used to build said software, relies on an often disparate set of different approaches and data formats. The solutions that do exist, often rely on digests that are stored on insecure systems that are susceptible to tampering and can lead to various attacks such as swapping out of digests , replay attacks.
+
+The goal of rekor would be to create a ledger service, and associated tooling for software maintainers to store metadata and digests of their software source code, artefacts and build process along with binary provenance. The ledger service will then act as a means for users to query said metadata and and assess the trust state / audit record of objects consumed within their own supply chain (for example dependencies).
+
+Rekór - Greek for “Record”
+
+Rekor's goals are to provide an immutable tamper resistant ledger of metadata generated within a software project or supply chain.  Rekor would enable software maintainers and build systems to generate metadata containing signed digests to an immutable record. Other parties can then query said metadata to enable them to make informed decisions on trust and nonrepudiation of an object's lifecycle, based on signed metadata stored within a tamper proof binary (merkle) tree.
+
+Rekor seeks to provide provenance and integrity of the software supply chain.
+
+Provenance deals with systematically capturing metadata describing the relationships among all the elements such as source code, build tools / compiler, processing steps, contextual information and dependencies used. Software provenance can be used for many purposes, such as understanding how an artifact was collected, determining ownership and rights over an artifact for policy decisions, making judgements about information to determine whether to trust an external library, verifying whether the process and steps used to obtain an artifact are compliant with given requirements etc.
+
+Integrity is a control mechanism that examines objects and checks if their integrity is intact and of a non tampered state. This is typically achieved using a cryptographically signed digest of the object (for example, code file, binary, configuration file). The signed digest and then be used to attest the trust status and provide surety that no unauthorised or malicious changes have been made.
 
 It uses a trillian backend to store in-toto style metadata into an immutable merkle tree.
 
@@ -21,7 +32,7 @@ use, however if you would like to contribute, then please do.
 
 Its very simple at the moment, but plans are to work more with link files and other manifest structures
 to allow automation of  integrity checks and design how other link file content such as materials can
-be stored and then queried in a useful manner. 
+be stored and then queried in a useful manner.
 
 The trillian components are:
 
@@ -79,16 +90,16 @@ cat logid
 ### Make an entry:
 
 ```
-rekor add --tlog_id=2587331608088442751 --linkfile tests/package.link 
+rekor add --tlog_id=2587331608088442751 --linkfile tests/package.link
 ```
 
 ### Query an entry:
 
 ```
-rekor get --tlog_id=2587331608088442751 --linkfile tests/package.link 
+rekor get --tlog_id=2587331608088442751 --linkfile tests/package.link
 ```
 
-Should your file be returned in full, good news, it matches. 
+Should your file be returned in full, good news, it matches.
 
 Should no return occur, then something is up (this of course will be handled
 better in time).
