@@ -16,9 +16,9 @@ Provenance deals with systematically capturing metadata describing the relations
 
 Integrity is a control mechanism that examines objects and checks if their integrity is intact and of a non tampered state. This is typically achieved using a cryptographically signed digest of the object (for example, code file, binary, configuration file). The signed digest and then be used to attest the trust status and provide surety that no unauthorised or malicious changes have been made.
 
-It uses a trillian backend to store in-toto style metadata into an immutable merkle tree.
+It uses a trillian backend to store [in-toto](https://in-toto.io/) style metadata into an immutable merkle tree.
 
-The rough idea is that a developer would include a `package.link` along with a software
+The rough idea is that a developer would include an in-toto style `.link` file along with a software
 package release and then use rekor to make a transparency log entry with the same link file.
 
 A receiver of the package would then use rekor to perform a `rekor get` command using the exact
@@ -103,3 +103,13 @@ Should your file be returned in full, good news, it matches.
 
 Should no return occur, then something is up (this of course will be handled
 better in time).
+
+# Other considerations
+
+## Developer Identification
+
+There needs to be a means of fixing a rekor entry to a developer identity. This identity will need cryptographic properties, so that a type of public key can be used to attest manifests stored within rekor as coming from the claimed provider of the manifests. A means to handle key compromise should also be considered, such as the principles utilized in the [TUF framework](https://theupdateframework.io/).
+
+The developer ID would allow queries to rekor to assess compromise impact over other projects.  
+
+It is vitally important to also balance between non repudiation and privacy. Developers should be able to contribute to open source  projects without fear of personal identity exposure leading to risks against their personal safety (for example, should they live within an oppressive regime).
