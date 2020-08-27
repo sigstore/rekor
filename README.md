@@ -110,6 +110,10 @@ better in time).
 
 There needs to be a means of fixing a rekor entry to a developer identity. This identity will need cryptographic properties, so that a type of public key can be used to attest manifests stored within rekor as coming from the claimed provider of the manifests. A means to handle key compromise should also be considered, such as the principles utilized in the [TUF framework](https://theupdateframework.io/).
 
-The developer ID would allow queries to rekor to assess compromise impact over other projects.  
+The developer ID would allow queries to rekor to assess compromise impact over other projects.
 
 It is vitally important to also balance between non repudiation and privacy. Developers should be able to contribute to open source  projects without fear of personal identity exposure leading to risks against their personal safety (for example, should they live within an oppressive regime).
+
+## Credit
+
+This project borrows a lot from [DaZ Wilkins simple trillion log example](https://github.com/DazWilkin/simple-trillian-log-1)
