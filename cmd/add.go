@@ -18,14 +18,15 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"time"
+
 	"github.com/google/trillian"
+	"github.com/lukehinds/rekor/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
-	"io/ioutil"
-	"log"
-	"os"
-	"time"
 )
 
 //type LeafData struct {
@@ -71,6 +72,7 @@ var addCmd = &cobra.Command{
 For more information, visit [domain]`,
 
 	Run: func(cmd *cobra.Command, args []string) {
+		log := log.Logger
 		logRpcServer := viper.GetString("log_rpc_server")
 		tLogID := viper.GetInt64("tlog_id")
 		linkfile := viper.GetString("linkfile")
@@ -82,7 +84,7 @@ For more information, visit [domain]`,
 		// Set up and test connection to rpc server
 		conn, err := grpc.DialContext(ctx, logRpcServer, grpc.WithInsecure())
 		if err != nil {
-			fmt.Println("Failed to connect to log server:", err)
+			log.Error("Failed to connect to log server:", err)
 		}
 		defer conn.Close()
 
@@ -101,8 +103,8 @@ For more information, visit [domain]`,
 
 		resp := &Response{}
 
-		resp, err =  server.addLeaf(byteValue, tLogID)
-		log.Printf("Server PUT Response: %s", resp.status)
+		resp, err = server.addLeaf(byteValue, tLogID)
+		log.Infof("Server PUT Response: %s", resp.status)
 	},
 }
 

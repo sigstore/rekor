@@ -19,8 +19,9 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
+
+	"github.com/lukehinds/rekor/log"
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
@@ -28,7 +29,6 @@ import (
 	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/google/trillian/types"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type server struct {
@@ -39,11 +39,6 @@ type server struct {
 }
 
 type Response struct {
-	status   string
-	leafhash string
-}
-
-type InclusionResponse struct {
 	status   string
 	leafhash string
 }
@@ -71,7 +66,7 @@ func (s *server) root() (types.LogRootV1, error) {
 }
 
 func (s *server) getInclusion(byteValue []byte, tLogID int64) (*Response, error) {
-
+	log := log.Logger
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
@@ -80,7 +75,7 @@ func (s *server) getInclusion(byteValue []byte, tLogID int64) (*Response, error)
 		return &Response{}, err
 	}
 
-	log.Printf("[server:wait] Root hash: %x", root.RootHash)
+	log.Info("Root hash: %x", root.RootHash)
 
 	hasher := rfc6962.DefaultHasher
 	leafHash := hasher.HashLeaf(byteValue)
@@ -91,36 +86,39 @@ func (s *server) getInclusion(byteValue []byte, tLogID int64) (*Response, error)
 			LeafHash: leafHash,
 			TreeSize: int64(root.TreeSize),
 		})
+
 	if err != nil {
-		fmt.Println("one")
-		return nil, status.Errorf(codes.Internal, "failed to get inclusion proof: %v", err)
+		log.Error(codes.Internal, "failed to get inclusion proof: %v", err)
+		return &Response{}, nil
 	}
 	if err != nil {
-		fmt.Println("two")
+		log.Info("two")
 		return &Response{}, err
 	}
 	if len(resp.Proof) < 1 {
-		fmt.Println("three")
+		log.Info("three")
 		return &Response{}, nil
 	}
 
 	v := merkle.NewLogVerifier(rfc6962.DefaultHasher)
+
 	for i, proof := range resp.Proof {
 		hashes := proof.GetHashes()
 		for j, hash := range hashes {
-			log.Printf("Proof[%d],hash[%d] == %x\n", i, j, hash)
+			log.Infof("Proof[%d],hash[%d] == %x\n", i, j, hash)
 		}
 		if err := v.VerifyInclusionProof(proof.LeafIndex, int64(root.TreeSize), hashes, root.RootHash, leafHash); err != nil {
 			return &Response{}, err
 		}
 	}
+
 	return &Response{
-		status: "ok",
+		status: "OK",
 	}, nil
 }
 
 func (s *server) addLeaf(byteValue []byte, tLogID int64) (*Response, error) {
-
+	log := log.Logger
 	leaf := &trillian.LogLeaf{
 		LeafValue: byteValue,
 	}
@@ -135,12 +133,12 @@ func (s *server) addLeaf(byteValue []byte, tLogID int64) (*Response, error) {
 
 	c := codes.Code(resp.QueuedLeaf.GetStatus().GetCode())
 	if c != codes.OK && c != codes.AlreadyExists {
-		fmt.Errorf("Server Status: Bad status: %v", resp.QueuedLeaf.GetStatus())
+		log.Error("Server Status: Bad status: %v", resp.QueuedLeaf.GetStatus())
 	}
 	if c == codes.OK {
-		log.Println("Server status: ok")
+		log.Info("Server status: ok")
 	} else if c == codes.AlreadyExists {
-		log.Printf("Data already Exists")
+		log.Error("Data already Exists")
 	}
 
 	return &Response{
@@ -149,7 +147,7 @@ func (s *server) addLeaf(byteValue []byte, tLogID int64) (*Response, error) {
 }
 
 func (s *server) getLeaf(byteValue []byte, tlog_id int64) (*Response, error) {
-
+	log := log.Logger
 	hasher := rfc6962.DefaultHasher
 	leafHash := hasher.HashLeaf(byteValue)
 
@@ -165,10 +163,10 @@ func (s *server) getLeaf(byteValue []byte, tlog_id int64) (*Response, error) {
 
 	for i, logLeaf := range resp.GetLeaves() {
 		leafValue := logLeaf.GetLeafValue()
-		log.Printf("[server:get] %d: %s", i, leafValue)
+		log.Infof("[server:get] %d: %s", i, leafValue)
 	}
 
 	return &Response{
-		status: "ok",
+		status: "OK",
 	}, nil
 }
