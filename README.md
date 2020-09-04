@@ -62,7 +62,6 @@ To run rekor you need to build trillian
 go get github.com/google/trillian.git
 go build ./cmd/trillian_log_server
 go build ./cmd/trillian_log_signer
-go build ./cmd/trillian_map_server
 go build ./cmd/createtree/
 
 ```
@@ -93,6 +92,12 @@ cat logid
 rekor add --tlog_id=2587331608088442751 --linkfile tests/package.link
 ```
 
+### Verify Inclusion Proof:
+
+```
+rekor inclusion --tlog_id=2587331608088442751 --linkfile tests/package.link
+```
+
 ### Query an entry:
 
 ```
@@ -104,16 +109,3 @@ Should your file be returned in full, good news, it matches.
 Should no return occur, then something is up (this of course will be handled
 better in time).
 
-# Other considerations
-
-## Developer Identification
-
-There needs to be a means of fixing a rekor entry to a developer identity. This identity will need cryptographic properties, so that a type of public key can be used to attest manifests stored within rekor as coming from the claimed provider of the manifests. A means to handle key compromise should also be considered, such as the principles utilized in the [TUF framework](https://theupdateframework.io/).
-
-The developer ID would allow queries to rekor to assess compromise impact over other projects.
-
-It is vitally important to also balance between non repudiation and privacy. Developers should be able to contribute to open source  projects without fear of personal identity exposure leading to risks against their personal safety (for example, should they live within an oppressive regime).
-
-## Credit
-
-This project borrows a lot from [DaZ Wilkins simple trillion log example](https://github.com/DazWilkin/simple-trillian-log-1)
