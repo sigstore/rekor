@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DB="test"
-USER="zaphod"
+USER="test"
 PASS="zaphod"
 ROOTPASS="p6ssw0rd"
 
