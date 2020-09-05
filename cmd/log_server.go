@@ -75,7 +75,7 @@ func (s *server) getInclusion(byteValue []byte, tLogID int64) (*Response, error)
 		return &Response{}, err
 	}
 
-	log.Info("Root hash: %x", root.RootHash)
+	log.Infof("Root hash: %x", root.RootHash)
 
 	hasher := rfc6962.DefaultHasher
 	leafHash := hasher.HashLeaf(byteValue)
