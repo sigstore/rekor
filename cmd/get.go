@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/google/trillian"
-	"github.com/lukehinds/rekor/log"
+	"github.com/projectrekor/rekor-cli/log"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 

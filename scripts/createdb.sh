@@ -3,12 +3,12 @@
 DB="test"
 USER="test"
 PASS="zaphod"
-ROOTPASS="p6ssw0rd"
+ROOTPASS=""
 
 echo -e "Creating $DB database and $USER user account"
 
 
-mysql -uroot -p$ROOTPASS<<MYSQL_SCRIPT
+mysql <<MYSQL_SCRIPT
 DROP DATABASE IF EXISTS $DB;
 CREATE DATABASE $DB;
 CREATE USER IF NOT EXISTS '$USER'@'localhost' IDENTIFIED BY '$PASS';

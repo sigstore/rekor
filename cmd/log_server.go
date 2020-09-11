@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lukehinds/rekor/log"
+	"github.com/projectrekor/rekor-cli/log"
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
