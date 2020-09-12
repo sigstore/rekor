@@ -1,6 +1,8 @@
 # Rekor
 
-## Early Development / Experimental use only.
+### Note that this CLI application will undergo refactoring to point at the rekor-server instead of direct connections to the trillian backend (which is what it does right now).
+
+Early Development / Experimental use only.
 
 Attestation and provenance of software, its generated artefacts and information on tools used to build said software, relies on an often disparate set of different approaches and data formats. The solutions that do exist, often rely on digests that are stored on insecure systems that are susceptible to tampering and can lead to various attacks such as swapping out of digests , replay attacks.
 
