@@ -16,17 +16,19 @@ limitations under the License.
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
+	"net/http"
 	"os"
 	"time"
 
-	"github.com/google/trillian"
 	"github.com/projectrekor/rekor-cli/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"google.golang.org/grpc"
 )
 
 //type LeafData struct {
@@ -73,38 +75,51 @@ For more information, visit [domain]`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger
-		logRpcServer := viper.GetString("log_rpc_server")
-		tLogID := viper.GetInt64("tlog_id")
+		rekorServer := viper.GetString("rekor_server")
+		url := rekorServer + "/api/v1/add"
 		linkfile := viper.GetString("linkfile")
 
 		// Set Context with Timeout for connects to thde log rpc server
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		// Set up and test connection to rpc server
-		conn, err := grpc.DialContext(ctx, logRpcServer, grpc.WithInsecure())
+		f, err := os.Open(linkfile)
 		if err != nil {
-			log.Error("Failed to connect to log server:", err)
-		}
-		defer conn.Close()
-
-		jsonFile, err := os.Open(linkfile)
-
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
-		byteValue, _ := ioutil.ReadAll(jsonFile)
-		defer jsonFile.Close()
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		part, err := writer.CreateFormFile("fileupload", "link.json")
 
-		tLogClient := trillian.NewTrillianLogClient(conn)
-		server := serverInstance(tLogClient, tLogID)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		resp := &Response{}
+		io.Copy(part, f)
+		writer.Close()
+		request, err := http.NewRequestWithContext(ctx, "POST", url, body)
 
-		resp, err = server.addLeaf(byteValue, tLogID)
-		log.Infof("Server PUT Response: %s", resp.status)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		request.Header.Add("Content-Type", writer.FormDataContentType())
+		client := &http.Client{}
+		response, err := client.Do(request)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer response.Body.Close()
+
+		content, err := ioutil.ReadAll(response.Body)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println(string(content))
 	},
 }
 
