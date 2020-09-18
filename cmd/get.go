@@ -16,14 +16,10 @@ limitations under the License.
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"mime/multipart"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/projectrekor/rekor-cli/log"
@@ -49,28 +45,15 @@ For more information, visit [domain]`,
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		f, err := os.Open(linkfile)
+		request, err := http.NewRequestWithContext(ctx, "POST", url, nil)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		body := &bytes.Buffer{}
-		writer := multipart.NewWriter(body)
-		part, err := writer.CreateFormFile("fileupload", "link.json")
-
-		if err != nil {
+		if err := addFileToRequest(request, linkfile); err != nil {
 			log.Fatal(err)
 		}
 
-		io.Copy(part, f)
-		writer.Close()
-		request, err := http.NewRequestWithContext(ctx, "POST", url, body)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		request.Header.Add("Content-Type", writer.FormDataContentType())
 		client := &http.Client{}
 		response, err := client.Do(request)
 
