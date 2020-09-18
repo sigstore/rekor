@@ -48,11 +48,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rekor.yaml)")
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
-	rootCmd.PersistentFlags().String("log_rpc_server", "localhost:8091", "Server address:port")
-	viper.BindPFlag("log_rpc_server", rootCmd.PersistentFlags().Lookup("log_rpc_server"))
-
-	rootCmd.PersistentFlags().Int64P("tlog_id", "", 0, "Trillian Log ID")
-	viper.BindPFlag("tlog_id", rootCmd.PersistentFlags().Lookup("tlog_id"))
+	rootCmd.PersistentFlags().String("rekor_server", "http://localhost:3000", "Server address:port")
+	viper.BindPFlag("rekor_server", rootCmd.PersistentFlags().Lookup("rekor_server"))
 
 	rootCmd.PersistentFlags().String("linkfile", "", "In-toto link file")
 	viper.BindPFlag("linkfile", rootCmd.PersistentFlags().Lookup("linkfile"))
