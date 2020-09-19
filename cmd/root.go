@@ -30,9 +30,7 @@ var cfgFile string
 var rootCmd = &cobra.Command{
 	Use:   "rekor",
 	Short: "Rekor CLI",
-	Long: `Rekor transparency log CLI
-
-For more information, visit [domain]`,
+	Long:  `Rekor command line interface tool`,
 }
 
 func Execute() {
