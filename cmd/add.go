@@ -97,7 +97,6 @@ For more information, visit [domain]`,
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		fmt.Println(string(content))
 	},
 }
