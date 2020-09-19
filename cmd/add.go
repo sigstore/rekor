@@ -64,10 +64,11 @@ import (
 // addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add",
-	Short: "Rekor CLI",
-	Long: `Rekor interacts with a transparency log
+	Short: "Rekor Add Command",
+	Long: `Add a linkfile to rekor
 
-For more information, visit [domain]`,
+The Add command will send a link file to rekor which will 
+then hash the file into the transparency log`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger

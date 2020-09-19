@@ -46,10 +46,10 @@ type getProofResponse struct {
 // getCmd represents the get command
 var getCmd = &cobra.Command{
 	Use:   "get",
-	Short: "Rekor CLI",
-	Long: `Rekor interacts with a transparency log
+	Short: "Rekor get command",
+	Long: `Performs a proof verification that a file
 
-For more information, visit [domain]`,
+exists within the transparency log`,
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger
 		rekorServer := viper.GetString("rekor_server")
