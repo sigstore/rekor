@@ -19,13 +19,11 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
+	"net/http"
 	"time"
 
-	"github.com/google/trillian"
 	"github.com/projectrekor/rekor-cli/log"
 	"github.com/spf13/viper"
-	"google.golang.org/grpc"
 
 	"github.com/spf13/cobra"
 )
@@ -39,32 +37,38 @@ var getCmd = &cobra.Command{
 For more information, visit [domain]`,
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger
-		logRpcServer := viper.GetString("log_rpc_server")
-		tLogID := viper.GetInt64("tlog_id")
+		rekorServer := viper.GetString("rekor_server")
+		url := rekorServer + "/api/v1/get"
 		linkfile := viper.GetString("linkfile")
 
+		// Set Context with Timeout for connects to thde log rpc server
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		conn, err := grpc.DialContext(ctx, logRpcServer, grpc.WithInsecure())
+		request, err := http.NewRequestWithContext(ctx, "POST", url, nil)
 		if err != nil {
-			log.Errorf("Failed to connect to log server:", err)
+			log.Fatal(err)
 		}
-		defer conn.Close()
 
-		jsonFile, err := os.Open(linkfile)
+		if err := addFileToRequest(request, linkfile); err != nil {
+			log.Fatal(err)
+		}
+
+		client := &http.Client{}
+		response, err := client.Do(request)
+
 		if err != nil {
-			fmt.Println(err)
+			log.Fatal(err)
 		}
-		byteValue, _ := ioutil.ReadAll(jsonFile)
-		defer jsonFile.Close()
+		defer response.Body.Close()
 
-		tLogClient := trillian.NewTrillianLogClient(conn)
-		server := serverInstance(tLogClient, tLogID)
+		content, err := ioutil.ReadAll(response.Body)
 
-		resp := &Response{}
-		resp, err = server.getLeaf(byteValue, tLogID)
-		log.Infof("Server GET Response: %s", resp.status)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println(string(content))
 	},
 }
 
