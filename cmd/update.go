@@ -74,10 +74,18 @@ func getPreviousState(log *zap.SugaredLogger) *state {
 	}
 	var oldState state
 	f, err := ioutil.ReadFile(p)
+
 	if err != nil {
-		log.Info(err)
-		return nil
+		if os.IsNotExist(err) {
+			log.Info("No previous state found at: ", p)
+			return nil
+		} else {
+			// Capture any other errors
+			log.Error(err)
+			return nil
+		}
 	}
+
 	if err := json.Unmarshal(f, &oldState); err != nil {
 		log.Info(err)
 		return nil
