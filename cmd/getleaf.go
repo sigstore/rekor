@@ -39,6 +39,31 @@ type getLeafResponse struct {
 	Key  []byte
 }
 
+// type leafStruct struct {
+// 	Leaf struct {
+// 		Leaves []struct {
+// 			MerkleLeafHash   string `json:"merkle_leaf_hash"`
+// 			LeafValue        string `json:"leaf_value"`
+// 			LeafIndex        int    `json:"leaf_index"`
+// 			LeafIdentityHash string `json:"leaf_identity_hash"`
+// 			QueueTimestamp   struct {
+// 				Seconds int `json:"seconds"`
+// 				Nanos   int `json:"nanos"`
+// 			} `json:"queue_timestamp"`
+// 			IntegrateTimestamp struct {
+// 				Seconds int `json:"seconds"`
+// 				Nanos   int `json:"nanos"`
+// 			} `json:"integrate_timestamp"`
+// 		} `json:"leaves"`
+// 		SignedLogRoot struct {
+// 			KeyHint          string `json:"key_hint"`
+// 			LogRoot          string `json:"log_root"`
+// 			LogRootSignature string `json:"log_root_signature"`
+// 		} `json:"signed_log_root"`
+// 	} `json:"Leaf"`
+// 	Key string `json:"Key"`
+// }
+
 // getleafCmd represents the getleaf command
 var getleafCmd = &cobra.Command{
 	Use:   "getleaf",
@@ -84,12 +109,13 @@ var getleafCmd = &cobra.Command{
 
 		verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
 		root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, resp.Leaf.SignedLogRoot)
+
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		log.Info("Leaf content", resp.Leaf)
-		log.Infof("Root: ", root)
+		log.Info("Leaf content", resp.Leaf.)
+		log.Info("Root: ", root.TreeSize)
 	},
 }
 
