@@ -17,6 +17,8 @@ package cmd
 
 import (
 	"context"
+	"crypto"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -24,6 +26,9 @@ import (
 	"time"
 
 	"github.com/google/trillian"
+	tclient "github.com/google/trillian/client"
+	tcrypto "github.com/google/trillian/crypto"
+	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/projectrekor/rekor-cli/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -31,6 +36,7 @@ import (
 
 type getLeafResponse struct {
 	Leaf *trillian.GetLeavesByIndexResponse
+	Key  []byte
 }
 
 // getleafCmd represents the getleaf command
@@ -71,7 +77,19 @@ var getleafCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
+		pub, err := x509.ParsePKIXPublicKey(resp.Key)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
+		root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, resp.Leaf.SignedLogRoot)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		log.Info("Leaf content", resp.Leaf)
+		log.Infof("Root: ", root)
 	},
 }
 
