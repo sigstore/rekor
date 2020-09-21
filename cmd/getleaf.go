@@ -39,7 +39,7 @@ type getLeafResponse struct {
 	Key  []byte
 }
 
-// type leafStruct struct {
+// type leafStructs struct {
 // 	Leaf struct {
 // 		Leaves []struct {
 // 			MerkleLeafHash   string `json:"merkle_leaf_hash"`
@@ -72,7 +72,7 @@ var getleafCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger
 		rekorServer := viper.GetString("rekor_server")
-		leafIndex := viper.GetString("leafIndex")
+		leafIndex, _ := cmd.PersistentFlags().GetInt64("index")
 		u := rekorServer + "/api/v1/getleaf"
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -83,7 +83,7 @@ var getleafCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		request.URL.RawQuery += fmt.Sprintf("leafindex=%s", leafIndex)
+		request.URL.RawQuery += fmt.Sprintf("leafindex=%d", leafIndex)
 
 		client := &http.Client{}
 		response, err := client.Do(request)
@@ -114,13 +114,12 @@ var getleafCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		log.Info("Leaf content", resp.Leaf.Leaves)
+		log.Info("Leaf content", resp.Leaf)
 		log.Info("Root: ", root.TreeSize)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(getleafCmd)
-	getleafCmd.PersistentFlags().String("index", "", "Leaf Index")
-	viper.BindPFlag("linkfile", getleafCmd.PersistentFlags().Lookup("index"))
+	getleafCmd.PersistentFlags().Int64("index", -1, "")
 }
