@@ -18,7 +18,9 @@ package cmd
 import (
 	"context"
 	"crypto"
+	"crypto/rand"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -34,37 +36,19 @@ import (
 	"github.com/spf13/viper"
 )
 
+func GenerateRand(length int) string {
+	b := make([]byte, length)
+	if _, err := rand.Read(b); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(b)
+}
+
 type getLeafResponse struct {
 	Leaf *trillian.GetLeavesByIndexResponse
 	Key  []byte
 }
 
-// type leafStructs struct {
-// 	Leaf struct {
-// 		Leaves []struct {
-// 			MerkleLeafHash   string `json:"merkle_leaf_hash"`
-// 			LeafValue        string `json:"leaf_value"`
-// 			LeafIndex        int    `json:"leaf_index"`
-// 			LeafIdentityHash string `json:"leaf_identity_hash"`
-// 			QueueTimestamp   struct {
-// 				Seconds int `json:"seconds"`
-// 				Nanos   int `json:"nanos"`
-// 			} `json:"queue_timestamp"`
-// 			IntegrateTimestamp struct {
-// 				Seconds int `json:"seconds"`
-// 				Nanos   int `json:"nanos"`
-// 			} `json:"integrate_timestamp"`
-// 		} `json:"leaves"`
-// 		SignedLogRoot struct {
-// 			KeyHint          string `json:"key_hint"`
-// 			LogRoot          string `json:"log_root"`
-// 			LogRootSignature string `json:"log_root_signature"`
-// 		} `json:"signed_log_root"`
-// 	} `json:"Leaf"`
-// 	Key string `json:"Key"`
-// }
-
-// getleafCmd represents the getleaf command
 var getleafCmd = &cobra.Command{
 	Use:   "getleaf",
 	Short: "Rekor Get Leaf Command",
@@ -73,6 +57,7 @@ var getleafCmd = &cobra.Command{
 		log := log.Logger
 		rekorServer := viper.GetString("rekor_server")
 		leafIndex, _ := cmd.PersistentFlags().GetInt64("index")
+		outfile, _ := cmd.PersistentFlags().GetString("outfile")
 		u := rekorServer + "/api/v1/getleaf"
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -98,6 +83,7 @@ var getleafCmd = &cobra.Command{
 		}
 
 		resp := getLeafResponse{}
+
 		if err := json.Unmarshal(content, &resp); err != nil {
 			log.Fatal(err)
 		}
@@ -108,18 +94,25 @@ var getleafCmd = &cobra.Command{
 		}
 
 		verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
-		root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, resp.Leaf.SignedLogRoot)
+		_, err = tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, resp.Leaf.SignedLogRoot)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		log.Info("Leaf content", resp.Leaf)
-		log.Info("Root: ", root.TreeSize)
+		fileContent := resp.Leaf.Leaves[0].LeafValue
+
+		err = ioutil.WriteFile(outfile, fileContent, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Info("Leaf contents saved to ", outfile)
+
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(getleafCmd)
 	getleafCmd.PersistentFlags().Int64("index", -1, "")
+	getleafCmd.PersistentFlags().String("outfile", GenerateRand(20)+".txt", "file name to output leaf content")
 }
