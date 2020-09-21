@@ -114,7 +114,7 @@ var getleafCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		log.Info("Leaf content", resp.Leaf.)
+		log.Info("Leaf content", resp.Leaf.Leaves)
 		log.Info("Root: ", root.TreeSize)
 	},
 }
