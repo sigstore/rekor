@@ -10,6 +10,7 @@ import (
 )
 
 func addFileToRequest(request *http.Request, path string) error {
+
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -18,7 +19,7 @@ func addFileToRequest(request *http.Request, path string) error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	defer writer.Close()
-	part, err := writer.CreateFormFile("fileupload", "link.json")
+	part, err := writer.CreateFormFile("fileupload", path)
 	if err != nil {
 		return err
 	}
