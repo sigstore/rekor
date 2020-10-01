@@ -17,7 +17,7 @@ package cmd
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -26,40 +26,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-//type LeafData struct {
-//	File string `json:"file"`
-//	Hash string `json:"hash"`
-//}
-
-//type LeafData struct {
-//	Signatures []struct {
-//		Keyid string `json:"keyid"`
-//		Sig   string `json:"sig"`
-//	} `json:"signatures"`
-//	Signed struct {
-//		Type       string `json:"_type"`
-//		Byproducts struct {
-//			ReturnValue int    `json:"return-value"`
-//			Stderr      string `json:"stderr"`
-//			Stdout      string `json:"stdout"`
-//		} `json:"byproducts"`
-//		Command     []string `json:"command"`
-//		Environment struct {
-//		} `json:"environment"`
-//		Materials struct {
-//			FooPy struct {
-//				Sha256 string `json:"sha256"`
-//			} `json:"foo.py"`
-//		} `json:"materials"`
-//		Name     string `json:"name"`
-//		Products struct {
-//			FooTarGz struct {
-//				Sha256 string `json:"sha256"`
-//			} `json:"foo.tar.gz"`
-//		} `json:"products"`
-//	} `json:"signed"`
-//}
 
 // addCmd represents the add command
 var addCmd = &cobra.Command{
@@ -98,7 +64,15 @@ then hash the file into the transparency log`,
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(string(content))
+
+		resp := getLeafResponse{}
+
+		if err := json.Unmarshal(content, &resp); err != nil {
+			log.Fatal(err)
+		}
+
+		log.Info("Status: ", resp.Status)
+
 	},
 }
 

@@ -43,9 +43,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type RespStatusCode struct {
+	Code string `json:"file_recieved"`
+}
+
 type latestResponse struct {
-	Proof *trillian.GetLatestSignedLogRootResponse
-	Key   []byte
+	Status RespStatusCode
+	Proof  *trillian.GetLatestSignedLogRootResponse
+	Key    []byte
 }
 
 type state struct {
@@ -150,12 +155,12 @@ var updateCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		fmt.Println(string(content))
-
 		resp := latestResponse{}
 		if err := json.Unmarshal(content, &resp); err != nil {
 			log.Fatal(err)
 		}
+
+		log.Info("Status: ", resp.Status)
 
 		pub, err := x509.ParsePKIXPublicKey(resp.Key)
 		if err != nil {

@@ -20,7 +20,6 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -39,8 +38,9 @@ import (
 )
 
 type getProofResponse struct {
-	Proof *trillian.GetInclusionProofByHashResponse
-	Key   []byte
+	Status string
+	Proof  *trillian.GetInclusionProofByHashResponse
+	Key    []byte
 }
 
 // getCmd represents the get command
@@ -82,8 +82,6 @@ exists within the transparency log`,
 			log.Fatal(err)
 		}
 
-		fmt.Println(string(content))
-
 		resp := getProofResponse{}
 		if err := json.Unmarshal(content, &resp); err != nil {
 			log.Fatal(err)
@@ -99,19 +97,23 @@ exists within the transparency log`,
 			log.Fatal(err)
 		}
 
-		leafHash := rfc6962.DefaultHasher.HashLeaf(f)
-		verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
-		root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, resp.Proof.SignedLogRoot)
-		if err != nil {
-			log.Fatal(err)
-		}
+		if resp.Proof != nil {
+			leafHash := rfc6962.DefaultHasher.HashLeaf(f)
+			verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
+			root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, resp.Proof.SignedLogRoot)
+			if err != nil {
+				log.Fatal(err)
+			}
 
-		v := merkle.NewLogVerifier(rfc6962.DefaultHasher)
-		proof := resp.Proof.Proof[0]
-		if err := v.VerifyInclusionProof(proof.LeafIndex, int64(root.TreeSize), proof.Hashes, root.RootHash, leafHash); err != nil {
-			log.Fatal(err)
+			v := merkle.NewLogVerifier(rfc6962.DefaultHasher)
+			proof := resp.Proof.Proof[0]
+			if err := v.VerifyInclusionProof(proof.LeafIndex, int64(root.TreeSize), proof.Hashes, root.RootHash, leafHash); err != nil {
+				log.Fatal(err)
+			}
+			log.Info("Proof correct!")
+		} else {
+			log.Info(resp.Status)
 		}
-		log.Info("proof correct!")
 	},
 }
 

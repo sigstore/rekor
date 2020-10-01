@@ -36,17 +36,18 @@ import (
 	"github.com/spf13/viper"
 )
 
+type getLeafResponse struct {
+	Status RespStatusCode
+	Leaf   *trillian.GetLeavesByIndexResponse
+	Key    []byte
+}
+
 func GenerateRand(length int) string {
 	b := make([]byte, length)
 	if _, err := rand.Read(b); err != nil {
 		return ""
 	}
 	return hex.EncodeToString(b)
-}
-
-type getLeafResponse struct {
-	Leaf *trillian.GetLeavesByIndexResponse
-	Key  []byte
 }
 
 var getleafCmd = &cobra.Command{
@@ -87,6 +88,8 @@ var getleafCmd = &cobra.Command{
 		if err := json.Unmarshal(content, &resp); err != nil {
 			log.Fatal(err)
 		}
+
+		log.Info("Status: ", resp.Status)
 
 		pub, err := x509.ParsePKIXPublicKey(resp.Key)
 		if err != nil {
