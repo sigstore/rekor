@@ -25,7 +25,9 @@ The `get` command performs an inclusion proof request to the transparency log.
 Attributes such as the files merkle hash, signed tree root hash are used to
 cryptographically verify proof of entry.
 
-## Performs a consistency proof against the tree between the last seen time and now
+## Update consistency proof
+
+Get a consistency proof against the tree between the last seen time and now
 
 This command can be used to monitor the tree for updates, it creates a track
 file in `$HOME/.rekor/rekor.json`
