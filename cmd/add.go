@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/projectrekor/rekor-cli/log"
@@ -48,7 +49,11 @@ then hash the file into the transparency log`,
 
 		request, err := http.NewRequestWithContext(ctx, "POST", url, nil)
 
-		if err := addFileToRequest(request, rekord); err != nil {
+		f, err := os.Open(rekord)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := addFileToRequest(request, f); err != nil {
 			log.Fatal(err)
 		}
 		client := &http.Client{}

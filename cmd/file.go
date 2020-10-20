@@ -6,25 +6,19 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
-	"os"
 )
 
-func addFileToRequest(request *http.Request, path string) error {
-
-	f, err := os.Open(path)
-	if err != nil {
-		return err
-	}
+func addFileToRequest(request *http.Request, r io.Reader) error {
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	defer writer.Close()
-	part, err := writer.CreateFormFile("fileupload", path)
+	part, err := writer.CreateFormFile("fileupload", "linkfile")
 	if err != nil {
 		return err
 	}
 
-	if _, err := io.Copy(part, f); err != nil {
+	if _, err := io.Copy(part, r); err != nil {
 		return err
 	}
 
