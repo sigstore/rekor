@@ -31,16 +31,16 @@ import (
 var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Rekor Add Command",
-	Long: `Add a linkfile to rekor
+	Long: `Add a rekord to rekor
 
-The Add command will send a link file to rekor which will 
+The Add command will send a rekord file to rekor which will
 then hash the file into the transparency log`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger
 		rekorServer := viper.GetString("rekor_server")
 		url := rekorServer + "/api/v1/add"
-		linkfile := viper.GetString("linkfile")
+		rekord := viper.GetString("rekord")
 
 		// Set Context with Timeout for connects to thde log rpc server
 		ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
@@ -48,7 +48,7 @@ then hash the file into the transparency log`,
 
 		request, err := http.NewRequestWithContext(ctx, "POST", url, nil)
 
-		if err := addFileToRequest(request, linkfile); err != nil {
+		if err := addFileToRequest(request, rekord); err != nil {
 			log.Fatal(err)
 		}
 		client := &http.Client{}

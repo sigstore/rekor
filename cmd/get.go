@@ -54,7 +54,7 @@ exists within the transparency log`,
 		log := log.Logger
 		rekorServer := viper.GetString("rekor_server")
 		url := rekorServer + "/api/v1/getproof"
-		linkfile := viper.GetString("linkfile")
+		rekord := viper.GetString("rekord")
 
 		// Set Context with Timeout for connects to thde log rpc server
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -65,7 +65,7 @@ exists within the transparency log`,
 			log.Fatal(err)
 		}
 
-		if err := addFileToRequest(request, linkfile); err != nil {
+		if err := addFileToRequest(request, rekord); err != nil {
 			log.Fatal(err)
 		}
 
@@ -92,7 +92,7 @@ exists within the transparency log`,
 			log.Fatal(err)
 		}
 
-		f, err := ioutil.ReadFile(linkfile)
+		f, err := ioutil.ReadFile(rekord)
 		if err != nil {
 			log.Fatal(err)
 		}
