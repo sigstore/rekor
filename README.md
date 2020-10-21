@@ -15,11 +15,11 @@ The CLI will default to using a rekor server connection of `localhost:3000`, sho
 The `add` command sends a file to the transparency log, who then adds the file
 to the transparency log as a merkle leaf.
 
-`rekor-cli add --linkfile <your/yourfile>`
+`rekor-cli add --rekord <your/yourfile>`
 
 ## Get Proof of Entry
 
-`rekor-cli get --linkfile <your/yourfile>`
+`rekor-cli get --rekord <your/yourfile>`
 
 The `get` command performs an inclusion proof request to the transparency log.
 Attributes such as the files merkle hash, signed tree root hash are used to

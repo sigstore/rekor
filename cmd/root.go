@@ -49,8 +49,8 @@ func init() {
 	rootCmd.PersistentFlags().String("rekor_server", "http://localhost:3000", "Server address:port")
 	viper.BindPFlag("rekor_server", rootCmd.PersistentFlags().Lookup("rekor_server"))
 
-	rootCmd.PersistentFlags().String("linkfile", "", "In-toto link file")
-	viper.BindPFlag("linkfile", rootCmd.PersistentFlags().Lookup("linkfile"))
+	rootCmd.PersistentFlags().String("rekord", "", "Rekor rekord file")
+	viper.BindPFlag("rekord", rootCmd.PersistentFlags().Lookup("rekord"))
 }
 
 func initConfig() {
