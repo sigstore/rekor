@@ -1,4 +1,4 @@
-package cmd
+package app
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func addFileToRequest(request *http.Request, r io.Reader) error {
+func AddFileToRequest(request *http.Request, r io.Reader) error {
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)

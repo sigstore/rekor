@@ -18,18 +18,12 @@ package cmd
 import (
 	"io/ioutil"
 
-	"github.com/google/trillian"
+	"github.com/projectrekor/rekor-cli/app"
 	"github.com/projectrekor/rekor-cli/log"
 	"github.com/spf13/viper"
 
 	"github.com/spf13/cobra"
 )
-
-type getProofResponse struct {
-	Status string
-	Proof  *trillian.GetInclusionProofByHashResponse
-	Key    []byte
-}
 
 // getCmd represents the get command
 var getCmd = &cobra.Command{
@@ -48,7 +42,7 @@ exists within the transparency log`,
 		if err != nil {
 			log.Fatal(err)
 		}
-		DoGet(url, rekorEntry)
+		app.DoGet(url, rekorEntry)
 	},
 }
 

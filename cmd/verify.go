@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/projectrekor/rekor-cli/app"
 	"github.com/projectrekor/rekor-cli/log"
 	"github.com/projectrekor/rekor-server/types"
 
@@ -78,7 +79,7 @@ var verifyCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		DoGet(url, b)
+		app.DoGet(url, b)
 	},
 }
 
