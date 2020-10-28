@@ -23,6 +23,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/projectrekor/rekor-cli/app"
 	"github.com/projectrekor/rekor-cli/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -53,7 +54,7 @@ then hash the file into the transparency log`,
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := addFileToRequest(request, f); err != nil {
+		if err := app.AddFileToRequest(request, f); err != nil {
 			log.Fatal(err)
 		}
 		client := &http.Client{}

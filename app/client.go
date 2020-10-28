@@ -1,4 +1,4 @@
-package cmd
+package app
 
 import (
 	"bytes"
@@ -10,15 +10,22 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/trillian"
 	tclient "github.com/google/trillian/client"
 	tcrypto "github.com/google/trillian/crypto"
 	"github.com/google/trillian/merkle"
 	"github.com/google/trillian/merkle/rfc6962"
-	"github.com/prometheus/common/log"
+	"github.com/projectrekor/rekor-cli/log"
 )
 
-func DoGet(url string, rekorEntry []byte) {
+type getProofResponse struct {
+	Status string
+	Proof  *trillian.GetInclusionProofByHashResponse
+	Key    []byte
+}
 
+func DoGet(url string, rekorEntry []byte) {
+	log := log.Logger
 	// Set Context with Timeout for connects to thde log rpc server
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -28,7 +35,7 @@ func DoGet(url string, rekorEntry []byte) {
 		log.Fatal(err)
 	}
 
-	if err := addFileToRequest(request, bytes.NewReader(rekorEntry)); err != nil {
+	if err := AddFileToRequest(request, bytes.NewReader(rekorEntry)); err != nil {
 		log.Fatal(err)
 	}
 
