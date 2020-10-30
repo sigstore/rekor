@@ -51,6 +51,21 @@ func init() {
 
 	rootCmd.PersistentFlags().String("rekord", "", "Rekor rekord file")
 	viper.BindPFlag("rekord", rootCmd.PersistentFlags().Lookup("rekord"))
+
+	rootCmd.PersistentFlags().String("signature", "", "Rekor signature")
+	viper.BindPFlag("signature", rootCmd.PersistentFlags().Lookup("signature"))
+
+	rootCmd.PersistentFlags().String("public_key", "", "Rekor publickey")
+	viper.BindPFlag("public_key", rootCmd.PersistentFlags().Lookup("public_key"))
+
+	rootCmd.PersistentFlags().String("artifact_path", "", "Rekor artifact path")
+	viper.BindPFlag("artifact_path", rootCmd.PersistentFlags().Lookup("artifact_path"))
+
+	rootCmd.PersistentFlags().String("artifact_url", "", "Rekor artifact url")
+	viper.BindPFlag("artifact_url", rootCmd.PersistentFlags().Lookup("artifact_url"))
+
+	rootCmd.PersistentFlags().String("artifact_sha", "", "Rekor artifact sha")
+	viper.BindPFlag("artifact_sha", rootCmd.PersistentFlags().Lookup("artifact_sha"))
 }
 
 func initConfig() {

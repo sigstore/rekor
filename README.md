@@ -1,47 +1,53 @@
 # Rekor Command Line Interface
 
-Early Development / Experimental use only.
-
 Rekór - Greek for “Record”
 
 Rekor's goals are to provide an immutable tamper resistant ledger of metadata generated within a software projects supply chain.  Rekor will enable software maintainers and build systems to record signed metadata to an immutable record. Other parties can then query said metadata to enable them to make informed decisions on trust and non-repudiation of an object's life-cycle, based on signed metadata stored within a tamper proof binary (merkle) tree.
 
-The Rekor CLI requires a running instance of the [rekor-server](https://github.com/projectrekor/rekor-server).
+Rekor requires a running instance of the [rekor-server](https://github.com/projectrekor/rekor-server).
 
-The CLI will default to using a rekor server connection of `localhost:3000`, should you wish to use a different address:port, use the `--rekor_server` flag.
+## Sign your release
 
-## Add an entry
+Before using rekor, you are required to sign your release. For now we use GPG
+(we plant to extend to other signing formats in the foreseeable future)
 
-The `add` command sends a file to the transparency log, who then adds the file
-to the transparency log as a merkle leaf.
+You may use either armored or plain binary:
 
-`rekor-cli add --rekord <your/yourfile>`
+`gpg --armor -u jdoe@example.com --output mysignature.asc --detach-sig
+myrelease.tar.gz`
 
-## Get Proof of Entry
+You will also need to export your public key
 
-`rekor-cli get --rekord <your/yourfile>`
+`gpg --export --armor "jdoe@example.com" > mypublickey.key`
 
-The `get` command performs an inclusion proof request to the transparency log.
-Attributes such as the files merkle hash, signed tree root hash are used to
-cryptographically verify proof of entry.
+## Upload an entry rekor
 
-## Update consistency proof
+The `upload` command sends your public key / signature and artifact URL to the rekor transparency log.
 
-Get a consistency proof against the tree between the last seen time and now
+Firstly the rekor command will verify your public key, signature and download
+a local copy of the artifact. It will then validate the artifact signing (no
+access to your private key is required).
 
-This command can be used to monitor the tree for updates, it creates a track
-file in `$HOME/.rekor/rekor.json`
+If the validations above pass correctly, the rekor command will construct a JSON
+file containing your signature, public key and the artifact URL. This file will
+be saved locally to your machines home directory (`.rekor/`). The JSON file will
+then be sent to the server, who will in turn do the same validations, before
+making an entry to the transparency log.
 
-`rekor-cli update`
+`rekor upload --rekor-server rekor.dev --signature <artifact-signature> --public-key <your_public_key> --artifact-url <url_to_artifact>`
 
-## get leaf
+Note that the `--artifact-url` must be a pubically accessable location. For example `--artifact-url https://example.com/releases/latest/my_project.tar.gz`
 
-Pass an index and the file is retrieved using a filename according to the merkle
-hash.
+## Verify Proof of Entry
 
-`rekor-cli getleaf --index 1`
+The `verify` command sends your public key / signature and artifcate URL to the rekor transparency log for verification of entry.
 
-## Contributions and Issues
+You would typically use this command as a means to  verify an 'inclusion proof'
+in that your artifact is stored within the transparency log.
 
-Contributions are welcome, please fork and make a pull request. Likewise if you
-find an issue, please do raise it.
+`rekor-cli upload --signature <artifact-signature> --public-key <your_public_key> --artifact-url <url_to_artifact>`
+
+## Contributions
+
+Rekor is still in its early phase of development, so we welcome contributions
+from anyone.
