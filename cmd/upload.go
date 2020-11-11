@@ -194,7 +194,7 @@ of the release artifact and uploads it to the rekor server.`,
 		// We need to approach this in two ways
 		// as the public key and signature could be either
 		// armored or binary
-		if isArmorProtected(sigkeyRingReader) || isArmorProtected(sigkeyRingReader) {
+		if isArmorProtected(sigkeyRingReader) || isArmorProtected(pubkeyRingReader) {
 			rekorArmorJSON := RekorArmorEntry{
 				URL:       artifactURL,
 				SHA:       generatedSha,
