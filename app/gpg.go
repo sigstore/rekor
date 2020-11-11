@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"io/ioutil"
-	"os"
 	"strings"
 
 	"golang.org/x/crypto/openpgp/armor"
@@ -19,12 +18,9 @@ func FormatPubKey(pubkeyFilePath string) (string, error) {
 	}
 
 	if strings.Contains(string(pubKey), "-----BEGIN PGP") {
-		b, err := os.Open(pubkeyFilePath)
-		if err != nil {
-			return "Cannot open file:", err
-		}
+		buf := bytes.NewReader(pubKey)
 
-		block, err := armor.Decode(b)
+		block, err := armor.Decode(buf)
 
 		if err != nil {
 			return "Error Decoding: ", err
@@ -71,12 +67,9 @@ func FormatSignature(sigFilePath string) (string, error) {
 
 	if strings.Contains(string(sigKey), "-----BEGIN PGP") {
 		// It's an armored file
-		b, err := os.Open(sigFilePath)
-		if err != nil {
-			return "Cannot open file:", err
-		}
+		buf := bytes.NewReader(sigKey)
 
-		block, err := armor.Decode(b)
+		block, err := armor.Decode(buf)
 
 		if err != nil {
 			return "Error Decoding: ", err
@@ -98,13 +91,11 @@ func FormatSignature(sigFilePath string) (string, error) {
 		return base64string, nil
 
 	} else {
-		// It's a binary file
+		// It's likely a binary file
 		pack, err := packet.Read(bytes.NewReader(sigKey))
 		if err != nil {
 			return "Error reading pub key", err
 		}
-
-		// Was it really a public key file ? If yes, get the PublicKey
 		_, ok := pack.(*packet.PublicKey)
 		if !ok {
 			return "Invalid public key.", err
