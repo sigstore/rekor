@@ -237,7 +237,7 @@ of the release artifact and uploads it to the rekor server.`,
 			}
 		}
 
-		// Upload to rekor
+		// Upload to the rekor service
 		log.Info("Uploading manifest to Rekor.")
 		ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
 		defer cancel()
