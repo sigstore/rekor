@@ -168,16 +168,28 @@ of the release artifact and uploads it to the rekor server.`,
 		var keyRing openpgp.EntityList
 		if isArmorProtected(pubkeyRingReader) {
 			keyRing, err = openpgp.ReadArmoredKeyRing(pubkeyRingReader)
+			if err != nil {
+				log.Error("Error reading Armored Keyring: ", err)
+			}
 		} else {
 			keyRing, err = openpgp.ReadKeyRing(pubkeyRingReader)
+			if err != nil {
+				log.Error("Error reading Keyring: ", err)
+			}
 		}
 
 		dataReader := bytes.NewReader(readBody)
 
 		if isArmorProtected(sigkeyRingReader) {
 			_, err = openpgp.CheckArmoredDetachedSignature(keyRing, dataReader, sigkeyRingReader)
+			if err != nil {
+				log.Error("Error reading Armor Detatched Signature: ", err)
+			}
 		} else {
 			_, err = openpgp.CheckDetachedSignature(keyRing, dataReader, sigkeyRingReader)
+			if err != nil {
+				log.Error("Error reading Detatched Signature: ", err)
+			}
 		}
 		if err != nil {
 			log.Error("Signature Verification failed: ", err)
@@ -215,8 +227,14 @@ of the release artifact and uploads it to the rekor server.`,
 				Signature: sigKey,
 				PublicKey: pubKey,
 			}
-			file, _ := json.MarshalIndent(rekorJSON, "", " ")
-			_ = ioutil.WriteFile(rekorFile, file, 0644)
+			file, err := json.Marshal(rekorJSON)
+			if err != nil {
+				log.Error("JSON Failed to Marshall: ", err)
+			}
+			err = ioutil.WriteFile(rekorFile, file, 0644)
+			if err != nil {
+				log.Error("Failed to write rekor file: ", err)
+			}
 		}
 
 		// Upload to rekor
