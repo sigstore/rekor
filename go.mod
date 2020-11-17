@@ -14,6 +14,8 @@ require (
 	github.com/spf13/viper v1.7.1
 	go.etcd.io/etcd v3.3.25+incompatible // indirect
 	go.uber.org/zap v1.16.0
+	golang.org/x/crypto v0.0.0-20200311171314-f7b00557c8c4
+	google.golang.org/appengine v1.6.6
 )
 
 replace google.golang.org/grpc => google.golang.org/grpc v1.29.1
