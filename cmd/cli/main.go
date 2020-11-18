@@ -15,8 +15,8 @@ limitations under the License.
 */
 package main
 
-import "github.com/projectrekor/rekor-cli/cmd"
+import "github.com/projectrekor/rekor/cmd/cli/app"
 
 func main() {
-	cmd.Execute()
+	app.Execute()
 }

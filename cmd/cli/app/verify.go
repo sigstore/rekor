@@ -13,16 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package app
 
 import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
 
-	"github.com/projectrekor/rekor-cli/app"
-	"github.com/projectrekor/rekor-cli/log"
 	"github.com/projectrekor/rekor-server/types"
+	"github.com/projectrekor/rekor/log"
+	"github.com/projectrekor/rekor/pkg"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -79,7 +79,7 @@ var verifyCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		app.DoGet(url, b)
+		pkg.DoGet(url, b)
 	},
 }
 
