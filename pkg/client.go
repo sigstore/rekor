@@ -15,7 +15,7 @@ import (
 	tcrypto "github.com/google/trillian/crypto"
 	"github.com/google/trillian/merkle"
 	"github.com/google/trillian/merkle/rfc6962"
-	"github.com/projectrekor/rekor/log"
+	"github.com/projectrekor/rekor/pkg/log"
 )
 
 type getProofResponse struct {

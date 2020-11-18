@@ -16,13 +16,14 @@ limitations under the License.
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"os"
 
-	"github.com/projectrekor/rekor-server/types"
-	"github.com/projectrekor/rekor/log"
 	"github.com/projectrekor/rekor/pkg"
+	"github.com/projectrekor/rekor/pkg/log"
+	"github.com/projectrekor/rekor/pkg/types"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -55,8 +56,10 @@ var verifyCmd = &cobra.Command{
 		}
 
 		rekorEntry := types.RekorEntry{
-			Signature: sig,
-			PublicKey: pubKey,
+			RekorLeaf: types.RekorLeaf{
+				Signature: sig,
+				PublicKey: pubKey,
+			},
 		}
 		var body []byte
 		if isLocal {
@@ -70,7 +73,7 @@ var verifyCmd = &cobra.Command{
 			rekorEntry.URL = artifact
 			rekorEntry.SHA = sha
 		}
-		if err := rekorEntry.Load(); err != nil {
+		if err := rekorEntry.Load(context.Background()); err != nil {
 			log.Fatal(err)
 		}
 
