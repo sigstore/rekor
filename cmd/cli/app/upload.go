@@ -32,8 +32,8 @@ import (
 
 	"github.com/google/trillian"
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/projectrekor/rekor/log"
 	"github.com/projectrekor/rekor/pkg"
+	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/openpgp"
