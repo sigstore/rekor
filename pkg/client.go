@@ -1,4 +1,4 @@
-package app
+package pkg
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 	tcrypto "github.com/google/trillian/crypto"
 	"github.com/google/trillian/merkle"
 	"github.com/google/trillian/merkle/rfc6962"
-	"github.com/projectrekor/rekor-cli/log"
+	"github.com/projectrekor/rekor/log"
 )
 
 type getProofResponse struct {

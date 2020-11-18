@@ -1,4 +1,4 @@
-module github.com/projectrekor/rekor-cli
+module github.com/projectrekor/rekor
 
 go 1.14
 

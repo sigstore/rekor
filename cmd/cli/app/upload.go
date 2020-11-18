@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package app
 
 import (
 	"bytes"
@@ -32,8 +32,8 @@ import (
 
 	"github.com/google/trillian"
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/projectrekor/rekor-cli/app"
-	"github.com/projectrekor/rekor-cli/log"
+	"github.com/projectrekor/rekor/log"
+	"github.com/projectrekor/rekor/pkg"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/openpgp"
@@ -122,13 +122,13 @@ of the release artifact and uploads it to the rekor server.`,
 		// Let's check the formatting is correct, if not we
 		// exit and allow the user to resolve their corrupted
 		// GPG files.
-		sig, err := app.FormatSignature(signature)
+		sig, err := pkg.FormatSignature(signature)
 		if err != nil {
 			log.Error("Signature validation failed: ", err)
 			os.Exit(1)
 		}
 
-		pub_key, err := app.FormatPubKey(publicKey)
+		pub_key, err := pkg.FormatPubKey(publicKey)
 		if err != nil {
 			log.Error("Pubic key validation failed: ", err)
 			os.Exit(1)
@@ -249,7 +249,7 @@ of the release artifact and uploads it to the rekor server.`,
 			log.Fatal(err)
 		}
 
-		if err := app.AddFileToRequest(request, f); err != nil {
+		if err := pkg.AddFileToRequest(request, f); err != nil {
 			log.Fatal(err)
 		}
 		client := &http.Client{}
