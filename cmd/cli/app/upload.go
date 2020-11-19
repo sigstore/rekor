@@ -65,9 +65,12 @@ type RekorArmorEntry struct {
 }
 
 func isArmorProtected(f *os.File) bool {
-	_, err := armor.Decode(f)
-	f.Seek(0, io.SeekStart)
-	return err == nil
+	log := log.Logger
+	_, decodeErr := armor.Decode(f)
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		log.Error("Error processing file:", err)
+	}
+	return decodeErr == nil
 }
 
 func hashGenerator(artifact string, fileObject []byte) string {
@@ -79,9 +82,13 @@ func hashGenerator(artifact string, fileObject []byte) string {
 		if err != nil {
 			log.Error("Error:", err)
 		}
-		io.Copy(hasher, gz)
+		if _, err := io.Copy(hasher, gz); err != nil {
+			log.Error("Error:", err)
+		}
 	} else {
-		hasher.Write(fileObject)
+		if _, err := hasher.Write(fileObject); err != nil {
+			log.Error("Error:", err)
+		}
 	}
 	sha := hex.EncodeToString(hasher.Sum(nil))
 	return sha
@@ -124,14 +131,12 @@ of the release artifact and uploads it to the rekor server.`,
 		// GPG files.
 		sig, err := pkg.FormatSignature(signature)
 		if err != nil {
-			log.Error("Signature validation failed: ", err)
-			os.Exit(1)
+			log.Fatal("Signature validation failed: ", err)
 		}
 
 		pub_key, err := pkg.FormatPubKey(publicKey)
 		if err != nil {
-			log.Error("Public key validation failed: ", err)
-			os.Exit(1)
+			log.Fatal("Public key validation failed: ", err)
 		}
 
 		// Download the artifact set within flag artifactURL
@@ -217,9 +222,12 @@ of the release artifact and uploads it to the rekor server.`,
 			_ = ioutil.WriteFile(rekorFile, file, 0644)
 		} else {
 			pubKey, err := ioutil.ReadFile(publicKey)
+			if err != nil {
+				log.Fatal("Error Loading: ", err)
+			}
 			sigKey, err := ioutil.ReadFile(signature)
 			if err != nil {
-				log.Error("Error Loading: ", err)
+				log.Fatal("Error Loading: ", err)
 			}
 			rekorJSON := RekorEntry{
 				URL:       artifactURL,
@@ -229,11 +237,11 @@ of the release artifact and uploads it to the rekor server.`,
 			}
 			file, err := json.Marshal(rekorJSON)
 			if err != nil {
-				log.Error("JSON Failed to Marshall: ", err)
+				log.Fatal("JSON Failed to Marshall: ", err)
 			}
 			err = ioutil.WriteFile(rekorFile, file, 0644)
 			if err != nil {
-				log.Error("Failed to write rekor file: ", err)
+				log.Fatal("Failed to write rekor file: ", err)
 			}
 		}
 
@@ -243,6 +251,9 @@ of the release artifact and uploads it to the rekor server.`,
 		defer cancel()
 
 		request, err := http.NewRequestWithContext(ctx, "POST", url, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		f, err := os.Open(rekorFile)
 		if err != nil {

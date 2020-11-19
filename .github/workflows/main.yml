@@ -23,11 +23,9 @@ jobs:
       - uses: actions/checkout@v2
       # Lint it
       - name: golangci-lint
-        continue-on-error: true
         uses: golangci/golangci-lint-action@v2
         with:
           version: v1.32
       # Test It
       - name: Test
-        continue-on-error: true
         run: go test -v ./...
