@@ -130,7 +130,7 @@ of the release artifact and uploads it to the rekor server.`,
 
 		pub_key, err := pkg.FormatPubKey(publicKey)
 		if err != nil {
-			log.Error("Pubic key validation failed: ", err)
+			log.Error("Public key validation failed: ", err)
 			os.Exit(1)
 		}
 

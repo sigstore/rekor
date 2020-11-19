@@ -36,7 +36,7 @@ making an entry to the transparency log.
 
 `rekor upload --rekor-server rekor.dev --signature <artifact-signature> --public-key <your_public_key> --artifact-url <url_to_artifact>`
 
-Note that the `--artifact-url` must be a pubically accessable location. For example `--artifact-url https://example.com/releases/latest/my_project.tar.gz`
+Note that the `--artifact-url` must be a publically accessable location. For example `--artifact-url https://example.com/releases/latest/my_project.tar.gz`
 
 ## Verify Proof of Entry
 
