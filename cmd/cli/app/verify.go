@@ -94,11 +94,16 @@ var (
 )
 
 func init() {
+	log := log.Logger
 	verifyCmd.Flags().StringVar(&signature, "signature", "", "path to signature file")
-	verifyCmd.MarkFlagFilename("signature")
+	if err := verifyCmd.MarkFlagFilename("signature"); err != nil {
+		log.Fatal("Error parsing cmd line args:", err)
+	}
 	verifyCmd.Flags().StringVar(&artifact, "artifact", "", "path or URL to artifact file")
 	verifyCmd.Flags().StringVar(&pk, "public-key", "", "path to public key file")
-	verifyCmd.MarkFlagFilename("public-key")
+	if err := verifyCmd.MarkFlagFilename("public-key"); err != nil {
+		log.Fatal("Error parsing cmd line args:", err)
+	}
 	verifyCmd.Flags().StringVar(&sha, "sha", "", "the sha of the contents")
 	rootCmd.AddCommand(verifyCmd)
 }

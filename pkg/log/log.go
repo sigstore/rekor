@@ -17,7 +17,7 @@ func createGlobalLogger() *zap.SugaredLogger {
 	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	logger, err := cfg.Build()
 	if err != nil {
-		log.Fatalln("createLogger", err.Error)
+		log.Fatalln("createLogger", err)
 	}
 
 	return logger.Sugar()

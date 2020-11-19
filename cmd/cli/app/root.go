@@ -44,28 +44,27 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rekor.yaml)")
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	rootCmd.PersistentFlags().String("rekor_server", "http://localhost:3000", "Server address:port")
-	viper.BindPFlag("rekor_server", rootCmd.PersistentFlags().Lookup("rekor_server"))
 
 	rootCmd.PersistentFlags().String("rekord", "", "Rekor rekord file")
-	viper.BindPFlag("rekord", rootCmd.PersistentFlags().Lookup("rekord"))
 
 	rootCmd.PersistentFlags().String("signature", "", "Rekor signature")
-	viper.BindPFlag("signature", rootCmd.PersistentFlags().Lookup("signature"))
 
 	rootCmd.PersistentFlags().String("public-key", "", "Rekor publickey")
-	viper.BindPFlag("public-key", rootCmd.PersistentFlags().Lookup("public-key"))
 
 	rootCmd.PersistentFlags().String("artifact-path", "", "Rekor artifact path")
-	viper.BindPFlag("artifact-path", rootCmd.PersistentFlags().Lookup("artifact-path"))
 
 	rootCmd.PersistentFlags().String("artifact-url", "", "Rekor artifact url")
-	viper.BindPFlag("artifact-url", rootCmd.PersistentFlags().Lookup("artifact-url"))
 
 	rootCmd.PersistentFlags().String("artifact-sha", "", "Rekor artifact sha")
-	viper.BindPFlag("artifact-sha", rootCmd.PersistentFlags().Lookup("artifact-sha"))
+
+	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 func initConfig() {

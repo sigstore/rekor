@@ -2,3 +2,4 @@
 .vscode/*
 logid
 rekor-cli
+rekor-server
