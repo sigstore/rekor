@@ -22,11 +22,12 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       # Lint it
-      - name: Setup golangci-lint Action
-        uses: nickhstr/action-setup-golangci-lint@v0.1.0
+      - name: golangci-lint
+        continue-on-error: true
+        uses: golangci/golangci-lint-action@v2
         with:
-          # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: 1.31.0
+          version: v1.32
       # Test It
       - name: Test
-        run: go test -v .
+        continue-on-error: true
+        run: go test -v ./...

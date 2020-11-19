@@ -1,0 +1,56 @@
+version: '3.1'
+services:
+  mysql:
+    image: gcr.io/trillian-opensource-ci/db_server
+    environment:
+      - MYSQL_ROOT_PASSWORD=zaphod
+      - MYSQL_DATABASE=test
+      - MYSQL_USER=test
+      - MYSQL_PASSWORD=zaphod
+    restart: always # keep the MySQL server running
+  trillian-log-server:
+    image: gcr.io/trillian-opensource-ci/log_server
+    command: [
+      "--storage_system=mysql",
+      "--mysql_uri=test:zaphod@tcp(mysql:3306)/test",
+      "--rpc_endpoint=0.0.0.0:8091",
+      "--http_endpoint=0.0.0.0:8090",
+      "--alsologtostderr",
+    ]
+    restart: always # retry while mysql is starting up
+    ports:
+      - "8090:8090"
+      - "8091:8091"
+    depends_on:
+      - mysql
+  trillian-log-signer:
+    image: gcr.io/trillian-opensource-ci/log_signer
+    command: [
+      "--storage_system=mysql",
+      "--mysql_uri=test:zaphod@tcp(mysql:3306)/test",
+      "--rpc_endpoint=0.0.0.0:8090",
+      "--http_endpoint=0.0.0.0:8091",
+      "--force_master",
+      "--alsologtostderr",
+    ]
+    restart: always # retry while mysql is starting up
+    ports:
+      - "8092:8091"
+    depends_on:
+      - mysql
+  rekor-server:
+    build:
+      context: .
+    command: [
+      "rekor-server",
+      "serve",
+      "--trillian_log_server.address=trillian-log-server",
+      "--trillian_log_server.port=8091",
+      "--rekor_server.address=0.0.0.0",
+      ]
+    restart: always # keep the server running
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mysql
+      - trillian-log-server

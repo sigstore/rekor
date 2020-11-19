@@ -131,6 +131,8 @@ github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMo
 github.com/fullstorydev/grpcurl v1.6.0 h1:p8BB6VZF8O7w6MxGr3KJ9E6EVKaswCevSALK6FBtMzA=
 github.com/fullstorydev/grpcurl v1.6.0/go.mod h1:ZQ+ayqbKMJNhzLmbpCiurTVlaK2M/3nqZCxaQ2Ze/sM=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
+github.com/go-chi/chi v1.5.0 h1:2ZcJZozJ+rj6BA0c19ffBUGXEKAT/aOLOtQjD46vBRA=
+github.com/go-chi/chi v1.5.0/go.mod h1:REp24E+25iKvxgeTfHmdUoL5x15kBiDBlnIl5bCwe2k=
 github.com/go-chi/chi v4.1.2+incompatible h1:fGFk2Gmi/YKXk0OmGfBh0WgmN3XB8lVnEyNz34tQRec=
 github.com/go-chi/chi v4.1.2+incompatible/go.mod h1:eB3wogJHnLi3x/kFX2A+IbTBlXxmMeXJVKy9tTv1XzQ=
 github.com/go-critic/go-critic v0.3.5-0.20190526074819-1df300866540/go.mod h1:+sE8vrLDS2M0pZkBk0wy6+nLdKexVDrl/jBqQOTDThA=
@@ -419,12 +421,6 @@ github.com/pmezard/go-difflib v0.0.0-20151028094244-d8ed2627bdf0/go.mod h1:iKH77
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/posener/complete v1.1.1/go.mod h1:em0nMJCgc9GFtwrmVmEMR/ZL6WyhyjMBndrE9hABlRI=
-github.com/projectrekor/rekor-server v0.0.0-20201008161531-12e2c52e09e2 h1:pQPWEqwFd+yGUvEG+T1Q1CJ8fqrM6wpoLxjXPgPNcg8=
-github.com/projectrekor/rekor-server v0.0.0-20201008161531-12e2c52e09e2/go.mod h1:I7RQ1DVuBLGfCNPq/Hn27WPrI08VDotlHMj5H0aV0FY=
-github.com/projectrekor/rekor-server v0.0.0-20201012145110-eccd6cf5cc58 h1:Z4a7OaJlZvl03/Oj9XsIwN74jXzGEtWMyH7EMQIdXu4=
-github.com/projectrekor/rekor-server v0.0.0-20201012145110-eccd6cf5cc58/go.mod h1:BXIiGaDN9dGBbUdKTDzF8NO+kVh16PJstySThjLLvLE=
-github.com/projectrekor/rekor-server v0.0.0-20201020185212-eabecb525492 h1:Qiswzk2IKgugirjpSCT12gLMZch2VZFbetBoNK9g22A=
-github.com/projectrekor/rekor-server v0.0.0-20201020185212-eabecb525492/go.mod h1:BXIiGaDN9dGBbUdKTDzF8NO+kVh16PJstySThjLLvLE=
 github.com/projectrekor/rekor-server v0.0.0-20201118155434-db5416f3d9bf h1:IjFrHdPNOyMLQeK+TJoB4TyGSl4pkEvs+fGpvfQBbeQ=
 github.com/projectrekor/rekor-server v0.0.0-20201118155434-db5416f3d9bf/go.mod h1:Wl5eV1oXwshXLSaUf06CEotJEZG7LLPm+CCz+eSaoyc=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=

@@ -29,7 +29,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/projectrekor/rekor-server/pki"
+	"github.com/projectrekor/rekor/pkg/pki"
 	"golang.org/x/sync/errgroup"
 )
 
