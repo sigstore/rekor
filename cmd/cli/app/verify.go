@@ -55,7 +55,7 @@ var verifyCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		rekorEntry := types.RekorEntry{
+		rekorEntry := &types.RekorEntry{
 			RekorLeaf: types.RekorLeaf{
 				Signature: sig,
 				PublicKey: pubKey,

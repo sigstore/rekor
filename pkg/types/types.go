@@ -77,10 +77,17 @@ func ParseRekorLeaf(r io.Reader) (*RekorLeaf, error) {
 		return nil, err
 	}
 
+	if err := l.ParseKeys(); err != nil {
+		return nil, err
+	}
+	return &l, nil
+}
+
+func (l *RekorLeaf) ParseKeys() error {
 	// validate fields
 	if l.SHA != "" {
 		if _, err := hex.DecodeString(l.SHA); err != nil || len(l.SHA) != 64 {
-			return nil, fmt.Errorf("Invalid SHA hash provided")
+			return fmt.Errorf("Invalid SHA hash provided")
 		}
 	}
 
@@ -90,16 +97,15 @@ func ParseRekorLeaf(r io.Reader) (*RekorLeaf, error) {
 	// check if this is an actual signature
 	l.sigObject, err = pki.NewPGPSignature(bytes.NewReader(l.Signature))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// check if this is an actual public key
 	l.keyObject, err = pki.NewPGPPublicKey(bytes.NewReader(l.PublicKey))
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	return &l, nil
+	return nil
 }
 
 func ParseRekorEntry(r io.Reader, leaf *RekorLeaf) (*RekorEntry, error) {
@@ -150,6 +156,10 @@ func (r *RekorEntry) Load(ctx context.Context) error {
 		}
 	} else {
 		dataReader = bytes.NewReader(r.Data)
+	}
+
+	if err := r.ParseKeys(); err != nil {
+		return err
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
