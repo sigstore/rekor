@@ -36,12 +36,12 @@ import (
 // RekorEntry is the API request.
 type RekorEntry struct {
 	Data      []byte
-	URL       string
 	RekorLeaf `json:"-"`
 }
 
 // RekorLeaf is the type we store in the log.
 type RekorLeaf struct {
+	URL       string
 	SHA       string
 	Signature []byte
 	PublicKey []byte
@@ -57,6 +57,7 @@ func (r *RekorLeaf) MarshalJSON() ([]byte, error) {
 	}
 	var cLeaf canonicalLeaf
 	cLeaf.SHA = r.SHA
+	cLeaf.URL = r.URL
 
 	var err error
 	cLeaf.Signature, err = r.sigObject.CanonicalValue()
