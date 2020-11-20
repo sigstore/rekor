@@ -1,0 +1,373 @@
+swagger: "2.0"
+info:
+  title: Rekor
+  description: Rekor is a cryptographically secure, immutable transparency log for signed software releases.
+  version: 0.0.1
+
+consumes:
+  - application/json
+produces:
+  - application/json
+
+paths:
+  /api/v1/log:
+    get:
+      summary: Get information about the current state of the transparency log
+      description: Returns the current root hash and size of the merkle tree used to store the log entries.
+      operationId: getLogInfo
+      tags:
+        - tLog
+      responses:
+        200:
+          description: A JSON object with the root hash and tree size as properties
+          schema:
+            $ref: '#/definitions/LogInfo'
+        default:
+          $ref: '#/responses/InternalServerError'
+
+  /api/v1/log/proof:
+    get:
+      summary: Get information required to generate a consistency proof for the transparency log
+      description: Returns a list of hashes for specified tree sizes that can be used to confirm the consistency of the transparency log
+      operationId: getLogProof
+      tags:
+        - tLog
+      parameters:
+        - in: query
+          name: firstSize
+          type: integer
+          default: 0
+          minimum: 0
+          description: >
+            The size of the tree that you wish to prove consistency from (0 means the beginning of the log)
+            Defaults to 0 if not specified
+        - in: query
+          name: lastSize
+          type: integer
+          required: true
+          minimum: 0
+          description: The size of the tree that you wish to prove consistency to
+      responses:
+        200:
+          description: All hashes required to compute the consistency proof
+          schema:
+            $ref: '#/definitions/ConsistencyProof'
+        default:
+          $ref: '#/responses/InternalServerError'
+
+  /api/v1/log/entries:
+    post:
+      summary: Creates an entry in the transparency log
+      description: >
+        Creates an entry in the transparency log for a detached signature, public key, and content.
+        Items can be included in the request or fetched by the server when URLs are specified.
+      operationId: createLogEntry
+      tags:
+        - entries
+      parameters:
+        - in: body
+          name: proposedEntry
+          schema:
+            $ref: '#/definitions/ProposedEntry'
+      responses:
+        201:
+          description: Returns the entry created in the transparency log
+          headers:
+            Location:
+              type: string
+              description: URI location of log entry
+              format: uri
+          schema:
+            $ref: '#/definitions/LogEntry'
+        400:
+          $ref: '#/responses/BadContent'
+        default:
+          $ref: '#/responses/InternalServerError'
+    get:
+      summary: Retrieves an entry from the transparency log (if it exists) by index
+      operationId: getLogEntryByIndex
+      tags:
+        - entries
+      parameters:
+        - in: query
+          name: logIndex
+          type: integer
+          required: true
+          description: specifies the index of the entry in the transparency log to be retrieved
+      responses:
+        200:
+          description: the entry in the transparency log requested
+          schema:
+            $ref: '#/definitions/LogEntry'
+        404:
+          $ref: '#/responses/NotFound'
+        default:
+          $ref: '#/responses/InternalServerError'
+
+  /api/v1/log/entries/{entryUUID}:
+    get:
+      summary: Retrieves an entry from the transparency log (if it exists) by UUID
+      operationId: getLogEntryByUUID
+      tags:
+        - entries
+      parameters:
+        - in: path
+          name: entryUUID
+          type: string
+          required: true
+          description: the UUID of the entry to be retrieved from the log. The UUID is also the merkle tree hash of the entry.
+      responses:
+        200:
+          description: the entry in the transparency log requested
+          schema:
+            $ref: '#/definitions/LogEntry'
+        404:
+          $ref: '#/responses/NotFound'
+        default:
+          $ref: '#/responses/InternalServerError'
+
+  /api/v1/log/entries/{entryUUID}/proof:
+    get:
+      summary: Get information required to generate an inclusion proof for a specified entry in the transparency log
+      description: Returns root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log
+      operationId: getLogEntryProof
+      tags:
+        - entries
+      parameters:
+        - in: path
+          name: entryUUID
+          type: string
+          required: true
+          description: the UUID of the entry for which the inclusion proof information should be returned
+      responses:
+        200:
+          description: Information needed for a client to compute the inclusion proof
+          schema:
+            $ref: '#/definitions/InclusionProof'
+        404:
+          $ref: '#/responses/NotFound'
+        default:
+          $ref: '#/responses/InternalServerError'
+
+  /api/v1/log/entries/retrieve:
+    post:
+      summary: Searches transparency log for one or more log entries
+      operationId: searchLogQuery
+      tags:
+        - entries
+      parameters:
+        - in: body
+          name: entry
+          required: true
+          schema:
+            $ref: '#/definitions/SearchLogQuery'
+      responses:
+        200:
+          description: Returns zero or more entries from the transparency log, according to how many were included in request query
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/LogEntry'
+        default:
+          $ref: '#/responses/InternalServerError'
+
+definitions:
+  SupportedPKIFormats:
+    type: string
+    description: This represents the tokens that indicate the format of the PKI artifacts supported by the server
+    enum: [pgp]
+
+  ProposedEntry:
+    type: object
+    properties:
+      signature:
+        type: object
+        properties:
+          format:
+            $ref: '#/definitions/SupportedPKIFormats'
+          url:
+            type: string
+            format: uri
+          content:
+            type: string
+            format: byte
+          publicKey:
+            type: object
+            properties:
+              url:
+                description: >
+                  The URL where the public key can be found. This public key needs to be the pair of the
+                  private key used to generate the detached signature found in the 'signature' property.
+
+                  The 'url' and 'content' properties are mutually exclusive.
+                type: string
+                format: uri
+              content:
+                description: >
+                  Base64-encoded content of the public key. This public key needs to be the pair of the
+                  private key used to generate the detached signature found in the 'signature' property.
+
+                  The 'url' and 'content' properties are mutually exclusive.
+                type: string
+                format: byte
+        required:
+          - format
+          - publicKey
+      data:
+        type: object
+        properties:
+          sha256:
+            description: >
+              The SHA256 hash of the content located at the URL specified in the 'url' parameter.
+              This property is required when 'url' is specified, and ignored when 'content' is specified.
+            type: string
+            pattern: '^[0-9a-fA-F]{64}$'
+          url:
+            description: >
+              The URL where the content refered to in the signature property is located.
+              When specifying 'url', you must also specify the 'sha256' property.
+
+              The 'url' and 'content' properties are mutually exclusive.
+            type: string
+            format: uri
+
+  LogEntry:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        logIndex:
+          type: integer
+        signature:
+          type: object
+          properties:
+            format:
+              $ref: '#/definitions/SupportedPKIFormats'
+            content:
+              type: string
+              format: byte
+            publicKey:
+              type: string
+              format: byte
+          required:
+            - format
+            - content
+            - publicKey
+        signedContentSHA256:
+          type: string
+          pattern: '^[0-9a-fA-F]{64}$'
+        extraData:
+          type: object
+          additionalProperties: 
+            type: string
+      required:
+        - "logIndex"
+        - "signature"
+        - "signedContentSHA256"
+
+  SearchLogQuery:
+    type: object
+    properties:
+      entryUUIDs:
+        type: array
+        items:
+          type: string
+          minItems: 1
+      logIndexes:
+        type: array
+        items:
+          type: integer
+          minItems: 1
+      entries:
+        type: array
+        items:
+          $ref: '#/definitions/LogEntry'
+          minItems: 1
+
+  LogInfo:
+    type: object
+    properties:
+      rootHash:
+        type: string
+        description: The current hash value stored at the root of the merkle tree
+      treeSize:
+        type: integer
+        description: The current number of nodes in the merkle tree
+    required:
+      - rootHash
+      - treeSize
+
+  ConsistencyProof:
+    type: object
+    properties:
+      firstRootHash:
+        type: string
+        description: The hash value stored at the root of the merkle tree at the first size specified
+      lastRootHash:
+        type: string
+        description: The hash value stored at the root of the merkle tree at the last size specified
+      hashes:
+        type: array
+        items:
+          type: string
+          pattern: '^[0-9a-fA-F]{64}$'
+    required:
+      - firstRootHash
+      - lastRootHash
+      - hashes
+
+  InclusionProof:
+    type: object
+    properties:
+      logIndex:
+        type: integer
+        description: The index of the entry in the transparency log
+      rootHash:
+        description: The hash value stored at the root of the merkle tree
+        type: string
+        pattern: '^[0-9a-fA-F]{64}$'
+      treeSize:
+        type: integer
+        description: The size of the merkle tree at the time the inclusion proof was generated
+      hashes:
+        description: A list of hashes required to compute the inclusion proof, sorted in order from leaf to root
+        type: array
+        items:
+          type: string
+          description: SHA256 hash value expressed in hexadecimal format
+          pattern: '^[0-9a-fA-F]{64}$'
+    required:
+      - logIndex
+      - rootHash
+      - treeSize
+      - hashes
+
+  Error: # follows RFC7807
+    type: object
+    properties:
+      type:
+        type: string
+      title:
+        type: string
+      status:
+        type: integer
+      detail:
+        type: string
+    required:
+      - type
+      - title
+      - status
+
+responses:
+  BadContent:
+    description: The content supplied to the server was invalid
+    schema:
+      $ref: "#/definitions/Error"
+  NotFound:
+    description: The content requested could not be found
+    schema:
+      $ref: "#/definitions/Error"
+  InternalServerError:
+    description: There was an internal error in the server while processing the request
+    schema:
+      $ref: "#/definitions/Error"
