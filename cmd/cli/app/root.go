@@ -50,12 +50,15 @@ func init() {
 	rootCmd.PersistentFlags().String("rekord", "", "Rekor rekord file")
 
 	rootCmd.PersistentFlags().String("signature", "", "Rekor signature")
+	rootCmd.MarkPersistentFlagRequired("signature")
 
 	rootCmd.PersistentFlags().String("public-key", "", "Rekor publickey")
+	rootCmd.MarkPersistentFlagRequired("public-key")
 
 	rootCmd.PersistentFlags().String("artifact-path", "", "Rekor artifact path")
 
 	rootCmd.PersistentFlags().String("artifact-url", "", "Rekor artifact url")
+	rootCmd.MarkPersistentFlagRequired("artifact-url")
 
 	rootCmd.PersistentFlags().String("artifact-sha", "", "Rekor artifact sha")
 

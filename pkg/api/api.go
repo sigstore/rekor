@@ -70,7 +70,7 @@ type getLeafResponse struct {
 }
 
 type RespStatusCode struct {
-	Code string `json:"file_recieved"`
+	Code string `json:"file_received"`
 }
 
 func NewAPI() (*API, error) {
