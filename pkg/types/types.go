@@ -70,20 +70,20 @@ func (r *RekorLeaf) MarshalJSON() ([]byte, error) {
 	return json.Marshal(cLeaf)
 }
 
-func ParseRekorLeaf(r io.Reader) (*RekorLeaf, error) {
+func ParseRekorLeaf(r io.Reader) (RekorLeaf, error) {
 	var l RekorLeaf
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&l); err != nil && err != io.EOF {
-		return nil, err
+		return RekorLeaf{}, err
 	}
 
-	if err := l.ParseKeys(); err != nil {
-		return nil, err
+	if err := l.ValidateLeaf(); err != nil {
+		return RekorLeaf{}, err
 	}
-	return &l, nil
+	return l, nil
 }
 
-func (l *RekorLeaf) ParseKeys() error {
+func (l *RekorLeaf) ValidateLeaf() error {
 	// validate fields
 	if l.SHA != "" {
 		if _, err := hex.DecodeString(l.SHA); err != nil || len(l.SHA) != 64 {
@@ -108,14 +108,15 @@ func (l *RekorLeaf) ParseKeys() error {
 	return nil
 }
 
-func ParseRekorEntry(r io.Reader, leaf *RekorLeaf) (*RekorEntry, error) {
+func ParseRekorEntry(r io.Reader, leaf RekorLeaf) (*RekorEntry, error) {
 	var e RekorEntry
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&e); err != nil && err != io.EOF {
 		return nil, err
 	}
+
 	//decode above should not have included the previously parsed & validated leaf, so copy it in
-	e.RekorLeaf = *leaf
+	e.RekorLeaf = leaf
 
 	if e.Data == nil && e.URL == "" {
 		return nil, errors.New("one of Contents or ContentsRef must be set")
@@ -132,6 +133,10 @@ func (r *RekorEntry) Load(ctx context.Context) error {
 
 	hashR, hashW := io.Pipe()
 	sigR, sigW := io.Pipe()
+
+	if err := r.ValidateLeaf(); err != nil {
+		return err
+	}
 
 	var dataReader io.Reader
 	if r.URL != "" {
@@ -156,10 +161,6 @@ func (r *RekorEntry) Load(ctx context.Context) error {
 		}
 	} else {
 		dataReader = bytes.NewReader(r.Data)
-	}
-
-	if err := r.ParseKeys(); err != nil {
-		return err
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
