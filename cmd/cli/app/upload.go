@@ -26,12 +26,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/google/trillian"
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/projectrekor/rekor/pkg"
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/spf13/cobra"
@@ -92,23 +90,6 @@ func hashGenerator(artifact string, fileObject []byte) string {
 	}
 	sha := hex.EncodeToString(hasher.Sum(nil))
 	return sha
-}
-
-func generateRekorFile(generatedSha string) string {
-	log := log.Logger
-	home, err := homedir.Dir()
-	if err != nil {
-		log.Error("Error finding Home Directory: ", err)
-	}
-
-	rekorDir := filepath.Join(home, ".rekor")
-
-	if _, err := os.Stat(rekorDir); os.IsNotExist(err) {
-		if err := os.Mkdir(rekorDir, 0755); err != nil {
-			log.Error(".rekor directory creation failed: ", err)
-		}
-	}
-	return filepath.Join(rekorDir, generatedSha+".txt")
 }
 
 // uploadCmd represents the upload command
@@ -202,15 +183,11 @@ of the release artifact and uploads it to the rekor server.`,
 		}
 		log.Info("Signature validation passed")
 
-		// Generate a file name based off the artifact hash
-		rekorFile := generateRekorFile(generatedSha)
-
-		log.Info("Building rekor file : ", rekorFile)
-
 		// Construct rekor json file
 		// We need to approach this in two ways
 		// as the public key and signature could be either
 		// armored or binary
+		var marshalledRekorEntry []byte
 		if isArmorProtected(sigkeyRingReader) || isArmorProtected(pubkeyRingReader) {
 			rekorArmorJSON := RekorArmorEntry{
 				URL:       artifactURL,
@@ -218,8 +195,10 @@ of the release artifact and uploads it to the rekor server.`,
 				Signature: sig,
 				PublicKey: pub_key,
 			}
-			file, _ := json.MarshalIndent(rekorArmorJSON, "", " ")
-			_ = ioutil.WriteFile(rekorFile, file, 0644)
+			marshalledRekorEntry, err = json.Marshal(rekorArmorJSON)
+			if err != nil {
+				log.Fatal(err)
+			}
 		} else {
 			pubKey, err := ioutil.ReadFile(publicKey)
 			if err != nil {
@@ -235,13 +214,9 @@ of the release artifact and uploads it to the rekor server.`,
 				Signature: sigKey,
 				PublicKey: pubKey,
 			}
-			file, err := json.Marshal(rekorJSON)
+			marshalledRekorEntry, err = json.Marshal(rekorJSON)
 			if err != nil {
 				log.Fatal("JSON Failed to Marshall: ", err)
-			}
-			err = ioutil.WriteFile(rekorFile, file, 0644)
-			if err != nil {
-				log.Fatal("Failed to write rekor file: ", err)
 			}
 		}
 
@@ -255,14 +230,7 @@ of the release artifact and uploads it to the rekor server.`,
 			log.Fatal(err)
 		}
 
-		f, err := os.Open(rekorFile)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if err := pkg.AddFileToRequest(request, f); err != nil {
-			log.Fatal(err)
-		}
+		request.Body = ioutil.NopCloser(bytes.NewReader(marshalledRekorEntry))
 		client := &http.Client{}
 		response, err := client.Do(request)
 
@@ -277,13 +245,13 @@ of the release artifact and uploads it to the rekor server.`,
 			log.Fatal(err)
 		}
 
-		Leafresp := getLeafResponse{}
+		leafresp := getLeafResponse{}
 
-		if err := json.Unmarshal(content, &Leafresp); err != nil {
+		if err := json.Unmarshal(content, &leafresp); err != nil {
 			log.Fatal(err)
 		}
 
-		log.Info("Status: ", Leafresp.Status)
+		log.Info("Status: ", leafresp.Status)
 	},
 }
 

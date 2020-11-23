@@ -35,9 +35,7 @@ func DoGet(url string, rekorEntry []byte) {
 		log.Fatal(err)
 	}
 
-	if err := AddFileToRequest(request, bytes.NewReader(rekorEntry)); err != nil {
-		log.Fatal(err)
-	}
+	request.Body = ioutil.NopCloser(bytes.NewReader(rekorEntry))
 
 	client := &http.Client{}
 	response, err := client.Do(request)
