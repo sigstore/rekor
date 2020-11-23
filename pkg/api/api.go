@@ -47,9 +47,8 @@ type addResponse struct {
 }
 
 type getResponse struct {
-	Status       RespStatusCode
-	FileRecieved FileRecieved
-	Leaves       []*trillian.LogLeaf
+	Status RespStatusCode
+	Leaves []*trillian.LogLeaf
 }
 
 type getLatestResponse struct {
@@ -59,10 +58,9 @@ type getLatestResponse struct {
 }
 
 type getProofResponse struct {
-	Status       string
-	FileRecieved FileRecieved
-	Proof        *trillian.GetInclusionProofByHashResponse
-	Key          []byte
+	Status string
+	Proof  *trillian.GetInclusionProofByHashResponse
+	Key    []byte
 }
 
 type getLeafResponse struct {
@@ -73,10 +71,6 @@ type getLeafResponse struct {
 
 type RespStatusCode struct {
 	Code string `json:"file_recieved"`
-}
-
-type FileRecieved struct {
-	File string `json:"file_recieved"`
 }
 
 func NewAPI() (*API, error) {
@@ -143,15 +137,8 @@ func (api *API) ping(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) getHandler(r *http.Request) (interface{}, error) {
-	file, header, err := r.FormFile("fileupload")
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	log.RequestIDLogger(r).Info("Received file: ", header.Filename)
-
-	leaf, err := types.ParseRekorLeaf(file)
+	defer r.Body.Close()
+	leaf, err := types.ParseRekorLeaf(r.Body)
 	if err != nil {
 		log.RequestIDLogger(r).Errorf("Not a valid rekor entry: %s", err)
 		return nil, err
@@ -172,22 +159,14 @@ func (api *API) getHandler(r *http.Request) (interface{}, error) {
 	logResults := resp.getLeafResult.GetLeaves()
 
 	return getResponse{
-		Status:       RespStatusCode{Code: getGprcCode(resp.status)},
-		FileRecieved: FileRecieved{File: header.Filename},
-		Leaves:       logResults,
+		Status: RespStatusCode{Code: getGprcCode(resp.status)},
+		Leaves: logResults,
 	}, nil
 }
 
 func (api *API) getProofHandler(r *http.Request) (interface{}, error) {
-	file, header, err := r.FormFile("fileupload")
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	log.RequestIDLogger(r).Info("Received file : ", header.Filename)
-
-	leaf, err := types.ParseRekorLeaf(file)
+	defer r.Body.Close()
+	leaf, err := types.ParseRekorLeaf(r.Body)
 	if err != nil || leaf.SHA == "" {
 		if err == nil {
 			err = errors.New("missing SHA sum")
@@ -218,25 +197,18 @@ func (api *API) getProofHandler(r *http.Request) (interface{}, error) {
 	log.RequestIDLogger(r).Info("Return Proof Result: ", string(proofResultsJSON))
 
 	return getProofResponse{
-		Status:       getGprcCode(resp.status),
-		FileRecieved: FileRecieved{File: header.Filename},
-		Proof:        proofResults,
-		Key:          api.pubkey.Der,
+		Status: getGprcCode(resp.status),
+		Proof:  proofResults,
+		Key:    api.pubkey.Der,
 	}, nil
 
 }
 
 func (api *API) addHandler(r *http.Request) (interface{}, error) {
-	file, header, err := r.FormFile("fileupload")
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	log.RequestIDLogger(r).Info("Received file : ", header.Filename)
+	defer r.Body.Close()
 
 	var byteEntry bytes.Buffer
-	tee := io.TeeReader(file, &byteEntry)
+	tee := io.TeeReader(r.Body, &byteEntry)
 
 	// See if this is a valid RekorLeaf
 	rekorLeaf, err := types.ParseRekorLeaf(tee)
