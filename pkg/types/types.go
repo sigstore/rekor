@@ -35,16 +35,16 @@ import (
 
 // RekorEntry is the API request.
 type RekorEntry struct {
-	Data      []byte
-	URL       string
-	RekorLeaf `json:"-"`
+	Data []byte `json:"Data,omitempty"`
+	URL  string `json:"URL,omitempty"`
+	RekorLeaf
 }
 
 // RekorLeaf is the type we store in the log.
 type RekorLeaf struct {
-	SHA       string
-	Signature []byte
-	PublicKey []byte
+	SHA       string `json:"SHA,omitempty"`
+	Signature []byte `json:"Signature"`
+	PublicKey []byte `json:"PublicKey"`
 	keyObject pki.PublicKey
 	sigObject pki.Signature
 }
