@@ -110,13 +110,20 @@ func (s PGPSignature) CanonicalValue() ([]byte, error) {
 	}
 
 	var canonicalBuffer bytes.Buffer
-	ew, err := armor.Encode(&canonicalBuffer, openpgp.SignatureType, nil)
-	if err != nil {
-		return nil, fmt.Errorf("Error encoding canonical value of PGP signature: %w", err)
-	}
+	// Use an inner function so we can defer the Close()
+	if err := func() error {
+		ew, err := armor.Encode(&canonicalBuffer, openpgp.SignatureType, nil)
+		if err != nil {
+			return fmt.Errorf("Error encoding canonical value of PGP signature: %w", err)
+		}
+		defer ew.Close()
 
-	if _, err := io.Copy(ew, bytes.NewReader(s.signature)); err != nil {
-		return nil, fmt.Errorf("Error generating canonical value of PGP signature: %w", err)
+		if _, err := io.Copy(ew, bytes.NewReader(s.signature)); err != nil {
+			return fmt.Errorf("Error generating canonical value of PGP signature: %w", err)
+		}
+		return nil
+	}(); err != nil {
+		return nil, err
 	}
 
 	return canonicalBuffer.Bytes(), nil
@@ -243,18 +250,22 @@ func (k PGPPublicKey) CanonicalValue() ([]byte, error) {
 
 	var canonicalBuffer bytes.Buffer
 
-	armoredWriter, err := armor.Encode(&canonicalBuffer, openpgp.PublicKeyType, nil)
-	if err != nil {
-		return nil, fmt.Errorf("Error generating canonical value of PGP public key: %w", err)
-	}
-
-	for _, entity := range k.key {
-		if err := entity.Serialize(armoredWriter); err != nil {
-			return nil, fmt.Errorf("Error generating canonical value of PGP public key: %w", err)
+	// Use an inner function so we can defer the close()
+	if err := func() error {
+		armoredWriter, err := armor.Encode(&canonicalBuffer, openpgp.PublicKeyType, nil)
+		if err != nil {
+			return fmt.Errorf("Error generating canonical value of PGP public key: %w", err)
 		}
-	}
-	if err := armoredWriter.Close(); err != nil {
-		return nil, fmt.Errorf("Error generating canonical value of PGP public key: %w", err)
+		defer armoredWriter.Close()
+
+		for _, entity := range k.key {
+			if err := entity.Serialize(armoredWriter); err != nil {
+				return fmt.Errorf("Error generating canonical value of PGP public key: %w", err)
+			}
+		}
+		return nil
+	}(); err != nil {
+		return nil, err
 	}
 
 	return canonicalBuffer.Bytes(), nil
