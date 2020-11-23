@@ -49,7 +49,7 @@ The `verify` command sends your public key / signature and artifcate URL to the 
 You would typically use this command as a means to  verify an 'inclusion proof'
 in that your artifact is stored within the transparency log.
 
-`rekor-cli verify --signature <artifact-signature> --public-key <your_public_key> --artifact-url <url_to_artifact>`
+`rekor verify --signature <artifact-signature> --public-key <your_public_key> --artifact-url <url_to_artifact>`
 
 * alternatively you can use a local artifact with `--artifact-url` path
 
