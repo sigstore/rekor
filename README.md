@@ -6,7 +6,7 @@ Rekor's goals are to provide an immutable tamper resistant ledger of metadata ge
 
 ## Build Rekor CLI
 
-From `rekor/cmd/server`
+From `rekor/cmd/cli`
 
 `go build -o rekor`
 
