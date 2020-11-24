@@ -21,9 +21,6 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.14.12'
       # Lint it
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
@@ -32,11 +29,8 @@ jobs:
       # Test It
       - name: Test
         run: go test -v ./...
-      - name: Set GOROOT for Gosec
-        run: |
-          echo GOROOT=$(go env GOROOT) >> $GITHUB_ENV
       # Gosec It
       - name: Run Gosec Security Scanner
-        uses: securego/gosec@master
+        uses: securego/gosec@v2.5.0
         with:
           args: ./...
