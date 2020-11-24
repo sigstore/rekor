@@ -131,9 +131,6 @@ func ParseRekorEntry(r io.Reader, leaf RekorLeaf) (*RekorEntry, error) {
 
 func (r *RekorEntry) Load(ctx context.Context) error {
 
-	hashR, hashW := io.Pipe()
-	sigR, sigW := io.Pipe()
-
 	if err := r.ValidateLeaf(); err != nil {
 		return err
 	}
@@ -144,6 +141,9 @@ func (r *RekorEntry) Load(ctx context.Context) error {
 		resp, err := http.DefaultClient.Get(r.URL)
 		if err != nil {
 			return err
+		}
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			return fmt.Errorf("Error received while fetching artifact: %v", resp.Status)
 		}
 		defer resp.Body.Close()
 
@@ -165,6 +165,11 @@ func (r *RekorEntry) Load(ctx context.Context) error {
 
 	g, ctx := errgroup.WithContext(ctx)
 
+	hashR, hashW := io.Pipe()
+	sigR, sigW := io.Pipe()
+	defer hashR.Close()
+	defer sigR.Close()
+
 	g.Go(func() error {
 		defer hashW.Close()
 		defer sigW.Close()
@@ -179,9 +184,7 @@ func (r *RekorEntry) Load(ctx context.Context) error {
 	hashResult := make(chan string)
 
 	g.Go(func() error {
-		defer hashR.Close()
 		defer close(hashResult)
-
 		hasher := sha256.New()
 
 		if _, err := io.Copy(hasher, hashR); err != nil {
@@ -202,8 +205,6 @@ func (r *RekorEntry) Load(ctx context.Context) error {
 	})
 
 	g.Go(func() error {
-		defer sigR.Close()
-
 		if err := r.sigObject.Verify(sigR, r.keyObject); err != nil {
 			return err
 		}
