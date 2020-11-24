@@ -29,3 +29,8 @@ jobs:
       # Test It
       - name: Test
         run: go test -v ./...
+      # Gosec It
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: ./...

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/projectrekor/rekor/pkg"
 	"github.com/projectrekor/rekor/pkg/log"
@@ -46,11 +47,11 @@ var verifyCmd = &cobra.Command{
 		}
 
 		// Signature and Public Key are always required
-		sig, err := ioutil.ReadFile(signature)
+		sig, err := ioutil.ReadFile(filepath.Clean(signature))
 		if err != nil {
 			log.Fatal(err)
 		}
-		pubKey, err := ioutil.ReadFile(pk)
+		pubKey, err := ioutil.ReadFile(filepath.Clean(pk))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -64,7 +65,7 @@ var verifyCmd = &cobra.Command{
 		var body []byte
 		if isLocal {
 			var err error
-			body, err = ioutil.ReadFile(artifact)
+			body, err = ioutil.ReadFile(filepath.Clean(artifact))
 			if err != nil {
 				log.Fatal(err)
 			}
