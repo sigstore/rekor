@@ -29,11 +29,10 @@ jobs:
       # Test It
       - name: Test
         run: go test -v ./...
-      - name: Unset GOROOT for Gosec
-        run: |
-          echo GOROOT= >> $GITHUB_ENV
       # Gosec It
       - name: Run Gosec Security Scanner
         uses: securego/gosec@v2.5.0
+        env:
+          GOROOT: ""
         with:
           args: ./...
