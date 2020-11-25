@@ -277,7 +277,7 @@ func TestCanonicalValueSignature(t *testing.T) {
 			t.Errorf("%v: Error reading canonicalized signature for TestCanonicalValueSignature: %v", tc.caseDesc, err)
 		}
 
-		inputFile.Seek(0, io.SeekStart)
+		_, _ = inputFile.Seek(0, io.SeekStart)
 
 		if err := canonicalSig.Verify(inputFile, key); (err == nil) != tc.expectSuccess {
 			t.Errorf("%v: canonical signature was unable to be verified: %v", tc.caseDesc, err)
