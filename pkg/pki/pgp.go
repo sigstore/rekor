@@ -42,7 +42,7 @@ func NewPGPSignature(r io.Reader) (*PGPSignature, error) {
 	var inputBuffer bytes.Buffer
 
 	if _, err := io.Copy(&inputBuffer, r); err != nil {
-		return nil, fmt.Errorf("Unable to read PGP signature: %w", err)
+		return nil, fmt.Errorf("unable to read PGP signature: %w", err)
 	}
 
 	sigByteReader := bytes.NewReader(inputBuffer.Bytes())
@@ -52,13 +52,13 @@ func NewPGPSignature(r io.Reader) (*PGPSignature, error) {
 	if err == nil {
 		s.isArmored = true
 		if sigBlock.Type != openpgp.SignatureType {
-			return nil, fmt.Errorf("Invalid PGP signature provided")
+			return nil, fmt.Errorf("invalid PGP signature provided")
 		}
 		sigReader = sigBlock.Body
 	} else {
 		s.isArmored = false
 		if _, err := sigByteReader.Seek(0, io.SeekStart); err != nil {
-			return nil, fmt.Errorf("Unable to read binary PGP signature: %w", err)
+			return nil, fmt.Errorf("unable to read binary PGP signature: %w", err)
 		}
 		sigReader = sigByteReader
 	}
@@ -66,12 +66,12 @@ func NewPGPSignature(r io.Reader) (*PGPSignature, error) {
 	sigPktReader := packet.NewReader(sigReader)
 	sigPkt, err := sigPktReader.Next()
 	if err != nil {
-		return nil, fmt.Errorf("Invalid PGP signature: %w", err)
+		return nil, fmt.Errorf("invalid PGP signature: %w", err)
 	}
 
 	if _, ok := sigPkt.(*packet.Signature); !ok {
 		if _, ok := sigPkt.(*packet.SignatureV3); !ok {
-			return nil, fmt.Errorf("Valid PGP signature was not detected")
+			return nil, fmt.Errorf("valid PGP signature was not detected")
 		}
 	}
 
@@ -79,16 +79,16 @@ func NewPGPSignature(r io.Reader) (*PGPSignature, error) {
 	return &s, nil
 }
 
-// Fetch implements pki.Signature interface
+// FetchPGPSignature implements pki.Signature interface
 func FetchPGPSignature(ctx context.Context, url string) (*PGPSignature, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("Error initializing fetch for PGP signature: %w", err)
+		return nil, fmt.Errorf("error initializing fetch for PGP signature: %w", err)
 	}
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("Error fetching PGP signature: %w", err)
+		return nil, fmt.Errorf("error fetching PGP signature: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -114,12 +114,12 @@ func (s PGPSignature) CanonicalValue() ([]byte, error) {
 	if err := func() error {
 		ew, err := armor.Encode(&canonicalBuffer, openpgp.SignatureType, nil)
 		if err != nil {
-			return fmt.Errorf("Error encoding canonical value of PGP signature: %w", err)
+			return fmt.Errorf("error encoding canonical value of PGP signature: %w", err)
 		}
 		defer ew.Close()
 
 		if _, err := io.Copy(ew, bytes.NewReader(s.signature)); err != nil {
-			return fmt.Errorf("Error generating canonical value of PGP signature: %w", err)
+			return fmt.Errorf("error generating canonical value of PGP signature: %w", err)
 		}
 		return nil
 	}(); err != nil {
@@ -137,9 +137,9 @@ func (s PGPSignature) Verify(r io.Reader, k interface{}) error {
 
 	key, ok := k.(*PGPPublicKey)
 	if !ok {
-		return fmt.Errorf("Cannot use Verify with a non-PGP signature")
+		return fmt.Errorf("cannot use Verify with a non-PGP signature")
 	}
-	if key.key == nil {
+	if len(key.key) == 0 {
 		return fmt.Errorf("PGP public key has not been initialized")
 	}
 
@@ -171,7 +171,7 @@ func NewPGPPublicKey(r io.Reader) (*PGPPublicKey, error) {
 	bufferedReader := bufio.NewReader(r)
 	armorCheck, err := bufferedReader.Peek(len(startToken))
 	if err != nil {
-		return nil, fmt.Errorf("Unable to read PGP public key: %w", err)
+		return nil, fmt.Errorf("unable to read PGP public key: %w", err)
 	}
 	if bytes.Equal(startToken, armorCheck) {
 		// looks like we have armored input
@@ -188,11 +188,11 @@ func NewPGPPublicKey(r io.Reader) (*PGPPublicKey, error) {
 				keyBlock, err := armor.Decode(&inputBuffer)
 				if err == nil {
 					if keyBlock.Type != openpgp.PublicKeyType && keyBlock.Type != openpgp.PrivateKeyType {
-						return nil, fmt.Errorf("Invalid PGP type detected")
+						return nil, fmt.Errorf("invalid PGP type detected")
 					}
 					keys, err := openpgp.ReadKeyRing(keyBlock.Body)
 					if err != nil {
-						return nil, fmt.Errorf("Error reading PGP public key: %w", err)
+						return nil, fmt.Errorf("error reading PGP public key: %w", err)
 					}
 					if k.key == nil {
 						k.key = keys
@@ -201,7 +201,7 @@ func NewPGPPublicKey(r io.Reader) (*PGPPublicKey, error) {
 					}
 					inputBuffer.Reset()
 				} else {
-					return nil, fmt.Errorf("Invalid PGP public key provided: %w", err)
+					return nil, fmt.Errorf("invalid PGP public key provided: %w", err)
 				}
 			}
 		}
@@ -209,12 +209,12 @@ func NewPGPPublicKey(r io.Reader) (*PGPPublicKey, error) {
 		// process as binary
 		k.key, err = openpgp.ReadKeyRing(bufferedReader)
 		if err != nil {
-			return nil, fmt.Errorf("Error reading binary PGP public key: %w", err)
+			return nil, fmt.Errorf("error reading binary PGP public key: %w", err)
 		}
 	}
 
 	if len(k.key) == len(k.key.DecryptionKeys()) {
-		return nil, fmt.Errorf("No PGP public keys could be read")
+		return nil, fmt.Errorf("no PGP public keys could be read")
 	}
 
 	return &k, nil
@@ -225,12 +225,12 @@ func FetchPGPPublicKey(ctx context.Context, url string) (*PGPPublicKey, error) {
 	//TODO: detect if url is hkp and adjust accordingly
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("Error fetching PGP public key: %w", err)
+		return nil, fmt.Errorf("error fetching PGP public key: %w", err)
 	}
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("Error fetching PGP public key: %w", err)
+		return nil, fmt.Errorf("error fetching PGP public key: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -254,13 +254,13 @@ func (k PGPPublicKey) CanonicalValue() ([]byte, error) {
 	if err := func() error {
 		armoredWriter, err := armor.Encode(&canonicalBuffer, openpgp.PublicKeyType, nil)
 		if err != nil {
-			return fmt.Errorf("Error generating canonical value of PGP public key: %w", err)
+			return fmt.Errorf("error generating canonical value of PGP public key: %w", err)
 		}
 		defer armoredWriter.Close()
 
 		for _, entity := range k.key {
 			if err := entity.Serialize(armoredWriter); err != nil {
-				return fmt.Errorf("Error generating canonical value of PGP public key: %w", err)
+				return fmt.Errorf("error generating canonical value of PGP public key: %w", err)
 			}
 		}
 		return nil
