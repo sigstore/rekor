@@ -26,7 +26,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"go.uber.org/goleak"
 )
+
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
+}
 
 func TestReadPublicKey(t *testing.T) {
 	type test struct {
@@ -36,7 +42,7 @@ func TestReadPublicKey(t *testing.T) {
 	}
 
 	tests := []test{
-		{caseDesc: "Not a valid armored public key file", inputFile: "testdata/bogus_armored.pgp", errorFound: true},
+		{caseDesc: "Not a valid armored public key file", inputFile: "testdata/hello_world.txt.asc.sig", errorFound: true},
 		{caseDesc: "Armored private key (should fail)", inputFile: "testdata/armored_private.pgp", errorFound: true},
 		{caseDesc: "Valid armored public key", inputFile: "testdata/valid_armored_public.pgp", errorFound: false},
 		{caseDesc: "Valid armored public key with multiple subentries", inputFile: "testdata/valid_armored_complex_public.pgp", errorFound: false},
@@ -67,8 +73,11 @@ func TestReadSignature(t *testing.T) {
 
 	tests := []test{
 		{caseDesc: "Not a valid signature file", inputFile: "testdata/bogus_armored.pgp", errorFound: true},
+		{caseDesc: "Invalid armored signature", inputFile: "testdata/valid_armored_public.pgp", errorFound: true},
 		{caseDesc: "Valid armored signature", inputFile: "testdata/hello_world.txt.asc.sig", errorFound: false},
 		{caseDesc: "Valid binary signature", inputFile: "testdata/hello_world.txt.sig", errorFound: false},
+		{caseDesc: "Valid armored V3 signature", inputFile: "testdata/hello_world.txt.asc.v3.sig", errorFound: false},
+		{caseDesc: "Valid binary V3 signature", inputFile: "testdata/hello_world.txt.v3.sig", errorFound: false},
 	}
 
 	for _, tc := range tests {
@@ -182,6 +191,100 @@ func TestFetchSignature(t *testing.T) {
 	}
 }
 
+func TestCanonicalValueSignature(t *testing.T) {
+	type test struct {
+		caseDesc      string
+		inputFile     string
+		keyFile       string
+		sigFile       string
+		expectSuccess bool
+	}
+
+	var s PGPSignature
+	if _, err := s.CanonicalValue(); err == nil {
+		t.Errorf("CanonicalValue did not error out for uninitialized signature")
+	}
+
+	tests := []test{
+		{
+			caseDesc:      "Binary signature and canonicalized (armored) signature both verify the same file",
+			inputFile:     "testdata/hello_world.txt",
+			keyFile:       "testdata/valid_armored_public.pgp",
+			sigFile:       "testdata/hello_world.txt.sig",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "Armored signature and canonicalized (armored) signature both verify the same file",
+			inputFile:     "testdata/hello_world.txt",
+			keyFile:       "testdata/valid_armored_public.pgp",
+			sigFile:       "testdata/hello_world.txt.asc.sig",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "Binary V3 signature and canonicalized (armored) signature both verify the same file",
+			inputFile:     "testdata/hello_world.txt",
+			keyFile:       "testdata/valid_armored_public.pgp",
+			sigFile:       "testdata/hello_world.txt.v3.sig",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "Armored V3 signature and canonicalized (armored) signature both verify the same file",
+			inputFile:     "testdata/hello_world.txt",
+			keyFile:       "testdata/valid_armored_public.pgp",
+			sigFile:       "testdata/hello_world.txt.asc.v3.sig",
+			expectSuccess: true,
+		},
+	}
+
+	for _, tc := range tests {
+		var err error
+		inputFile, err := os.Open(tc.inputFile)
+		if err != nil {
+			t.Errorf("%v: cannot open %v", tc.caseDesc, tc.inputFile)
+		}
+
+		sigFile, err := os.Open(tc.sigFile)
+		if err != nil {
+			t.Errorf("%v: cannot open %v", tc.caseDesc, tc.sigFile)
+		}
+
+		keyFile, err := os.Open(tc.keyFile)
+		if err != nil {
+			t.Errorf("%v: cannot open %v", tc.caseDesc, tc.keyFile)
+		}
+
+		key, err := NewPGPPublicKey(keyFile)
+		if err != nil {
+			t.Errorf("%v: Error reading public key for TestCanonicalValueSignature: %v", tc.caseDesc, err)
+		}
+
+		sig, err := NewPGPSignature(sigFile)
+		if err != nil {
+			t.Errorf("%v: Error reading signature for TestCanonicalValueSignature: %v", tc.caseDesc, err)
+		}
+
+		if err := sig.Verify(inputFile, key); err != nil {
+			t.Errorf("%v: Error verifying pre-canonicalized signature for TestCanonicalValueSignature: %v", tc.caseDesc, err)
+		}
+
+		canonicalSigBytes, err := sig.CanonicalValue()
+		if err != nil {
+			t.Errorf("%v: Error canonicalizing signature '%v': %v", tc.caseDesc, tc.sigFile, err)
+		}
+
+		canonicalSig, err := NewPGPSignature(bytes.NewReader(canonicalSigBytes))
+		if err != nil {
+			t.Errorf("%v: Error reading canonicalized signature for TestCanonicalValueSignature: %v", tc.caseDesc, err)
+		}
+
+		inputFile.Seek(0, io.SeekStart)
+
+		if err := canonicalSig.Verify(inputFile, key); (err == nil) != tc.expectSuccess {
+			t.Errorf("%v: canonical signature was unable to be verified: %v", tc.caseDesc, err)
+		}
+	}
+}
+
 func TestCanonicalValuePublicKey(t *testing.T) {
 	type test struct {
 		caseDesc string
@@ -253,6 +356,10 @@ func TestVerifySignature(t *testing.T) {
 		{caseDesc: "Valid Armored Signature, Binary Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.asc.sig", keyFile: "testdata/valid_binary_public.pgp", verified: true},
 		{caseDesc: "Valid Binary Signature, Armored Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.sig", keyFile: "testdata/valid_armored_public.pgp", verified: true},
 		{caseDesc: "Valid Binary Signature, Binary Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.sig", keyFile: "testdata/valid_binary_public.pgp", verified: true},
+		{caseDesc: "Valid V3 Armored Signature, Armored Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.asc.v3.sig", keyFile: "testdata/valid_armored_public.pgp", verified: true},
+		{caseDesc: "Valid V3 Armored Signature, Binary Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.asc.v3.sig", keyFile: "testdata/valid_binary_public.pgp", verified: true},
+		{caseDesc: "Valid V3 Binary Signature, Armored Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.v3.sig", keyFile: "testdata/valid_armored_public.pgp", verified: true},
+		{caseDesc: "Valid V3 Binary Signature, Binary Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.v3.sig", keyFile: "testdata/valid_binary_public.pgp", verified: true},
 		{caseDesc: "Valid Signature, Incorrect Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.sig", keyFile: "testdata/valid_binary_complex_public.pgp", verified: false},
 		{caseDesc: "Data does not match Signature", dataFile: "testdata/armored_private.pgp", sigFile: "testdata/hello_world.txt.sig", keyFile: "testdata/valid_binary_complex_public.pgp", verified: false},
 	}
@@ -284,5 +391,23 @@ func TestVerifySignature(t *testing.T) {
 		if err := s.Verify(dataFile, k); (err == nil) != tc.verified {
 			t.Errorf("%v: unexpected result in verifying sigature: %v", tc.caseDesc, err)
 		}
+	}
+
+	emptyKey := PGPPublicKey{}
+	emptySig := PGPSignature{}
+
+	if err := emptySig.Verify(bytes.NewReader([]byte("irrelevant")), emptyKey); err == nil {
+		t.Errorf("expected error when using empty sig to verify")
+	}
+
+	sigFile, _ := os.Open("testdata/hello_world.txt.sig")
+	validSig, _ := NewPGPSignature(sigFile)
+
+	if err := validSig.Verify(bytes.NewReader([]byte("irrelevant")), &emptyKey); err == nil {
+		t.Errorf("expected error when using empty key to verify")
+	}
+
+	if err := validSig.Verify(bytes.NewReader([]byte("irrelevant")), sigFile); err == nil {
+		t.Errorf("expected error when using non key to verify")
 	}
 }
