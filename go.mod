@@ -14,6 +14,7 @@ require (
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.7.1
 	go.etcd.io/etcd v3.3.25+incompatible // indirect
+	go.uber.org/goleak v1.1.10
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20200311171314-f7b00557c8c4
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
