@@ -455,7 +455,7 @@ func TestRekorLeafMarshalJSON(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc.leaf.ValidateLeaf()
+		_ = tc.leaf.ValidateLeaf()
 		jsonOutput, err := json.Marshal(tc.leaf)
 		if (err == nil) != tc.expectSuccess {
 			t.Errorf("Error in test case '%v': %v", tc.caseDesc, err)
