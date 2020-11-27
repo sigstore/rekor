@@ -3,7 +3,6 @@ package log
 import (
 	"context"
 	"log"
-	"net/http"
 
 	"github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
@@ -27,12 +26,9 @@ func WithRequestID(ctx context.Context, id string) context.Context {
 	return context.WithValue(ctx, middleware.RequestIDKey, id)
 }
 
-func RequestIDLogger(r *http.Request) *zap.SugaredLogger {
-	proposedLogger := Logger
-	if r != nil {
-		if ctxRequestID, ok := r.Context().Value(middleware.RequestIDKey).(string); ok {
-			proposedLogger = proposedLogger.With(zap.String("requestID", ctxRequestID))
-		}
+func RequestIDLogger(ctx context.Context) *zap.SugaredLogger {
+	if ctxRequestID, ok := ctx.Value(middleware.RequestIDKey).(string); ok {
+		return Logger.With(zap.String("requestID", ctxRequestID))
 	}
-	return proposedLogger
+	return Logger
 }
