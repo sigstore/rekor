@@ -1,0 +1,49 @@
+openapi: '3.0.2'
+info:
+  title: API Title
+  version: '1.0'
+servers:
+  - url: https://api.server.test/v1
+
+components:
+  schemas:
+    RemoteRef:
+      type: object
+      properties:
+        Url:
+          type: string
+        Sha:
+          type: string  
+    InlineData:
+      type: string
+    Content:
+      type: object
+      oneOf:
+      - $ref: '#/components/schemas/RemoteRef'
+      - $ref: '#/components/schemas/InlineData'
+    Signature:
+      type: object
+      properties:
+        Format:
+          type: string
+        Content:
+          $ref: '#/components/schemas/Content'
+        PublicKey:
+          $ref: '#/components/schemas/Content'
+paths:
+  /log/entries:
+    post:
+      responses:
+        '200':
+          description: OK
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Signature:
+                  $ref: '#/components/schemas/Signature'
+                Data:
+                  $ref: '#/components/schemas/Content'
