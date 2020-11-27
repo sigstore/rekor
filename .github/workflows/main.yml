@@ -29,3 +29,10 @@ jobs:
       # Test It
       - name: Test
         run: go test -v ./...
+      # Gosec It
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@v2.5.0
+        env:
+          GOROOT: ""
+        with:
+          args: ./...
