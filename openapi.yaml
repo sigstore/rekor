@@ -230,6 +230,13 @@ definitions:
               The 'url' and 'content' properties are mutually exclusive.
             type: string
             format: uri
+          content:
+            description: >
+              Base64-encoded content.
+
+              The 'url' and 'content' properties are mutually exclusive.
+            type: string
+            format: byte
 
   LogEntry:
     type: object
