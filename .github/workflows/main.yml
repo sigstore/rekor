@@ -6,9 +6,9 @@ name: CI
 # events but only for the main branch
 on:
   push:
-    branches: [ main ]
+    branches: [ main, openapi]
   pull_request:
-    branches: [ main ]
+    branches: [ main, openapi ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -36,3 +36,6 @@ jobs:
           GOROOT: ""
         with:
           args: ./...
+      - name: Swagger
+        uses: docker://quay.io/goswagger/swagger
+        run: swagger validate openapi.yaml
