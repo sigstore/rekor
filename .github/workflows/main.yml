@@ -24,14 +24,14 @@ jobs:
       # Download go-swagger
       - name: download go-swagger
         run: |
-          curl -Lsq https://github.com/go-swagger/go-swagger/releases/download/v0.25.0/swagger_linux_amd64 -o swagger
-          chmod +x swagger
+          curl -Lsq https://github.com/go-swagger/go-swagger/releases/download/v0.25.0/swagger_linux_amd64 -o $GITHUB_WORKSPACE/swagger
+          chmod +x $GITHUB_WORKSPACE/swagger
       - name: Validate OpenAPI with Swagger
-        run: swagger validate openapi.yaml
+        run: $GITHUB_WORKSPACE/swagger validate openapi.yaml
       # Make it
       - name: Build
         run: |
-          make all
+          make -C $GITHUB_WORKSPACE all
       # Lint it
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
