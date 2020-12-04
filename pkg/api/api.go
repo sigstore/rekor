@@ -336,6 +336,7 @@ func New() (*chi.Mux, error) {
 	router.Post("/api/v1/latest", wrap(api.getLatestHandler))
 	router.Get("/api/v1/getleaf", wrap(api.getLeafByIndexHandler))
 	router.Get("/api/v1//ping", api.ping)
+
 	return router, nil
 }
 

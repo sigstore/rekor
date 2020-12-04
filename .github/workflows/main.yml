@@ -6,7 +6,7 @@ name: CI
 # events but only for the main branch
 on:
   push:
-    branches: [ main, openapi]
+    branches: [ main, openapi ]
   pull_request:
     branches: [ main, openapi ]
 
@@ -21,6 +21,16 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+      # Download go-swagger
+      - name: download go-swagger
+        run: |
+          curl -Lsq https://github.com/go-swagger/go-swagger/releases/download/v0.25.0/swagger_linux_amd64 -o $GOBIN/swagger
+      - name: Validate OpenAPI with Swagger
+        run: swagger validate openapi.yaml
+      # Make it
+      - name: Build
+        run: |
+          make all
       # Lint it
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
@@ -36,6 +46,4 @@ jobs:
           GOROOT: ""
         with:
           args: ./...
-      - name: Swagger
-        uses: docker://quay.io/goswagger/swagger
-        run: swagger validate openapi.yaml
+      #TODO: add check that ensures we didn't generate different code than what was checked out

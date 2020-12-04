@@ -1,7 +1,7 @@
 .idea/*
 .vscode/*
-cli
+/cli
 logid
 rekor-cli
 rekor-server
-server
+/server
