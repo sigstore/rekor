@@ -6,8 +6,8 @@ SRCS := $(wildcard cmd/**/**.go) ${GENSRCS} $(shell find pkg -name "*.go"|grep -
 all: cli server
 
 $(GENSRCS): openapi.yaml
-	$(GOBIN)/swagger generate client -f openapi.yaml -q -t pkg/generated --additional-initialism=PKI
-	$(GOBIN)/swagger generate server -f openapi.yaml -q -t pkg/generated --additional-initialism=PKI --exclude-main -A rekor_server --exclude-spec --flag-strategy=pflag
+	swagger generate client -f openapi.yaml -q -t pkg/generated --additional-initialism=PKI
+	swagger generate server -f openapi.yaml -q -t pkg/generated --additional-initialism=PKI --exclude-main -A rekor_server --exclude-spec --flag-strategy=pflag
 
 lint: $(SRCS)
 	$(GOBIN)/golangci-lint run -v ./...
