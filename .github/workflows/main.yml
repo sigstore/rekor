@@ -21,10 +21,14 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+      # Setup go
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.14.13'
       # Download go-swagger
       - name: download go-swagger
         run: |
-          curl -Lsq https://github.com/go-swagger/go-swagger/releases/download/v0.25.0/swagger_linux_amd64 -o $GOBIN/swagger
+          curl -L https://github.com/go-swagger/go-swagger/releases/download/v0.25.0/swagger_linux_amd64 -o $GOBIN/swagger
       - name: Validate OpenAPI with Swagger
         run: swagger validate openapi.yaml
       # Make it
