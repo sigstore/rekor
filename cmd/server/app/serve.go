@@ -17,10 +17,13 @@ limitations under the License.
 package app
 
 import (
-	"log"
+	"github.com/go-openapi/loads"
+	"github.com/projectrekor/rekor/pkg/generated/restapi/operations"
+	"github.com/projectrekor/rekor/pkg/log"
 
-	"github.com/projectrekor/rekor/pkg/api"
+	"github.com/projectrekor/rekor/pkg/generated/restapi"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // serveCmd represents the serve command
@@ -29,15 +32,18 @@ var serveCmd = &cobra.Command{
 	Short: "start http server with configured api",
 	Long:  `Starts a http server and serves the configured api`,
 	Run: func(cmd *cobra.Command, args []string) {
-		server, err := api.NewServer()
-		if err != nil {
-			log.Fatal(err)
+
+		doc, _ := loads.Embedded(restapi.SwaggerJSON, restapi.FlatSwaggerJSON)
+		server := restapi.NewServer(operations.NewRekorServerAPI(doc))
+		server.Host = viper.GetString("rekor_server.address")
+		server.Port = int(viper.GetUint("rekor_server.port"))
+		server.ConfigureAPI()
+		if err := server.Serve(); err != nil {
+			log.Logger.Fatal(err)
 		}
-		server.Start()
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
-	//viper.SetDefault("port", "localhost:3000")
 }

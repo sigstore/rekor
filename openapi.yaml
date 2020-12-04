@@ -16,7 +16,7 @@ paths:
       description: Returns the current root hash and size of the merkle tree used to store the log entries.
       operationId: getLogInfo
       tags:
-        - tLog
+        - tlog
       responses:
         200:
           description: A JSON object with the root hash and tree size as properties
@@ -31,7 +31,7 @@ paths:
       description: Returns a list of hashes for specified tree sizes that can be used to confirm the consistency of the transparency log
       operationId: getLogProof
       tags:
-        - tLog
+        - tlog
       parameters:
         - in: query
           name: firstSize
