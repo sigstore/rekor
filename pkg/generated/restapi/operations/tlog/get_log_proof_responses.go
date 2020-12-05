@@ -57,6 +57,50 @@ func (o *GetLogProofOK) WriteResponse(rw http.ResponseWriter, producer runtime.P
 	}
 }
 
+// GetLogProofBadRequestCode is the HTTP code returned for type GetLogProofBadRequest
+const GetLogProofBadRequestCode int = 400
+
+/*GetLogProofBadRequest The content supplied to the server was invalid
+
+swagger:response getLogProofBadRequest
+*/
+type GetLogProofBadRequest struct {
+
+	/*
+	  In: Body
+	*/
+	Payload *models.Error `json:"body,omitempty"`
+}
+
+// NewGetLogProofBadRequest creates GetLogProofBadRequest with default headers values
+func NewGetLogProofBadRequest() *GetLogProofBadRequest {
+
+	return &GetLogProofBadRequest{}
+}
+
+// WithPayload adds the payload to the get log proof bad request response
+func (o *GetLogProofBadRequest) WithPayload(payload *models.Error) *GetLogProofBadRequest {
+	o.Payload = payload
+	return o
+}
+
+// SetPayload sets the payload to the get log proof bad request response
+func (o *GetLogProofBadRequest) SetPayload(payload *models.Error) {
+	o.Payload = payload
+}
+
+// WriteResponse to the client
+func (o *GetLogProofBadRequest) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+
+	rw.WriteHeader(400)
+	if o.Payload != nil {
+		payload := o.Payload
+		if err := producer.Produce(rw, payload); err != nil {
+			panic(err) // let the recovery middleware deal with this
+		}
+	}
+}
+
 /*GetLogProofDefault There was an internal error in the server while processing the request
 
 swagger:response getLogProofDefault

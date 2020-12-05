@@ -22,7 +22,7 @@ import (
 	"github.com/projectrekor/rekor/pkg/generated/models"
 
 	"github.com/go-openapi/runtime/middleware"
-	ttypes "github.com/google/trillian/types"
+	"github.com/google/trillian/types"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/tlog"
 )
 
@@ -36,7 +36,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 		return tlog.NewGetLogInfoDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
 	}
 
-	var root ttypes.LogRootV1
+	var root types.LogRootV1
 	if err := root.UnmarshalBinary(resp.getLatestResult.SignedLogRoot.LogRoot); err != nil {
 		return tlog.NewGetLogInfoDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
 	}
@@ -52,5 +52,37 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 }
 
 func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
-	return middleware.NotImplemented("getLogProof not yet implemented")
+	if *params.FirstSize > params.LastSize {
+		return tlog.NewGetLogProofBadRequest().WithPayload(errorMsg("title", "type", "firstSize must be greater than or equal to lastSize", http.StatusBadRequest))
+	}
+	api, _ := NewAPI()
+
+	server := serverInstance(api.logClient, api.tLogID)
+
+	cpResp, err := server.getConsistencyProof(api.tLogID, *params.FirstSize, params.LastSize)
+	if err != nil {
+		return tlog.NewGetLogProofDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
+	}
+	result := cpResp.getConsistencyProofResult
+
+	var root types.LogRootV1
+	if err := root.UnmarshalBinary(result.SignedLogRoot.LogRoot); err != nil {
+		return tlog.NewGetLogProofDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
+	}
+
+	hashString := hex.EncodeToString(root.RootHash)
+	proofHashes := []string{}
+
+	if proof := result.GetProof(); proof != nil {
+		for _, hash := range proof.Hashes {
+			proofHashes = append(proofHashes, hex.EncodeToString(hash))
+		}
+	}
+
+	consistencyProof := models.ConsistencyProof{
+		RootHash: &hashString,
+		Hashes:   proofHashes,
+	}
+
+	return tlog.NewGetLogProofOK().WithPayload(&consistencyProof)
 }

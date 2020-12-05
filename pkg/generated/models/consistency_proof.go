@@ -19,47 +19,31 @@ import (
 // swagger:model ConsistencyProof
 type ConsistencyProof struct {
 
-	// The hash value stored at the root of the merkle tree at the first size specified
-	// Required: true
-	FirstRootHash *string `json:"firstRootHash"`
-
 	// hashes
 	// Required: true
 	Hashes []string `json:"hashes"`
 
-	// The hash value stored at the root of the merkle tree at the last size specified
+	// The hash value stored at the root of the merkle tree at time the proof was generated
 	// Required: true
-	LastRootHash *string `json:"lastRootHash"`
+	// Pattern: ^[0-9a-fA-F]{64}$
+	RootHash *string `json:"rootHash"`
 }
 
 // Validate validates this consistency proof
 func (m *ConsistencyProof) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateFirstRootHash(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateHashes(formats); err != nil {
 		res = append(res, err)
 	}
 
-	if err := m.validateLastRootHash(formats); err != nil {
+	if err := m.validateRootHash(formats); err != nil {
 		res = append(res, err)
 	}
 
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *ConsistencyProof) validateFirstRootHash(formats strfmt.Registry) error {
-
-	if err := validate.Required("firstRootHash", "body", m.FirstRootHash); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -80,9 +64,13 @@ func (m *ConsistencyProof) validateHashes(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *ConsistencyProof) validateLastRootHash(formats strfmt.Registry) error {
+func (m *ConsistencyProof) validateRootHash(formats strfmt.Registry) error {
 
-	if err := validate.Required("lastRootHash", "body", m.LastRootHash); err != nil {
+	if err := validate.Required("rootHash", "body", m.RootHash); err != nil {
+		return err
+	}
+
+	if err := validate.Pattern("rootHash", "body", string(*m.RootHash), `^[0-9a-fA-F]{64}$`); err != nil {
 		return err
 	}
 

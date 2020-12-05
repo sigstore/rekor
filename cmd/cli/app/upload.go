@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -47,6 +48,17 @@ var uploadCmd = &cobra.Command{
 	Short: "Upload a rekord file",
 	Long: `This command takes the public key, signature and URL
 of the release artifact and uploads it to the rekor server.`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		// these are bound here so that they are not overwritten by other commands
+		if err := viper.BindPFlags(cmd.Flags()); err != nil {
+			log.Logger.Fatal("Error initializing cmd line args: ", err)
+		}
+		if err := validateRekorServerURL(); err != nil {
+			log.Logger.Error(err)
+			_ = cmd.Help()
+			os.Exit(1)
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger
 		rekorServerURL := viper.GetString("rekor_server") + "/api/v1/add"

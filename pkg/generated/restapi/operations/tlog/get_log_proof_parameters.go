@@ -23,7 +23,7 @@ func NewGetLogProofParams() GetLogProofParams {
 	var (
 		// initialize parameters with default values
 
-		firstSizeDefault = int64(0)
+		firstSizeDefault = int64(1)
 	)
 
 	return GetLogProofParams{
@@ -40,16 +40,16 @@ type GetLogProofParams struct {
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 
-	/*The size of the tree that you wish to prove consistency from (0 means the beginning of the log) Defaults to 0 if not specified
+	/*The size of the tree that you wish to prove consistency from (1 means the beginning of the log) Defaults to 1 if not specified
 
-	  Minimum: 0
+	  Minimum: 1
 	  In: query
-	  Default: 0
+	  Default: 1
 	*/
 	FirstSize *int64
 	/*The size of the tree that you wish to prove consistency to
 	  Required: true
-	  Minimum: 0
+	  Minimum: 1
 	  In: query
 	*/
 	LastSize int64
@@ -112,7 +112,7 @@ func (o *GetLogProofParams) bindFirstSize(rawData []string, hasKey bool, formats
 // validateFirstSize carries on validations for parameter FirstSize
 func (o *GetLogProofParams) validateFirstSize(formats strfmt.Registry) error {
 
-	if err := validate.MinimumInt("firstSize", "query", int64(*o.FirstSize), 0, false); err != nil {
+	if err := validate.MinimumInt("firstSize", "query", int64(*o.FirstSize), 1, false); err != nil {
 		return err
 	}
 
@@ -151,7 +151,7 @@ func (o *GetLogProofParams) bindLastSize(rawData []string, hasKey bool, formats 
 // validateLastSize carries on validations for parameter LastSize
 func (o *GetLogProofParams) validateLastSize(formats strfmt.Registry) error {
 
-	if err := validate.MinimumInt("lastSize", "query", int64(o.LastSize), 0, false); err != nil {
+	if err := validate.MinimumInt("lastSize", "query", int64(o.LastSize), 1, false); err != nil {
 		return err
 	}
 

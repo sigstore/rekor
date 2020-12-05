@@ -41,11 +41,12 @@ type trillianclient struct {
 }
 
 type Response struct {
-	status               codes.Code
-	getLeafResult        *trillian.GetLeavesByHashResponse
-	getProofResult       *trillian.GetInclusionProofByHashResponse
-	getLeafByIndexResult *trillian.GetLeavesByIndexResponse
-	getLatestResult      *trillian.GetLatestSignedLogRootResponse
+	status                    codes.Code
+	getLeafResult             *trillian.GetLeavesByHashResponse
+	getProofResult            *trillian.GetInclusionProofByHashResponse
+	getLeafByIndexResult      *trillian.GetLeavesByIndexResponse
+	getLatestResult           *trillian.GetLatestSignedLogRootResponse
+	getConsistencyProofResult *trillian.GetConsistencyProofResponse
 }
 
 func serverInstance(client trillian.TrillianLogClient, tLogID int64) *trillianclient {
@@ -174,10 +175,34 @@ func (s *trillianclient) getLatest(tLogID int64, leafSizeInt int64) (*Response, 
 			LogId:         tLogID,
 			FirstTreeSize: leafSizeInt,
 		})
+	if err != nil {
+		return nil, err
+	}
 
 	return &Response{
 		status:          status.Code(err),
 		getLatestResult: resp,
+	}, nil
+}
+
+func (s *trillianclient) getConsistencyProof(tLogID int64, firstSize, lastSize int64) (*Response, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	resp, err := s.client.GetConsistencyProof(ctx,
+		&trillian.GetConsistencyProofRequest{
+			LogId:          tLogID,
+			FirstTreeSize:  firstSize,
+			SecondTreeSize: lastSize,
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	return &Response{
+		status:                    status.Code(err),
+		getConsistencyProofResult: resp,
 	}, nil
 }
 
