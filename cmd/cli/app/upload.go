@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -52,11 +51,6 @@ of the release artifact and uploads it to the rekor server.`,
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			log.Logger.Fatal("Error initializing cmd line args: ", err)
-		}
-		if err := validateRekorServerURL(); err != nil {
-			log.Logger.Error(err)
-			_ = cmd.Help()
-			os.Exit(1)
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {

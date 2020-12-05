@@ -37,11 +37,6 @@ var logProofCmd = &cobra.Command{
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			log.Logger.Fatal("Error initializing cmd line args: ", err)
 		}
-		if err := validateRekorServerURL(); err != nil {
-			log.Logger.Error(err)
-			_ = cmd.Help()
-			os.Exit(1)
-		}
 		if viper.GetUint64("first-size") > viper.GetUint64("last-size") {
 			log.Logger.Error("last-size must be >= to first-size")
 			os.Exit(1)

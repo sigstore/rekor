@@ -40,11 +40,6 @@ var verifyCmd = &cobra.Command{
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			log.Logger.Fatal("Error initializing cmd line args: ", err)
 		}
-		if err := validateRekorServerURL(); err != nil {
-			log.Logger.Error(err)
-			_ = cmd.Help()
-			os.Exit(1)
-		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger

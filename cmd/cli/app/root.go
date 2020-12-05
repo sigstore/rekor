@@ -48,7 +48,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rekor.yaml)")
 
-	rootCmd.PersistentFlags().String("rekor_server", "http://localhost:3000", "Server address:port")
+	rootCmd.PersistentFlags().Var(&UrlFlag{url: "http://localhost:3000"}, "rekor_server", "Server address:port")
 
 	rootCmd.PersistentFlags().String("rekord", "", "Rekor rekord file")
 
@@ -90,6 +90,37 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+type UrlFlag struct {
+	url string
+}
+
+func (u *UrlFlag) String() string {
+	return u.url
+}
+
+func (u *UrlFlag) Set(s string) error {
+	if s == "" {
+		return errors.New("flag must be specified")
+	}
+	url, err := url.Parse(s)
+	if err != nil {
+		return fmt.Errorf("malformed URL: %w", err)
+	}
+	if !url.IsAbs() {
+		return fmt.Errorf("URL must be absolute, got %s", s)
+	}
+	lowercaseScheme := strings.ToLower(url.Scheme)
+	if lowercaseScheme != "http" && lowercaseScheme != "https" {
+		return fmt.Errorf("URL must be a valid HTTP or HTTPS URL, got %s", s)
+	}
+	u.url = s
+	return nil
+}
+
+func (u *UrlFlag) Type() string {
+	return "url"
 }
 
 func validateRekorServerURL() error {
