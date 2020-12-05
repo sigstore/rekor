@@ -25,15 +25,17 @@ type InclusionProof struct {
 
 	// The index of the entry in the transparency log
 	// Required: true
+	// Minimum: 1
 	LogIndex *int64 `json:"logIndex"`
 
-	// The hash value stored at the root of the merkle tree
+	// The hash value stored at the root of the merkle tree at the time the proof was generated
 	// Required: true
 	// Pattern: ^[0-9a-fA-F]{64}$
 	RootHash *string `json:"rootHash"`
 
 	// The size of the merkle tree at the time the inclusion proof was generated
 	// Required: true
+	// Minimum: 1
 	TreeSize *int64 `json:"treeSize"`
 }
 
@@ -86,6 +88,10 @@ func (m *InclusionProof) validateLogIndex(formats strfmt.Registry) error {
 		return err
 	}
 
+	if err := validate.MinimumInt("logIndex", "body", int64(*m.LogIndex), 1, false); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -105,6 +111,10 @@ func (m *InclusionProof) validateRootHash(formats strfmt.Registry) error {
 func (m *InclusionProof) validateTreeSize(formats strfmt.Registry) error {
 
 	if err := validate.Required("treeSize", "body", m.TreeSize); err != nil {
+		return err
+	}
+
+	if err := validate.MinimumInt("treeSize", "body", int64(*m.TreeSize), 1, false); err != nil {
 		return err
 	}
 

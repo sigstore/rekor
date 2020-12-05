@@ -11,6 +11,7 @@ import (
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/go-openapi/validate"
 )
 
 // SearchLogQuery search log query
@@ -90,6 +91,10 @@ func (m *SearchLogQuery) validateLogIndexes(formats strfmt.Registry) error {
 	}
 
 	for i := 0; i < len(m.LogIndexes); i++ {
+
+		if err := validate.MinimumInt("logIndexes"+"."+strconv.Itoa(i), "body", int64(m.LogIndexes[i]), 1, false); err != nil {
+			return err
+		}
 
 	}
 

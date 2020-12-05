@@ -36,22 +36,24 @@ paths:
         - in: query
           name: firstSize
           type: integer
-          default: 0
-          minimum: 0
+          default: 1
+          minimum: 1
           description: >
-            The size of the tree that you wish to prove consistency from (0 means the beginning of the log)
-            Defaults to 0 if not specified
+            The size of the tree that you wish to prove consistency from (1 means the beginning of the log)
+            Defaults to 1 if not specified
         - in: query
           name: lastSize
           type: integer
           required: true
-          minimum: 0
+          minimum: 1
           description: The size of the tree that you wish to prove consistency to
       responses:
         200:
           description: All hashes required to compute the consistency proof
           schema:
             $ref: '#/definitions/ConsistencyProof'
+        400:
+          $ref: '#/responses/BadContent'
         default:
           $ref: '#/responses/InternalServerError'
 
@@ -93,6 +95,7 @@ paths:
           name: logIndex
           type: integer
           required: true
+          minimum: 1
           description: specifies the index of the entry in the transparency log to be retrieved
       responses:
         200:
@@ -245,6 +248,7 @@ definitions:
       properties:
         logIndex:
           type: integer
+          minimum: 1
         signature:
           type: object
           properties:
@@ -285,6 +289,7 @@ definitions:
         items:
           type: integer
           minItems: 1
+          minimum: 1
       entries:
         type: array
         items:
@@ -297,9 +302,11 @@ definitions:
       rootHash:
         type: string
         description: The current hash value stored at the root of the merkle tree
+        pattern: '^[0-9a-fA-F]{64}$'
       treeSize:
         type: integer
         description: The current number of nodes in the merkle tree
+        minimum: 1
     required:
       - rootHash
       - treeSize
@@ -307,20 +314,18 @@ definitions:
   ConsistencyProof:
     type: object
     properties:
-      firstRootHash:
+      rootHash:
         type: string
-        description: The hash value stored at the root of the merkle tree at the first size specified
-      lastRootHash:
-        type: string
-        description: The hash value stored at the root of the merkle tree at the last size specified
+        description: The hash value stored at the root of the merkle tree at time the proof was generated
+        pattern: '^[0-9a-fA-F]{64}$'
       hashes:
         type: array
         items:
           type: string
+          description: SHA256 hash value expressed in hexadecimal format
           pattern: '^[0-9a-fA-F]{64}$'
     required:
-      - firstRootHash
-      - lastRootHash
+      - rootHash
       - hashes
 
   InclusionProof:
@@ -329,13 +334,15 @@ definitions:
       logIndex:
         type: integer
         description: The index of the entry in the transparency log
+        minimum: 1
       rootHash:
-        description: The hash value stored at the root of the merkle tree
+        description: The hash value stored at the root of the merkle tree at the time the proof was generated
         type: string
         pattern: '^[0-9a-fA-F]{64}$'
       treeSize:
         type: integer
         description: The size of the merkle tree at the time the inclusion proof was generated
+        minimum: 1
       hashes:
         description: A list of hashes required to compute the inclusion proof, sorted in order from leaf to root
         type: array

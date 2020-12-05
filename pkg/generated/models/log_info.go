@@ -19,10 +19,12 @@ type LogInfo struct {
 
 	// The current hash value stored at the root of the merkle tree
 	// Required: true
+	// Pattern: ^[0-9a-fA-F]{64}$
 	RootHash *string `json:"rootHash"`
 
 	// The current number of nodes in the merkle tree
 	// Required: true
+	// Minimum: 1
 	TreeSize *int64 `json:"treeSize"`
 }
 
@@ -50,12 +52,20 @@ func (m *LogInfo) validateRootHash(formats strfmt.Registry) error {
 		return err
 	}
 
+	if err := validate.Pattern("rootHash", "body", string(*m.RootHash), `^[0-9a-fA-F]{64}$`); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (m *LogInfo) validateTreeSize(formats strfmt.Registry) error {
 
 	if err := validate.Required("treeSize", "body", m.TreeSize); err != nil {
+		return err
+	}
+
+	if err := validate.MinimumInt("treeSize", "body", int64(*m.TreeSize), 1, false); err != nil {
 		return err
 	}
 

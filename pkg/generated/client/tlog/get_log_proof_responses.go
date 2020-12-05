@@ -29,6 +29,12 @@ func (o *GetLogProofReader) ReadResponse(response runtime.ClientResponse, consum
 			return nil, err
 		}
 		return result, nil
+	case 400:
+		result := NewGetLogProofBadRequest()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
 	default:
 		result := NewGetLogProofDefault(response.Code())
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -65,6 +71,39 @@ func (o *GetLogProofOK) GetPayload() *models.ConsistencyProof {
 func (o *GetLogProofOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	o.Payload = new(models.ConsistencyProof)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
+		return err
+	}
+
+	return nil
+}
+
+// NewGetLogProofBadRequest creates a GetLogProofBadRequest with default headers values
+func NewGetLogProofBadRequest() *GetLogProofBadRequest {
+	return &GetLogProofBadRequest{}
+}
+
+/*GetLogProofBadRequest handles this case with default header values.
+
+The content supplied to the server was invalid
+*/
+type GetLogProofBadRequest struct {
+	Payload *models.Error
+}
+
+func (o *GetLogProofBadRequest) Error() string {
+	return fmt.Sprintf("[GET /api/v1/log/proof][%d] getLogProofBadRequest  %+v", 400, o.Payload)
+}
+
+func (o *GetLogProofBadRequest) GetPayload() *models.Error {
+	return o.Payload
+}
+
+func (o *GetLogProofBadRequest) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	o.Payload = new(models.Error)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {

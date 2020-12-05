@@ -16,8 +16,11 @@ limitations under the License.
 package app
 
 import (
+	"errors"
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -87,4 +90,24 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+func validateRekorServerURL() error {
+	rekorServerURL := viper.GetString("rekor_server")
+	if rekorServerURL != "" {
+		url, err := url.Parse(rekorServerURL)
+		if err != nil {
+			return fmt.Errorf("malformed rekor_server URL: %w", err)
+		}
+		if !url.IsAbs() {
+			return errors.New("rekor_server URL must be absolute")
+		}
+		lowercaseScheme := strings.ToLower(url.Scheme)
+		if lowercaseScheme != "http" && lowercaseScheme != "https" {
+			return errors.New("rekor_server must be a valid HTTP or HTTPS URL")
+		}
+	} else {
+		return errors.New("rekor_server must be specified")
+	}
+	return nil
 }

@@ -1,7 +1,8 @@
 .PHONY: all test clean lint gosec
 
+NONGENSRCS := $(shell find cmd -name "*.go") $(shell find pkg -name "*.go"|grep -v "pkg/generated") pkg/generated/restapi/configure_rekor_server.go
 GENSRCS := $(shell find pkg/generated -name "*.go"|grep -v "configure_rekor_server.go")
-SRCS := $(wildcard cmd/**/**.go) ${GENSRCS} $(shell find pkg -name "*.go"|grep -v "pkg/generated") pkg/generated/restapi/configure_rekor_server.go
+SRCS := $(NONGENSRCS) ${GENSRCS}
 
 all: cli server
 
@@ -15,10 +16,10 @@ lint: $(SRCS)
 gosec: $(SRCS)
 	$(GOBIN)/gosec ./...
 
-cli: $(SRCS)
+cli: $(SRCS) openapi.yaml
 	go build ./cmd/cli
 
-server: $(SRCS)
+server: $(SRCS) openapi.yaml
 	go build ./cmd/server
 
 test:

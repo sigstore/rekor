@@ -18,18 +18,27 @@ package app
 import (
 	"fmt"
 	"net/url"
+	"os"
 
 	"github.com/projectrekor/rekor/pkg/generated/client"
+	"github.com/projectrekor/rekor/pkg/generated/client/tlog"
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-// verifyCmd represents the get command
+// logInfoCmd represents the current information about the transparency log
 var logInfoCmd = &cobra.Command{
 	Use:   "loginfo",
 	Short: "Rekor loginfo command",
 	Long:  `Prints info about the transparency log`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		if err := validateRekorServerURL(); err != nil {
+			log.Logger.Error(err)
+			_ = cmd.Help()
+			os.Exit(1)
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger
 		rekorServer := viper.GetString("rekor_server")
@@ -42,7 +51,9 @@ var logInfoCmd = &cobra.Command{
 		tc := client.DefaultTransportConfig().WithHost(url.Host)
 		rc := client.NewHTTPClientWithConfig(nil, tc)
 
-		result, err := rc.Tlog.GetLogInfo(nil)
+		params := tlog.NewGetLogInfoParams()
+
+		result, err := rc.Tlog.GetLogInfo(params)
 		if err != nil {
 			log.Fatal(err)
 		}

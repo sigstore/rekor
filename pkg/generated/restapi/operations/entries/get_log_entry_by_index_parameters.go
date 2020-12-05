@@ -34,6 +34,7 @@ type GetLogEntryByIndexParams struct {
 
 	/*specifies the index of the entry in the transparency log to be retrieved
 	  Required: true
+	  Minimum: 1
 	  In: query
 	*/
 	LogIndex int64
@@ -82,6 +83,20 @@ func (o *GetLogEntryByIndexParams) bindLogIndex(rawData []string, hasKey bool, f
 		return errors.InvalidType("logIndex", "query", "int64", raw)
 	}
 	o.LogIndex = value
+
+	if err := o.validateLogIndex(formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateLogIndex carries on validations for parameter LogIndex
+func (o *GetLogEntryByIndexParams) validateLogIndex(formats strfmt.Registry) error {
+
+	if err := validate.MinimumInt("logIndex", "query", int64(o.LogIndex), 1, false); err != nil {
+		return err
+	}
 
 	return nil
 }

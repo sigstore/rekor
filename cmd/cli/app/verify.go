@@ -35,6 +35,17 @@ var verifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Rekor verify command",
 	Long:  `Verifies a signature and checks that it exists in the transparency log`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		// these are bound here so that they are not overwritten by other commands
+		if err := viper.BindPFlags(cmd.Flags()); err != nil {
+			log.Logger.Fatal("Error initializing cmd line args: ", err)
+		}
+		if err := validateRekorServerURL(); err != nil {
+			log.Logger.Error(err)
+			_ = cmd.Help()
+			os.Exit(1)
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger
 		rekorServer := viper.GetString("rekor_server")

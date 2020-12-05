@@ -21,7 +21,7 @@ import (
 // with the default values initialized.
 func NewGetLogProofParams() *GetLogProofParams {
 	var (
-		firstSizeDefault = int64(0)
+		firstSizeDefault = int64(1)
 	)
 	return &GetLogProofParams{
 		FirstSize: &firstSizeDefault,
@@ -34,7 +34,7 @@ func NewGetLogProofParams() *GetLogProofParams {
 // with the default values initialized, and the ability to set a timeout on a request
 func NewGetLogProofParamsWithTimeout(timeout time.Duration) *GetLogProofParams {
 	var (
-		firstSizeDefault = int64(0)
+		firstSizeDefault = int64(1)
 	)
 	return &GetLogProofParams{
 		FirstSize: &firstSizeDefault,
@@ -47,7 +47,7 @@ func NewGetLogProofParamsWithTimeout(timeout time.Duration) *GetLogProofParams {
 // with the default values initialized, and the ability to set a context for a request
 func NewGetLogProofParamsWithContext(ctx context.Context) *GetLogProofParams {
 	var (
-		firstSizeDefault = int64(0)
+		firstSizeDefault = int64(1)
 	)
 	return &GetLogProofParams{
 		FirstSize: &firstSizeDefault,
@@ -60,7 +60,7 @@ func NewGetLogProofParamsWithContext(ctx context.Context) *GetLogProofParams {
 // with the default values initialized, and the ability to set a custom HTTPClient for a request
 func NewGetLogProofParamsWithHTTPClient(client *http.Client) *GetLogProofParams {
 	var (
-		firstSizeDefault = int64(0)
+		firstSizeDefault = int64(1)
 	)
 	return &GetLogProofParams{
 		FirstSize:  &firstSizeDefault,
@@ -74,7 +74,7 @@ for the get log proof operation typically these are written to a http.Request
 type GetLogProofParams struct {
 
 	/*FirstSize
-	  The size of the tree that you wish to prove consistency from (0 means the beginning of the log) Defaults to 0 if not specified
+	  The size of the tree that you wish to prove consistency from (1 means the beginning of the log) Defaults to 1 if not specified
 
 
 	*/

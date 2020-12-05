@@ -61,6 +61,7 @@ func init() {
         "operationId": "getLogEntryByIndex",
         "parameters": [
           {
+            "minimum": 1,
             "type": "integer",
             "description": "specifies the index of the entry in the transparency log to be retrieved",
             "name": "logIndex",
@@ -230,13 +231,15 @@ func init() {
         "operationId": "getLogProof",
         "parameters": [
           {
+            "minimum": 1,
             "type": "integer",
-            "default": 0,
-            "description": "The size of the tree that you wish to prove consistency from (0 means the beginning of the log) Defaults to 0 if not specified\n",
+            "default": 1,
+            "description": "The size of the tree that you wish to prove consistency from (1 means the beginning of the log) Defaults to 1 if not specified\n",
             "name": "firstSize",
             "in": "query"
           },
           {
+            "minimum": 1,
             "type": "integer",
             "description": "The size of the tree that you wish to prove consistency to",
             "name": "lastSize",
@@ -251,6 +254,9 @@ func init() {
               "$ref": "#/definitions/ConsistencyProof"
             }
           },
+          "400": {
+            "$ref": "#/responses/BadContent"
+          },
           "default": {
             "$ref": "#/responses/InternalServerError"
           }
@@ -262,25 +268,22 @@ func init() {
     "ConsistencyProof": {
       "type": "object",
       "required": [
-        "firstRootHash",
-        "lastRootHash",
+        "rootHash",
         "hashes"
       ],
       "properties": {
-        "firstRootHash": {
-          "description": "The hash value stored at the root of the merkle tree at the first size specified",
-          "type": "string"
-        },
         "hashes": {
           "type": "array",
           "items": {
+            "description": "SHA256 hash value expressed in hexadecimal format",
             "type": "string",
             "pattern": "^[0-9a-fA-F]{64}$"
           }
         },
-        "lastRootHash": {
-          "description": "The hash value stored at the root of the merkle tree at the last size specified",
-          "type": "string"
+        "rootHash": {
+          "description": "The hash value stored at the root of the merkle tree at time the proof was generated",
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$"
         }
       }
     },
@@ -326,16 +329,18 @@ func init() {
         },
         "logIndex": {
           "description": "The index of the entry in the transparency log",
-          "type": "integer"
+          "type": "integer",
+          "minimum": 1
         },
         "rootHash": {
-          "description": "The hash value stored at the root of the merkle tree",
+          "description": "The hash value stored at the root of the merkle tree at the time the proof was generated",
           "type": "string",
           "pattern": "^[0-9a-fA-F]{64}$"
         },
         "treeSize": {
           "description": "The size of the merkle tree at the time the inclusion proof was generated",
-          "type": "integer"
+          "type": "integer",
+          "minimum": 1
         }
       }
     },
@@ -356,7 +361,8 @@ func init() {
             }
           },
           "logIndex": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": 1
           },
           "signature": {
             "type": "object",
@@ -395,11 +401,13 @@ func init() {
       "properties": {
         "rootHash": {
           "description": "The current hash value stored at the root of the merkle tree",
-          "type": "string"
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$"
         },
         "treeSize": {
           "description": "The current number of nodes in the merkle tree",
-          "type": "integer"
+          "type": "integer",
+          "minimum": 1
         }
       }
     },
@@ -484,6 +492,7 @@ func init() {
           "type": "array",
           "items": {
             "type": "integer",
+            "minimum": 1,
             "minItems": 1
           }
         }
@@ -565,6 +574,7 @@ func init() {
         "operationId": "getLogEntryByIndex",
         "parameters": [
           {
+            "minimum": 1,
             "type": "integer",
             "description": "specifies the index of the entry in the transparency log to be retrieved",
             "name": "logIndex",
@@ -761,15 +771,15 @@ func init() {
         "operationId": "getLogProof",
         "parameters": [
           {
-            "minimum": 0,
+            "minimum": 1,
             "type": "integer",
-            "default": 0,
-            "description": "The size of the tree that you wish to prove consistency from (0 means the beginning of the log) Defaults to 0 if not specified\n",
+            "default": 1,
+            "description": "The size of the tree that you wish to prove consistency from (1 means the beginning of the log) Defaults to 1 if not specified\n",
             "name": "firstSize",
             "in": "query"
           },
           {
-            "minimum": 0,
+            "minimum": 1,
             "type": "integer",
             "description": "The size of the tree that you wish to prove consistency to",
             "name": "lastSize",
@@ -782,6 +792,12 @@ func init() {
             "description": "All hashes required to compute the consistency proof",
             "schema": {
               "$ref": "#/definitions/ConsistencyProof"
+            }
+          },
+          "400": {
+            "description": "The content supplied to the server was invalid",
+            "schema": {
+              "$ref": "#/definitions/Error"
             }
           },
           "default": {
@@ -798,25 +814,22 @@ func init() {
     "ConsistencyProof": {
       "type": "object",
       "required": [
-        "firstRootHash",
-        "lastRootHash",
+        "rootHash",
         "hashes"
       ],
       "properties": {
-        "firstRootHash": {
-          "description": "The hash value stored at the root of the merkle tree at the first size specified",
-          "type": "string"
-        },
         "hashes": {
           "type": "array",
           "items": {
+            "description": "SHA256 hash value expressed in hexadecimal format",
             "type": "string",
             "pattern": "^[0-9a-fA-F]{64}$"
           }
         },
-        "lastRootHash": {
-          "description": "The hash value stored at the root of the merkle tree at the last size specified",
-          "type": "string"
+        "rootHash": {
+          "description": "The hash value stored at the root of the merkle tree at time the proof was generated",
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$"
         }
       }
     },
@@ -862,16 +875,18 @@ func init() {
         },
         "logIndex": {
           "description": "The index of the entry in the transparency log",
-          "type": "integer"
+          "type": "integer",
+          "minimum": 1
         },
         "rootHash": {
-          "description": "The hash value stored at the root of the merkle tree",
+          "description": "The hash value stored at the root of the merkle tree at the time the proof was generated",
           "type": "string",
           "pattern": "^[0-9a-fA-F]{64}$"
         },
         "treeSize": {
           "description": "The size of the merkle tree at the time the inclusion proof was generated",
-          "type": "integer"
+          "type": "integer",
+          "minimum": 1
         }
       }
     },
@@ -896,7 +911,8 @@ func init() {
           }
         },
         "logIndex": {
-          "type": "integer"
+          "type": "integer",
+          "minimum": 1
         },
         "signature": {
           "type": "object",
@@ -955,11 +971,13 @@ func init() {
       "properties": {
         "rootHash": {
           "description": "The current hash value stored at the root of the merkle tree",
-          "type": "string"
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$"
         },
         "treeSize": {
           "description": "The current number of nodes in the merkle tree",
-          "type": "integer"
+          "type": "integer",
+          "minimum": 1
         }
       }
     },
@@ -1114,6 +1132,7 @@ func init() {
           "type": "array",
           "items": {
             "type": "integer",
+            "minimum": 1,
             "minItems": 1
           }
         }

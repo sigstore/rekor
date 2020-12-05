@@ -50,6 +50,7 @@ type LogEntryAnon struct {
 
 	// log index
 	// Required: true
+	// Minimum: 1
 	LogIndex *int64 `json:"logIndex"`
 
 	// signature
@@ -87,6 +88,10 @@ func (m *LogEntryAnon) Validate(formats strfmt.Registry) error {
 func (m *LogEntryAnon) validateLogIndex(formats strfmt.Registry) error {
 
 	if err := validate.Required("logIndex", "body", m.LogIndex); err != nil {
+		return err
+	}
+
+	if err := validate.MinimumInt("logIndex", "body", int64(*m.LogIndex), 1, false); err != nil {
 		return err
 	}
 
