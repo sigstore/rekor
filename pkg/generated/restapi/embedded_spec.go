@@ -350,44 +350,16 @@ func init() {
         "type": "object",
         "required": [
           "logIndex",
-          "signature",
-          "signedContentSHA256"
+          "body"
         ],
         "properties": {
-          "extraData": {
+          "body": {
             "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
+            "additionalProperties": true
           },
           "logIndex": {
             "type": "integer",
             "minimum": 1
-          },
-          "signature": {
-            "type": "object",
-            "required": [
-              "format",
-              "content",
-              "publicKey"
-            ],
-            "properties": {
-              "content": {
-                "type": "string",
-                "format": "byte"
-              },
-              "format": {
-                "$ref": "#/definitions/SupportedPKIFormats"
-              },
-              "publicKey": {
-                "type": "string",
-                "format": "byte"
-              }
-            }
-          },
-          "signedContentSHA256": {
-            "type": "string",
-            "pattern": "^[0-9a-fA-F]{64}$"
           }
         }
       }
@@ -413,63 +385,7 @@ func init() {
     },
     "ProposedEntry": {
       "type": "object",
-      "properties": {
-        "data": {
-          "type": "object",
-          "properties": {
-            "content": {
-              "description": "Base64-encoded content.\nThe 'url' and 'content' properties are mutually exclusive.\n",
-              "type": "string",
-              "format": "byte"
-            },
-            "sha256": {
-              "description": "The SHA256 hash of the content located at the URL specified in the 'url' parameter. This property is required when 'url' is specified, and ignored when 'content' is specified.\n",
-              "type": "string",
-              "pattern": "^[0-9a-fA-F]{64}$"
-            },
-            "url": {
-              "description": "The URL where the content refered to in the signature property is located. When specifying 'url', you must also specify the 'sha256' property.\nThe 'url' and 'content' properties are mutually exclusive.\n",
-              "type": "string",
-              "format": "uri"
-            }
-          }
-        },
-        "signature": {
-          "type": "object",
-          "required": [
-            "format",
-            "publicKey"
-          ],
-          "properties": {
-            "content": {
-              "type": "string",
-              "format": "byte"
-            },
-            "format": {
-              "$ref": "#/definitions/SupportedPKIFormats"
-            },
-            "publicKey": {
-              "type": "object",
-              "properties": {
-                "content": {
-                  "description": "Base64-encoded content of the public key. This public key needs to be the pair of the private key used to generate the detached signature found in the 'signature' property.\nThe 'url' and 'content' properties are mutually exclusive.\n",
-                  "type": "string",
-                  "format": "byte"
-                },
-                "url": {
-                  "description": "The URL where the public key can be found. This public key needs to be the pair of the private key used to generate the detached signature found in the 'signature' property.\nThe 'url' and 'content' properties are mutually exclusive.\n",
-                  "type": "string",
-                  "format": "uri"
-                }
-              }
-            },
-            "url": {
-              "type": "string",
-              "format": "uri"
-            }
-          }
-        }
-      }
+      "$ref": "pkg/types/schemas/base_schema/v0.0.1/base_schema.json"
     },
     "SearchLogQuery": {
       "type": "object",
@@ -478,7 +394,7 @@ func init() {
           "type": "array",
           "items": {
             "minItems": 1,
-            "$ref": "#/definitions/LogEntry"
+            "$ref": "#/definitions/ProposedEntry"
           }
         },
         "entryUUIDs": {
@@ -497,13 +413,6 @@ func init() {
           }
         }
       }
-    },
-    "SupportedPKIFormats": {
-      "description": "This represents the tokens that indicate the format of the PKI artifacts supported by the server",
-      "type": "string",
-      "enum": [
-        "pgp"
-      ]
     }
   },
   "responses": {
@@ -900,65 +809,16 @@ func init() {
       "type": "object",
       "required": [
         "logIndex",
-        "signature",
-        "signedContentSHA256"
+        "body"
       ],
       "properties": {
-        "extraData": {
+        "body": {
           "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
+          "additionalProperties": true
         },
         "logIndex": {
           "type": "integer",
           "minimum": 1
-        },
-        "signature": {
-          "type": "object",
-          "required": [
-            "format",
-            "content",
-            "publicKey"
-          ],
-          "properties": {
-            "content": {
-              "type": "string",
-              "format": "byte"
-            },
-            "format": {
-              "$ref": "#/definitions/SupportedPKIFormats"
-            },
-            "publicKey": {
-              "type": "string",
-              "format": "byte"
-            }
-          }
-        },
-        "signedContentSHA256": {
-          "type": "string",
-          "pattern": "^[0-9a-fA-F]{64}$"
-        }
-      }
-    },
-    "LogEntryAnonSignature": {
-      "type": "object",
-      "required": [
-        "format",
-        "content",
-        "publicKey"
-      ],
-      "properties": {
-        "content": {
-          "type": "string",
-          "format": "byte"
-        },
-        "format": {
-          "$ref": "#/definitions/SupportedPKIFormats"
-        },
-        "publicKey": {
-          "type": "string",
-          "format": "byte"
         }
       }
     },
@@ -982,130 +842,172 @@ func init() {
       }
     },
     "ProposedEntry": {
+      "$ref": "#/definitions/baseSchema"
+    },
+    "RekordSchemaData": {
+      "description": "Information about the content associated with the entry",
       "type": "object",
-      "properties": {
-        "data": {
-          "type": "object",
-          "properties": {
-            "content": {
-              "description": "Base64-encoded content.\nThe 'url' and 'content' properties are mutually exclusive.\n",
-              "type": "string",
-              "format": "byte"
-            },
-            "sha256": {
-              "description": "The SHA256 hash of the content located at the URL specified in the 'url' parameter. This property is required when 'url' is specified, and ignored when 'content' is specified.\n",
-              "type": "string",
-              "pattern": "^[0-9a-fA-F]{64}$"
-            },
-            "url": {
-              "description": "The URL where the content refered to in the signature property is located. When specifying 'url', you must also specify the 'sha256' property.\nThe 'url' and 'content' properties are mutually exclusive.\n",
-              "type": "string",
-              "format": "uri"
-            }
-          }
-        },
-        "signature": {
-          "type": "object",
+      "oneOf": [
+        {
           "required": [
-            "format",
-            "publicKey"
-          ],
-          "properties": {
-            "content": {
-              "type": "string",
-              "format": "byte"
-            },
-            "format": {
-              "$ref": "#/definitions/SupportedPKIFormats"
-            },
-            "publicKey": {
-              "type": "object",
-              "properties": {
-                "content": {
-                  "description": "Base64-encoded content of the public key. This public key needs to be the pair of the private key used to generate the detached signature found in the 'signature' property.\nThe 'url' and 'content' properties are mutually exclusive.\n",
-                  "type": "string",
-                  "format": "byte"
-                },
-                "url": {
-                  "description": "The URL where the public key can be found. This public key needs to be the pair of the private key used to generate the detached signature found in the 'signature' property.\nThe 'url' and 'content' properties are mutually exclusive.\n",
-                  "type": "string",
-                  "format": "uri"
-                }
-              }
-            },
-            "url": {
-              "type": "string",
-              "format": "uri"
-            }
-          }
-        }
-      }
-    },
-    "ProposedEntryData": {
-      "type": "object",
-      "properties": {
-        "content": {
-          "description": "Base64-encoded content.\nThe 'url' and 'content' properties are mutually exclusive.\n",
-          "type": "string",
-          "format": "byte"
+            "hash",
+            "url"
+          ]
         },
-        "sha256": {
-          "description": "The SHA256 hash of the content located at the URL specified in the 'url' parameter. This property is required when 'url' is specified, and ignored when 'content' is specified.\n",
-          "type": "string",
-          "pattern": "^[0-9a-fA-F]{64}$"
-        },
-        "url": {
-          "description": "The URL where the content refered to in the signature property is located. When specifying 'url', you must also specify the 'sha256' property.\nThe 'url' and 'content' properties are mutually exclusive.\n",
-          "type": "string",
-          "format": "uri"
+        {
+          "required": [
+            "content"
+          ]
         }
-      }
-    },
-    "ProposedEntrySignature": {
-      "type": "object",
-      "required": [
-        "format",
-        "publicKey"
       ],
       "properties": {
         "content": {
+          "description": "Specifies the content inline within the document",
           "type": "string",
-          "format": "byte"
+          "contentEncoding": "base64"
+        },
+        "hash": {
+          "description": "Specifies the hash algorithm and value for the content",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value": {
+              "description": "The hash value for the content",
+              "type": "string"
+            }
+          }
+        },
+        "url": {
+          "description": "Specifies the location of the content; if this is specified, a hash value must also be provided",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "RekordSchemaDataHash": {
+      "description": "Specifies the hash algorithm and value for the content",
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "The hashing function used to compute the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value": {
+          "description": "The hash value for the content",
+          "type": "string"
+        }
+      }
+    },
+    "RekordSchemaSignature": {
+      "description": "Information about the detached signature associated with the entry",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "format",
+            "publicKey",
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "format",
+            "publicKey",
+            "content"
+          ]
+        }
+      ],
+      "properties": {
+        "content": {
+          "description": "Specifies the content of the signature inline within the document",
+          "type": "string",
+          "format": "byte",
+          "contentEncoding": "base64"
         },
         "format": {
-          "$ref": "#/definitions/SupportedPKIFormats"
+          "description": "Specifies the format of the signature",
+          "type": "string",
+          "enum": [
+            "pgp"
+          ]
         },
         "publicKey": {
+          "description": "The public key that can verify the signature",
           "type": "object",
+          "oneOf": [
+            {
+              "required": [
+                "url"
+              ]
+            },
+            {
+              "required": [
+                "content"
+              ]
+            }
+          ],
           "properties": {
             "content": {
-              "description": "Base64-encoded content of the public key. This public key needs to be the pair of the private key used to generate the detached signature found in the 'signature' property.\nThe 'url' and 'content' properties are mutually exclusive.\n",
+              "description": "Specifies the content of the public key inline within the document",
               "type": "string",
-              "format": "byte"
+              "format": "byte",
+              "contentEncoding": "base64"
             },
             "url": {
-              "description": "The URL where the public key can be found. This public key needs to be the pair of the private key used to generate the detached signature found in the 'signature' property.\nThe 'url' and 'content' properties are mutually exclusive.\n",
+              "description": "Specifies the location of the public key",
               "type": "string",
               "format": "uri"
             }
           }
         },
         "url": {
+          "description": "Specifies the location of the signature",
           "type": "string",
           "format": "uri"
         }
       }
     },
-    "ProposedEntrySignaturePublicKey": {
+    "RekordSchemaSignaturePublicKey": {
+      "description": "The public key that can verify the signature",
       "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "content"
+          ]
+        }
+      ],
       "properties": {
         "content": {
-          "description": "Base64-encoded content of the public key. This public key needs to be the pair of the private key used to generate the detached signature found in the 'signature' property.\nThe 'url' and 'content' properties are mutually exclusive.\n",
+          "description": "Specifies the content of the public key inline within the document",
           "type": "string",
-          "format": "byte"
+          "format": "byte",
+          "contentEncoding": "base64"
         },
         "url": {
-          "description": "The URL where the public key can be found. This public key needs to be the pair of the private key used to generate the detached signature found in the 'signature' property.\nThe 'url' and 'content' properties are mutually exclusive.\n",
+          "description": "Specifies the location of the public key",
           "type": "string",
           "format": "uri"
         }
@@ -1117,33 +1019,192 @@ func init() {
         "entries": {
           "type": "array",
           "items": {
-            "minItems": 1,
-            "$ref": "#/definitions/LogEntry"
+            "$ref": "#/definitions/ProposedEntry"
           }
         },
         "entryUUIDs": {
           "type": "array",
           "items": {
-            "type": "string",
-            "minItems": 1
+            "type": "string"
           }
         },
         "logIndexes": {
           "type": "array",
           "items": {
             "type": "integer",
-            "minimum": 1,
-            "minItems": 1
+            "minimum": 1
           }
         }
       }
     },
-    "SupportedPKIFormats": {
-      "description": "This represents the tokens that indicate the format of the PKI artifacts supported by the server",
-      "type": "string",
-      "enum": [
-        "pgp"
-      ]
+    "baseSchema": {
+      "description": "Schema for base object",
+      "type": "object",
+      "title": "Base Schema",
+      "required": [
+        "kind",
+        "apiVersion",
+        "spec"
+      ],
+      "properties": {
+        "apiVersion": {
+          "description": "The version of the object contained in the 'spec' property, expressed in semver",
+          "type": "string",
+          "pattern": "^(?P\u003cmajor\u003e0|[1-9]\\d*)\\.(?P\u003cminor\u003e0|[1-9]\\d*)\\.(?P\u003cpatch\u003e0|[1-9]\\d*)(?:-(?P\u003cprerelease\u003e(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+(?P\u003cbuildmetadata\u003e[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+        },
+        "kind": {
+          "description": "The type of object contained in the 'spec' property",
+          "type": "string"
+        },
+        "spec": {
+          "description": "The actual object proposed to be added to the transparency log",
+          "type": "object",
+          "oneOf": [
+            {
+              "$ref": "#/definitions/rekordSchema"
+            }
+          ]
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.dev/types/base_schema/v0.0.1/base_schema.json"
+    },
+    "rekordSchema": {
+      "description": "Schema for Rekord object",
+      "type": "object",
+      "title": "Rekor Schema",
+      "required": [
+        "signature",
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "description": "Information about the content associated with the entry",
+          "type": "object",
+          "oneOf": [
+            {
+              "required": [
+                "hash",
+                "url"
+              ]
+            },
+            {
+              "required": [
+                "content"
+              ]
+            }
+          ],
+          "properties": {
+            "content": {
+              "description": "Specifies the content inline within the document",
+              "type": "string",
+              "contentEncoding": "base64"
+            },
+            "hash": {
+              "description": "Specifies the hash algorithm and value for the content",
+              "type": "object",
+              "required": [
+                "algorithm",
+                "value"
+              ],
+              "properties": {
+                "algorithm": {
+                  "description": "The hashing function used to compute the hash value",
+                  "type": "string",
+                  "enum": [
+                    "sha256"
+                  ]
+                },
+                "value": {
+                  "description": "The hash value for the content",
+                  "type": "string"
+                }
+              }
+            },
+            "url": {
+              "description": "Specifies the location of the content; if this is specified, a hash value must also be provided",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "extraData": {
+          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
+          "type": "object",
+          "additionalProperties": true
+        },
+        "signature": {
+          "description": "Information about the detached signature associated with the entry",
+          "type": "object",
+          "oneOf": [
+            {
+              "required": [
+                "format",
+                "publicKey",
+                "url"
+              ]
+            },
+            {
+              "required": [
+                "format",
+                "publicKey",
+                "content"
+              ]
+            }
+          ],
+          "properties": {
+            "content": {
+              "description": "Specifies the content of the signature inline within the document",
+              "type": "string",
+              "format": "byte",
+              "contentEncoding": "base64"
+            },
+            "format": {
+              "description": "Specifies the format of the signature",
+              "type": "string",
+              "enum": [
+                "pgp"
+              ]
+            },
+            "publicKey": {
+              "description": "The public key that can verify the signature",
+              "type": "object",
+              "oneOf": [
+                {
+                  "required": [
+                    "url"
+                  ]
+                },
+                {
+                  "required": [
+                    "content"
+                  ]
+                }
+              ],
+              "properties": {
+                "content": {
+                  "description": "Specifies the content of the public key inline within the document",
+                  "type": "string",
+                  "format": "byte",
+                  "contentEncoding": "base64"
+                },
+                "url": {
+                  "description": "Specifies the location of the public key",
+                  "type": "string",
+                  "format": "uri"
+                }
+              }
+            },
+            "url": {
+              "description": "Specifies the location of the signature",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.dev/types/rekord_schema.json"
     }
   },
   "responses": {

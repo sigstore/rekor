@@ -1,0 +1,26 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.dev/types/base_schema/v0.0.1/base_schema.json",
+    "title": "Base Schema",
+    "description": "Schema for base object",
+    "type": "object",
+    "properties": {
+        "kind": {
+            "description": "The type of object contained in the 'spec' property",
+            "type": "string"
+        },
+        "apiVersion": {
+            "description": "The version of the object contained in the 'spec' property, expressed in semver",
+            "type": "string",
+            "pattern": "^(?P<major>0|[1-9]\\d*)\\.(?P<minor>0|[1-9]\\d*)\\.(?P<patch>0|[1-9]\\d*)(?:-(?P<prerelease>(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+        },
+        "spec": {
+            "description": "The actual object proposed to be added to the transparency log",
+            "type": "object",
+            "oneOf": [
+                { "$ref": "file://pkg/types/schemas/rekord_schema/v0.0.1/rekord_schema.json" }
+            ]
+        }
+    },
+    "required": [ "kind", "apiVersion", "spec" ]
+}

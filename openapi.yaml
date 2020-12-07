@@ -175,71 +175,9 @@ paths:
           $ref: '#/responses/InternalServerError'
 
 definitions:
-  SupportedPKIFormats:
-    type: string
-    description: This represents the tokens that indicate the format of the PKI artifacts supported by the server
-    enum: [pgp]
-
   ProposedEntry:
     type: object
-    properties:
-      signature:
-        type: object
-        properties:
-          format:
-            $ref: '#/definitions/SupportedPKIFormats'
-          url:
-            type: string
-            format: uri
-          content:
-            type: string
-            format: byte
-          publicKey:
-            type: object
-            properties:
-              url:
-                description: >
-                  The URL where the public key can be found. This public key needs to be the pair of the
-                  private key used to generate the detached signature found in the 'signature' property.
-
-                  The 'url' and 'content' properties are mutually exclusive.
-                type: string
-                format: uri
-              content:
-                description: >
-                  Base64-encoded content of the public key. This public key needs to be the pair of the
-                  private key used to generate the detached signature found in the 'signature' property.
-
-                  The 'url' and 'content' properties are mutually exclusive.
-                type: string
-                format: byte
-        required:
-          - format
-          - publicKey
-      data:
-        type: object
-        properties:
-          sha256:
-            description: >
-              The SHA256 hash of the content located at the URL specified in the 'url' parameter.
-              This property is required when 'url' is specified, and ignored when 'content' is specified.
-            type: string
-            pattern: '^[0-9a-fA-F]{64}$'
-          url:
-            description: >
-              The URL where the content refered to in the signature property is located.
-              When specifying 'url', you must also specify the 'sha256' property.
-
-              The 'url' and 'content' properties are mutually exclusive.
-            type: string
-            format: uri
-          content:
-            description: >
-              Base64-encoded content.
-
-              The 'url' and 'content' properties are mutually exclusive.
-            type: string
-            format: byte
+    $ref: "pkg/types/schemas/base_schema/v0.0.1/base_schema.json"
 
   LogEntry:
     type: object
@@ -249,32 +187,12 @@ definitions:
         logIndex:
           type: integer
           minimum: 1
-        signature:
+        body:
           type: object
-          properties:
-            format:
-              $ref: '#/definitions/SupportedPKIFormats'
-            content:
-              type: string
-              format: byte
-            publicKey:
-              type: string
-              format: byte
-          required:
-            - format
-            - content
-            - publicKey
-        signedContentSHA256:
-          type: string
-          pattern: '^[0-9a-fA-F]{64}$'
-        extraData:
-          type: object
-          additionalProperties: 
-            type: string
+          additionalProperties: true
       required:
         - "logIndex"
-        - "signature"
-        - "signedContentSHA256"
+        - "body"
 
   SearchLogQuery:
     type: object
@@ -293,7 +211,7 @@ definitions:
       entries:
         type: array
         items:
-          $ref: '#/definitions/LogEntry'
+          $ref: '#/definitions/ProposedEntry'
           minItems: 1
 
   LogInfo:

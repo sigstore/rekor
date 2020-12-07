@@ -6,345 +6,60 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
+	"context"
+
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"github.com/go-openapi/validate"
 )
 
 // ProposedEntry proposed entry
 //
 // swagger:model ProposedEntry
 type ProposedEntry struct {
+	BaseSchema
+}
 
-	// data
-	Data *ProposedEntryData `json:"data,omitempty"`
+// UnmarshalJSON unmarshals this object from a JSON structure
+func (m *ProposedEntry) UnmarshalJSON(raw []byte) error {
+	// AO0
+	var aO0 BaseSchema
+	if err := swag.ReadJSON(raw, &aO0); err != nil {
+		return err
+	}
+	m.BaseSchema = aO0
 
-	// signature
-	Signature *ProposedEntrySignature `json:"signature,omitempty"`
+	return nil
+}
+
+// MarshalJSON marshals this object to a JSON structure
+func (m ProposedEntry) MarshalJSON() ([]byte, error) {
+	_parts := make([][]byte, 0, 1)
+
+	aO0, err := swag.WriteJSON(m.BaseSchema)
+	if err != nil {
+		return nil, err
+	}
+	_parts = append(_parts, aO0)
+	return swag.ConcatJSON(_parts...), nil
 }
 
 // Validate validates this proposed entry
 func (m *ProposedEntry) Validate(formats strfmt.Registry) error {
+	return nil
+}
+
+// ContextValidate validate this proposed entry based on the context it is used
+func (m *ProposedEntry) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateData(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateSignature(formats); err != nil {
+	// validation for a type composition with BaseSchema
+	if err := m.BaseSchema.ContextValidate(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *ProposedEntry) validateData(formats strfmt.Registry) error {
-
-	if swag.IsZero(m.Data) { // not required
-		return nil
-	}
-
-	if m.Data != nil {
-		if err := m.Data.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("data")
-			}
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *ProposedEntry) validateSignature(formats strfmt.Registry) error {
-
-	if swag.IsZero(m.Signature) { // not required
-		return nil
-	}
-
-	if m.Signature != nil {
-		if err := m.Signature.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("signature")
-			}
-			return err
-		}
-	}
-
-	return nil
-}
-
-// MarshalBinary interface implementation
-func (m *ProposedEntry) MarshalBinary() ([]byte, error) {
-	if m == nil {
-		return nil, nil
-	}
-	return swag.WriteJSON(m)
-}
-
-// UnmarshalBinary interface implementation
-func (m *ProposedEntry) UnmarshalBinary(b []byte) error {
-	var res ProposedEntry
-	if err := swag.ReadJSON(b, &res); err != nil {
-		return err
-	}
-	*m = res
-	return nil
-}
-
-// ProposedEntryData proposed entry data
-//
-// swagger:model ProposedEntryData
-type ProposedEntryData struct {
-
-	// Base64-encoded content.
-	// The 'url' and 'content' properties are mutually exclusive.
-	//
-	// Format: byte
-	Content strfmt.Base64 `json:"content,omitempty"`
-
-	// The SHA256 hash of the content located at the URL specified in the 'url' parameter. This property is required when 'url' is specified, and ignored when 'content' is specified.
-	//
-	// Pattern: ^[0-9a-fA-F]{64}$
-	Sha256 string `json:"sha256,omitempty"`
-
-	// The URL where the content refered to in the signature property is located. When specifying 'url', you must also specify the 'sha256' property.
-	// The 'url' and 'content' properties are mutually exclusive.
-	//
-	// Format: uri
-	URL strfmt.URI `json:"url,omitempty"`
-}
-
-// Validate validates this proposed entry data
-func (m *ProposedEntryData) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateSha256(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateURL(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *ProposedEntryData) validateSha256(formats strfmt.Registry) error {
-
-	if swag.IsZero(m.Sha256) { // not required
-		return nil
-	}
-
-	if err := validate.Pattern("data"+"."+"sha256", "body", string(m.Sha256), `^[0-9a-fA-F]{64}$`); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *ProposedEntryData) validateURL(formats strfmt.Registry) error {
-
-	if swag.IsZero(m.URL) { // not required
-		return nil
-	}
-
-	if err := validate.FormatOf("data"+"."+"url", "body", "uri", m.URL.String(), formats); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// MarshalBinary interface implementation
-func (m *ProposedEntryData) MarshalBinary() ([]byte, error) {
-	if m == nil {
-		return nil, nil
-	}
-	return swag.WriteJSON(m)
-}
-
-// UnmarshalBinary interface implementation
-func (m *ProposedEntryData) UnmarshalBinary(b []byte) error {
-	var res ProposedEntryData
-	if err := swag.ReadJSON(b, &res); err != nil {
-		return err
-	}
-	*m = res
-	return nil
-}
-
-// ProposedEntrySignature proposed entry signature
-//
-// swagger:model ProposedEntrySignature
-type ProposedEntrySignature struct {
-
-	// content
-	// Format: byte
-	Content strfmt.Base64 `json:"content,omitempty"`
-
-	// format
-	// Required: true
-	Format SupportedPKIFormats `json:"format"`
-
-	// public key
-	// Required: true
-	PublicKey *ProposedEntrySignaturePublicKey `json:"publicKey"`
-
-	// url
-	// Format: uri
-	URL strfmt.URI `json:"url,omitempty"`
-}
-
-// Validate validates this proposed entry signature
-func (m *ProposedEntrySignature) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateFormat(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validatePublicKey(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateURL(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *ProposedEntrySignature) validateFormat(formats strfmt.Registry) error {
-
-	if err := m.Format.Validate(formats); err != nil {
-		if ve, ok := err.(*errors.Validation); ok {
-			return ve.ValidateName("signature" + "." + "format")
-		}
-		return err
-	}
-
-	return nil
-}
-
-func (m *ProposedEntrySignature) validatePublicKey(formats strfmt.Registry) error {
-
-	if err := validate.Required("signature"+"."+"publicKey", "body", m.PublicKey); err != nil {
-		return err
-	}
-
-	if m.PublicKey != nil {
-		if err := m.PublicKey.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("signature" + "." + "publicKey")
-			}
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *ProposedEntrySignature) validateURL(formats strfmt.Registry) error {
-
-	if swag.IsZero(m.URL) { // not required
-		return nil
-	}
-
-	if err := validate.FormatOf("signature"+"."+"url", "body", "uri", m.URL.String(), formats); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// MarshalBinary interface implementation
-func (m *ProposedEntrySignature) MarshalBinary() ([]byte, error) {
-	if m == nil {
-		return nil, nil
-	}
-	return swag.WriteJSON(m)
-}
-
-// UnmarshalBinary interface implementation
-func (m *ProposedEntrySignature) UnmarshalBinary(b []byte) error {
-	var res ProposedEntrySignature
-	if err := swag.ReadJSON(b, &res); err != nil {
-		return err
-	}
-	*m = res
-	return nil
-}
-
-// ProposedEntrySignaturePublicKey proposed entry signature public key
-//
-// swagger:model ProposedEntrySignaturePublicKey
-type ProposedEntrySignaturePublicKey struct {
-
-	// Base64-encoded content of the public key. This public key needs to be the pair of the private key used to generate the detached signature found in the 'signature' property.
-	// The 'url' and 'content' properties are mutually exclusive.
-	//
-	// Format: byte
-	Content strfmt.Base64 `json:"content,omitempty"`
-
-	// The URL where the public key can be found. This public key needs to be the pair of the private key used to generate the detached signature found in the 'signature' property.
-	// The 'url' and 'content' properties are mutually exclusive.
-	//
-	// Format: uri
-	URL strfmt.URI `json:"url,omitempty"`
-}
-
-// Validate validates this proposed entry signature public key
-func (m *ProposedEntrySignaturePublicKey) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateURL(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *ProposedEntrySignaturePublicKey) validateURL(formats strfmt.Registry) error {
-
-	if swag.IsZero(m.URL) { // not required
-		return nil
-	}
-
-	if err := validate.FormatOf("signature"+"."+"publicKey"+"."+"url", "body", "uri", m.URL.String(), formats); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// MarshalBinary interface implementation
-func (m *ProposedEntrySignaturePublicKey) MarshalBinary() ([]byte, error) {
-	if m == nil {
-		return nil, nil
-	}
-	return swag.WriteJSON(m)
-}
-
-// UnmarshalBinary interface implementation
-func (m *ProposedEntrySignaturePublicKey) UnmarshalBinary(b []byte) error {
-	var res ProposedEntrySignaturePublicKey
-	if err := swag.ReadJSON(b, &res); err != nil {
-		return err
-	}
-	*m = res
 	return nil
 }

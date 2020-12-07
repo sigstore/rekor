@@ -6,9 +6,9 @@ SRCS := $(NONGENSRCS) ${GENSRCS}
 
 all: cli server
 
-$(GENSRCS): openapi.yaml
-	swagger generate client -f openapi.yaml -q -t pkg/generated --additional-initialism=PKI
-	swagger generate server -f openapi.yaml -q -t pkg/generated --additional-initialism=PKI --exclude-main -A rekor_server --exclude-spec --flag-strategy=pflag
+$(GENSRCS): openapi.yaml $(shell find pkg/types/schemas -name "*.json")
+	swagger generate client -f openapi.yaml -q -t pkg/generated
+	swagger generate server -f openapi.yaml -q -t pkg/generated --exclude-main -A rekor_server --exclude-spec --flag-strategy=pflag
 
 lint: $(SRCS)
 	$(GOBIN)/golangci-lint run -v ./...
