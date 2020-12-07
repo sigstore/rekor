@@ -30,7 +30,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// verifyCmd represents the get command
 var verifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Rekor verify command",
@@ -39,10 +38,15 @@ var verifyCmd = &cobra.Command{
 		log := log.Logger
 		rekorServer := viper.GetString("rekor_server")
 		url := rekorServer + "/api/v1/getproof"
+		signature := viper.GetString("signature")
+		publicKey := viper.GetString("public-key")
+		artifactURL := viper.GetString("artifact-url")
+		artifactPATH := viper.GetString("artifact-path")
+		artifactSHA := viper.GetString("artifact-sha")
 
-		// Figure out if the artifact is local or a URL
+		// verify the artifact is local
 		isLocal := true
-		if _, err := os.Stat(artifact); os.IsNotExist(err) {
+		if _, err := os.Stat(artifactPATH); os.IsNotExist(err) {
 			isLocal = false
 		}
 
@@ -51,7 +55,7 @@ var verifyCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		pubKey, err := ioutil.ReadFile(filepath.Clean(pk))
+		pubKey, err := ioutil.ReadFile(filepath.Clean(publicKey))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -65,14 +69,14 @@ var verifyCmd = &cobra.Command{
 		var body []byte
 		if isLocal {
 			var err error
-			body, err = ioutil.ReadFile(filepath.Clean(artifact))
+			body, err = ioutil.ReadFile(filepath.Clean(artifactPATH))
 			if err != nil {
 				log.Fatal(err)
 			}
 			rekorEntry.Data = body
 		} else {
-			rekorEntry.URL = artifact
-			rekorEntry.SHA = sha
+			rekorEntry.URL = artifactURL
+			rekorEntry.SHA = artifactSHA
 		}
 		if err := rekorEntry.Load(context.Background()); err != nil {
 			log.Fatal(err)
@@ -88,23 +92,13 @@ var verifyCmd = &cobra.Command{
 }
 
 var (
-	signature string
-	artifact  string
-	pk        string
-	sha       string
+	signature    string
+	artifactURL  string
+	artifactPATH string
+	publicKey    string
+	artifactSHA  string
 )
 
 func init() {
-	log := log.Logger
-	verifyCmd.Flags().StringVar(&signature, "signature", "", "path to signature file")
-	if err := verifyCmd.MarkFlagFilename("signature"); err != nil {
-		log.Fatal("Error parsing cmd line args:", err)
-	}
-	verifyCmd.Flags().StringVar(&artifact, "artifact", "", "path or URL to artifact file")
-	verifyCmd.Flags().StringVar(&pk, "public-key", "", "path to public key file")
-	if err := verifyCmd.MarkFlagFilename("public-key"); err != nil {
-		log.Fatal("Error parsing cmd line args:", err)
-	}
-	verifyCmd.Flags().StringVar(&sha, "sha", "", "the sha of the contents")
 	rootCmd.AddCommand(verifyCmd)
 }
