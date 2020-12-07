@@ -25,12 +25,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-/*
-func TestMain(m *testing.M) {
-	goleak.VerifyTestMain(m)
-}
-*/
-
 func TestArtifactPFlags(t *testing.T) {
 	type test struct {
 		caseDesc      string
