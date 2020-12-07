@@ -4,11 +4,17 @@ NONGENSRCS := $(shell find cmd -name "*.go") $(shell find pkg -name "*.go"|grep 
 GENSRCS := $(shell find pkg/generated -name "*.go"|grep -v "configure_rekor_server.go")
 SRCS := $(NONGENSRCS) ${GENSRCS}
 
+ifneq ($(GITHUB_WORKSPACE),)
+SWAGGER ?= ./swagger
+else
+SWAGGER ?= swagger
+endif
+
 all: cli server
 
 $(GENSRCS): openapi.yaml $(shell find pkg/types/schemas -name "*.json")
-	swagger generate client -f openapi.yaml -q -t pkg/generated
-	swagger generate server -f openapi.yaml -q -t pkg/generated --exclude-main -A rekor_server --exclude-spec --flag-strategy=pflag
+	$(SWAGGER) generate client -f openapi.yaml -q -t pkg/generated
+	$(SWAGGER) generate server -f openapi.yaml -q -t pkg/generated --exclude-main -A rekor_server --exclude-spec --flag-strategy=pflag
 
 lint: $(SRCS)
 	$(GOBIN)/golangci-lint run -v ./...
