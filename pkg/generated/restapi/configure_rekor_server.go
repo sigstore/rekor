@@ -38,6 +38,9 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	// To continue using redoc as your UI, uncomment the following line
 	// api.UseRedoc()
 
+	// this is needed to adhere to the order of producers specified in openapi.yaml
+	api.SetDefaultProduces("")
+
 	api.JSONConsumer = runtime.JSONConsumer()
 
 	api.JSONProducer = runtime.JSONProducer()
