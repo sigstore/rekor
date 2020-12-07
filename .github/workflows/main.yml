@@ -31,7 +31,7 @@ jobs:
         run: $GITHUB_WORKSPACE/swagger validate openapi.yaml
       # Make it
       - name: Build
-        run: make -C $GITHUB_WORKSPACE all
+        run: PATH=$PATH:$GITHUB_WORKSPACE make -C $GITHUB_WORKSPACE all
       # Lint it
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
