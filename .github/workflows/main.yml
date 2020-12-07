@@ -25,7 +25,7 @@ jobs:
       - name: download go-swagger
         run: |
           git clone https://github.com/go-swagger/go-swagger
-          cd go-swagger && go build ./cmd/swagger && cp swagger $GITHUB_WORKSPACE/swagger
+          cd go-swagger && go build ./cmd/swagger && cp swagger $GITHUB_WORKSPACE/ && chmod +x $GITHUB_WORKSPACE/swagger && ls -al $GITHUB_WORKSPACE/swagger
      #     curl -Lsq https://github.com/go-swagger/go-swagger/releases/download/v0.25.0/swagger_linux_amd64 -o $GITHUB_WORKSPACE/swagger
      #     chmod +x $GITHUB_WORKSPACE/swagger
       - name: Validate OpenAPI with Swagger
