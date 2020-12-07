@@ -35,6 +35,12 @@ var serveCmd = &cobra.Command{
 
 		doc, _ := loads.Embedded(restapi.SwaggerJSON, restapi.FlatSwaggerJSON)
 		server := restapi.NewServer(operations.NewRekorServerAPI(doc))
+		defer func() {
+			if err := server.Shutdown(); err != nil {
+				log.Logger.Error(err)
+			}
+		}()
+
 		server.Host = viper.GetString("rekor_server.address")
 		server.Port = int(viper.GetUint("rekor_server.port"))
 		server.ConfigureAPI()
