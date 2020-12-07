@@ -21,12 +21,11 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"path/filepath"
+	"os"
 	"time"
 
 	"github.com/google/trillian"
 	"github.com/projectrekor/rekor/pkg/log"
-	"github.com/projectrekor/rekor/pkg/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -44,54 +43,41 @@ type getLeafResponse struct {
 // uploadCmd represents the upload command
 var uploadCmd = &cobra.Command{
 	Use:   "upload",
-	Short: "Upload a rekord file",
-	Long: `This command takes the public key, signature and URL
-of the release artifact and uploads it to the rekor server.`,
+	Short: "Upload an artifact to Rekor",
+	PreRun: func(cmd *cobra.Command, args []string) {
+		// these are bound here so that they are not overwritten by other commands
+		if err := viper.BindPFlags(cmd.Flags()); err != nil {
+			log.Logger.Fatal("Error initializing cmd line args: ", err)
+		}
+		if err := validateRekorServerURL(); err != nil {
+			log.Logger.Error(err)
+			_ = cmd.Help()
+			os.Exit(1)
+		}
+		if err := validateArtifactPFlags(); err != nil {
+			log.Logger.Error(err)
+			_ = cmd.Help()
+			os.Exit(1)
+		}
+	},
+	Long: `This command takes the public key, signature and URL of the release artifact and uploads it to the rekor server.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger
 		rekorServerURL := viper.GetString("rekor_server") + "/api/v1/add"
-		signature := viper.GetString("signature")
-		publicKey := viper.GetString("public-key")
-		artifactURL := viper.GetString("artifact-url")
 
-		// Before we download anything or validate the signing
-		// Let's check the formatting is correct, if not we
-		// exit and allow the user to resolve their corrupted
-		// GPG files.
-
-		var rekorEntry types.RekorEntry
-		rekorEntry.URL = artifactURL
-
-		var err error
-		rekorEntry.Signature, err = ioutil.ReadFile(filepath.Clean(signature))
+		rekorEntry, err := buildRekorEntryFromPFlags()
 		if err != nil {
-			log.Fatal("Error reading signature file: ", err)
+			log.Fatal(err)
 		}
 
-		rekorEntry.PublicKey, err = ioutil.ReadFile(filepath.Clean(publicKey))
-		if err != nil {
-			log.Fatal("Error reading public key: ", err)
-		}
-
-		if err := (&(rekorEntry.RekorLeaf)).ValidateLeaf(); err != nil {
-			log.Fatal("Error validating signature/key: ", err)
-		}
-
-		// Download the artifact set within flag artifactURL
-		log.Info("Downloading artifact..")
-		ctx := context.Background()
-		if err := rekorEntry.Load(ctx); err != nil {
-			log.Fatal("Error processing artifact: ", err)
-		}
-
-		marshalledRekorEntry, err := json.Marshal(rekorEntry)
+		marshalledRekorEntry, err := json.Marshal(*rekorEntry)
 		if err != nil {
 			log.Fatal("Error generating rekorfile: ", err)
 		}
 
 		// Upload to the rekor service
 		log.Info("Uploading manifest to Rekor...")
-		ctx, cancel := context.WithTimeout(ctx, 180*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
 		defer cancel()
 
 		request, err := http.NewRequestWithContext(ctx, "POST", rekorServerURL, nil)
@@ -121,9 +107,17 @@ of the release artifact and uploads it to the rekor server.`,
 		}
 
 		log.Info("Status: ", leafresp.Status)
+
+		if leafresp.Status.Code != "OK" {
+			os.Exit(1)
+		}
 	},
 }
 
 func init() {
+	if err := addArtifactPFlags(uploadCmd); err != nil {
+		log.Logger.Fatal("Error parsing cmd line args:", err)
+	}
+
 	rootCmd.AddCommand(uploadCmd)
 }
