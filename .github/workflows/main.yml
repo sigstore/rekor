@@ -21,6 +21,10 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+      # Setup Go
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.14.13' # The Go version to download (if necessary) and use.
       # Download go-swagger
       - name: download go-swagger
       # curl -Lsq https://github.com/go-swagger/go-swagger/releases/download/v0.25.0/swagger_linux_amd64 -o $GITHUB_WORKSPACE/swagger
