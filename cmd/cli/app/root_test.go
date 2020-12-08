@@ -198,9 +198,7 @@ func TestValidateRekorServerURL(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		viper.Reset()
-		viper.Set("rekor_server", tc.rekorServer)
-		if err := validateRekorServerURL(); (err == nil) != tc.expectSuccess {
+		if err := rootCmd.PersistentFlags().Set("rekor_server", tc.rekorServer); (err == nil) != tc.expectSuccess {
 			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
 		}
 	}
