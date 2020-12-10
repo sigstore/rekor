@@ -19,6 +19,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,6 +31,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/google/trillian"
 	"github.com/google/trillian/crypto/keyspb"
+	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/projectrekor/rekor/pkg/types"
 	"github.com/spf13/viper"
@@ -58,9 +60,10 @@ type getLatestResponse struct {
 }
 
 type getProofResponse struct {
-	Status string
-	Proof  *trillian.GetInclusionProofByHashResponse
-	Key    []byte
+	Status   string
+	LeafHash string
+	Proof    *trillian.GetInclusionProofByHashResponse
+	Key      []byte
 }
 
 type getLeafResponse struct {
@@ -175,7 +178,7 @@ func (api *API) getProofHandler(r *http.Request) (interface{}, error) {
 		return nil, err
 	}
 
-	byteLeaf, err := json.Marshal(leaf)
+	byteLeaf, err := json.Marshal(&leaf)
 	if err != nil {
 		return nil, err
 	}
@@ -197,9 +200,16 @@ func (api *API) getProofHandler(r *http.Request) (interface{}, error) {
 	log.RequestIDLogger(r).Info("Return Proof Result: ", string(proofResultsJSON))
 
 	return getProofResponse{
+<<<<<<< HEAD
 		Status: getGrpcCode(resp.status),
 		Proof:  proofResults,
 		Key:    api.pubkey.Der,
+=======
+		Status:   getGprcCode(resp.status),
+		LeafHash: hex.EncodeToString(rfc6962.DefaultHasher.HashLeaf(byteLeaf)),
+		Proof:    proofResults,
+		Key:      api.pubkey.Der,
+>>>>>>> eb3abd60acb2ee2db0bd94db29f79325eb83393b
 	}, nil
 
 }

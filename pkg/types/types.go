@@ -28,6 +28,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"reflect"
 
 	"github.com/projectrekor/rekor/pkg/generated/models"
 	"github.com/projectrekor/rekor/pkg/pki"
@@ -100,9 +102,16 @@ func (r *RekorLeaf) MarshalJSON() ([]byte, error) {
 	cLeaf.SHA = r.SHA
 
 	var err error
+	if reflect.ValueOf(r.sigObject).IsNil() {
+		return nil, errors.New("signature has not been initialized")
+	}
 	cLeaf.Signature, err = r.sigObject.CanonicalValue()
 	if err != nil {
 		return nil, err
+	}
+
+	if reflect.ValueOf(r.keyObject).IsNil() {
+		return nil, errors.New("public key has not been initialized")
 	}
 	cLeaf.PublicKey, err = r.keyObject.CanonicalValue()
 	if err != nil {
@@ -128,7 +137,7 @@ func (l *RekorLeaf) ValidateLeaf() error {
 	// validate fields
 	if l.SHA != "" {
 		if _, err := hex.DecodeString(l.SHA); err != nil || len(l.SHA) != 64 {
-			return fmt.Errorf("Invalid SHA hash provided")
+			return fmt.Errorf("invalid SHA hash provided")
 		}
 	}
 
@@ -150,6 +159,10 @@ func (l *RekorLeaf) ValidateLeaf() error {
 }
 
 func ParseRekorEntry(r io.Reader, leaf RekorLeaf) (*RekorEntry, error) {
+	if err := leaf.ValidateLeaf(); err != nil {
+		return nil, err
+	}
+
 	var e RekorEntry
 	dec := json.NewDecoder(r)
 	if err := dec.Decode(&e); err != nil && err != io.EOF {
@@ -160,11 +173,17 @@ func ParseRekorEntry(r io.Reader, leaf RekorLeaf) (*RekorEntry, error) {
 	e.RekorLeaf = leaf
 
 	if e.Data == nil && e.URL == "" {
-		return nil, errors.New("one of Contents or ContentsRef must be set")
+		return nil, errors.New("one of Data or URL must be set")
 	}
 
-	if e.URL != "" && e.SHA == "" {
-		return nil, errors.New("SHA hash must be specified if URL is set")
+	if e.URL != "" {
+		if _, err := url.ParseRequestURI(e.URL); err != nil {
+			return nil, fmt.Errorf("url parsing failed: %w", err)
+		}
+
+		if e.SHA == "" {
+			return nil, errors.New("SHA hash must be specified if URL is set")
+		}
 	}
 
 	return &e, nil
@@ -184,7 +203,7 @@ func (r *RekorEntry) Load(ctx context.Context) error {
 			return err
 		}
 		if resp.StatusCode < 200 || resp.StatusCode > 299 {
-			return fmt.Errorf("Error received while fetching artifact: %v", resp.Status)
+			return fmt.Errorf("error received while fetching artifact: %v", resp.Status)
 		}
 		defer resp.Body.Close()
 
@@ -195,7 +214,7 @@ func (r *RekorEntry) Load(ctx context.Context) error {
 			return err
 		}
 
-		if "application/x+gzip" == http.DetectContentType(ctBuf) {
+		if http.DetectContentType(ctBuf) == "application/x-gzip" {
 			dataReader, _ = gzip.NewReader(io.MultiReader(bufReader, resp.Body))
 		} else {
 			dataReader = io.MultiReader(bufReader, resp.Body)

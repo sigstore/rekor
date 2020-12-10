@@ -18,7 +18,6 @@ package app
 import (
 	"fmt"
 	"net/url"
-	"os"
 
 	"github.com/projectrekor/rekor/pkg/generated/client"
 	"github.com/projectrekor/rekor/pkg/generated/client/tlog"
@@ -32,13 +31,6 @@ var logInfoCmd = &cobra.Command{
 	Use:   "loginfo",
 	Short: "Rekor loginfo command",
 	Long:  `Prints info about the transparency log`,
-	PreRun: func(cmd *cobra.Command, args []string) {
-		if err := validateRekorServerURL(); err != nil {
-			log.Logger.Error(err)
-			_ = cmd.Help()
-			os.Exit(1)
-		}
-	},
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger
 		rekorServer := viper.GetString("rekor_server")
