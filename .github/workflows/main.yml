@@ -24,15 +24,13 @@ jobs:
       # Setup Go
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.14.13' # The Go version to download (if necessary) and use.
+          go-version: '1.15.6'
       # Download go-swagger
       - name: download go-swagger
-      # curl -Lsq https://github.com/go-swagger/go-swagger/releases/download/v0.25.0/swagger_linux_amd64 -o $GITHUB_WORKSPACE/swagger
-        run: |
-          curl -Lsq https://people.redhat.com/~bcallawa/swagger -o $GITHUB_WORKSPACE/swagger
-          chmod +x $GITHUB_WORKSPACE/swagger
+        run : go get -u github.com/go-swagger/go-swagger/cmd/swagger@master
+      #  run : go get -u github.com/go-swagger/go-swagger/cmd/swagger@v0.25.0
       - name: Validate OpenAPI with Swagger
-        run: $GITHUB_WORKSPACE/swagger validate openapi.yaml
+        run: swagger validate openapi.yaml
       # Make it
       - name: Build
         run: make -C $GITHUB_WORKSPACE all

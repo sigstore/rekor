@@ -29,9 +29,50 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/projectrekor/rekor/pkg/generated/models"
 	"github.com/projectrekor/rekor/pkg/pki"
 	"golang.org/x/sync/errgroup"
 )
+
+type TypeImpl interface {
+	Kind() string
+	UnmarshalEntry(pe interface{}) (*EntryImpl, error)
+}
+
+type EntryImpl interface {
+	APIVersion() string
+	CanonicalLeaf() ([]byte, error)
+	FetchExternalEntities() error
+	HasExternalEntities() bool
+	Unmarshal(e interface{}) error
+}
+
+var typeMap = map[string]TypeImpl{}
+
+func init() {
+	// add new type objects here
+	typeArray := []TypeImpl{
+		RekordType{},
+	}
+
+	for _, t := range typeArray {
+		if _, found := typeMap[t.Kind()]; found {
+			panic(fmt.Errorf("entry in typeMap for %v already exists", t.Kind()))
+		}
+		typeMap[t.Kind()] = t
+	}
+}
+
+func NewEntry(pe models.ProposedEntry) (EntryImpl, error) {
+	if t, found := typeMap[pe.Kind()]; found {
+		et, err := t.UnmarshalEntry(pe)
+		if err != nil {
+			return nil, err
+		}
+		return *et, nil
+	}
+	return nil, fmt.Errorf("could not create entry for kind '%v'", pe.Kind())
+}
 
 // RekorEntry is the API request.
 type RekorEntry struct {

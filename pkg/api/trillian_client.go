@@ -42,6 +42,7 @@ type trillianclient struct {
 
 type Response struct {
 	status                    codes.Code
+	getAddResult              *trillian.QueueLeafResponse
 	getLeafResult             *trillian.GetLeavesByHashResponse
 	getProofResult            *trillian.GetInclusionProofByHashResponse
 	getLeafByIndexResult      *trillian.GetLeavesByIndexResponse
@@ -85,7 +86,8 @@ func (s *trillianclient) addLeaf(byteValue []byte, tLogID int64) (*Response, err
 	}
 
 	return &Response{
-		status: codes.Code(resp.QueuedLeaf.GetStatus().GetCode()),
+		status:       codes.Code(resp.QueuedLeaf.GetStatus().GetCode()),
+		getAddResult: resp,
 	}, nil
 }
 
@@ -93,9 +95,13 @@ func (s *trillianclient) getLeaf(byteValue []byte, tlog_id int64) (*Response, er
 	hasher := rfc6962.DefaultHasher
 	leafHash := hasher.HashLeaf(byteValue)
 
+	return s.getLeafByHash(leafHash, tlog_id)
+}
+
+func (s *trillianclient) getLeafByHash(hashValue []byte, tlog_id int64) (*Response, error) {
 	rqst := &trillian.GetLeavesByHashRequest{
 		LogId:    tlog_id,
-		LeafHash: [][]byte{leafHash},
+		LeafHash: [][]byte{hashValue},
 	}
 
 	resp, err := s.client.GetLeavesByHash(context.Background(), rqst)
@@ -127,6 +133,12 @@ func (s *trillianclient) getLeafByIndex(tLogID int64, leafSizeInt int64) (*Respo
 }
 
 func (s *trillianclient) getProof(byteValue []byte, tLogID int64) (*Response, error) {
+	hasher := rfc6962.DefaultHasher
+	leafHash := hasher.HashLeaf(byteValue)
+	return s.getProofByHash(leafHash, tLogID)
+}
+
+func (s *trillianclient) getProofByHash(hashValue []byte, tLogID int64) (*Response, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
@@ -135,13 +147,10 @@ func (s *trillianclient) getProof(byteValue []byte, tLogID int64) (*Response, er
 		return &Response{}, err
 	}
 
-	hasher := rfc6962.DefaultHasher
-	leafHash := hasher.HashLeaf(byteValue)
-
 	resp, err := s.client.GetInclusionProofByHash(ctx,
 		&trillian.GetInclusionProofByHashRequest{
 			LogId:    tLogID,
-			LeafHash: leafHash,
+			LeafHash: hashValue,
 			TreeSize: int64(root.TreeSize),
 		})
 
@@ -153,7 +162,7 @@ func (s *trillianclient) getProof(byteValue []byte, tLogID int64) (*Response, er
 			for j, hash := range hashes {
 				log.Logger.Infof("Proof[%d],hash[%d] == %x\n", i, j, hash)
 			}
-			if err := v.VerifyInclusionProof(proof.LeafIndex, int64(root.TreeSize), hashes, root.RootHash, leafHash); err != nil {
+			if err := v.VerifyInclusionProof(proof.LeafIndex, int64(root.TreeSize), hashes, root.RootHash, hashValue); err != nil {
 				return &Response{}, err
 			}
 		}

@@ -6,60 +6,121 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
+	"io/ioutil"
 
 	"github.com/go-openapi/errors"
+	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/validate"
 )
 
 // ProposedEntry proposed entry
 //
-// swagger:model ProposedEntry
-type ProposedEntry struct {
-	BaseSchema
+// swagger:discriminator ProposedEntry kind
+type ProposedEntry interface {
+	runtime.Validatable
+	runtime.ContextValidatable
+
+	// kind
+	// Required: true
+	Kind() string
+	SetKind(string)
+
+	// AdditionalProperties in base type shoud be handled just like regular properties
+	// At this moment, the base type property is pushed down to the subtype
 }
 
-// UnmarshalJSON unmarshals this object from a JSON structure
-func (m *ProposedEntry) UnmarshalJSON(raw []byte) error {
-	// AO0
-	var aO0 BaseSchema
-	if err := swag.ReadJSON(raw, &aO0); err != nil {
-		return err
+type proposedEntry struct {
+	kindField string
+}
+
+// Kind gets the kind of this polymorphic type
+func (m *proposedEntry) Kind() string {
+	return "ProposedEntry"
+}
+
+// SetKind sets the kind of this polymorphic type
+func (m *proposedEntry) SetKind(val string) {
+}
+
+// UnmarshalProposedEntrySlice unmarshals polymorphic slices of ProposedEntry
+func UnmarshalProposedEntrySlice(reader io.Reader, consumer runtime.Consumer) ([]ProposedEntry, error) {
+	var elements []json.RawMessage
+	if err := consumer.Consume(reader, &elements); err != nil {
+		return nil, err
 	}
-	m.BaseSchema = aO0
 
-	return nil
+	var result []ProposedEntry
+	for _, element := range elements {
+		obj, err := unmarshalProposedEntry(element, consumer)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, obj)
+	}
+	return result, nil
 }
 
-// MarshalJSON marshals this object to a JSON structure
-func (m ProposedEntry) MarshalJSON() ([]byte, error) {
-	_parts := make([][]byte, 0, 1)
-
-	aO0, err := swag.WriteJSON(m.BaseSchema)
+// UnmarshalProposedEntry unmarshals polymorphic ProposedEntry
+func UnmarshalProposedEntry(reader io.Reader, consumer runtime.Consumer) (ProposedEntry, error) {
+	// we need to read this twice, so first into a buffer
+	data, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
-	_parts = append(_parts, aO0)
-	return swag.ConcatJSON(_parts...), nil
+	return unmarshalProposedEntry(data, consumer)
+}
+
+func unmarshalProposedEntry(data []byte, consumer runtime.Consumer) (ProposedEntry, error) {
+	buf := bytes.NewBuffer(data)
+	buf2 := bytes.NewBuffer(data)
+
+	// the first time this is read is to fetch the value of the kind property.
+	var getType struct {
+		Kind string `json:"kind"`
+	}
+	if err := consumer.Consume(buf, &getType); err != nil {
+		return nil, err
+	}
+
+	if err := validate.RequiredString("kind", "body", getType.Kind); err != nil {
+		return nil, err
+	}
+
+	// The value of kind is used to determine which type to create and unmarshal the data into
+	switch getType.Kind {
+	case "ProposedEntry":
+		var result proposedEntry
+		if err := consumer.Consume(buf2, &result); err != nil {
+			return nil, err
+		}
+		return &result, nil
+	case "rekord":
+		var result Rekord
+		if err := consumer.Consume(buf2, &result); err != nil {
+			return nil, err
+		}
+		return &result, nil
+	case "rekord2":
+		var result Rekord2
+		if err := consumer.Consume(buf2, &result); err != nil {
+			return nil, err
+		}
+		return &result, nil
+	}
+	return nil, errors.New(422, "invalid kind value: %q", getType.Kind)
 }
 
 // Validate validates this proposed entry
-func (m *ProposedEntry) Validate(formats strfmt.Registry) error {
+func (m *proposedEntry) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validate this proposed entry based on the context it is used
-func (m *ProposedEntry) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	// validation for a type composition with BaseSchema
-	if err := m.BaseSchema.ContextValidate(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
+// ContextValidate validates this proposed entry based on context it is used
+func (m *proposedEntry) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }

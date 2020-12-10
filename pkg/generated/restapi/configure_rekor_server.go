@@ -85,6 +85,7 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 	returnHandler := middleware.RequestID(handler)
 	returnHandler = middleware.Logger(returnHandler)
 	returnHandler = middleware.Recoverer(returnHandler)
+	returnHandler = middleware.Heartbeat("/ping")(returnHandler)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		r = r.WithContext(log.WithRequestID(ctx, middleware.GetReqID(ctx)))

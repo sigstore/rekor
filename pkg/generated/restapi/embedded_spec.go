@@ -121,6 +121,9 @@ func init() {
           "400": {
             "$ref": "#/responses/BadContent"
           },
+          "409": {
+            "$ref": "#/responses/Conflict"
+          },
           "default": {
             "$ref": "#/responses/InternalServerError"
           }
@@ -389,7 +392,15 @@ func init() {
     },
     "ProposedEntry": {
       "type": "object",
-      "$ref": "pkg/types/schemas/base_schema/v0.0.1/base_schema.json"
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string"
+        }
+      },
+      "discriminator": "kind"
     },
     "SearchLogQuery": {
       "type": "object",
@@ -417,11 +428,72 @@ func init() {
           }
         }
       }
+    },
+    "rekord": {
+      "description": "Rekord object",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "enum": [
+                "0.0.1"
+              ]
+            },
+            "spec": {
+              "type": "object",
+              "$ref": "pkg/types/rekord/rekord_schema.json"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "rekord2": {
+      "description": "Rekord2 object",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "enum": [
+                "0.0.1"
+              ]
+            },
+            "spec": {
+              "$ref": "pkg/types/rekord2/v0.0.1/rekord2_schema.json"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
     }
   },
   "responses": {
     "BadContent": {
       "description": "The content supplied to the server was invalid",
+      "schema": {
+        "$ref": "#/definitions/Error"
+      }
+    },
+    "Conflict": {
+      "description": "The request conflicts with the current state of the transparency log",
       "schema": {
         "$ref": "#/definitions/Error"
       }
@@ -552,6 +624,12 @@ func init() {
           },
           "400": {
             "description": "The content supplied to the server was invalid",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the transparency log",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -850,9 +928,187 @@ func init() {
       }
     },
     "ProposedEntry": {
-      "$ref": "#/definitions/baseSchema"
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string"
+        }
+      },
+      "discriminator": "kind"
     },
-    "RekordSchemaData": {
+    "Rekord2SchemaData2": {
+      "description": "Information about the content associated with the entry",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "hash2",
+            "url2"
+          ]
+        },
+        {
+          "required": [
+            "content2"
+          ]
+        }
+      ],
+      "properties": {
+        "content2": {
+          "description": "Specifies the content inline within the document",
+          "type": "string",
+          "contentEncoding": "base64"
+        },
+        "hash2": {
+          "description": "Specifies the hash algorithm and value for the content",
+          "type": "object",
+          "required": [
+            "algorithm2",
+            "value2"
+          ],
+          "properties": {
+            "algorithm2": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value2": {
+              "description": "The hash value for the content",
+              "type": "string"
+            }
+          }
+        },
+        "url2": {
+          "description": "Specifies the location of the content; if this is specified, a hash value must also be provided",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "Rekord2SchemaData2Hash2": {
+      "description": "Specifies the hash algorithm and value for the content",
+      "type": "object",
+      "required": [
+        "algorithm2",
+        "value2"
+      ],
+      "properties": {
+        "algorithm2": {
+          "description": "The hashing function used to compute the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value2": {
+          "description": "The hash value for the content",
+          "type": "string"
+        }
+      }
+    },
+    "Rekord2SchemaSignature2": {
+      "description": "Information about the detached signature associated with the entry",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "format2",
+            "publicKey2",
+            "url2"
+          ]
+        },
+        {
+          "required": [
+            "format2",
+            "publicKey2",
+            "content2"
+          ]
+        }
+      ],
+      "properties": {
+        "content2": {
+          "description": "Specifies the content of the signature inline within the document",
+          "type": "string",
+          "format": "byte",
+          "contentEncoding": "base64"
+        },
+        "format2": {
+          "description": "Specifies the format of the signature",
+          "type": "string",
+          "enum": [
+            "pgp"
+          ]
+        },
+        "publicKey2": {
+          "description": "The public key that can verify the signature",
+          "type": "object",
+          "oneOf": [
+            {
+              "required": [
+                "url2"
+              ]
+            },
+            {
+              "required": [
+                "content2"
+              ]
+            }
+          ],
+          "properties": {
+            "content2": {
+              "description": "Specifies the content of the public key inline within the document",
+              "type": "string",
+              "format": "byte",
+              "contentEncoding": "base64"
+            },
+            "url2": {
+              "description": "Specifies the location of the public key",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "url2": {
+          "description": "Specifies the location of the signature",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "Rekord2SchemaSignature2PublicKey2": {
+      "description": "The public key that can verify the signature",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "url2"
+          ]
+        },
+        {
+          "required": [
+            "content2"
+          ]
+        }
+      ],
+      "properties": {
+        "content2": {
+          "description": "Specifies the content of the public key inline within the document",
+          "type": "string",
+          "format": "byte",
+          "contentEncoding": "base64"
+        },
+        "url2": {
+          "description": "Specifies the location of the public key",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "RekordV001SchemaData": {
       "description": "Information about the content associated with the entry",
       "type": "object",
       "oneOf": [
@@ -902,7 +1158,7 @@ func init() {
         }
       }
     },
-    "RekordSchemaDataHash": {
+    "RekordV001SchemaDataHash": {
       "description": "Specifies the hash algorithm and value for the content",
       "type": "object",
       "required": [
@@ -923,7 +1179,7 @@ func init() {
         }
       }
     },
-    "RekordSchemaSignature": {
+    "RekordV001SchemaSignature": {
       "description": "Information about the detached signature associated with the entry",
       "type": "object",
       "oneOf": [
@@ -992,7 +1248,7 @@ func init() {
         }
       }
     },
-    "RekordSchemaSignaturePublicKey": {
+    "RekordV001SchemaSignaturePublicKey": {
       "description": "The public key that can verify the signature",
       "type": "object",
       "oneOf": [
@@ -1045,42 +1301,213 @@ func init() {
         }
       }
     },
-    "baseSchema": {
-      "description": "Schema for base object",
+    "rekord": {
+      "description": "Rekord object",
       "type": "object",
-      "title": "Base Schema",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "enum": [
+                "0.0.1"
+              ]
+            },
+            "spec": {
+              "$ref": "#/definitions/rekordSchema"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "rekord2": {
+      "description": "Rekord2 object",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "enum": [
+                "0.0.1"
+              ]
+            },
+            "spec": {
+              "$ref": "#/definitions/rekord2Schema"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "rekord2Schema": {
+      "description": "Schema for Rekord object",
+      "type": "object",
+      "title": "Rekor2 Schema",
       "required": [
-        "kind",
-        "apiVersion",
-        "spec"
+        "signature2",
+        "data2"
       ],
       "properties": {
-        "apiVersion": {
-          "description": "The version of the object contained in the 'spec' property, expressed in semver",
-          "type": "string",
-          "pattern": "^(?P\u003cmajor\u003e0|[1-9]\\d*)\\.(?P\u003cminor\u003e0|[1-9]\\d*)\\.(?P\u003cpatch\u003e0|[1-9]\\d*)(?:-(?P\u003cprerelease\u003e(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+(?P\u003cbuildmetadata\u003e[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
-        },
-        "kind": {
-          "description": "The type of object contained in the 'spec' property",
-          "type": "string"
-        },
-        "spec": {
-          "description": "The actual object proposed to be added to the transparency log",
+        "data2": {
+          "description": "Information about the content associated with the entry",
           "type": "object",
           "oneOf": [
             {
-              "$ref": "#/definitions/rekordSchema"
+              "required": [
+                "hash2",
+                "url2"
+              ]
+            },
+            {
+              "required": [
+                "content2"
+              ]
             }
-          ]
+          ],
+          "properties": {
+            "content2": {
+              "description": "Specifies the content inline within the document",
+              "type": "string",
+              "contentEncoding": "base64"
+            },
+            "hash2": {
+              "description": "Specifies the hash algorithm and value for the content",
+              "type": "object",
+              "required": [
+                "algorithm2",
+                "value2"
+              ],
+              "properties": {
+                "algorithm2": {
+                  "description": "The hashing function used to compute the hash value",
+                  "type": "string",
+                  "enum": [
+                    "sha256"
+                  ]
+                },
+                "value2": {
+                  "description": "The hash value for the content",
+                  "type": "string"
+                }
+              }
+            },
+            "url2": {
+              "description": "Specifies the location of the content; if this is specified, a hash value must also be provided",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "extraData2": {
+          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
+          "type": "object",
+          "additionalProperties": true
+        },
+        "signature2": {
+          "description": "Information about the detached signature associated with the entry",
+          "type": "object",
+          "oneOf": [
+            {
+              "required": [
+                "format2",
+                "publicKey2",
+                "url2"
+              ]
+            },
+            {
+              "required": [
+                "format2",
+                "publicKey2",
+                "content2"
+              ]
+            }
+          ],
+          "properties": {
+            "content2": {
+              "description": "Specifies the content of the signature inline within the document",
+              "type": "string",
+              "format": "byte",
+              "contentEncoding": "base64"
+            },
+            "format2": {
+              "description": "Specifies the format of the signature",
+              "type": "string",
+              "enum": [
+                "pgp"
+              ]
+            },
+            "publicKey2": {
+              "description": "The public key that can verify the signature",
+              "type": "object",
+              "oneOf": [
+                {
+                  "required": [
+                    "url2"
+                  ]
+                },
+                {
+                  "required": [
+                    "content2"
+                  ]
+                }
+              ],
+              "properties": {
+                "content2": {
+                  "description": "Specifies the content of the public key inline within the document",
+                  "type": "string",
+                  "format": "byte",
+                  "contentEncoding": "base64"
+                },
+                "url2": {
+                  "description": "Specifies the location of the public key",
+                  "type": "string",
+                  "format": "uri"
+                }
+              }
+            },
+            "url2": {
+              "description": "Specifies the location of the signature",
+              "type": "string",
+              "format": "uri"
+            }
+          }
         }
       },
       "$schema": "http://json-schema.org/draft-07/schema",
-      "$id": "http://rekor.dev/types/base_schema/v0.0.1/base_schema.json"
+      "$id": "http://rekor.dev/types/rekord2_schema.json"
     },
     "rekordSchema": {
-      "description": "Schema for Rekord object",
+      "description": "Schema for Rekord objects",
       "type": "object",
       "title": "Rekor Schema",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/rekordV001Schema"
+        }
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.dev/types/rekord/rekord_schema.json"
+    },
+    "rekordV001Schema": {
+      "description": "Schema for Rekord object",
+      "type": "object",
+      "title": "Rekor v0.0.1 Schema",
       "required": [
         "signature",
         "data"
@@ -1212,12 +1639,18 @@ func init() {
         }
       },
       "$schema": "http://json-schema.org/draft-07/schema",
-      "$id": "http://rekor.dev/types/rekord_schema.json"
+      "$id": "http://rekor.dev/types/rekord/rekord_v0_0_1_schema.json"
     }
   },
   "responses": {
     "BadContent": {
       "description": "The content supplied to the server was invalid",
+      "schema": {
+        "$ref": "#/definitions/Error"
+      }
+    },
+    "Conflict": {
+      "description": "The request conflicts with the current state of the transparency log",
       "schema": {
         "$ref": "#/definitions/Error"
       }

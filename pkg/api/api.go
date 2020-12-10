@@ -159,7 +159,7 @@ func (api *API) getHandler(r *http.Request) (interface{}, error) {
 	logResults := resp.getLeafResult.GetLeaves()
 
 	return getResponse{
-		Status: RespStatusCode{Code: getGprcCode(resp.status)},
+		Status: RespStatusCode{Code: getGrpcCode(resp.status)},
 		Leaves: logResults,
 	}, nil
 }
@@ -197,7 +197,7 @@ func (api *API) getProofHandler(r *http.Request) (interface{}, error) {
 	log.RequestIDLogger(r).Info("Return Proof Result: ", string(proofResultsJSON))
 
 	return getProofResponse{
-		Status: getGprcCode(resp.status),
+		Status: getGrpcCode(resp.status),
 		Proof:  proofResults,
 		Key:    api.pubkey.Der,
 	}, nil
@@ -227,7 +227,7 @@ func (api *API) addHandler(r *http.Request) (interface{}, error) {
 
 		if resp, err := server.getLeaf(byteLeaf, api.tLogID); err != nil && len(resp.getLeafResult.Leaves) != 0 {
 			return addResponse{
-				Status: RespStatusCode{Code: getGprcCode(codes.AlreadyExists)},
+				Status: RespStatusCode{Code: getGrpcCode(codes.AlreadyExists)},
 			}, nil
 		}
 	}
@@ -255,7 +255,7 @@ func (api *API) addHandler(r *http.Request) (interface{}, error) {
 	log.RequestIDLogger(r).Infof("Server PUT Response: %s", resp.status)
 
 	return addResponse{
-		Status: RespStatusCode{Code: getGprcCode(resp.status)},
+		Status: RespStatusCode{Code: getGrpcCode(resp.status)},
 	}, nil
 }
 
@@ -279,7 +279,7 @@ func (api *API) getLatestHandler(r *http.Request) (interface{}, error) {
 	}
 
 	return getLatestResponse{
-		Status: RespStatusCode{Code: getGprcCode(resp.status)},
+		Status: RespStatusCode{Code: getGrpcCode(resp.status)},
 		Proof:  resp.getLatestResult,
 		Key:    api.pubkey.Der,
 	}, nil
@@ -314,7 +314,7 @@ func (api *API) getLeafByIndexHandler(r *http.Request) (interface{}, error) {
 	log.RequestIDLogger(r).Info("Return getLeafByIndex :", string(respJSON))
 
 	return getLeafResponse{
-		Status: RespStatusCode{Code: getGprcCode(resp.status)},
+		Status: RespStatusCode{Code: getGrpcCode(resp.status)},
 		Leaf:   resp.getLeafByIndexResult,
 		Key:    api.pubkey.Der,
 	}, nil

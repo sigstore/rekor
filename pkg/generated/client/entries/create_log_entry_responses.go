@@ -36,6 +36,12 @@ func (o *CreateLogEntryReader) ReadResponse(response runtime.ClientResponse, con
 			return nil, err
 		}
 		return nil, result
+	case 409:
+		result := NewCreateLogEntryConflict()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
 	default:
 		result := NewCreateLogEntryDefault(response.Code())
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -113,6 +119,39 @@ func (o *CreateLogEntryBadRequest) GetPayload() *models.Error {
 }
 
 func (o *CreateLogEntryBadRequest) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	o.Payload = new(models.Error)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
+		return err
+	}
+
+	return nil
+}
+
+// NewCreateLogEntryConflict creates a CreateLogEntryConflict with default headers values
+func NewCreateLogEntryConflict() *CreateLogEntryConflict {
+	return &CreateLogEntryConflict{}
+}
+
+/*CreateLogEntryConflict handles this case with default header values.
+
+The request conflicts with the current state of the transparency log
+*/
+type CreateLogEntryConflict struct {
+	Payload *models.Error
+}
+
+func (o *CreateLogEntryConflict) Error() string {
+	return fmt.Sprintf("[POST /api/v1/log/entries][%d] createLogEntryConflict  %+v", 409, o.Payload)
+}
+
+func (o *CreateLogEntryConflict) GetPayload() *models.Error {
+	return o.Payload
+}
+
+func (o *CreateLogEntryConflict) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	o.Payload = new(models.Error)
 

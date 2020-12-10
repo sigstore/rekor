@@ -127,6 +127,50 @@ func (o *CreateLogEntryBadRequest) WriteResponse(rw http.ResponseWriter, produce
 	}
 }
 
+// CreateLogEntryConflictCode is the HTTP code returned for type CreateLogEntryConflict
+const CreateLogEntryConflictCode int = 409
+
+/*CreateLogEntryConflict The request conflicts with the current state of the transparency log
+
+swagger:response createLogEntryConflict
+*/
+type CreateLogEntryConflict struct {
+
+	/*
+	  In: Body
+	*/
+	Payload *models.Error `json:"body,omitempty"`
+}
+
+// NewCreateLogEntryConflict creates CreateLogEntryConflict with default headers values
+func NewCreateLogEntryConflict() *CreateLogEntryConflict {
+
+	return &CreateLogEntryConflict{}
+}
+
+// WithPayload adds the payload to the create log entry conflict response
+func (o *CreateLogEntryConflict) WithPayload(payload *models.Error) *CreateLogEntryConflict {
+	o.Payload = payload
+	return o
+}
+
+// SetPayload sets the payload to the create log entry conflict response
+func (o *CreateLogEntryConflict) SetPayload(payload *models.Error) {
+	o.Payload = payload
+}
+
+// WriteResponse to the client
+func (o *CreateLogEntryConflict) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+
+	rw.WriteHeader(409)
+	if o.Payload != nil {
+		payload := o.Payload
+		if err := producer.Produce(rw, payload); err != nil {
+			panic(err) // let the recovery middleware deal with this
+		}
+	}
+}
+
 /*CreateLogEntryDefault There was an internal error in the server while processing the request
 
 swagger:response createLogEntryDefault

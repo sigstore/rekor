@@ -52,6 +52,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 }
 
 func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
+	//TODO: reimplement this into custom validator
 	if *params.FirstSize > params.LastSize {
 		return tlog.NewGetLogProofBadRequest().WithPayload(errorMsg("title", "type", "firstSize must be greater than or equal to lastSize", http.StatusBadRequest))
 	}
@@ -59,11 +60,11 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 
 	server := serverInstance(api.logClient, api.tLogID)
 
-	cpResp, err := server.getConsistencyProof(api.tLogID, *params.FirstSize, params.LastSize)
+	resp, err := server.getConsistencyProof(api.tLogID, *params.FirstSize, params.LastSize)
 	if err != nil {
 		return tlog.NewGetLogProofDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
 	}
-	result := cpResp.getConsistencyProofResult
+	result := resp.getConsistencyProofResult
 
 	var root types.LogRootV1
 	if err := root.UnmarshalBinary(result.SignedLogRoot.LogRoot); err != nil {
@@ -83,6 +84,5 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 		RootHash: &hashString,
 		Hashes:   proofHashes,
 	}
-
 	return tlog.NewGetLogProofOK().WithPayload(&consistencyProof)
 }

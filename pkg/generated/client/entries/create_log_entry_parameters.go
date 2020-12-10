@@ -63,7 +63,7 @@ for the create log entry operation typically these are written to a http.Request
 type CreateLogEntryParams struct {
 
 	/*ProposedEntry*/
-	ProposedEntry *models.ProposedEntry
+	ProposedEntry models.ProposedEntry
 
 	timeout    time.Duration
 	Context    context.Context
@@ -104,13 +104,13 @@ func (o *CreateLogEntryParams) SetHTTPClient(client *http.Client) {
 }
 
 // WithProposedEntry adds the proposedEntry to the create log entry params
-func (o *CreateLogEntryParams) WithProposedEntry(proposedEntry *models.ProposedEntry) *CreateLogEntryParams {
+func (o *CreateLogEntryParams) WithProposedEntry(proposedEntry models.ProposedEntry) *CreateLogEntryParams {
 	o.SetProposedEntry(proposedEntry)
 	return o
 }
 
 // SetProposedEntry adds the proposedEntry to the create log entry params
-func (o *CreateLogEntryParams) SetProposedEntry(proposedEntry *models.ProposedEntry) {
+func (o *CreateLogEntryParams) SetProposedEntry(proposedEntry models.ProposedEntry) {
 	o.ProposedEntry = proposedEntry
 }
 
@@ -122,10 +122,8 @@ func (o *CreateLogEntryParams) WriteToRequest(r runtime.ClientRequest, reg strfm
 	}
 	var res []error
 
-	if o.ProposedEntry != nil {
-		if err := r.SetBodyParam(o.ProposedEntry); err != nil {
-			return err
-		}
+	if err := r.SetBodyParam(o.ProposedEntry); err != nil {
+		return err
 	}
 
 	if len(res) > 0 {

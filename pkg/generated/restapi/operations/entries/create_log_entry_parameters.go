@@ -36,7 +36,7 @@ type CreateLogEntryParams struct {
 	/*
 	  In: body
 	*/
-	ProposedEntry *models.ProposedEntry
+	ProposedEntry models.ProposedEntry
 }
 
 // BindRequest both binds and validates a request, it assumes that complex things implement a Validatable(strfmt.Registry) error interface
@@ -50,9 +50,9 @@ func (o *CreateLogEntryParams) BindRequest(r *http.Request, route *middleware.Ma
 
 	if runtime.HasBody(r) {
 		defer r.Body.Close()
-		var body models.ProposedEntry
-		if err := route.Consumer.Consume(r.Body, &body); err != nil {
-			res = append(res, errors.NewParseError("proposedEntry", "body", "", err))
+		body, err := models.UnmarshalProposedEntry(r.Body, route.Consumer)
+		if err != nil {
+			res = append(res, err)
 		} else {
 			// validate body object
 			if err := body.Validate(route.Formats); err != nil {
@@ -65,7 +65,7 @@ func (o *CreateLogEntryParams) BindRequest(r *http.Request, route *middleware.Ma
 			}
 
 			if len(res) == 0 {
-				o.ProposedEntry = &body
+				o.ProposedEntry = body
 			}
 		}
 	}

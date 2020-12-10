@@ -87,6 +87,8 @@ paths:
             $ref: '#/definitions/LogEntry'
         400:
           $ref: '#/responses/BadContent'
+        409:
+          $ref: '#/responses/Conflict'
         default:
           $ref: '#/responses/InternalServerError'
     get:
@@ -181,7 +183,45 @@ paths:
 definitions:
   ProposedEntry:
     type: object
-    $ref: "pkg/types/schemas/base_schema/v0.0.1/base_schema.json"
+    discriminator: kind
+    properties:
+      kind:
+        type: string
+    required:
+      - kind
+
+  rekord:
+    type: object
+    description: Rekord object
+    allOf:
+    - $ref: '#/definitions/ProposedEntry'
+    - properties:
+        apiVersion:
+          type: string
+          enum: [ "0.0.1" ]
+        spec:
+          type: object
+          $ref: 'pkg/types/rekord/rekord_schema.json'
+      required:
+        - apiVersion
+        - spec
+      additionalProperties: false
+
+  rekord2:
+    type: object
+    description: Rekord2 object
+    allOf:
+    - $ref: '#/definitions/ProposedEntry'
+    - properties:
+        apiVersion:
+          type: string
+          enum: [ "0.0.1" ]
+        spec:
+          $ref: 'pkg/types/rekord2/v0.0.1/rekord2_schema.json'
+      required:
+        - apiVersion
+        - spec
+      additionalProperties: false
 
   LogEntry:
     type: object
@@ -299,6 +339,10 @@ responses:
     description: The content supplied to the server was invalid
     schema:
       $ref: "#/definitions/Error"
+  Conflict:
+    description: The request conflicts with the current state of the transparency log
+    schema:
+      $ref: "#/definitions/Error"
   NotFound:
     description: The content requested could not be found
     schema:
@@ -306,4 +350,4 @@ responses:
   InternalServerError:
     description: There was an internal error in the server while processing the request
     schema:
-      $ref: "#/definitions/Error"
+      $ref: "#/definitions/Error" 
