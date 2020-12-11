@@ -15,14 +15,16 @@ limitations under the License.
 */
 package api
 
-import "github.com/projectrekor/rekor/pkg/generated/models"
+import (
+	"github.com/go-openapi/swag"
+	"github.com/projectrekor/rekor/pkg/generated/models"
+)
 
 func errorMsg(Type, Title, Detail string, Code int) *models.Error {
-	i64Code := int64(Code)
 	errObj := models.Error{
-		Type:   &Type,
-		Title:  &Title,
-		Status: &i64Code,
+		Type:   swag.String(Type),
+		Title:  swag.String(Title),
+		Status: swag.Int64(int64(Code)),
 		Detail: Detail,
 	}
 	return &errObj

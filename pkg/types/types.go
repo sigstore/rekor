@@ -43,8 +43,8 @@ type TypeImpl interface {
 
 type EntryImpl interface {
 	APIVersion() string
-	CanonicalLeaf() ([]byte, error)
-	FetchExternalEntities() error
+	Canonicalize(ctx context.Context) ([]byte, error)
+	FetchExternalEntities(ctx context.Context) error
 	HasExternalEntities() bool
 	Unmarshal(e interface{}) error
 }

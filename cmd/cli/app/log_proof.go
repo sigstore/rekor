@@ -17,10 +17,8 @@ package app
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 
-	"github.com/projectrekor/rekor/pkg/generated/client"
 	"github.com/projectrekor/rekor/pkg/generated/client/tlog"
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/spf13/cobra"
@@ -52,15 +50,10 @@ var logProofCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger
-		rekorServer := viper.GetString("rekor_server")
-
-		url, err := url.Parse(rekorServer)
+		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		tc := client.DefaultTransportConfig().WithHost(url.Host)
-		rc := client.NewHTTPClientWithConfig(nil, tc)
 
 		firstSize := int64(viper.GetUint64("first-size"))
 		lastSize := int64(viper.GetUint64("last-size"))
@@ -69,7 +62,7 @@ var logProofCmd = &cobra.Command{
 		params.FirstSize = &firstSize
 		params.LastSize = lastSize
 
-		result, err := rc.Tlog.GetLogProof(params)
+		result, err := rekorClient.Tlog.GetLogProof(params)
 		if err != nil {
 			log.Fatal(err)
 		}

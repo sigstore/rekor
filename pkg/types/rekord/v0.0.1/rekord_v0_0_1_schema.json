@@ -22,8 +22,7 @@
                 "content": {
                     "description": "Specifies the content of the signature inline within the document",
                     "type": "string",
-                    "format": "byte",
-                    "contentEncoding": "base64"
+                    "format": "byte"
                 },
                 "publicKey" : {
                     "description": "The public key that can verify the signature",
@@ -37,8 +36,7 @@
                         "content": {
                             "description": "Specifies the content of the public key inline within the document",
                             "type": "string",
-                            "format": "byte",
-                            "contentEncoding": "base64"
+                            "format": "byte"
                         }
                     },
                     "oneOf": [
@@ -88,7 +86,7 @@
                 "content": {
                     "description": "Specifies the content inline within the document",
                     "type": "string",
-                    "contentEncoding": "base64"
+                    "format": "byte"
                 }
             },
             "oneOf": [

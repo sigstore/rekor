@@ -17,7 +17,10 @@ package api
 
 import (
 	"encoding/hex"
+	"fmt"
 	"net/http"
+
+	"github.com/go-openapi/swag"
 
 	"google.golang.org/grpc/codes"
 
@@ -28,6 +31,8 @@ import (
 	"github.com/projectrekor/rekor/pkg/generated/models"
 
 	"github.com/go-openapi/runtime/middleware"
+	"github.com/go-openapi/strfmt"
+	"github.com/google/trillian/merkle/rfc6962"
 	ttypes "github.com/google/trillian/types"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/entries"
 )
@@ -36,7 +41,8 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 	api, _ := NewAPI()
 
 	server := serverInstance(api.logClient, api.tLogID)
-	resp, err := server.getLeafByIndex(api.tLogID, params.LogIndex)
+	indexes := []int64{params.LogIndex}
+	resp, err := server.getLeafByIndex(api.tLogID, indexes)
 	if err != nil {
 		return entries.NewGetLogEntryByIndexDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
 	}
@@ -65,14 +71,7 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 		return entries.NewCreateLogEntryBadRequest()
 	}
 
-	if entry.HasExternalEntities() {
-		if err := entry.FetchExternalEntities(); err != nil {
-			log.RequestIDLogger(params.HTTPRequest).Error(err)
-			return entries.NewCreateLogEntryDefault(http.StatusInternalServerError)
-		}
-	}
-
-	leaf, err := entry.CanonicalLeaf()
+	leaf, err := entry.Canonicalize(params.HTTPRequest.Context())
 	if err != nil {
 		log.RequestIDLogger(params.HTTPRequest).Error(err)
 		return entries.NewCreateLogEntryDefault(http.StatusInternalServerError)
@@ -94,22 +93,24 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
 
 	uuid := hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
-	logIndex := queuedLeaf.GetLeafIndex()
 
 	logEntry := models.LogEntry{
 		uuid: models.LogEntryAnon{
-			LogIndex: &logIndex, //TODO: this comes back 0 from QueueLeafRequest; do we need to re-fetch it before returning?
+			LogIndex: swag.Int64(queuedLeaf.GetLeafIndex()), //TODO: this comes back 0 from QueueLeafRequest; do we need to re-fetch it before returning?
 			Body:     queuedLeaf.GetLeafValue(),
 		},
 	}
-	return entries.NewCreateLogEntryCreated().WithPayload(logEntry)
+
+	location := strfmt.URI(fmt.Sprintf("%v/%v", params.HTTPRequest.URL, uuid))
+	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(location)
 }
 
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
 	api, _ := NewAPI()
 	server := serverInstance(api.logClient, api.tLogID)
 	hashValue, _ := hex.DecodeString(params.EntryUUID)
-	resp, err := server.getLeafByHash(hashValue, api.tLogID)
+	hashes := [][]byte{hashValue}
+	resp, err := server.getLeafByHash(hashes, api.tLogID)
 	if err != nil {
 		log.RequestIDLogger(params.HTTPRequest).Error(err)
 		return entries.NewGetLogEntryByUUIDDefault(http.StatusInternalServerError)
@@ -124,11 +125,10 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 	leaf := leaves[0]
 
 	uuid := hex.EncodeToString(leaf.GetMerkleLeafHash())
-	logIndex := leaf.GetLeafIndex()
 
 	logEntry := models.LogEntry{
 		uuid: models.LogEntryAnon{
-			LogIndex: &logIndex,
+			LogIndex: swag.Int64(leaf.GetLeafIndex()),
 			Body:     leaf.LeafValue,
 		},
 	}
@@ -150,30 +150,97 @@ func GetLogEntryProofHandler(params entries.GetLogEntryProofParams) middleware.R
 		return entries.NewGetLogEntryProofDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
 	}
 
-	hashString := hex.EncodeToString(root.RootHash)
-	treeSize := int64(root.TreeSize)
-
 	if len(resp.getProofResult.Proof) != 1 {
 		return entries.NewGetLogEntryProofDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
 	}
 	proof := resp.getProofResult.Proof[0]
 
-	logIndex := proof.GetLeafIndex()
 	hashes := []string{}
-
 	for _, hash := range proof.Hashes {
 		hashes = append(hashes, hex.EncodeToString(hash))
 	}
 
 	inclusionProof := models.InclusionProof{
-		TreeSize: &treeSize,
-		RootHash: &hashString,
-		LogIndex: &logIndex,
+		TreeSize: swag.Int64(int64(root.TreeSize)),
+		RootHash: swag.String(hex.EncodeToString(root.RootHash)),
+		LogIndex: swag.Int64(proof.GetLeafIndex()),
 		Hashes:   hashes,
 	}
 	return entries.NewGetLogEntryProofOK().WithPayload(&inclusionProof)
 }
 
 func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Responder {
-	return middleware.NotImplemented("operation entries.SearchLogQuery has not yet been implemented")
+	resultPayload := []models.LogEntry{}
+	api, _ := NewAPI()
+	server := serverInstance(api.logClient, api.tLogID)
+
+	//TODO: parallelize this into different goroutines to speed up search
+	searchHashes := [][]byte{}
+	if len(params.Entry.EntryUUIDs) > 0 || len(params.Entry.Entries()) > 0 {
+		for _, uuid := range params.Entry.EntryUUIDs {
+			hash, err := hex.DecodeString(uuid)
+			if err != nil {
+				return entries.NewSearchLogQueryDefault(http.StatusBadRequest)
+			}
+			searchHashes = append(searchHashes, hash)
+		}
+
+		for _, e := range params.Entry.Entries() {
+			entry, err := types.NewEntry(e)
+			if err != nil {
+				log.RequestIDLogger(params.HTTPRequest).Error(err)
+				return entries.NewSearchLogQueryDefault(http.StatusBadRequest)
+			}
+
+			if entry.HasExternalEntities() {
+				if err := entry.FetchExternalEntities(params.HTTPRequest.Context()); err != nil {
+					log.RequestIDLogger(params.HTTPRequest).Error(err)
+					return entries.NewSearchLogQueryDefault(http.StatusInternalServerError)
+				}
+			}
+
+			leaf, err := entry.Canonicalize(params.HTTPRequest.Context())
+			if err != nil {
+				log.RequestIDLogger(params.HTTPRequest).Error(err)
+				return entries.NewSearchLogQueryDefault(http.StatusInternalServerError)
+			}
+			hasher := rfc6962.DefaultHasher
+			leafHash := hasher.HashLeaf(leaf)
+			searchHashes = append(searchHashes, leafHash)
+		}
+
+		resp, err := server.getLeafByHash(searchHashes, api.tLogID)
+		if err != nil {
+			return entries.NewSearchLogQueryDefault(http.StatusInternalServerError)
+		}
+
+		for _, leaf := range resp.getLeafResult.Leaves {
+			logEntry := models.LogEntry{
+				hex.EncodeToString(leaf.MerkleLeafHash): models.LogEntryAnon{
+					LogIndex: &leaf.LeafIndex,
+					Body:     leaf.LeafValue,
+				},
+			}
+			resultPayload = append(resultPayload, logEntry)
+		}
+	}
+
+	if len(params.Entry.LogIndexes) > 0 {
+		resp, err := server.getLeafByIndex(api.tLogID, params.Entry.LogIndexes)
+		if err != nil {
+			return entries.NewSearchLogQueryDefault(http.StatusInternalServerError)
+		}
+
+		for _, leaf := range resp.getLeafResult.Leaves {
+			logEntry := models.LogEntry{
+				hex.EncodeToString(leaf.MerkleLeafHash): models.LogEntryAnon{
+					LogIndex: &leaf.LeafIndex,
+					Body:     leaf.LeafValue,
+				},
+			}
+			resultPayload = append(resultPayload, logEntry)
+		}
+	}
+
+	return entries.NewSearchLogQueryOK().WithPayload(resultPayload)
 }

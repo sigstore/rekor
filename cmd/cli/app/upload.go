@@ -16,29 +16,13 @@ limitations under the License.
 package app
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"io/ioutil"
-	"net/http"
 	"os"
-	"time"
 
-	"github.com/google/trillian"
+	"github.com/projectrekor/rekor/pkg/generated/client/entries"
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-type RespStatusCode struct {
-	Code string `json:"file_received"`
-}
-
-type getLeafResponse struct {
-	Status RespStatusCode
-	Leaf   *trillian.GetLeavesByIndexResponse
-	Key    []byte
-}
 
 // uploadCmd represents the upload command
 var uploadCmd = &cobra.Command{
@@ -58,54 +42,24 @@ var uploadCmd = &cobra.Command{
 	Long: `This command takes the public key, signature and URL of the release artifact and uploads it to the rekor server.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger
-		rekorServerURL := viper.GetString("rekor_server") + "/api/v1/add"
+		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		params := entries.NewCreateLogEntryParams()
 
-		rekorEntry, err := buildRekorEntryFromPFlags()
+		rekordEntry, err := CreateRekordFromPFlags()
+		if err != nil {
+			log.Fatal(err)
+		}
+		params.SetProposedEntry(rekordEntry)
+
+		resp, err := rekorClient.Entries.CreateLogEntry(params)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		marshalledRekorEntry, err := json.Marshal(*rekorEntry)
-		if err != nil {
-			log.Fatal("Error generating rekorfile: ", err)
-		}
-
-		// Upload to the rekor service
-		log.Info("Uploading manifest to Rekor...")
-		ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
-		defer cancel()
-
-		request, err := http.NewRequestWithContext(ctx, "POST", rekorServerURL, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		request.Body = ioutil.NopCloser(bytes.NewReader(marshalledRekorEntry))
-		client := &http.Client{}
-		response, err := client.Do(request)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer response.Body.Close()
-
-		content, err := ioutil.ReadAll(response.Body)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		leafresp := getLeafResponse{}
-
-		if err := json.Unmarshal(content, &leafresp); err != nil {
-			log.Fatal(err)
-		}
-
-		log.Info("Status: ", leafresp.Status)
-
-		if leafresp.Status.Code != "OK" {
-			os.Exit(1)
-		}
+		log.Info("Created entry at: ", resp.Location)
 	},
 }
 

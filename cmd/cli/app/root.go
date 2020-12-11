@@ -16,18 +16,13 @@ limitations under the License.
 package app
 
 import (
-	"context"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/projectrekor/rekor/pkg/types"
+	"github.com/projectrekor/rekor/pkg/generated/client"
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -55,7 +50,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rekor.yaml)")
 
-	rootCmd.PersistentFlags().Var(&UrlFlag{url: "http://localhost:3000"}, "rekor_server", "Server address:port")
+	rootCmd.PersistentFlags().Var(&urlFlag{url: "http://localhost:3000"}, "rekor_server", "Server address:port")
 
 	// these are bound here and not in PreRun so that all child commands can use them
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
@@ -87,140 +82,25 @@ func initConfig() {
 	}
 }
 
-func addArtifactPFlags(cmd *cobra.Command) error {
-	cmd.Flags().String("signature", "", "path to detached signature file")
-	if err := cmd.MarkFlagFilename("signature"); err != nil {
-		return err
+func GetRekorClient(rekorServerURL string) (*client.Rekor, error) {
+	url, err := url.Parse(rekorServerURL)
+	if err != nil {
+		return nil, err
 	}
 
-	cmd.Flags().String("public-key", "", "path to public key file")
-	if err := cmd.MarkFlagFilename("public-key"); err != nil {
-		return err
-	}
-
-	cmd.Flags().String("artifact", "", "path or URL to artifact file")
-
-	cmd.Flags().String("rekord", "", "Rekor rekord file")
-	if err := cmd.MarkFlagFilename("rekord"); err != nil {
-		return err
-	}
-
-	cmd.Flags().String("sha", "", "the sha of the artifact")
-	return nil
+	tc := client.DefaultTransportConfig().WithHost(url.Host)
+	return client.NewHTTPClientWithConfig(nil, tc), nil
 }
 
-func validateArtifactPFlags() error {
-	rekord := viper.GetString("rekord")
-	if rekord != "" {
-		if _, err := os.Stat(filepath.Clean(rekord)); os.IsNotExist(err) {
-			return fmt.Errorf("error processing 'rekord' file: %w", err)
-		}
-	} else {
-		// we will need artifact, public-key, signature, and potentially SHA
-		artifact := viper.GetString("artifact")
-		if artifact == "" {
-			return errors.New("either 'rekord' or 'artifact' must be specified")
-		}
-
-		sha := viper.GetString("sha")
-		if sha != "" {
-			if _, err := hex.DecodeString(sha); (err != nil) || (len(sha) != 64) {
-				if err == nil {
-					err = errors.New("invalid length for SHA256 hash value")
-				}
-				return fmt.Errorf("SHA value specified is invalid: %w", err)
-			}
-		}
-
-		if _, err := os.Stat(filepath.Clean(artifact)); os.IsNotExist(err) {
-			url, err := url.Parse(artifact)
-			if err == nil && url.IsAbs() {
-				if sha == "" {
-					return errors.New("a valid SHA hash must be specified when specifying a URL for 'artifact'")
-				}
-			} else {
-				return errors.New("artifact must be a valid URL or path to a file")
-			}
-		}
-
-		var err error
-		signature := viper.GetString("signature")
-		if signature != "" {
-			if _, err = os.Stat(filepath.Clean(signature)); os.IsNotExist(err) {
-				return fmt.Errorf("error reading signature file: %w", err)
-			}
-		} else {
-			return errors.New("signature flag is required when --artifact is used")
-		}
-
-		publicKey := viper.GetString("public-key")
-		if publicKey != "" {
-			if _, err = os.Stat(filepath.Clean(publicKey)); os.IsNotExist(err) {
-				return fmt.Errorf("error reading public key: %w", err)
-			}
-		} else {
-			return errors.New("public-key flag is required when --artifact is used")
-		}
-	}
-	return nil
-}
-
-func buildRekorEntryFromPFlags() (*types.RekorEntry, error) {
-	// if rekord is specified, ensure it is a valid path and we can open it
-	var rekorEntry types.RekorEntry
-
-	rekord := viper.GetString("rekord")
-	if rekord != "" {
-		rekordBytes, err := ioutil.ReadFile(filepath.Clean(rekord))
-		if err != nil {
-			return nil, fmt.Errorf("error processing 'rekord' file: %w", err)
-		}
-		if err := json.Unmarshal(rekordBytes, &rekorEntry); err != nil {
-			return nil, fmt.Errorf("error parsing rekord file: %w", err)
-		}
-	} else {
-		// we will need artifact, public-key, signature, and potentially SHA
-		artifact := viper.GetString("artifact")
-		url, err := url.Parse(artifact)
-		if err == nil && url.IsAbs() {
-			rekorEntry.URL = artifact
-			rekorEntry.SHA = viper.GetString("sha")
-		} else {
-			artifactBytes, err := ioutil.ReadFile(filepath.Clean(artifact))
-			if err != nil {
-				return nil, fmt.Errorf("error reading artifact file: %w", err)
-			}
-			rekorEntry.Data = artifactBytes
-		}
-
-		signature := viper.GetString("signature")
-		rekorEntry.Signature, err = ioutil.ReadFile(filepath.Clean(signature))
-		if err != nil {
-			return nil, fmt.Errorf("error reading signature file: %w", err)
-		}
-
-		publicKey := viper.GetString("public-key")
-		rekorEntry.PublicKey, err = ioutil.ReadFile(filepath.Clean(publicKey))
-		if err != nil {
-			return nil, fmt.Errorf("error reading public key: %w", err)
-		}
-	}
-
-	if err := rekorEntry.Load(context.Background()); err != nil {
-		return nil, fmt.Errorf("error loading entry: %w", err)
-	}
-	return &rekorEntry, nil
-}
-
-type UrlFlag struct {
+type urlFlag struct {
 	url string
 }
 
-func (u *UrlFlag) String() string {
+func (u *urlFlag) String() string {
 	return u.url
 }
 
-func (u *UrlFlag) Set(s string) error {
+func (u *urlFlag) Set(s string) error {
 	if s == "" {
 		return errors.New("flag must be specified")
 	}
@@ -239,6 +119,6 @@ func (u *UrlFlag) Set(s string) error {
 	return nil
 }
 
-func (u *UrlFlag) Type() string {
+func (u *urlFlag) Type() string {
 	return "url"
 }

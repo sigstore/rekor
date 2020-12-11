@@ -17,7 +17,6 @@ package types
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/projectrekor/rekor/pkg/generated/models"
 	rekord_v001 "github.com/projectrekor/rekor/pkg/types/rekord/v0.0.1"
@@ -31,23 +30,29 @@ func (rt RekordType) Kind() string {
 	return rt.r.Kind()
 }
 
-var versionToEntryTypeMap = map[string]reflect.Type{}
+var versionToGenFnMap = map[string]interface{}{}
 
 func init() {
-	// add new versions here
-	versions := []EntryImpl{
-		rekord_v001.V001Entry{},
+	//TODO: add semver range support
+	type versionFuncTuple struct {
+		APIVersion string
+		GenFn      interface{}
+	}
+	// add new versions here by listing version, generator function tuples
+	versions := []versionFuncTuple{
+		{APIVersion: rekord_v001.APIVERSION, GenFn: rekord_v001.NewEntry},
 	}
 
 	for _, version := range versions {
-		versionToEntryTypeMap[version.APIVersion()] = reflect.TypeOf(version)
+		versionToGenFnMap[version.APIVersion] = version.GenFn
 	}
 }
 
 func (rt RekordType) UnmarshalEntry(pe interface{}) (*EntryImpl, error) {
 	rekord := pe.(*models.Rekord)
-	if et, found := versionToEntryTypeMap[*rekord.APIVersion]; found {
-		entry := reflect.Zero(et).Interface().(EntryImpl)
+	//TODO: add semver range support
+	if genFn, found := versionToGenFnMap[*rekord.APIVersion]; found {
+		entry := genFn.(func() interface{})().(EntryImpl)
 		if err := entry.Unmarshal(rekord); err != nil {
 			return nil, err
 		}

@@ -207,22 +207,6 @@ definitions:
         - spec
       additionalProperties: false
 
-  rekord2:
-    type: object
-    description: Rekord2 object
-    allOf:
-    - $ref: '#/definitions/ProposedEntry'
-    - properties:
-        apiVersion:
-          type: string
-          enum: [ "0.0.1" ]
-        spec:
-          $ref: 'pkg/types/rekord2/v0.0.1/rekord2_schema.json'
-      required:
-        - apiVersion
-        - spec
-      additionalProperties: false
-
   LogEntry:
     type: object
     additionalProperties:

@@ -51,3 +51,5 @@ jobs:
           args: ./...
       - name: Ensure no files were modified as a result of the build
         run: git update-index --refresh && git diff-index --quiet HEAD --
+        # ignore errors here while we are using 'go get' above
+        continue-on-error: true

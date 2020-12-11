@@ -16,6 +16,7 @@ require (
 	github.com/go-swagger/go-swagger v0.25.1-0.20201206132650-7c73d972c8b9 // indirect
 	github.com/golang/protobuf v1.4.3
 	github.com/google/certificate-transparency-go v1.1.0 // indirect
+	github.com/google/martian v2.1.0+incompatible
 	github.com/google/trillian v1.3.10
 	github.com/gorilla/handlers v1.5.1 // indirect
 	github.com/kr/pretty v0.2.1 // indirect
@@ -28,8 +29,8 @@ require (
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.1
-	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/tidwall/sjson v1.1.2
+	github.com/xeipuuv/gojsonschema v1.2.0
 	go.etcd.io/etcd v3.3.25+incompatible // indirect
 	go.uber.org/goleak v1.1.10
 	go.uber.org/zap v1.16.0
