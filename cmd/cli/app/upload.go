@@ -33,7 +33,7 @@ var uploadCmd = &cobra.Command{
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			log.Logger.Fatal("Error initializing cmd line args: ", err)
 		}
-		if err := validateArtifactPFlags(); err != nil {
+		if err := validateArtifactPFlags(false); err != nil {
 			log.Logger.Error(err)
 			_ = cmd.Help()
 			os.Exit(1)
@@ -52,6 +52,7 @@ var uploadCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
+
 		params.SetProposedEntry(rekordEntry)
 
 		resp, err := rekorClient.Entries.CreateLogEntry(params)
@@ -59,7 +60,7 @@ var uploadCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		log.Info("Created entry at: ", resp.Location)
+		log.Infof("Created entry at: %v%v", viper.GetString("rekor_server"), resp.Location)
 	},
 }
 

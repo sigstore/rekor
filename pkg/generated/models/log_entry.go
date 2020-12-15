@@ -89,9 +89,8 @@ type LogEntryAnon struct {
 	Body interface{} `json:"body"`
 
 	// log index
-	// Required: true
-	// Minimum: 1
-	LogIndex *int64 `json:"logIndex"`
+	// Minimum: 0
+	LogIndex *int64 `json:"logIndex,omitempty"`
 }
 
 // Validate validates this log entry anon
@@ -122,12 +121,11 @@ func (m *LogEntryAnon) validateBody(formats strfmt.Registry) error {
 }
 
 func (m *LogEntryAnon) validateLogIndex(formats strfmt.Registry) error {
-
-	if err := validate.Required("logIndex", "body", m.LogIndex); err != nil {
-		return err
+	if swag.IsZero(m.LogIndex) { // not required
+		return nil
 	}
 
-	if err := validate.MinimumInt("logIndex", "body", int64(*m.LogIndex), 1, false); err != nil {
+	if err := validate.MinimumInt("logIndex", "body", int64(*m.LogIndex), 0, false); err != nil {
 		return err
 	}
 

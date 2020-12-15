@@ -257,7 +257,7 @@ func TestArtifactPFlags(t *testing.T) {
 			if err := viper.BindPFlags(blankCmd.Flags()); err != nil {
 				t.Fatalf("unexpected result initializing viper in '%v': %v", tc.caseDesc, err)
 			}
-			if err := validateArtifactPFlags(); (err == nil) != tc.expectValidateSuccess {
+			if err := validateArtifactPFlags(false); (err == nil) != tc.expectValidateSuccess {
 				t.Errorf("unexpected result validating '%v': %v", tc.caseDesc, err)
 				continue
 			}
@@ -267,6 +267,8 @@ func TestArtifactPFlags(t *testing.T) {
 		}
 	}
 }
+
+//TODO: add UUID flag testing
 
 func TestValidateRekorServerURL(t *testing.T) {
 	type test struct {

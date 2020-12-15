@@ -46,6 +46,13 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 	if err != nil {
 		return entries.NewGetLogEntryByIndexDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
 	}
+	switch resp.status {
+	case codes.OK:
+	case codes.NotFound, codes.OutOfRange:
+		return entries.NewGetLogEntryByIndexNotFound()
+	default:
+		return entries.NewGetLogEntryByIndexDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", resp.status.String(), http.StatusInternalServerError))
+	}
 
 	leaves := resp.getLeafByIndexResult.GetLeaves()
 	if len(leaves) > 1 {
@@ -84,10 +91,12 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 		log.RequestIDLogger(params.HTTPRequest).Error(err)
 		return entries.NewCreateLogEntryDefault(http.StatusInternalServerError)
 	}
-	if resp.status == codes.AlreadyExists || resp.status == codes.FailedPrecondition {
+	switch resp.status {
+	case codes.OK:
+	case codes.AlreadyExists, codes.FailedPrecondition:
 		return entries.NewCreateLogEntryConflict()
-	} else if resp.status != codes.OK {
-		return entries.NewCreateLogEntryDefault(http.StatusInternalServerError)
+	default:
+		return entries.NewCreateLogEntryDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", resp.status.String(), http.StatusInternalServerError))
 	}
 
 	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
@@ -96,13 +105,12 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 
 	logEntry := models.LogEntry{
 		uuid: models.LogEntryAnon{
-			LogIndex: swag.Int64(queuedLeaf.GetLeafIndex()), //TODO: this comes back 0 from QueueLeafRequest; do we need to re-fetch it before returning?
-			Body:     queuedLeaf.GetLeafValue(),
+			Body: queuedLeaf.GetLeafValue(),
 		},
 	}
 
 	location := strfmt.URI(fmt.Sprintf("%v/%v", params.HTTPRequest.URL, uuid))
-	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(location)
+	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(location).WithETag(uuid)
 }
 
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
@@ -114,6 +122,13 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 	if err != nil {
 		log.RequestIDLogger(params.HTTPRequest).Error(err)
 		return entries.NewGetLogEntryByUUIDDefault(http.StatusInternalServerError)
+	}
+	switch resp.status {
+	case codes.OK:
+	case codes.NotFound:
+		return entries.NewGetLogEntryByUUIDNotFound()
+	default:
+		return entries.NewGetLogEntryByUUIDDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", resp.status.String(), http.StatusInternalServerError))
 	}
 
 	leaves := resp.getLeafResult.GetLeaves()
@@ -143,6 +158,13 @@ func GetLogEntryProofHandler(params entries.GetLogEntryProofParams) middleware.R
 	if err != nil {
 		log.RequestIDLogger(params.HTTPRequest).Error(err)
 		return entries.NewGetLogEntryProofDefault(http.StatusInternalServerError)
+	}
+	switch resp.status {
+	case codes.OK:
+	case codes.NotFound:
+		return entries.NewGetLogEntryProofNotFound()
+	default:
+		return entries.NewGetLogEntryProofDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", resp.status.String(), http.StatusInternalServerError))
 	}
 
 	var root ttypes.LogRootV1
@@ -213,6 +235,11 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		if err != nil {
 			return entries.NewSearchLogQueryDefault(http.StatusInternalServerError)
 		}
+		switch resp.status {
+		case codes.OK, codes.NotFound:
+		default:
+			return entries.NewSearchLogQueryDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", resp.status.String(), http.StatusInternalServerError))
+		}
 
 		for _, leaf := range resp.getLeafResult.Leaves {
 			logEntry := models.LogEntry{
@@ -226,9 +253,14 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	}
 
 	if len(params.Entry.LogIndexes) > 0 {
-		resp, err := server.getLeafByIndex(api.tLogID, params.Entry.LogIndexes)
+		resp, err := server.getLeafByIndex(api.tLogID, swag.Int64ValueSlice(params.Entry.LogIndexes))
 		if err != nil {
 			return entries.NewSearchLogQueryDefault(http.StatusInternalServerError)
+		}
+		switch resp.status {
+		case codes.OK, codes.NotFound:
+		default:
+			return entries.NewSearchLogQueryDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", resp.status.String(), http.StatusInternalServerError))
 		}
 
 		for _, leaf := range resp.getLeafResult.Leaves {

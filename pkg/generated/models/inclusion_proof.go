@@ -43,7 +43,7 @@ type InclusionProof struct {
 
 	// The index of the entry in the transparency log
 	// Required: true
-	// Minimum: 1
+	// Minimum: 0
 	LogIndex *int64 `json:"logIndex"`
 
 	// The hash value stored at the root of the merkle tree at the time the proof was generated
@@ -106,7 +106,7 @@ func (m *InclusionProof) validateLogIndex(formats strfmt.Registry) error {
 		return err
 	}
 
-	if err := validate.MinimumInt("logIndex", "body", int64(*m.LogIndex), 1, false); err != nil {
+	if err := validate.MinimumInt("logIndex", "body", int64(*m.LogIndex), 0, false); err != nil {
 		return err
 	}
 

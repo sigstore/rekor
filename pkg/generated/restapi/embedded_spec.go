@@ -41,7 +41,7 @@ func init() {
     "application/yaml"
   ],
   "produces": [
-    "application/json",
+    "application/json;q=1",
     "application/xml",
     "application/yaml"
   ],
@@ -82,7 +82,6 @@ func init() {
         "operationId": "getLogEntryByIndex",
         "parameters": [
           {
-            "minimum": 1,
             "type": "integer",
             "description": "specifies the index of the entry in the transparency log to be retrieved",
             "name": "logIndex",
@@ -128,6 +127,10 @@ func init() {
               "$ref": "#/definitions/LogEntry"
             },
             "headers": {
+              "ETag": {
+                "type": "string",
+                "description": "UUID of log entry"
+              },
               "Location": {
                 "type": "string",
                 "format": "uri",
@@ -353,8 +356,7 @@ func init() {
         },
         "logIndex": {
           "description": "The index of the entry in the transparency log",
-          "type": "integer",
-          "minimum": 1
+          "type": "integer"
         },
         "rootHash": {
           "description": "The hash value stored at the root of the merkle tree at the time the proof was generated",
@@ -373,7 +375,6 @@ func init() {
       "additionalProperties": {
         "type": "object",
         "required": [
-          "logIndex",
           "body"
         ],
         "properties": {
@@ -382,8 +383,7 @@ func init() {
             "additionalProperties": true
           },
           "logIndex": {
-            "type": "integer",
-            "minimum": 1
+            "type": "integer"
           }
         }
       }
@@ -438,10 +438,9 @@ func init() {
         },
         "logIndexes": {
           "type": "array",
+          "minItems": 1,
           "items": {
-            "type": "integer",
-            "minimum": 1,
-            "minItems": 1
+            "type": "integer"
           }
         }
       }
@@ -461,9 +460,7 @@ func init() {
           "properties": {
             "apiVersion": {
               "type": "string",
-              "enum": [
-                "0.0.1"
-              ]
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
             },
             "spec": {
               "type": "object",
@@ -509,7 +506,7 @@ func init() {
     "application/yaml"
   ],
   "produces": [
-    "application/json",
+    "application/json;q=1",
     "application/xml",
     "application/yaml"
   ],
@@ -553,7 +550,7 @@ func init() {
         "operationId": "getLogEntryByIndex",
         "parameters": [
           {
-            "minimum": 1,
+            "minimum": 0,
             "type": "integer",
             "description": "specifies the index of the entry in the transparency log to be retrieved",
             "name": "logIndex",
@@ -605,6 +602,10 @@ func init() {
               "$ref": "#/definitions/LogEntry"
             },
             "headers": {
+              "ETag": {
+                "type": "string",
+                "description": "UUID of log entry"
+              },
               "Location": {
                 "type": "string",
                 "format": "uri",
@@ -861,7 +862,7 @@ func init() {
         "logIndex": {
           "description": "The index of the entry in the transparency log",
           "type": "integer",
-          "minimum": 1
+          "minimum": 0
         },
         "rootHash": {
           "description": "The hash value stored at the root of the merkle tree at the time the proof was generated",
@@ -884,7 +885,6 @@ func init() {
     "LogEntryAnon": {
       "type": "object",
       "required": [
-        "logIndex",
         "body"
       ],
       "properties": {
@@ -894,7 +894,7 @@ func init() {
         },
         "logIndex": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 0
         }
       }
     },
@@ -1112,9 +1112,10 @@ func init() {
         },
         "logIndexes": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "integer",
-            "minimum": 1
+            "minimum": 0
           }
         }
       }
@@ -1134,9 +1135,7 @@ func init() {
           "properties": {
             "apiVersion": {
               "type": "string",
-              "enum": [
-                "0.0.1"
-              ]
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
             },
             "spec": {
               "$ref": "#/definitions/rekordSchema"

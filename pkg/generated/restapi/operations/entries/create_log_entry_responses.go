@@ -39,6 +39,10 @@ const CreateLogEntryCreatedCode int = 201
 swagger:response createLogEntryCreated
 */
 type CreateLogEntryCreated struct {
+	/*UUID of log entry
+
+	 */
+	ETag string `json:"ETag"`
 	/*URI location of log entry
 
 	 */
@@ -54,6 +58,17 @@ type CreateLogEntryCreated struct {
 func NewCreateLogEntryCreated() *CreateLogEntryCreated {
 
 	return &CreateLogEntryCreated{}
+}
+
+// WithETag adds the eTag to the create log entry created response
+func (o *CreateLogEntryCreated) WithETag(eTag string) *CreateLogEntryCreated {
+	o.ETag = eTag
+	return o
+}
+
+// SetETag sets the eTag to the create log entry created response
+func (o *CreateLogEntryCreated) SetETag(eTag string) {
+	o.ETag = eTag
 }
 
 // WithLocation adds the location to the create log entry created response
@@ -80,6 +95,13 @@ func (o *CreateLogEntryCreated) SetPayload(payload models.LogEntry) {
 
 // WriteResponse to the client
 func (o *CreateLogEntryCreated) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+
+	// response header ETag
+
+	eTag := o.ETag
+	if eTag != "" {
+		rw.Header().Set("ETag", eTag)
+	}
 
 	// response header Location
 

@@ -48,11 +48,11 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 		RootHash: &hashString,
 		TreeSize: &treeSize,
 	}
+
 	return tlog.NewGetLogInfoOK().WithPayload(&logInfo)
 }
 
 func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
-	//TODO: reimplement this into custom validator
 	if *params.FirstSize > params.LastSize {
 		return tlog.NewGetLogProofBadRequest().WithPayload(errorMsg("title", "type", "firstSize must be greater than or equal to lastSize", http.StatusBadRequest))
 	}

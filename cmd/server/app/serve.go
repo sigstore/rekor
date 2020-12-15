@@ -20,6 +20,8 @@ import (
 	"github.com/go-openapi/loads"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations"
 	"github.com/projectrekor/rekor/pkg/log"
+	"github.com/projectrekor/rekor/pkg/types/rekord"
+	rekord_v001 "github.com/projectrekor/rekor/pkg/types/rekord/v0.0.1"
 
 	"github.com/projectrekor/rekor/pkg/generated/restapi"
 	"github.com/spf13/cobra"
@@ -40,6 +42,12 @@ var serveCmd = &cobra.Command{
 				log.Logger.Error(err)
 			}
 		}()
+
+		//TODO: make this a config option for server to load via viper field
+		//TODO: add command line option to print versions supported in binary
+		// these trigger loading of package and therefore init() methods to run
+		log.Logger.Infof("Loading support for pluggable type '%v'", rekord.KIND)
+		log.Logger.Infof("Loading version '%v' for pluggable type '%v'", rekord_v001.APIVERSION, rekord.KIND)
 
 		server.Host = viper.GetString("rekor_server.address")
 		server.Port = int(viper.GetUint("rekor_server.port"))

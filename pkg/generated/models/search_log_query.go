@@ -46,7 +46,8 @@ type SearchLogQuery struct {
 	EntryUUIDs []string `json:"entryUUIDs"`
 
 	// log indexes
-	LogIndexes []int64 `json:"logIndexes"`
+	// Min Items: 1
+	LogIndexes []*int64 `json:"logIndexes"`
 }
 
 // Entries gets the entries of this base type
@@ -66,7 +67,7 @@ func (m *SearchLogQuery) UnmarshalJSON(raw []byte) error {
 
 		EntryUUIDs []string `json:"entryUUIDs"`
 
-		LogIndexes []int64 `json:"logIndexes"`
+		LogIndexes []*int64 `json:"logIndexes"`
 	}
 	buf := bytes.NewBuffer(raw)
 	dec := json.NewDecoder(buf)
@@ -108,7 +109,7 @@ func (m SearchLogQuery) MarshalJSON() ([]byte, error) {
 	b1, err = json.Marshal(struct {
 		EntryUUIDs []string `json:"entryUUIDs"`
 
-		LogIndexes []int64 `json:"logIndexes"`
+		LogIndexes []*int64 `json:"logIndexes"`
 	}{
 
 		EntryUUIDs: m.EntryUUIDs,
@@ -173,9 +174,18 @@ func (m *SearchLogQuery) validateLogIndexes(formats strfmt.Registry) error {
 		return nil
 	}
 
-	for i := 0; i < len(m.LogIndexes); i++ {
+	iLogIndexesSize := int64(len(m.LogIndexes))
 
-		if err := validate.MinimumInt("logIndexes"+"."+strconv.Itoa(i), "body", int64(m.LogIndexes[i]), 1, false); err != nil {
+	if err := validate.MinItems("logIndexes", "body", iLogIndexesSize, 1); err != nil {
+		return err
+	}
+
+	for i := 0; i < len(m.LogIndexes); i++ {
+		if swag.IsZero(m.LogIndexes[i]) { // not required
+			continue
+		}
+
+		if err := validate.MinimumInt("logIndexes"+"."+strconv.Itoa(i), "body", int64(*m.LogIndexes[i]), 0, false); err != nil {
 			return err
 		}
 

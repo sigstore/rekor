@@ -30,6 +30,7 @@ import (
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/projectrekor/rekor/pkg/log"
+	"github.com/projectrekor/rekor/pkg/util"
 )
 
 //go:generate swagger generate server --target ../../generated --name RekorServer --spec ../../../openapi.yaml --principal interface{} --exclude-main
@@ -53,12 +54,11 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	// To continue using redoc as your UI, uncomment the following line
 	// api.UseRedoc()
 
-	// this is needed to adhere to the order of producers specified in openapi.yaml
-	api.SetDefaultProduces("")
-
 	api.JSONConsumer = runtime.JSONConsumer()
-
 	api.JSONProducer = runtime.JSONProducer()
+
+	api.YamlConsumer = util.YamlConsumer()
+	api.YamlProducer = util.YamlProducer()
 
 	api.EntriesCreateLogEntryHandler = entries.CreateLogEntryHandlerFunc(pkgapi.CreateLogEntryHandler)
 	api.EntriesGetLogEntryByIndexHandler = entries.GetLogEntryByIndexHandlerFunc(pkgapi.GetLogEntryByIndexHandler)
@@ -72,6 +72,15 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.PreServerShutdown = func() {}
 
 	api.ServerShutdown = func() {}
+
+	//not cacheable
+	api.AddMiddlewareFor("GET", "/api/v1/log", middleware.NoCache)
+	api.AddMiddlewareFor("GET", "/api/v1/log/proof", middleware.NoCache)
+	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}/proof", middleware.NoCache)
+
+	//cache forever
+	api.AddMiddlewareFor("GET", "/api/v1/log/entries", cacheForever)
+	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}", cacheForever)
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
 }
@@ -109,5 +118,12 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 		}()
 
 		returnHandler.ServeHTTP(w, r)
+	})
+}
+
+func cacheForever(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "s-maxage=31536000, max-age=31536000, immutable")
+		handler.ServeHTTP(w, r)
 	})
 }

@@ -40,7 +40,7 @@ type Rekord struct {
 
 	// api version
 	// Required: true
-	// Enum: [0.0.1]
+	// Pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
 	APIVersion *string `json:"apiVersion"`
 
 	// spec
@@ -63,7 +63,7 @@ func (m *Rekord) UnmarshalJSON(raw []byte) error {
 
 		// api version
 		// Required: true
-		// Enum: [0.0.1]
+		// Pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
 		APIVersion *string `json:"apiVersion"`
 
 		// spec
@@ -114,7 +114,7 @@ func (m Rekord) MarshalJSON() ([]byte, error) {
 
 		// api version
 		// Required: true
-		// Enum: [0.0.1]
+		// Pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
 		APIVersion *string `json:"apiVersion"`
 
 		// spec
@@ -160,34 +160,13 @@ func (m *Rekord) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-var rekordTypeAPIVersionPropEnum []interface{}
-
-func init() {
-	var res []string
-	if err := json.Unmarshal([]byte(`["0.0.1"]`), &res); err != nil {
-		panic(err)
-	}
-	for _, v := range res {
-		rekordTypeAPIVersionPropEnum = append(rekordTypeAPIVersionPropEnum, v)
-	}
-}
-
-// property enum
-func (m *Rekord) validateAPIVersionEnum(path, location string, value string) error {
-	if err := validate.EnumCase(path, location, value, rekordTypeAPIVersionPropEnum, true); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (m *Rekord) validateAPIVersion(formats strfmt.Registry) error {
 
 	if err := validate.Required("apiVersion", "body", m.APIVersion); err != nil {
 		return err
 	}
 
-	// value enum
-	if err := m.validateAPIVersionEnum("apiVersion", "body", *m.APIVersion); err != nil {
+	if err := validate.Pattern("apiVersion", "body", string(*m.APIVersion), `^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`); err != nil {
 		return err
 	}
 

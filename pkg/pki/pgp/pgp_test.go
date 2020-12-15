@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pki
+package pgp
 
 import (
 	"bytes"
@@ -58,7 +58,7 @@ func TestReadPublicKey(t *testing.T) {
 			t.Errorf("%v: cannot open %v", tc.caseDesc, tc.inputFile)
 		}
 
-		if got, err := NewPGPPublicKey(file); ((got != nil) == tc.errorFound) || ((err != nil) != tc.errorFound) {
+		if got, err := NewPublicKey(file); ((got != nil) == tc.errorFound) || ((err != nil) != tc.errorFound) {
 			t.Errorf("%v: unexpected result testing %v: %v", tc.caseDesc, tc.inputFile, err)
 		}
 	}
@@ -85,7 +85,7 @@ func TestReadSignature(t *testing.T) {
 		if err != nil {
 			t.Errorf("%v: cannot open %v", tc.caseDesc, tc.inputFile)
 		}
-		if got, err := NewPGPSignature(file); ((got != nil) == tc.errorFound) || ((err != nil) != tc.errorFound) {
+		if got, err := NewSignature(file); ((got != nil) == tc.errorFound) || ((err != nil) != tc.errorFound) {
 			t.Errorf("%v: unexpected result testing %v: %v", tc.caseDesc, tc.inputFile, got)
 		}
 	}
@@ -100,14 +100,14 @@ func (br BadReader) Read(p []byte) (n int, err error) {
 
 func TestReadErrorPublicKey(t *testing.T) {
 	br := new(BadReader)
-	if _, err := NewPGPPublicKey(br); err == nil {
+	if _, err := NewPublicKey(br); err == nil {
 		t.Errorf("KnownBadReader: unexpected success testing a broken reader for public key")
 	}
 }
 
 func TestReadErrorSignature(t *testing.T) {
 	br := new(BadReader)
-	if _, err := NewPGPSignature(br); err == nil {
+	if _, err := NewSignature(br); err == nil {
 		t.Errorf("KnownBadReader: unexpected success testing a broken reader for signature")
 	}
 }
@@ -146,7 +146,7 @@ func TestFetchPublicKey(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		if got, err := FetchPGPPublicKey(context.TODO(), testServer.URL+"/"+tc.inputFile); ((got != nil) == tc.errorFound) || ((err != nil) != tc.errorFound) {
+		if got, err := FetchPublicKey(context.TODO(), testServer.URL+"/"+tc.inputFile); ((got != nil) == tc.errorFound) || ((err != nil) != tc.errorFound) {
 			t.Errorf("%v: unexpected result testing %v: %v", tc.caseDesc, tc.inputFile, got)
 		}
 	}
@@ -185,7 +185,7 @@ func TestFetchSignature(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		if got, err := FetchPGPSignature(context.TODO(), testServer.URL+"/"+tc.inputFile); ((got != nil) == tc.errorFound) || ((err != nil) != tc.errorFound) {
+		if got, err := FetchSignature(context.TODO(), testServer.URL+"/"+tc.inputFile); ((got != nil) == tc.errorFound) || ((err != nil) != tc.errorFound) {
 			t.Errorf("%v: unexpected result testing %v: %v", tc.caseDesc, tc.inputFile, got)
 		}
 	}
@@ -200,7 +200,7 @@ func TestCanonicalValueSignature(t *testing.T) {
 		expectSuccess bool
 	}
 
-	var s PGPSignature
+	var s Signature
 	if _, err := s.CanonicalValue(); err == nil {
 		t.Errorf("CanonicalValue did not error out for uninitialized signature")
 	}
@@ -253,12 +253,12 @@ func TestCanonicalValueSignature(t *testing.T) {
 			t.Errorf("%v: cannot open %v", tc.caseDesc, tc.keyFile)
 		}
 
-		key, err := NewPGPPublicKey(keyFile)
+		key, err := NewPublicKey(keyFile)
 		if err != nil {
 			t.Errorf("%v: Error reading public key for TestCanonicalValueSignature: %v", tc.caseDesc, err)
 		}
 
-		sig, err := NewPGPSignature(sigFile)
+		sig, err := NewSignature(sigFile)
 		if err != nil {
 			t.Errorf("%v: Error reading signature for TestCanonicalValueSignature: %v", tc.caseDesc, err)
 		}
@@ -272,7 +272,7 @@ func TestCanonicalValueSignature(t *testing.T) {
 			t.Errorf("%v: Error canonicalizing signature '%v': %v", tc.caseDesc, tc.sigFile, err)
 		}
 
-		canonicalSig, err := NewPGPSignature(bytes.NewReader(canonicalSigBytes))
+		canonicalSig, err := NewSignature(bytes.NewReader(canonicalSigBytes))
 		if err != nil {
 			t.Errorf("%v: Error reading canonicalized signature for TestCanonicalValueSignature: %v", tc.caseDesc, err)
 		}
@@ -293,7 +293,7 @@ func TestCanonicalValuePublicKey(t *testing.T) {
 		match    bool
 	}
 
-	var k PGPPublicKey
+	var k PublicKey
 	if _, err := k.CanonicalValue(); err == nil {
 		t.Errorf("CanonicalValue did not error out for uninitialized key")
 	}
@@ -311,7 +311,7 @@ func TestCanonicalValuePublicKey(t *testing.T) {
 			t.Errorf("%v: cannot open %v", tc.caseDesc, tc.input)
 		}
 
-		inputKey, err := NewPGPPublicKey(inputFile)
+		inputKey, err := NewPublicKey(inputFile)
 		if err != nil {
 			t.Errorf("%v: Error reading input for TestCanonicalValuePublicKey: %v", tc.caseDesc, err)
 		}
@@ -326,7 +326,7 @@ func TestCanonicalValuePublicKey(t *testing.T) {
 			t.Errorf("%v: cannot open %v", tc.caseDesc, tc.output)
 		}
 
-		outputKey, err := NewPGPPublicKey(outputFile)
+		outputKey, err := NewPublicKey(outputFile)
 		if err != nil {
 			t.Errorf("%v: Error reading input for TestCanonicalValuePublicKey: %v", tc.caseDesc, err)
 		}
@@ -369,7 +369,7 @@ func TestVerifySignature(t *testing.T) {
 		if err != nil {
 			t.Errorf("%v: error reading keyfile '%v': %v", tc.caseDesc, tc.keyFile, err)
 		}
-		k, err := NewPGPPublicKey(keyFile)
+		k, err := NewPublicKey(keyFile)
 		if err != nil {
 			t.Errorf("%v: error reading keyfile '%v': %v", tc.caseDesc, tc.keyFile, err)
 		}
@@ -378,7 +378,7 @@ func TestVerifySignature(t *testing.T) {
 		if err != nil {
 			t.Errorf("%v: error reading sigfile '%v': %v", tc.caseDesc, tc.sigFile, err)
 		}
-		s, err := NewPGPSignature(sigFile)
+		s, err := NewSignature(sigFile)
 		if err != nil {
 			t.Errorf("%v: error reading sigfile '%v': %v", tc.caseDesc, tc.sigFile, err)
 		}
@@ -393,15 +393,15 @@ func TestVerifySignature(t *testing.T) {
 		}
 	}
 
-	emptyKey := PGPPublicKey{}
-	emptySig := PGPSignature{}
+	emptyKey := PublicKey{}
+	emptySig := Signature{}
 
 	if err := emptySig.Verify(bytes.NewReader([]byte("irrelevant")), emptyKey); err == nil {
 		t.Errorf("expected error when using empty sig to verify")
 	}
 
 	sigFile, _ := os.Open("testdata/hello_world.txt.sig")
-	validSig, _ := NewPGPSignature(sigFile)
+	validSig, _ := NewSignature(sigFile)
 
 	if err := validSig.Verify(bytes.NewReader([]byte("irrelevant")), &emptyKey); err == nil {
 		t.Errorf("expected error when using empty key to verify")

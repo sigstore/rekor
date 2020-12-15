@@ -17,7 +17,11 @@ limitations under the License.
 package pki
 
 import (
+	"fmt"
 	"io"
+	"strings"
+
+	"github.com/projectrekor/rekor/pkg/pki/pgp"
 )
 
 // PublicKey Generic object representing a public key (regardless of format & algorithm)
@@ -29,4 +33,30 @@ type PublicKey interface {
 type Signature interface {
 	CanonicalValue() ([]byte, error)
 	Verify(r io.Reader, k interface{}) error
+}
+
+type ArtifactFactory struct {
+	format string
+}
+
+func NewArtifactFactory(format string) *ArtifactFactory {
+	return &ArtifactFactory{
+		format: format,
+	}
+}
+
+func (a ArtifactFactory) NewPublicKey(r io.Reader) (PublicKey, error) {
+	switch strings.ToLower(a.format) {
+	case "pgp":
+		return pgp.NewPublicKey(r)
+	}
+	return nil, fmt.Errorf("unknown key format '%v'", a.format)
+}
+
+func (a ArtifactFactory) NewSignature(r io.Reader) (Signature, error) {
+	switch strings.ToLower(a.format) {
+	case "pgp":
+		return pgp.NewSignature(r)
+	}
+	return nil, fmt.Errorf("unknown key format '%v'", a.format)
 }

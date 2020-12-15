@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pki
+package pgp
 
 import (
 	"bufio"
@@ -31,14 +31,14 @@ import (
 )
 
 // PGPSignature Signature that follows the PGP standard; supports both armored & binary detached signatures
-type PGPSignature struct {
+type Signature struct {
 	isArmored bool
 	signature []byte
 }
 
-// NewPGPSignature creates and validates a PGP signature object
-func NewPGPSignature(r io.Reader) (*PGPSignature, error) {
-	var s PGPSignature
+// NewSignature creates and validates a PGP signature object
+func NewSignature(r io.Reader) (*Signature, error) {
+	var s Signature
 	var inputBuffer bytes.Buffer
 
 	if _, err := io.Copy(&inputBuffer, r); err != nil {
@@ -79,8 +79,8 @@ func NewPGPSignature(r io.Reader) (*PGPSignature, error) {
 	return &s, nil
 }
 
-// FetchPGPSignature implements pki.Signature interface
-func FetchPGPSignature(ctx context.Context, url string) (*PGPSignature, error) {
+// FetchSignature implements pki.Signature interface
+func FetchSignature(ctx context.Context, url string) (*Signature, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error initializing fetch for PGP signature: %w", err)
@@ -92,7 +92,7 @@ func FetchPGPSignature(ctx context.Context, url string) (*PGPSignature, error) {
 	}
 	defer resp.Body.Close()
 
-	sig, err := NewPGPSignature(resp.Body)
+	sig, err := NewSignature(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func FetchPGPSignature(ctx context.Context, url string) (*PGPSignature, error) {
 }
 
 // CanonicalValue implements the pki.Signature interface
-func (s PGPSignature) CanonicalValue() ([]byte, error) {
+func (s Signature) CanonicalValue() ([]byte, error) {
 	if len(s.signature) == 0 {
 		return nil, fmt.Errorf("PGP signature has not been initialized")
 	}
@@ -130,12 +130,12 @@ func (s PGPSignature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s PGPSignature) Verify(r io.Reader, k interface{}) error {
+func (s Signature) Verify(r io.Reader, k interface{}) error {
 	if len(s.signature) == 0 {
 		return fmt.Errorf("PGP signature has not been initialized")
 	}
 
-	key, ok := k.(*PGPPublicKey)
+	key, ok := k.(*PublicKey)
 	if !ok {
 		return fmt.Errorf("cannot use Verify with a non-PGP signature")
 	}
@@ -155,14 +155,14 @@ func (s PGPSignature) Verify(r io.Reader, k interface{}) error {
 	return nil
 }
 
-// PGPPublicKey Public Key that follows the PGP standard; supports both armored & binary detached signatures
-type PGPPublicKey struct {
+// PublicKey Public Key that follows the PGP standard; supports both armored & binary detached signatures
+type PublicKey struct {
 	key openpgp.EntityList
 }
 
-// NewPGPPublicKey implements the pki.PublicKey interface
-func NewPGPPublicKey(r io.Reader) (*PGPPublicKey, error) {
-	var k PGPPublicKey
+// NewPublicKey implements the pki.PublicKey interface
+func NewPublicKey(r io.Reader) (*PublicKey, error) {
+	var k PublicKey
 	var inputBuffer bytes.Buffer
 
 	startToken := []byte(`-----BEGIN PGP`)
@@ -220,8 +220,8 @@ func NewPGPPublicKey(r io.Reader) (*PGPPublicKey, error) {
 	return &k, nil
 }
 
-// FetchPGPPublicKey implements pki.PublicKey interface
-func FetchPGPPublicKey(ctx context.Context, url string) (*PGPPublicKey, error) {
+// FetchPublicKey implements pki.PublicKey interface
+func FetchPublicKey(ctx context.Context, url string) (*PublicKey, error) {
 	//TODO: detect if url is hkp and adjust accordingly
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -234,7 +234,7 @@ func FetchPGPPublicKey(ctx context.Context, url string) (*PGPPublicKey, error) {
 	}
 	defer resp.Body.Close()
 
-	key, err := NewPGPPublicKey(resp.Body)
+	key, err := NewPublicKey(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +243,7 @@ func FetchPGPPublicKey(ctx context.Context, url string) (*PGPPublicKey, error) {
 }
 
 // CanonicalValue implements the pki.PublicKey interface
-func (k PGPPublicKey) CanonicalValue() ([]byte, error) {
+func (k PublicKey) CanonicalValue() ([]byte, error) {
 	if k.key == nil {
 		return nil, fmt.Errorf("PGP public key has not been initialized")
 	}

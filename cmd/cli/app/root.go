@@ -22,7 +22,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-openapi/runtime"
+	httptransport "github.com/go-openapi/runtime/client"
+	"github.com/go-openapi/strfmt"
 	"github.com/projectrekor/rekor/pkg/generated/client"
+	"github.com/projectrekor/rekor/pkg/util"
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -88,8 +92,13 @@ func GetRekorClient(rekorServerURL string) (*client.Rekor, error) {
 		return nil, err
 	}
 
-	tc := client.DefaultTransportConfig().WithHost(url.Host)
-	return client.NewHTTPClientWithConfig(nil, tc), nil
+	rt := httptransport.New(url.Host, client.DefaultBasePath, client.DefaultSchemes)
+	rt.Consumers["application/yaml"] = util.YamlConsumer()
+	rt.Consumers["application/xml"] = runtime.XMLConsumer()
+	rt.Producers["application/yaml"] = util.YamlProducer()
+	rt.Producers["application/xml"] = runtime.XMLProducer()
+
+	return client.New(rt, strfmt.Default), nil
 }
 
 type urlFlag struct {

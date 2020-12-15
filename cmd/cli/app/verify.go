@@ -40,7 +40,7 @@ var verifyCmd = &cobra.Command{
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			log.Logger.Fatal("Error initializing cmd line args: ", err)
 		}
-		if err := validateArtifactPFlags(); err != nil {
+		if err := validateArtifactPFlags(true); err != nil {
 			log.Logger.Error(err)
 			_ = cmd.Help()
 			os.Exit(1)

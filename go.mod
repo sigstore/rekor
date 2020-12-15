@@ -3,8 +3,12 @@ module github.com/projectrekor/rekor
 go 1.15
 
 require (
+	github.com/Masterminds/semver v1.5.0
+	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
+	github.com/blang/semver v3.5.1+incompatible
 	github.com/coreos/bbolt v1.3.3 // indirect
 	github.com/coreos/etcd v3.3.18+incompatible // indirect
+	github.com/ghodss/yaml v1.0.0
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-openapi/errors v0.19.9
 	github.com/go-openapi/loads v0.20.0

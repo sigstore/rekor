@@ -81,6 +81,9 @@ func NewCreateLogEntryCreated() *CreateLogEntryCreated {
 Returns the entry created in the transparency log
 */
 type CreateLogEntryCreated struct {
+	/*UUID of log entry
+	 */
+	ETag string
 	/*URI location of log entry
 	 */
 	Location strfmt.URI
@@ -97,6 +100,9 @@ func (o *CreateLogEntryCreated) GetPayload() models.LogEntry {
 }
 
 func (o *CreateLogEntryCreated) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	// response header ETag
+	o.ETag = response.GetHeader("ETag")
 
 	// response header Location
 

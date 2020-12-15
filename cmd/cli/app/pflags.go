@@ -48,7 +48,19 @@ func addArtifactPFlags(cmd *cobra.Command) error {
 	return nil
 }
 
-func validateArtifactPFlags() error {
+func validateArtifactPFlags(uuidValid bool) error {
+	uuidGiven := false
+	if uuidValid {
+		uuid := shaFlag{}
+		uuidStr := viper.GetString("uuid")
+
+		if uuidStr != "" {
+			if err := uuid.Set(uuidStr); err != nil {
+				return err
+			}
+			uuidGiven = true
+		}
+	}
 	// we will need artifact, public-key, signature, and potentially SHA
 	rekord := viper.GetString("rekord")
 
@@ -65,6 +77,9 @@ func validateArtifactPFlags() error {
 	sha := viper.GetString("sha")
 
 	if rekord == "" && artifact.String() == "" {
+		if uuidGiven && uuidValid {
+			return nil
+		}
 		return errors.New("either 'rekord' or 'artifact' must be specified")
 	}
 
@@ -93,6 +108,7 @@ func CreateRekordFromPFlags() (models.ProposedEntry, error) {
 		var rekordBytes []byte
 		rekordURL, err := url.Parse(rekord)
 		if err == nil && rekordURL.IsAbs() {
+			/* #nosec G107 */
 			rekordResp, err := http.Get(rekord)
 			if err != nil {
 				return nil, fmt.Errorf("error fetching 'rekord': %w", err)
@@ -157,6 +173,10 @@ func CreateRekordFromPFlags() (models.ProposedEntry, error) {
 			re.RekordObj.Signature.PublicKey.Content = strfmt.Base64(keyBytes)
 		}
 
+		if err := re.Validate(); err != nil {
+			return nil, err
+		}
+
 		if re.HasExternalEntities() {
 			if err := re.FetchExternalEntities(context.Background()); err != nil {
 				return nil, fmt.Errorf("error retrieving external entities: %v", err)
@@ -165,10 +185,6 @@ func CreateRekordFromPFlags() (models.ProposedEntry, error) {
 
 		returnVal.APIVersion = swag.String(re.APIVersion())
 		returnVal.Spec = re.RekordObj
-	}
-
-	if err := returnVal.Validate(nil); err != nil {
-		return nil, err
 	}
 
 	return &returnVal, nil
