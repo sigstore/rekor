@@ -96,9 +96,6 @@ var getCmd = &cobra.Command{
 }
 
 func init() {
-	if err := addArtifactPFlags(getCmd); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args:", err)
-	}
 	if err := addUUIDPFlags(getCmd, false); err != nil {
 		log.Logger.Fatal("Error parsing cmd line args:", err)
 	}

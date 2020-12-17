@@ -46,6 +46,12 @@ func (o *SearchLogQueryReader) ReadResponse(response runtime.ClientResponse, con
 			return nil, err
 		}
 		return result, nil
+	case 400:
+		result := NewSearchLogQueryBadRequest()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
 	default:
 		result := NewSearchLogQueryDefault(response.Code())
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -83,6 +89,39 @@ func (o *SearchLogQueryOK) readResponse(response runtime.ClientResponse, consume
 
 	// response payload
 	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && err != io.EOF {
+		return err
+	}
+
+	return nil
+}
+
+// NewSearchLogQueryBadRequest creates a SearchLogQueryBadRequest with default headers values
+func NewSearchLogQueryBadRequest() *SearchLogQueryBadRequest {
+	return &SearchLogQueryBadRequest{}
+}
+
+/*SearchLogQueryBadRequest handles this case with default header values.
+
+The content supplied to the server was invalid
+*/
+type SearchLogQueryBadRequest struct {
+	Payload *models.Error
+}
+
+func (o *SearchLogQueryBadRequest) Error() string {
+	return fmt.Sprintf("[POST /api/v1/log/entries/retrieve][%d] searchLogQueryBadRequest  %+v", 400, o.Payload)
+}
+
+func (o *SearchLogQueryBadRequest) GetPayload() *models.Error {
+	return o.Payload
+}
+
+func (o *SearchLogQueryBadRequest) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	o.Payload = new(models.Error)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
 		return err
 	}
 

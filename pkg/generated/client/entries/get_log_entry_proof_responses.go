@@ -107,25 +107,13 @@ func NewGetLogEntryProofNotFound() *GetLogEntryProofNotFound {
 The content requested could not be found
 */
 type GetLogEntryProofNotFound struct {
-	Payload *models.Error
 }
 
 func (o *GetLogEntryProofNotFound) Error() string {
-	return fmt.Sprintf("[GET /api/v1/log/entries/{entryUUID}/proof][%d] getLogEntryProofNotFound  %+v", 404, o.Payload)
-}
-
-func (o *GetLogEntryProofNotFound) GetPayload() *models.Error {
-	return o.Payload
+	return fmt.Sprintf("[GET /api/v1/log/entries/{entryUUID}/proof][%d] getLogEntryProofNotFound ", 404)
 }
 
 func (o *GetLogEntryProofNotFound) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
-
-	o.Payload = new(models.Error)
-
-	// response payload
-	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
-		return err
-	}
 
 	return nil
 }

@@ -23,19 +23,15 @@ import (
 
 	"github.com/go-openapi/swag"
 	"github.com/projectrekor/rekor/pkg/generated/models"
+	"github.com/projectrekor/rekor/pkg/types"
 )
 
 type UnmarshalTester struct {
 	models.Rekord
-	unmarshalError bool
 }
 
-func NewUnmarshalTester() interface{} {
+func (u UnmarshalTester) NewEntry() types.EntryImpl {
 	return &UnmarshalTester{}
-}
-
-func NewUnmarshalFailsTester() interface{} {
-	return &UnmarshalTester{unmarshalError: true}
 }
 
 func (u UnmarshalTester) APIVersion() string {
@@ -54,40 +50,44 @@ func (u *UnmarshalTester) FetchExternalEntities(ctx context.Context) error {
 	return nil
 }
 
-func (u UnmarshalTester) Unmarshal(e interface{}) error {
-	if u.unmarshalError {
-		return errors.New("error")
-	}
+func (u UnmarshalTester) Unmarshal(pe models.ProposedEntry) error {
 	return nil
+}
+
+type UnmarshalFailsTester struct {
+	UnmarshalTester
+}
+
+func (u UnmarshalFailsTester) NewEntry() types.EntryImpl {
+	return &UnmarshalFailsTester{}
+}
+
+func (u UnmarshalFailsTester) Unmarshal(pe models.ProposedEntry) error {
+	return errors.New("error")
 }
 
 func TestRekordType(t *testing.T) {
 	// empty to start
-	if len(SemVerToGenFnMap.versionFuncs) != 0 {
+	if len(SemVerToFacFnMap.versionFactories) != 0 {
 		t.Error("semver range was not blank at start of test")
 	}
 
+	u := UnmarshalTester{}
 	// ensure semver range parser is working
 	invalidSemVerRange := "not a valid semver range"
-	SemVerToGenFnMap.Set(invalidSemVerRange, &invalidSemVerRange)
-	if len(SemVerToGenFnMap.versionFuncs) > 0 {
-		t.Error("invalid semver range was incorrectly added to SemVerToGenFnMap")
+	SemVerToFacFnMap.Set(invalidSemVerRange, u.NewEntry)
+	if len(SemVerToFacFnMap.versionFactories) > 0 {
+		t.Error("invalid semver range was incorrectly added to SemVerToFacFnMap")
 	}
 
 	// valid semver range can be parsed
-	u := UnmarshalTester{unmarshalError: false}
-	SemVerToGenFnMap.Set(">= 1.2.3", NewUnmarshalTester)
-	if len(SemVerToGenFnMap.versionFuncs) != 1 {
-		t.Error("valid semver range was not added to SemVerToGenFnMap")
+	SemVerToFacFnMap.Set(">= 1.2.3", u.NewEntry)
+	if len(SemVerToFacFnMap.versionFactories) != 1 {
+		t.Error("valid semver range was not added to SemVerToFacFnMap")
 	}
 
 	u.Rekord.APIVersion = swag.String("2.0.1")
 	brt := BaseRekordType{}
-
-	// pass a non-Rekord object and ensure unmarshal fails
-	if _, err := brt.UnmarshalEntry(swag.String("not_rekord")); err == nil {
-		t.Error("unexpected success Unmarshalling non Rekord object")
-	}
 
 	// version requested matches implementation in map
 	if _, err := brt.UnmarshalEntry(&u.Rekord); err != nil {
@@ -102,7 +102,8 @@ func TestRekordType(t *testing.T) {
 
 	// error in Unmarshal call is raised appropriately
 	u.Rekord.APIVersion = swag.String("2.2.0")
-	SemVerToGenFnMap.Set(">= 1.2.3", NewUnmarshalFailsTester)
+	u2 := UnmarshalFailsTester{}
+	SemVerToFacFnMap.Set(">= 1.2.3", u2.NewEntry)
 	if _, err := brt.UnmarshalEntry(&u.Rekord); err == nil {
 		t.Error("unexpected success in Unmarshal when error is thrown")
 	}

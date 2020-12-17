@@ -31,6 +31,9 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/projectrekor/rekor/pkg/log"
+	"github.com/projectrekor/rekor/pkg/types"
+
 	"github.com/asaskevich/govalidator"
 
 	"github.com/go-openapi/strfmt"
@@ -49,7 +52,7 @@ const (
 )
 
 func init() {
-	rekord.SemVerToGenFnMap.Set(APIVERSION, NewEntry)
+	rekord.SemVerToFacFnMap.Set(APIVERSION, NewEntry)
 }
 
 type V001Entry struct {
@@ -63,7 +66,7 @@ func (v V001Entry) APIVersion() string {
 	return APIVERSION
 }
 
-func NewEntry() interface{} {
+func NewEntry() types.EntryImpl {
 	return &V001Entry{}
 }
 
@@ -81,8 +84,8 @@ func Base64StringtoByteArray() mapstructure.DecodeHookFunc {
 	}
 }
 
-func (v *V001Entry) Unmarshal(e interface{}) error {
-	rekord, ok := e.(models.Rekord)
+func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
+	rekord, ok := pe.(*models.Rekord)
 	if !ok {
 		return errors.New("cannot unmarshal non Rekord v0.0.1 type")
 	}
@@ -110,14 +113,24 @@ func (v *V001Entry) Unmarshal(e interface{}) error {
 }
 
 func (v V001Entry) HasExternalEntities() bool {
-	if v.fetchedExternalEntities || (v.RekordObj.Data.Content != nil && v.RekordObj.Signature.Content != nil && v.RekordObj.Signature.PublicKey.Content != nil) {
+	if v.fetchedExternalEntities {
 		return false
 	}
-	return true
+
+	if v.RekordObj.Data != nil && v.RekordObj.Data.URL.String() != "" {
+		return true
+	}
+	if v.RekordObj.Signature != nil && v.RekordObj.Signature.URL.String() != "" {
+		return true
+	}
+	if v.RekordObj.Signature != nil && v.RekordObj.Signature.PublicKey != nil && v.RekordObj.Signature.PublicKey.URL.String() != "" {
+		return true
+	}
+	return false
 }
 
 // fileOrURLReadCloser Note: caller is responsible for closing ReadCloser returned from method!
-func fileOrURLReadCloser(url string, content []byte, ctx context.Context, checkGZIP bool) (io.ReadCloser, error) {
+func fileOrURLReadCloser(ctx context.Context, url string, content []byte, checkGZIP bool) (io.ReadCloser, error) {
 	var dataReader io.ReadCloser
 	if url != "" {
 		//TODO: set timeout here, SSL settings?
@@ -172,6 +185,20 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	defer hashR.Close()
 	defer sigR.Close()
 
+	closePipesOnError := func(err error) error {
+		pipeReaders := []*io.PipeReader{hashR, sigR}
+		pipeWriters := []*io.PipeWriter{hashW, sigW}
+		for idx := range pipeReaders {
+			if e := pipeReaders[idx].CloseWithError(err); e != nil {
+				log.Logger.Error(fmt.Errorf("error closing pipe: %w", e))
+			}
+			if e := pipeWriters[idx].CloseWithError(err); e != nil {
+				log.Logger.Error(fmt.Errorf("error closing pipe: %w", e))
+			}
+		}
+		return err
+	}
+
 	oldSHA := ""
 	if v.RekordObj.Data.Hash != nil && v.RekordObj.Data.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.RekordObj.Data.Hash.Value)
@@ -182,15 +209,15 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		defer hashW.Close()
 		defer sigW.Close()
 
-		dataReadCloser, err := fileOrURLReadCloser(v.RekordObj.Data.URL.String(), v.RekordObj.Data.Content, ctx, true)
+		dataReadCloser, err := fileOrURLReadCloser(ctx, v.RekordObj.Data.URL.String(), v.RekordObj.Data.Content, true)
 		if err != nil {
-			return err
+			return closePipesOnError(err)
 		}
 		defer dataReadCloser.Close()
 
 		/* #nosec G110 */
 		if _, err := io.Copy(io.MultiWriter(hashW, sigW), dataReadCloser); err != nil {
-			return err
+			return closePipesOnError(err)
 		}
 		return nil
 	})
@@ -202,12 +229,12 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		hasher := sha256.New()
 
 		if _, err := io.Copy(hasher, hashR); err != nil {
-			return err
+			return closePipesOnError(err)
 		}
 
 		computedSHA := hex.EncodeToString(hasher.Sum(nil))
 		if oldSHA != "" && computedSHA != oldSHA {
-			return fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)
+			return closePipesOnError(fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA))
 		}
 
 		select {
@@ -223,16 +250,16 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	g.Go(func() error {
 		defer close(sigResult)
 
-		sigReadCloser, err := fileOrURLReadCloser(v.RekordObj.Signature.URL.String(),
-			v.RekordObj.Signature.Content, ctx, false)
+		sigReadCloser, err := fileOrURLReadCloser(ctx, v.RekordObj.Signature.URL.String(),
+			v.RekordObj.Signature.Content, false)
 		if err != nil {
-			return err
+			return closePipesOnError(err)
 		}
 		defer sigReadCloser.Close()
 
 		signature, err := artifactFactory.NewSignature(sigReadCloser)
 		if err != nil {
-			return err
+			return closePipesOnError(err)
 		}
 
 		select {
@@ -248,16 +275,16 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	g.Go(func() error {
 		defer close(keyResult)
 
-		keyReadCloser, err := fileOrURLReadCloser(v.RekordObj.Signature.PublicKey.URL.String(),
-			v.RekordObj.Signature.PublicKey.Content, ctx, false)
+		keyReadCloser, err := fileOrURLReadCloser(ctx, v.RekordObj.Signature.PublicKey.URL.String(),
+			v.RekordObj.Signature.PublicKey.Content, false)
 		if err != nil {
-			return err
+			return closePipesOnError(err)
 		}
 		defer keyReadCloser.Close()
 
 		key, err := artifactFactory.NewPublicKey(keyReadCloser)
 		if err != nil {
-			return err
+			return closePipesOnError(err)
 		}
 
 		select {
@@ -272,12 +299,12 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		v.keyObj, v.sigObj = <-keyResult, <-sigResult
 
 		if v.keyObj == nil || v.sigObj == nil {
-			return errors.New("failed to read signature or public key")
+			return closePipesOnError(errors.New("failed to read signature or public key"))
 		}
 
 		var err error
 		if err = v.sigObj.Verify(sigR, v.keyObj); err != nil {
-			return err
+			return closePipesOnError(err)
 		}
 
 		select {
@@ -340,6 +367,9 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	canonicalEntry.Data = &models.RekordV001SchemaData{}
 	canonicalEntry.Data.Hash = v.RekordObj.Data.Hash
 	// data content is not set deliberately
+
+	// ExtraData is copied through unfiltered
+	canonicalEntry.ExtraData = v.RekordObj.ExtraData
 
 	// wrap in valid object with kind and apiVersion set
 	rekordObj := models.Rekord{}

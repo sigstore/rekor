@@ -49,8 +49,8 @@ func (e InvalidEntry) ContextValidate(context context.Context, formats strfmt.Re
 type UnmarshalErrorValidEntry struct{}
 
 func (e UnmarshalErrorValidEntry) Kind() string {
-	if t, found := TypeMap.Get("rekord"); found {
-		return t.Kind()
+	if _, found := TypeMap.Get("rekord"); found {
+		return "rekord"
 	}
 	return ""
 }

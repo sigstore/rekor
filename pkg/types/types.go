@@ -26,7 +26,7 @@ import (
 
 type TypeImpl interface {
 	Kind() string
-	UnmarshalEntry(pe interface{}) (*EntryImpl, error)
+	UnmarshalEntry(pe models.ProposedEntry) (EntryImpl, error)
 }
 
 type EntryImpl interface {
@@ -34,37 +34,43 @@ type EntryImpl interface {
 	Canonicalize(ctx context.Context) ([]byte, error)
 	FetchExternalEntities(ctx context.Context) error
 	HasExternalEntities() bool
-	Unmarshal(e interface{}) error
+	Unmarshal(e models.ProposedEntry) error
 }
 
+type TypeFactory func() TypeImpl
+
 type typeMap struct {
-	typeImpls map[string]TypeImpl
+	typeImpls map[string]TypeFactory
 
 	sync.RWMutex
 }
 
-func (tm *typeMap) Get(name string) (TypeImpl, bool) {
+func (tm *typeMap) Get(kind string) (TypeFactory, bool) {
 	tm.RLock()
 	defer tm.RUnlock()
-	t, ok := tm.typeImpls[name]
+	t, ok := tm.typeImpls[kind]
 	return t, ok
 }
 
-func (tm *typeMap) Set(name string, t TypeImpl) {
+func (tm *typeMap) Set(kind string, t TypeFactory) {
 	tm.Lock()
 	defer tm.Unlock()
-	tm.typeImpls[name] = t
+	tm.typeImpls[kind] = t
 }
 
-var TypeMap = &typeMap{typeImpls: make(map[string]TypeImpl)}
+var TypeMap = &typeMap{typeImpls: make(map[string]TypeFactory)}
 
 func NewEntry(pe models.ProposedEntry) (EntryImpl, error) {
-	if t, found := TypeMap.Get(pe.Kind()); found {
+	if typeFactory, found := TypeMap.Get(pe.Kind()); found {
+		t := typeFactory()
+		if t == nil {
+			return nil, fmt.Errorf("error generating object for kind '%v'", pe.Kind())
+		}
 		et, err := t.UnmarshalEntry(pe)
 		if err != nil {
 			return nil, err
 		}
-		return *et, nil
+		return et, nil
 	}
 	return nil, fmt.Errorf("could not create entry for kind '%v'", pe.Kind())
 }

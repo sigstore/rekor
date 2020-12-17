@@ -36,6 +36,8 @@ func TestArtifactPFlags(t *testing.T) {
 		signature             string
 		publicKey             string
 		sha                   string
+		uuid                  string
+		uuidRequired          bool
 		expectParseSuccess    bool
 		expectValidateSuccess bool
 	}
@@ -222,12 +224,48 @@ func TestArtifactPFlags(t *testing.T) {
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
+		{
+			caseDesc:              "valid uuid",
+			uuid:                  "3030303030303030303030303030303030303030303030303030303030303030",
+			uuidRequired:          true,
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "invalid uuid",
+			uuid:                  "not_a_uuid",
+			uuidRequired:          true,
+			expectParseSuccess:    false,
+			expectValidateSuccess: false,
+		},
+		{
+			caseDesc:              "unwanted uuid",
+			uuid:                  "3030303030303030303030303030303030303030303030303030303030303030",
+			uuidRequired:          false,
+			expectParseSuccess:    true,
+			expectValidateSuccess: false,
+		},
+		{
+			caseDesc:              "no flags when either uuid, rekord, or artifact++ are needed",
+			uuidRequired:          false,
+			expectParseSuccess:    true,
+			expectValidateSuccess: false,
+		},
+		{
+			caseDesc:              "missing uuid flag when it is needed",
+			uuidRequired:          true,
+			expectParseSuccess:    true,
+			expectValidateSuccess: false,
+		},
 	}
 
 	for _, tc := range tests {
 		var blankCmd = &cobra.Command{}
 		if err := addArtifactPFlags(blankCmd); err != nil {
 			t.Fatalf("unexpected error adding flags in '%v': %v", tc.caseDesc, err)
+		}
+		if err := addUUIDPFlags(blankCmd, tc.uuidRequired); err != nil {
+			t.Fatalf("unexpected error adding uuid flags in '%v': %v", tc.caseDesc, err)
 		}
 
 		args := []string{}
@@ -247,6 +285,9 @@ func TestArtifactPFlags(t *testing.T) {
 		if tc.sha != "" {
 			args = append(args, "--sha", tc.sha)
 		}
+		if tc.uuid != "" {
+			args = append(args, "--uuid", tc.uuid)
+		}
 
 		if err := blankCmd.ParseFlags(args); (err == nil) != tc.expectParseSuccess {
 			t.Errorf("unexpected result parsing '%v': %v", tc.caseDesc, err)
@@ -257,18 +298,18 @@ func TestArtifactPFlags(t *testing.T) {
 			if err := viper.BindPFlags(blankCmd.Flags()); err != nil {
 				t.Fatalf("unexpected result initializing viper in '%v': %v", tc.caseDesc, err)
 			}
-			if err := validateArtifactPFlags(false); (err == nil) != tc.expectValidateSuccess {
+			if err := validateArtifactPFlags(tc.uuidRequired); (err == nil) != tc.expectValidateSuccess {
 				t.Errorf("unexpected result validating '%v': %v", tc.caseDesc, err)
 				continue
 			}
-			if _, err := CreateRekordFromPFlags(); err != nil {
-				t.Errorf("unexpected result in '%v' building Rekord: %v", tc.caseDesc, err)
+			if !tc.uuidRequired {
+				if _, err := CreateRekordFromPFlags(); err != nil {
+					t.Errorf("unexpected result in '%v' building Rekord: %v", tc.caseDesc, err)
+				}
 			}
 		}
 	}
 }
-
-//TODO: add UUID flag testing
 
 func TestValidateRekorServerURL(t *testing.T) {
 	type test struct {

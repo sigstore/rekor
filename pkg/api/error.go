@@ -16,16 +16,36 @@ limitations under the License.
 package api
 
 import (
-	"github.com/go-openapi/swag"
+	"net/http"
+	"reflect"
+
+	"github.com/go-openapi/runtime/middleware"
 	"github.com/projectrekor/rekor/pkg/generated/models"
+	"github.com/projectrekor/rekor/pkg/log"
 )
 
-func errorMsg(Type, Title, Detail string, Code int) *models.Error {
+const (
+	trillianCommunicationError     = "Unexpected error communicating with transparency log"
+	trillianUnexpectedResult       = "Unexpected result from transparency log"
+	failedToGenerateCanonicalEntry = "Error generating canonicalized entry"
+	entryAlreadyExists             = "An equivalent entry already exists in the transparency log"
+	firstSizeLessThanLastSize      = "firstSize(%v) must be less than lastSize(%v)"
+)
+
+func errorMsg(message string, code int) *models.Error {
 	errObj := models.Error{
-		Type:   swag.String(Type),
-		Title:  swag.String(Title),
-		Status: swag.Int64(int64(Code)),
-		Detail: Detail,
+		Status:  int64(code),
+		Message: message,
 	}
 	return &errObj
+}
+
+func logAndReturnError(returnObj middleware.Responder, code int, err error, message string, r *http.Request) middleware.Responder {
+	log.RequestIDLogger(r).Errorf("returning %T(%v): message '%v', err '%v'", returnObj, code, message, err)
+	errorMsg := errorMsg(message, code)
+	if m, ok := reflect.TypeOf(returnObj).MethodByName("WithPayload"); ok {
+		args := []reflect.Value{reflect.ValueOf(returnObj), reflect.ValueOf(errorMsg)}
+		return m.Func.Call(args)[0].Interface().(middleware.Responder)
+	}
+	return returnObj
 }

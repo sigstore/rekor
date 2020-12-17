@@ -180,6 +180,8 @@ paths:
             type: array
             items:
               $ref: '#/definitions/LogEntry'
+        400:
+          $ref: '#/responses/BadContent'
         default:
           $ref: '#/responses/InternalServerError'
 
@@ -304,21 +306,13 @@ definitions:
       - treeSize
       - hashes
 
-  Error: # follows RFC7807
+  Error:
     type: object
     properties:
-      type:
-        type: string
-      title:
-        type: string
       status:
         type: integer
-      detail:
+      message:
         type: string
-    required:
-      - type
-      - title
-      - status
 
 responses:
   BadContent:
@@ -331,9 +325,7 @@ responses:
       $ref: "#/definitions/Error"
   NotFound:
     description: The content requested could not be found
-    schema:
-      $ref: "#/definitions/Error"
   InternalServerError:
     description: There was an internal error in the server while processing the request
     schema:
-      $ref: "#/definitions/Error" 
+      $ref: "#/definitions/Error"

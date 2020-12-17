@@ -85,11 +85,6 @@ const GetLogEntryByUUIDNotFoundCode int = 404
 swagger:response getLogEntryByUuidNotFound
 */
 type GetLogEntryByUUIDNotFound struct {
-
-	/*
-	  In: Body
-	*/
-	Payload *models.Error `json:"body,omitempty"`
 }
 
 // NewGetLogEntryByUUIDNotFound creates GetLogEntryByUUIDNotFound with default headers values
@@ -98,27 +93,12 @@ func NewGetLogEntryByUUIDNotFound() *GetLogEntryByUUIDNotFound {
 	return &GetLogEntryByUUIDNotFound{}
 }
 
-// WithPayload adds the payload to the get log entry by Uuid not found response
-func (o *GetLogEntryByUUIDNotFound) WithPayload(payload *models.Error) *GetLogEntryByUUIDNotFound {
-	o.Payload = payload
-	return o
-}
-
-// SetPayload sets the payload to the get log entry by Uuid not found response
-func (o *GetLogEntryByUUIDNotFound) SetPayload(payload *models.Error) {
-	o.Payload = payload
-}
-
 // WriteResponse to the client
 func (o *GetLogEntryByUUIDNotFound) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
 
+	rw.Header().Del(runtime.HeaderContentType) //Remove Content-Type on empty responses
+
 	rw.WriteHeader(404)
-	if o.Payload != nil {
-		payload := o.Payload
-		if err := producer.Produce(rw, payload); err != nil {
-			panic(err) // let the recovery middleware deal with this
-		}
-	}
 }
 
 /*GetLogEntryByUUIDDefault There was an internal error in the server while processing the request

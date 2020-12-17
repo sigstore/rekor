@@ -40,16 +40,22 @@ func (rt BaseRekordType) Kind() string {
 }
 
 func init() {
-	types.TypeMap.Set(KIND, BaseRekordType{})
+	types.TypeMap.Set(KIND, New)
 }
 
-type versionFuncMap struct {
-	versionFuncs map[string]interface{}
+func New() types.TypeImpl {
+	return &BaseRekordType{}
+}
+
+type VersionFactory func() types.EntryImpl
+
+type versionFactoryMap struct {
+	versionFactories map[string]VersionFactory
 
 	sync.RWMutex
 }
 
-func (vfm *versionFuncMap) Get(version string) (interface{}, bool) {
+func (vfm *versionFactoryMap) Get(version string) (VersionFactory, bool) {
 	vfm.RLock()
 	defer vfm.RUnlock()
 
@@ -60,7 +66,7 @@ func (vfm *versionFuncMap) Get(version string) (interface{}, bool) {
 	}
 
 	//will return first function that matches
-	for k, v := range vfm.versionFuncs {
+	for k, v := range vfm.versionFactories {
 		semverRange, err := semver.ParseRange(k)
 		if err != nil {
 			log.Logger.Error(err)
@@ -74,7 +80,7 @@ func (vfm *versionFuncMap) Get(version string) (interface{}, bool) {
 	return nil, false
 }
 
-func (vfm *versionFuncMap) Set(constraint string, f interface{}) {
+func (vfm *versionFactoryMap) Set(constraint string, vf VersionFactory) {
 	vfm.Lock()
 	defer vfm.Unlock()
 
@@ -83,23 +89,26 @@ func (vfm *versionFuncMap) Set(constraint string, f interface{}) {
 		return
 	}
 
-	vfm.versionFuncs[constraint] = f
+	vfm.versionFactories[constraint] = vf
 }
 
-var SemVerToGenFnMap = &versionFuncMap{versionFuncs: make(map[string]interface{})}
+var SemVerToFacFnMap = &versionFactoryMap{versionFactories: make(map[string]VersionFactory)}
 
-func (rt BaseRekordType) UnmarshalEntry(pe interface{}) (*types.EntryImpl, error) {
+func (rt BaseRekordType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
 	rekord, ok := pe.(*models.Rekord)
 	if !ok {
 		return nil, errors.New("cannot unmarshal non-Rekord types")
 	}
 
-	if genFn, found := SemVerToGenFnMap.Get(swag.StringValue(rekord.APIVersion)); found {
-		entry := genFn.(func() interface{})().(types.EntryImpl)
-		if err := entry.Unmarshal(*rekord); err != nil {
+	if genFn, found := SemVerToFacFnMap.Get(swag.StringValue(rekord.APIVersion)); found {
+		entry := genFn()
+		if entry == nil {
+			return nil, fmt.Errorf("failure generating Rekord object for version '%v'", rekord.APIVersion)
+		}
+		if err := entry.Unmarshal(rekord); err != nil {
 			return nil, err
 		}
-		return &entry, nil
+		return entry, nil
 	}
 	return nil, fmt.Errorf("RekordType implementation for version '%v' not found", swag.StringValue(rekord.APIVersion))
 }

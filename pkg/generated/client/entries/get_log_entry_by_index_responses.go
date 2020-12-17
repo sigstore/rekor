@@ -105,25 +105,13 @@ func NewGetLogEntryByIndexNotFound() *GetLogEntryByIndexNotFound {
 The content requested could not be found
 */
 type GetLogEntryByIndexNotFound struct {
-	Payload *models.Error
 }
 
 func (o *GetLogEntryByIndexNotFound) Error() string {
-	return fmt.Sprintf("[GET /api/v1/log/entries][%d] getLogEntryByIndexNotFound  %+v", 404, o.Payload)
-}
-
-func (o *GetLogEntryByIndexNotFound) GetPayload() *models.Error {
-	return o.Payload
+	return fmt.Sprintf("[GET /api/v1/log/entries][%d] getLogEntryByIndexNotFound ", 404)
 }
 
 func (o *GetLogEntryByIndexNotFound) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
-
-	o.Payload = new(models.Error)
-
-	// response payload
-	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
-		return err
-	}
 
 	return nil
 }

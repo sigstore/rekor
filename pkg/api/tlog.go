@@ -16,29 +16,42 @@ limitations under the License.
 package api
 
 import (
+	"crypto"
+	"crypto/x509"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 
 	"github.com/projectrekor/rekor/pkg/generated/models"
 
 	"github.com/go-openapi/runtime/middleware"
-	"github.com/google/trillian/types"
+	tclient "github.com/google/trillian/client"
+	tcrypto "github.com/google/trillian/crypto"
+	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/tlog"
 )
 
 func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
-	api, _ := NewAPI()
+	api, _ := NewAPI(params.HTTPRequest.Context())
 
-	server := serverInstance(api.logClient, api.tLogID)
-
-	resp, err := server.getLatest(api.tLogID, 0)
+	resp, err := api.client.getLatest(0)
 	if err != nil {
-		return tlog.NewGetLogInfoDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
+		code := http.StatusInternalServerError
+		return logAndReturnError(tlog.NewGetLogInfoDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
 	}
+	result := resp.getLatestResult
 
-	var root types.LogRootV1
-	if err := root.UnmarshalBinary(resp.getLatestResult.SignedLogRoot.LogRoot); err != nil {
-		return tlog.NewGetLogInfoDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
+	// validate result is signed with the key we're aware of
+	pub, err := x509.ParsePKIXPublicKey(api.pubkey.Der)
+	if err != nil {
+		code := http.StatusInternalServerError
+		return logAndReturnError(tlog.NewGetLogInfoDefault(code), code, err, http.StatusText(code), params.HTTPRequest)
+	}
+	verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
+	root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, result.SignedLogRoot)
+	if err != nil {
+		code := http.StatusInternalServerError
+		return logAndReturnError(tlog.NewGetLogInfoDefault(code), code, err, trillianUnexpectedResult, params.HTTPRequest)
 	}
 
 	hashString := hex.EncodeToString(root.RootHash)
@@ -48,27 +61,33 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 		RootHash: &hashString,
 		TreeSize: &treeSize,
 	}
-
 	return tlog.NewGetLogInfoOK().WithPayload(&logInfo)
 }
 
 func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	if *params.FirstSize > params.LastSize {
-		return tlog.NewGetLogProofBadRequest().WithPayload(errorMsg("title", "type", "firstSize must be greater than or equal to lastSize", http.StatusBadRequest))
+		return logAndReturnError(tlog.NewGetLogProofBadRequest(), http.StatusBadRequest, nil, fmt.Sprintf(firstSizeLessThanLastSize, *params.FirstSize, params.LastSize), params.HTTPRequest)
 	}
-	api, _ := NewAPI()
+	api, _ := NewAPI(params.HTTPRequest.Context())
 
-	server := serverInstance(api.logClient, api.tLogID)
-
-	resp, err := server.getConsistencyProof(api.tLogID, *params.FirstSize, params.LastSize)
+	resp, err := api.client.getConsistencyProof(*params.FirstSize, params.LastSize)
 	if err != nil {
-		return tlog.NewGetLogProofDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
+		code := http.StatusInternalServerError
+		return logAndReturnError(tlog.NewGetLogProofDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
 	}
 	result := resp.getConsistencyProofResult
 
-	var root types.LogRootV1
-	if err := root.UnmarshalBinary(result.SignedLogRoot.LogRoot); err != nil {
-		return tlog.NewGetLogProofDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
+	// validate result is signed with the key we're aware of
+	pub, err := x509.ParsePKIXPublicKey(api.pubkey.Der)
+	if err != nil {
+		code := http.StatusInternalServerError
+		return logAndReturnError(tlog.NewGetLogProofDefault(code), code, err, http.StatusText(code), params.HTTPRequest)
+	}
+	verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
+	root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, result.SignedLogRoot)
+	if err != nil {
+		code := http.StatusInternalServerError
+		return logAndReturnError(tlog.NewGetLogProofDefault(code), code, err, trillianUnexpectedResult, params.HTTPRequest)
 	}
 
 	hashString := hex.EncodeToString(root.RootHash)

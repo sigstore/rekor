@@ -45,9 +45,16 @@ var serveCmd = &cobra.Command{
 
 		//TODO: make this a config option for server to load via viper field
 		//TODO: add command line option to print versions supported in binary
+
 		// these trigger loading of package and therefore init() methods to run
-		log.Logger.Infof("Loading support for pluggable type '%v'", rekord.KIND)
-		log.Logger.Infof("Loading version '%v' for pluggable type '%v'", rekord_v001.APIVERSION, rekord.KIND)
+		pluggableTypeMap := map[string]string{
+			rekord.KIND: rekord_v001.APIVERSION,
+		}
+
+		for k, v := range pluggableTypeMap {
+			log.Logger.Infof("Loading support for pluggable type '%v'", k)
+			log.Logger.Infof("Loading version '%v' for pluggable type '%v'", v, k)
+		}
 
 		server.Host = viper.GetString("rekor_server.address")
 		server.Port = int(viper.GetUint("rekor_server.port"))

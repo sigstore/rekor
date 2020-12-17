@@ -3,7 +3,6 @@ module github.com/projectrekor/rekor
 go 1.15
 
 require (
-	github.com/Masterminds/semver v1.5.0
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/coreos/bbolt v1.3.3 // indirect

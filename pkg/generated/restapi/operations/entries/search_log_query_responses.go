@@ -77,6 +77,50 @@ func (o *SearchLogQueryOK) WriteResponse(rw http.ResponseWriter, producer runtim
 	}
 }
 
+// SearchLogQueryBadRequestCode is the HTTP code returned for type SearchLogQueryBadRequest
+const SearchLogQueryBadRequestCode int = 400
+
+/*SearchLogQueryBadRequest The content supplied to the server was invalid
+
+swagger:response searchLogQueryBadRequest
+*/
+type SearchLogQueryBadRequest struct {
+
+	/*
+	  In: Body
+	*/
+	Payload *models.Error `json:"body,omitempty"`
+}
+
+// NewSearchLogQueryBadRequest creates SearchLogQueryBadRequest with default headers values
+func NewSearchLogQueryBadRequest() *SearchLogQueryBadRequest {
+
+	return &SearchLogQueryBadRequest{}
+}
+
+// WithPayload adds the payload to the search log query bad request response
+func (o *SearchLogQueryBadRequest) WithPayload(payload *models.Error) *SearchLogQueryBadRequest {
+	o.Payload = payload
+	return o
+}
+
+// SetPayload sets the payload to the search log query bad request response
+func (o *SearchLogQueryBadRequest) SetPayload(payload *models.Error) {
+	o.Payload = payload
+}
+
+// WriteResponse to the client
+func (o *SearchLogQueryBadRequest) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+
+	rw.WriteHeader(400)
+	if o.Payload != nil {
+		payload := o.Payload
+		if err := producer.Produce(rw, payload); err != nil {
+			panic(err) // let the recovery middleware deal with this
+		}
+	}
+}
+
 /*SearchLogQueryDefault There was an internal error in the server while processing the request
 
 swagger:response searchLogQueryDefault

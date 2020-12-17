@@ -30,7 +30,7 @@ import (
 	"golang.org/x/crypto/openpgp"
 )
 
-// PGPSignature Signature that follows the PGP standard; supports both armored & binary detached signatures
+// Signature Signature that follows the PGP standard; supports both armored & binary detached signatures
 type Signature struct {
 	isArmored bool
 	signature []byte

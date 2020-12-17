@@ -85,11 +85,6 @@ const GetLogEntryByIndexNotFoundCode int = 404
 swagger:response getLogEntryByIndexNotFound
 */
 type GetLogEntryByIndexNotFound struct {
-
-	/*
-	  In: Body
-	*/
-	Payload *models.Error `json:"body,omitempty"`
 }
 
 // NewGetLogEntryByIndexNotFound creates GetLogEntryByIndexNotFound with default headers values
@@ -98,27 +93,12 @@ func NewGetLogEntryByIndexNotFound() *GetLogEntryByIndexNotFound {
 	return &GetLogEntryByIndexNotFound{}
 }
 
-// WithPayload adds the payload to the get log entry by index not found response
-func (o *GetLogEntryByIndexNotFound) WithPayload(payload *models.Error) *GetLogEntryByIndexNotFound {
-	o.Payload = payload
-	return o
-}
-
-// SetPayload sets the payload to the get log entry by index not found response
-func (o *GetLogEntryByIndexNotFound) SetPayload(payload *models.Error) {
-	o.Payload = payload
-}
-
 // WriteResponse to the client
 func (o *GetLogEntryByIndexNotFound) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
 
+	rw.Header().Del(runtime.HeaderContentType) //Remove Content-Type on empty responses
+
 	rw.WriteHeader(404)
-	if o.Payload != nil {
-		payload := o.Payload
-		if err := producer.Produce(rw, payload); err != nil {
-			panic(err) // let the recovery middleware deal with this
-		}
-	}
 }
 
 /*GetLogEntryByIndexDefault There was an internal error in the server while processing the request

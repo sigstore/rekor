@@ -41,16 +41,14 @@ func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
 }
 
 type API struct {
-	tLogID    int64
-	logClient trillian.TrillianLogClient
-	pubkey    *keyspb.PublicKey
+	client *TrillianClient
+	pubkey *keyspb.PublicKey
 }
 
-func NewAPI() (*API, error) {
+func NewAPI(ctx context.Context) (*API, error) {
 	logRPCServer := fmt.Sprintf("%s:%d",
 		viper.GetString("trillian_log_server.address"),
 		viper.GetUint("trillian_log_server.port"))
-	ctx := context.Background()
 	tConn, err := dial(ctx, logRPCServer)
 	if err != nil {
 		return nil, err
@@ -75,8 +73,7 @@ func NewAPI() (*API, error) {
 	}
 
 	return &API{
-		tLogID:    tLogID,
-		logClient: logClient,
-		pubkey:    t.PublicKey,
+		client: TrillianClientInstance(logClient, tLogID),
+		pubkey: t.PublicKey,
 	}, nil
 }

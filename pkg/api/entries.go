@@ -16,6 +16,8 @@ limitations under the License.
 package api
 
 import (
+	"crypto"
+	"crypto/x509"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -26,39 +28,40 @@ import (
 
 	"github.com/projectrekor/rekor/pkg/types"
 
-	"github.com/projectrekor/rekor/pkg/log"
-
 	"github.com/projectrekor/rekor/pkg/generated/models"
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
+	tclient "github.com/google/trillian/client"
+	tcrypto "github.com/google/trillian/crypto"
 	"github.com/google/trillian/merkle/rfc6962"
-	ttypes "github.com/google/trillian/types"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/entries"
 )
 
 func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middleware.Responder {
-	api, _ := NewAPI()
+	api, _ := NewAPI(params.HTTPRequest.Context())
 
-	server := serverInstance(api.logClient, api.tLogID)
 	indexes := []int64{params.LogIndex}
-	resp, err := server.getLeafByIndex(api.tLogID, indexes)
+	resp, err := api.client.getLeafByIndex(indexes)
 	if err != nil {
-		return entries.NewGetLogEntryByIndexDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
+		code := http.StatusInternalServerError
+		return logAndReturnError(entries.NewGetLogEntryByIndexDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
 	}
 	switch resp.status {
 	case codes.OK:
 	case codes.NotFound, codes.OutOfRange:
-		return entries.NewGetLogEntryByIndexNotFound()
+		return logAndReturnError(entries.NewGetLogEntryByIndexNotFound(), http.StatusNotFound, nil, "", params.HTTPRequest)
 	default:
-		return entries.NewGetLogEntryByIndexDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", resp.status.String(), http.StatusInternalServerError))
+		code := http.StatusInternalServerError
+		return logAndReturnError(entries.NewGetLogEntryByIndexDefault(code), code, nil, trillianCommunicationError, params.HTTPRequest)
 	}
 
 	leaves := resp.getLeafByIndexResult.GetLeaves()
 	if len(leaves) > 1 {
-		return entries.NewGetLogEntryByIndexDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
+		code := http.StatusInternalServerError
+		return logAndReturnError(entries.NewGetLogEntryByIndexDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
 	} else if len(leaves) == 0 {
-		return entries.NewGetLogEntryByIndexNotFound()
+		return logAndReturnError(entries.NewGetLogEntryByIndexNotFound(), http.StatusNotFound, nil, "", params.HTTPRequest)
 	}
 	leaf := leaves[0]
 
@@ -74,29 +77,28 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Responder {
 	entry, err := types.NewEntry(params.ProposedEntry)
 	if err != nil {
-		log.RequestIDLogger(params.HTTPRequest).Error(err)
-		return entries.NewCreateLogEntryBadRequest()
+		return logAndReturnError(entries.NewCreateLogEntryBadRequest(), http.StatusBadRequest, err, err.Error(), params.HTTPRequest)
 	}
 
 	leaf, err := entry.Canonicalize(params.HTTPRequest.Context())
 	if err != nil {
-		log.RequestIDLogger(params.HTTPRequest).Error(err)
-		return entries.NewCreateLogEntryDefault(http.StatusInternalServerError)
+		code := http.StatusInternalServerError
+		return logAndReturnError(entries.NewCreateLogEntryDefault(code), code, err, failedToGenerateCanonicalEntry, params.HTTPRequest)
 	}
 
-	api, _ := NewAPI()
-	server := serverInstance(api.logClient, api.tLogID)
-	resp, err := server.addLeaf(leaf, api.tLogID)
+	api, _ := NewAPI(params.HTTPRequest.Context())
+	resp, err := api.client.addLeaf(leaf)
 	if err != nil {
-		log.RequestIDLogger(params.HTTPRequest).Error(err)
-		return entries.NewCreateLogEntryDefault(http.StatusInternalServerError)
+		code := http.StatusInternalServerError
+		return logAndReturnError(entries.NewCreateLogEntryDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
 	}
 	switch resp.status {
 	case codes.OK:
 	case codes.AlreadyExists, codes.FailedPrecondition:
-		return entries.NewCreateLogEntryConflict()
+		return logAndReturnError(entries.NewCreateLogEntryConflict(), http.StatusConflict, nil, entryAlreadyExists, params.HTTPRequest)
 	default:
-		return entries.NewCreateLogEntryDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", resp.status.String(), http.StatusInternalServerError))
+		code := http.StatusInternalServerError
+		return logAndReturnError(entries.NewCreateLogEntryDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
 	}
 
 	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
@@ -105,6 +107,7 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 
 	logEntry := models.LogEntry{
 		uuid: models.LogEntryAnon{
+			//LogIndex is not given here because it is always returned as 0
 			Body: queuedLeaf.GetLeafValue(),
 		},
 	}
@@ -114,28 +117,29 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 }
 
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
-	api, _ := NewAPI()
-	server := serverInstance(api.logClient, api.tLogID)
+	api, _ := NewAPI(params.HTTPRequest.Context())
 	hashValue, _ := hex.DecodeString(params.EntryUUID)
 	hashes := [][]byte{hashValue}
-	resp, err := server.getLeafByHash(hashes, api.tLogID)
+	resp, err := api.client.getLeafByHash(hashes)
 	if err != nil {
-		log.RequestIDLogger(params.HTTPRequest).Error(err)
-		return entries.NewGetLogEntryByUUIDDefault(http.StatusInternalServerError)
+		code := http.StatusInternalServerError
+		return logAndReturnError(entries.NewGetLogEntryByUUIDDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
 	}
 	switch resp.status {
 	case codes.OK:
 	case codes.NotFound:
-		return entries.NewGetLogEntryByUUIDNotFound()
+		return logAndReturnError(entries.NewGetLogEntryByUUIDNotFound(), http.StatusNotFound, nil, "", params.HTTPRequest)
 	default:
-		return entries.NewGetLogEntryByUUIDDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", resp.status.String(), http.StatusInternalServerError))
+		code := http.StatusInternalServerError
+		return logAndReturnError(entries.NewGetLogEntryByUUIDDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
 	}
 
 	leaves := resp.getLeafResult.GetLeaves()
 	if len(leaves) > 1 {
-		return entries.NewGetLogEntryByUUIDDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
+		code := http.StatusInternalServerError
+		return logAndReturnError(entries.NewGetLogEntryByUUIDDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
 	} else if len(leaves) == 0 {
-		return entries.NewGetLogEntryByUUIDNotFound()
+		return logAndReturnError(entries.NewGetLogEntryByUUIDNotFound(), http.StatusNotFound, nil, "", params.HTTPRequest)
 	}
 	leaf := leaves[0]
 
@@ -151,31 +155,41 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 }
 
 func GetLogEntryProofHandler(params entries.GetLogEntryProofParams) middleware.Responder {
-	api, _ := NewAPI()
-	server := serverInstance(api.logClient, api.tLogID)
+	api, _ := NewAPI(params.HTTPRequest.Context())
 	hashValue, _ := hex.DecodeString(params.EntryUUID)
-	resp, err := server.getProofByHash(hashValue, api.tLogID)
+	resp, err := api.client.getProofByHash(hashValue)
 	if err != nil {
-		log.RequestIDLogger(params.HTTPRequest).Error(err)
-		return entries.NewGetLogEntryProofDefault(http.StatusInternalServerError)
+		code := http.StatusInternalServerError
+		return logAndReturnError(entries.NewGetLogEntryProofDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
 	}
 	switch resp.status {
 	case codes.OK:
 	case codes.NotFound:
-		return entries.NewGetLogEntryProofNotFound()
+		return logAndReturnError(entries.NewGetLogEntryProofNotFound(), http.StatusNotFound, nil, "", params.HTTPRequest)
 	default:
-		return entries.NewGetLogEntryProofDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", resp.status.String(), http.StatusInternalServerError))
+		code := http.StatusInternalServerError
+		return logAndReturnError(entries.NewGetLogEntryProofDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
+	}
+	result := resp.getProofResult
+
+	// validate result is signed with the key we're aware of
+	pub, err := x509.ParsePKIXPublicKey(api.pubkey.Der)
+	if err != nil {
+		code := http.StatusInternalServerError
+		return logAndReturnError(entries.NewGetLogEntryProofDefault(code), code, err, http.StatusText(code), params.HTTPRequest)
+	}
+	verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
+	root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, result.SignedLogRoot)
+	if err != nil {
+		code := http.StatusInternalServerError
+		return logAndReturnError(entries.NewGetLogEntryProofDefault(code), code, err, trillianUnexpectedResult, params.HTTPRequest)
 	}
 
-	var root ttypes.LogRootV1
-	if err := root.UnmarshalBinary(resp.getProofResult.SignedLogRoot.LogRoot); err != nil {
-		return entries.NewGetLogEntryProofDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
+	if len(result.Proof) != 1 {
+		code := http.StatusInternalServerError
+		return logAndReturnError(entries.NewGetLogEntryProofDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
 	}
-
-	if len(resp.getProofResult.Proof) != 1 {
-		return entries.NewGetLogEntryProofDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", err.Error(), http.StatusInternalServerError))
-	}
-	proof := resp.getProofResult.Proof[0]
+	proof := result.Proof[0]
 
 	hashes := []string{}
 	for _, hash := range proof.Hashes {
@@ -193,8 +207,7 @@ func GetLogEntryProofHandler(params entries.GetLogEntryProofParams) middleware.R
 
 func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Responder {
 	resultPayload := []models.LogEntry{}
-	api, _ := NewAPI()
-	server := serverInstance(api.logClient, api.tLogID)
+	api, _ := NewAPI(params.HTTPRequest.Context())
 
 	//TODO: parallelize this into different goroutines to speed up search
 	searchHashes := [][]byte{}
@@ -202,7 +215,8 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		for _, uuid := range params.Entry.EntryUUIDs {
 			hash, err := hex.DecodeString(uuid)
 			if err != nil {
-				return entries.NewSearchLogQueryDefault(http.StatusBadRequest)
+				code := http.StatusBadRequest
+				return logAndReturnError(entries.NewSearchLogQueryBadRequest(), code, err, http.StatusText(code), params.HTTPRequest)
 			}
 			searchHashes = append(searchHashes, hash)
 		}
@@ -210,35 +224,37 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		for _, e := range params.Entry.Entries() {
 			entry, err := types.NewEntry(e)
 			if err != nil {
-				log.RequestIDLogger(params.HTTPRequest).Error(err)
-				return entries.NewSearchLogQueryDefault(http.StatusBadRequest)
+				code := http.StatusBadRequest
+				return logAndReturnError(entries.NewSearchLogQueryBadRequest(), code, err, err.Error(), params.HTTPRequest)
 			}
 
 			if entry.HasExternalEntities() {
 				if err := entry.FetchExternalEntities(params.HTTPRequest.Context()); err != nil {
-					log.RequestIDLogger(params.HTTPRequest).Error(err)
-					return entries.NewSearchLogQueryDefault(http.StatusInternalServerError)
+					code := http.StatusBadRequest
+					return logAndReturnError(entries.NewSearchLogQueryDefault(code), code, err, err.Error(), params.HTTPRequest)
 				}
 			}
 
 			leaf, err := entry.Canonicalize(params.HTTPRequest.Context())
 			if err != nil {
-				log.RequestIDLogger(params.HTTPRequest).Error(err)
-				return entries.NewSearchLogQueryDefault(http.StatusInternalServerError)
+				code := http.StatusInternalServerError
+				return logAndReturnError(entries.NewSearchLogQueryDefault(code), code, err, err.Error(), params.HTTPRequest)
 			}
 			hasher := rfc6962.DefaultHasher
 			leafHash := hasher.HashLeaf(leaf)
 			searchHashes = append(searchHashes, leafHash)
 		}
 
-		resp, err := server.getLeafByHash(searchHashes, api.tLogID)
+		resp, err := api.client.getLeafByHash(searchHashes)
 		if err != nil {
-			return entries.NewSearchLogQueryDefault(http.StatusInternalServerError)
+			code := http.StatusInternalServerError
+			return logAndReturnError(entries.NewSearchLogQueryDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
 		}
 		switch resp.status {
 		case codes.OK, codes.NotFound:
 		default:
-			return entries.NewSearchLogQueryDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", resp.status.String(), http.StatusInternalServerError))
+			code := http.StatusInternalServerError
+			return logAndReturnError(entries.NewSearchLogQueryDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
 		}
 
 		for _, leaf := range resp.getLeafResult.Leaves {
@@ -253,14 +269,16 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	}
 
 	if len(params.Entry.LogIndexes) > 0 {
-		resp, err := server.getLeafByIndex(api.tLogID, swag.Int64ValueSlice(params.Entry.LogIndexes))
+		resp, err := api.client.getLeafByIndex(swag.Int64ValueSlice(params.Entry.LogIndexes))
 		if err != nil {
-			return entries.NewSearchLogQueryDefault(http.StatusInternalServerError)
+			code := http.StatusInternalServerError
+			return logAndReturnError(entries.NewSearchLogQueryDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
 		}
 		switch resp.status {
 		case codes.OK, codes.NotFound:
 		default:
-			return entries.NewSearchLogQueryDefault(http.StatusInternalServerError).WithPayload(errorMsg("title", "type", resp.status.String(), http.StatusInternalServerError))
+			code := http.StatusInternalServerError
+			return logAndReturnError(entries.NewSearchLogQueryDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
 		}
 
 		for _, leaf := range resp.getLeafResult.Leaves {

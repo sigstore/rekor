@@ -177,6 +177,9 @@ func init() {
               }
             }
           },
+          "400": {
+            "$ref": "#/responses/BadContent"
+          },
           "default": {
             "$ref": "#/responses/InternalServerError"
           }
@@ -316,23 +319,12 @@ func init() {
     },
     "Error": {
       "type": "object",
-      "required": [
-        "type",
-        "title",
-        "status"
-      ],
       "properties": {
-        "detail": {
+        "message": {
           "type": "string"
         },
         "status": {
           "type": "integer"
-        },
-        "title": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
         }
       }
     },
@@ -492,10 +484,7 @@ func init() {
       }
     },
     "NotFound": {
-      "description": "The content requested could not be found",
-      "schema": {
-        "$ref": "#/definitions/Error"
-      }
+      "description": "The content requested could not be found"
     }
   }
 }`))
@@ -566,10 +555,7 @@ func init() {
             }
           },
           "404": {
-            "description": "The content requested could not be found",
-            "schema": {
-              "$ref": "#/definitions/Error"
-            }
+            "description": "The content requested could not be found"
           },
           "default": {
             "description": "There was an internal error in the server while processing the request",
@@ -661,6 +647,12 @@ func init() {
               }
             }
           },
+          "400": {
+            "description": "The content supplied to the server was invalid",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          },
           "default": {
             "description": "There was an internal error in the server while processing the request",
             "schema": {
@@ -694,10 +686,7 @@ func init() {
             }
           },
           "404": {
-            "description": "The content requested could not be found",
-            "schema": {
-              "$ref": "#/definitions/Error"
-            }
+            "description": "The content requested could not be found"
           },
           "default": {
             "description": "There was an internal error in the server while processing the request",
@@ -733,10 +722,7 @@ func init() {
             }
           },
           "404": {
-            "description": "The content requested could not be found",
-            "schema": {
-              "$ref": "#/definitions/Error"
-            }
+            "description": "The content requested could not be found"
           },
           "default": {
             "description": "There was an internal error in the server while processing the request",
@@ -821,23 +807,12 @@ func init() {
     },
     "Error": {
       "type": "object",
-      "required": [
-        "type",
-        "title",
-        "status"
-      ],
       "properties": {
-        "detail": {
+        "message": {
           "type": "string"
         },
         "status": {
           "type": "integer"
-        },
-        "title": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
         }
       }
     },
@@ -1313,10 +1288,7 @@ func init() {
       }
     },
     "NotFound": {
-      "description": "The content requested could not be found",
-      "schema": {
-        "$ref": "#/definitions/Error"
-      }
+      "description": "The content requested could not be found"
     }
   }
 }`))
