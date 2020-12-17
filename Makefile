@@ -1,25 +1,29 @@
 .PHONY: all test clean lint gosec
 
-NONGENSRCS := $(shell find cmd -name "*.go") $(shell find pkg -name "*.go"|grep -v "pkg/generated") pkg/generated/restapi/configure_rekor_server.go
-GENSRCS := $(shell find pkg/generated -name "*.go"|grep -v "configure_rekor_server.go")
-SRCS := $(NONGENSRCS) ${GENSRCS}
-
 all: cli server
 
-$(GENSRCS): openapi.yaml
-	swagger generate client -f openapi.yaml -q -t pkg/generated --additional-initialism=PKI
-	swagger generate server -f openapi.yaml -q -t pkg/generated --additional-initialism=PKI --exclude-main -A rekor_server --exclude-spec --flag-strategy=pflag
+GENSRC = pkg/generated/client/%.go pkg/generated/models/%.go pkg/generated/restapi/%.go
+OPENAPIDEPS = openapi.yaml $(shell find pkg/types -iname "*.json")
+SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go"|grep -v pkg/generated) pkg/generated/restapi/configure_rekor_server.go $(GENSRC)
 
-lint: $(SRCS)
+$(GENSRC): $(OPENAPIDEPS)
+	swagger generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --default-consumes application/json\;q=1
+	swagger generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A rekor_server --exclude-spec --flag-strategy=pflag --default-produces application/json
+
+# this exists to override pattern match rule above since this file is in the generated directory but should not be treated as generated code
+pkg/generated/restapi/configure_rekor_server.go: $(OPENAPIDEPS)
+	
+
+lint:
 	$(GOBIN)/golangci-lint run -v ./...
 
-gosec: $(SRCS)
+gosec:
 	$(GOBIN)/gosec ./...
 
-cli: $(SRCS) openapi.yaml
+cli: $(SRCS)
 	go build ./cmd/cli
 
-server: $(SRCS) openapi.yaml
+server: $(SRCS)
 	go build ./cmd/server
 
 test:

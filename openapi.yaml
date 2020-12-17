@@ -9,7 +9,7 @@ consumes:
   - application/xml
   - application/yaml
 produces:
-  - application/json
+  - application/json;q=1
   - application/xml
   - application/yaml
 
@@ -79,6 +79,9 @@ paths:
         201:
           description: Returns the entry created in the transparency log
           headers:
+            ETag:
+              type: string
+              description: UUID of log entry
             Location:
               type: string
               description: URI location of log entry
@@ -87,6 +90,8 @@ paths:
             $ref: '#/definitions/LogEntry'
         400:
           $ref: '#/responses/BadContent'
+        409:
+          $ref: '#/responses/Conflict'
         default:
           $ref: '#/responses/InternalServerError'
     get:
@@ -99,7 +104,7 @@ paths:
           name: logIndex
           type: integer
           required: true
-          minimum: 1
+          minimum: 0
           description: specifies the index of the entry in the transparency log to be retrieved
       responses:
         200:
@@ -175,75 +180,37 @@ paths:
             type: array
             items:
               $ref: '#/definitions/LogEntry'
+        400:
+          $ref: '#/responses/BadContent'
         default:
           $ref: '#/responses/InternalServerError'
 
 definitions:
-  SupportedPKIFormats:
-    type: string
-    description: This represents the tokens that indicate the format of the PKI artifacts supported by the server
-    enum: [pgp]
-
   ProposedEntry:
     type: object
+    discriminator: kind
     properties:
-      signature:
-        type: object
-        properties:
-          format:
-            $ref: '#/definitions/SupportedPKIFormats'
-          url:
-            type: string
-            format: uri
-          content:
-            type: string
-            format: byte
-          publicKey:
-            type: object
-            properties:
-              url:
-                description: >
-                  The URL where the public key can be found. This public key needs to be the pair of the
-                  private key used to generate the detached signature found in the 'signature' property.
+      kind:
+        type: string
+    required:
+      - kind
 
-                  The 'url' and 'content' properties are mutually exclusive.
-                type: string
-                format: uri
-              content:
-                description: >
-                  Base64-encoded content of the public key. This public key needs to be the pair of the
-                  private key used to generate the detached signature found in the 'signature' property.
-
-                  The 'url' and 'content' properties are mutually exclusive.
-                type: string
-                format: byte
-        required:
-          - format
-          - publicKey
-      data:
-        type: object
-        properties:
-          sha256:
-            description: >
-              The SHA256 hash of the content located at the URL specified in the 'url' parameter.
-              This property is required when 'url' is specified, and ignored when 'content' is specified.
-            type: string
-            pattern: '^[0-9a-fA-F]{64}$'
-          url:
-            description: >
-              The URL where the content refered to in the signature property is located.
-              When specifying 'url', you must also specify the 'sha256' property.
-
-              The 'url' and 'content' properties are mutually exclusive.
-            type: string
-            format: uri
-          content:
-            description: >
-              Base64-encoded content.
-
-              The 'url' and 'content' properties are mutually exclusive.
-            type: string
-            format: byte
+  rekord:
+    type: object
+    description: Rekord object
+    allOf:
+    - $ref: '#/definitions/ProposedEntry'
+    - properties:
+        apiVersion:
+          type: string
+          pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
+        spec:
+          type: object
+          $ref: 'pkg/types/rekord/rekord_schema.json'
+      required:
+        - apiVersion
+        - spec
+      additionalProperties: false
 
   LogEntry:
     type: object
@@ -252,33 +219,12 @@ definitions:
       properties:
         logIndex:
           type: integer
-          minimum: 1
-        signature:
+          minimum: 0
+        body:
           type: object
-          properties:
-            format:
-              $ref: '#/definitions/SupportedPKIFormats'
-            content:
-              type: string
-              format: byte
-            publicKey:
-              type: string
-              format: byte
-          required:
-            - format
-            - content
-            - publicKey
-        signedContentSHA256:
-          type: string
-          pattern: '^[0-9a-fA-F]{64}$'
-        extraData:
-          type: object
-          additionalProperties: 
-            type: string
+          additionalProperties: true
       required:
-        - "logIndex"
-        - "signature"
-        - "signedContentSHA256"
+        - "body"
 
   SearchLogQuery:
     type: object
@@ -290,14 +236,14 @@ definitions:
           minItems: 1
       logIndexes:
         type: array
+        minItems: 1
         items:
           type: integer
-          minItems: 1
-          minimum: 1
+          minimum: 0
       entries:
         type: array
         items:
-          $ref: '#/definitions/LogEntry'
+          $ref: '#/definitions/ProposedEntry'
           minItems: 1
 
   LogInfo:
@@ -338,7 +284,7 @@ definitions:
       logIndex:
         type: integer
         description: The index of the entry in the transparency log
-        minimum: 1
+        minimum: 0
       rootHash:
         description: The hash value stored at the root of the merkle tree at the time the proof was generated
         type: string
@@ -360,31 +306,25 @@ definitions:
       - treeSize
       - hashes
 
-  Error: # follows RFC7807
+  Error:
     type: object
     properties:
-      type:
-        type: string
-      title:
-        type: string
       status:
         type: integer
-      detail:
+      message:
         type: string
-    required:
-      - type
-      - title
-      - status
 
 responses:
   BadContent:
     description: The content supplied to the server was invalid
     schema:
       $ref: "#/definitions/Error"
-  NotFound:
-    description: The content requested could not be found
+  Conflict:
+    description: The request conflicts with the current state of the transparency log
     schema:
       $ref: "#/definitions/Error"
+  NotFound:
+    description: The content requested could not be found
   InternalServerError:
     description: There was an internal error in the server while processing the request
     schema:

@@ -16,34 +16,19 @@ limitations under the License.
 package app
 
 import (
-	"bytes"
-	"context"
-	"crypto"
-	"crypto/x509"
 	"encoding/hex"
-	"encoding/json"
-	"io/ioutil"
-	"net/http"
+	"fmt"
 	"os"
-	"time"
 
-	"github.com/google/trillian"
-	tclient "github.com/google/trillian/client"
-	tcrypto "github.com/google/trillian/crypto"
 	"github.com/google/trillian/merkle"
 	"github.com/google/trillian/merkle/rfc6962"
+	"github.com/projectrekor/rekor/pkg/generated/client/entries"
+	"github.com/projectrekor/rekor/pkg/generated/models"
 	"github.com/projectrekor/rekor/pkg/log"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-type getProofResponse struct {
-	Status   string
-	LeafHash string
-	Proof    *trillian.GetInclusionProofByHashResponse
-	Key      []byte
-}
 
 // verifyCmd represents the get command
 var verifyCmd = &cobra.Command{
@@ -55,7 +40,7 @@ var verifyCmd = &cobra.Command{
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			log.Logger.Fatal("Error initializing cmd line args: ", err)
 		}
-		if err := validateArtifactPFlags(); err != nil {
+		if err := validateArtifactPFlags(true); err != nil {
 			log.Logger.Error(err)
 			_ = cmd.Help()
 			os.Exit(1)
@@ -63,73 +48,84 @@ var verifyCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		log := log.Logger
-		rekorServerURL := viper.GetString("rekor_server") + "/api/v1/getproof"
-
-		rekorEntry, err := buildRekorEntryFromPFlags()
+		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		// Now we have the RekorEntry, send it to the server!
-		b, err := json.Marshal(rekorEntry.RekorLeaf)
-		if err != nil {
-			log.Fatal(err)
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
+		params := entries.NewGetLogEntryProofParams()
+		params.EntryUUID = viper.GetString("uuid")
+		if params.EntryUUID == "" {
+			// without the UUID, we need to search for it
+			searchParams := entries.NewSearchLogQueryParams()
+			searchLogQuery := models.SearchLogQuery{}
 
-		request, err := http.NewRequestWithContext(ctx, "POST", rekorServerURL, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		request.Body = ioutil.NopCloser(bytes.NewReader(b))
-
-		client := &http.Client{}
-		response, err := client.Do(request)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer response.Body.Close()
-
-		content, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		resp := getProofResponse{}
-		if err := json.Unmarshal(content, &resp); err != nil {
-			log.Fatal(err)
-		}
-
-		pub, err := x509.ParsePKIXPublicKey(resp.Key)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if resp.Proof != nil {
-			leafHash, _ := hex.DecodeString(resp.LeafHash)
-			verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
-			root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, resp.Proof.SignedLogRoot)
+			rekordEntry, err := CreateRekordFromPFlags()
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			v := merkle.NewLogVerifier(rfc6962.DefaultHasher)
-			proof := resp.Proof.Proof[0]
-			if err := v.VerifyInclusionProof(proof.LeafIndex, int64(root.TreeSize), proof.Hashes, root.RootHash, leafHash); err != nil {
+			entries := []models.ProposedEntry{rekordEntry}
+			searchLogQuery.SetEntries(entries)
+			searchParams.SetEntry(&searchLogQuery)
+
+			resp, err := rekorClient.Entries.SearchLogQuery(searchParams)
+			if err != nil {
 				log.Fatal(err)
 			}
-			log.Info("Proof correct!")
-		} else {
-			log.Info(resp.Status)
+
+			if len(resp.Payload) == 0 {
+				log.Fatal(fmt.Errorf("entry in log cannot be located"))
+			} else if len(resp.Payload) > 1 {
+				log.Fatal(fmt.Errorf("multiple entries returned; this should not happen"))
+			}
+			logEntry := resp.Payload[0]
+			if len(logEntry) != 1 {
+				log.Fatal("UUID value can not be extracted")
+			}
+			for k := range logEntry {
+				params.EntryUUID = k
+			}
 		}
+
+		resp, err := rekorClient.Entries.GetLogEntryProof(params)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		inclusionProof := resp.GetPayload()
+		hashes := [][]byte{}
+
+		for _, hash := range inclusionProof.Hashes {
+			val, err := hex.DecodeString(hash)
+			if err != nil {
+				log.Fatal(err)
+			}
+			hashes = append(hashes, val)
+		}
+
+		leafHash, err := hex.DecodeString(params.EntryUUID)
+		if err != nil {
+			log.Fatal(err)
+		}
+		rootHash, err := hex.DecodeString(*inclusionProof.RootHash)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		v := merkle.NewLogVerifier(rfc6962.DefaultHasher)
+		if err := v.VerifyInclusionProof(*inclusionProof.LogIndex, *inclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
+			log.Fatal(err)
+		}
+		log.Info("Proof correct!")
 	},
 }
 
 func init() {
 	if err := addArtifactPFlags(verifyCmd); err != nil {
+		log.Logger.Fatal("Error parsing cmd line args:", err)
+	}
+	if err := addUUIDPFlags(verifyCmd, false); err != nil {
 		log.Logger.Fatal("Error parsing cmd line args:", err)
 	}
 

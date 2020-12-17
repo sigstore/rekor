@@ -1,3 +1,18 @@
+/*
+Copyright © 2020 Bob Callaway <bcallawa@redhat.com>
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 // This file is safe to edit. Once it exists it will not be overwritten
 
 package restapi
@@ -15,6 +30,7 @@ import (
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/projectrekor/rekor/pkg/log"
+	"github.com/projectrekor/rekor/pkg/util"
 )
 
 //go:generate swagger generate server --target ../../generated --name RekorServer --spec ../../../openapi.yaml --principal interface{} --exclude-main
@@ -38,12 +54,11 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	// To continue using redoc as your UI, uncomment the following line
 	// api.UseRedoc()
 
-	// this is needed to adhere to the order of producers specified in openapi.yaml
-	api.SetDefaultProduces("")
-
 	api.JSONConsumer = runtime.JSONConsumer()
-
 	api.JSONProducer = runtime.JSONProducer()
+
+	api.YamlConsumer = util.YamlConsumer()
+	api.YamlProducer = util.YamlProducer()
 
 	api.EntriesCreateLogEntryHandler = entries.CreateLogEntryHandlerFunc(pkgapi.CreateLogEntryHandler)
 	api.EntriesGetLogEntryByIndexHandler = entries.GetLogEntryByIndexHandlerFunc(pkgapi.GetLogEntryByIndexHandler)
@@ -57,6 +72,15 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.PreServerShutdown = func() {}
 
 	api.ServerShutdown = func() {}
+
+	//not cacheable
+	api.AddMiddlewareFor("GET", "/api/v1/log", middleware.NoCache)
+	api.AddMiddlewareFor("GET", "/api/v1/log/proof", middleware.NoCache)
+	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}/proof", middleware.NoCache)
+
+	//cache forever
+	api.AddMiddlewareFor("GET", "/api/v1/log/entries", cacheForever)
+	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}", cacheForever)
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
 }
@@ -82,10 +106,10 @@ func setupMiddlewares(handler http.Handler) http.Handler {
 // The middleware configuration happens before anything, this middleware also applies to serving the swagger.json document.
 // So this is a good place to plug in a panic handling middleware, logging and metrics
 func setupGlobalMiddleware(handler http.Handler) http.Handler {
-	returnHandler := middleware.RequestID(handler)
+	returnHandler := middleware.Recoverer(handler)
 	returnHandler = middleware.Logger(returnHandler)
-	returnHandler = middleware.Recoverer(returnHandler)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	returnHandler = middleware.Heartbeat("/ping")(returnHandler)
+	return middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		r = r.WithContext(log.WithRequestID(ctx, middleware.GetReqID(ctx)))
 		defer func() {
@@ -93,5 +117,12 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 		}()
 
 		returnHandler.ServeHTTP(w, r)
+	}))
+}
+
+func cacheForever(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "s-maxage=31536000, max-age=31536000, immutable")
+		handler.ServeHTTP(w, r)
 	})
 }

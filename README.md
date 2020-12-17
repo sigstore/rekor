@@ -24,34 +24,52 @@ You will also need to export your public key
 
 `gpg --export --armor "jdoe@example.com" > mypublickey.key`
 
-## Upload an entry rekor
+## Commands
+### Upload An Entry
 
-The `upload` command sends your public key / signature and artifact URL to the rekor transparency log.
+The `upload` command sends a public key, detached signature and artifact to the Rekor transparency log.
 
 Firstly the rekor command will verify your public key, signature and download
 a local copy of the artifact. It will then validate the artifact signing (no
 access to your private key is required).
 
 If the validations above pass correctly, the rekor command will construct a JSON
-file containing your signature, public key and the artifact URL. This file will
-be saved locally to your machines home directory (`.rekor/`). The JSON file will
+file containing your signature, public key and the artifact. This file will
+be saved locally to your machine's home directory (`.rekor/`). The JSON file will
 then be sent to the server, who will in turn do the same validations, before
 making an entry to the transparency log.
 
-`rekor upload --rekor-server rekor.dev --signature <artifact-signature> --public-key <your_public_key> --artifact-url <url_to_artifact>`
+`rekor upload --rekor-server https://rekor.dev/ --signature <url_to_signature> --public-key <url_to_public_key> --artifact <url_to_artifact>`
 
-Note that the `--artifact-url` must be a publically accessable location. For example `--artifact-url https://example.com/releases/latest/my_project.tar.gz`
+> Note that the flags `--artifact`, `--signature`, and `--public-key` can either be a path to a file on the local filesystem or be a publically accessable URL. For example `--artifact https://example.com/releases/latest/my_project.tar.gz`
 
-## Verify Proof of Entry
+### Verify Proof of Entry
 
-The `verify` command sends your public key / signature and artifcate URL to the rekor transparency log for verification of entry.
+The `verify` command queries the Rekor transparency log to verify the inclusion of an entry.
 
-You would typically use this command as a means to  verify an 'inclusion proof'
-in that your artifact is stored within the transparency log.
+`rekor verify --signature <url_to_signature> --public-key <url_to_public_key> --artifact <url_to_artifact>`
 
-`rekor verify --signature <artifact-signature> --public-key <your_public_key> --artifact-url <url_to_artifact>`
+> Alternatively, you can specify the UUID of an entry to verify by using the `--uuid <entry_uuid>` flag
 
-* alternatively you can use a local artifact with `--artifact-url` path
+### Get Entry from Log
+
+The `get` command returns an entry from the transparency log using either the log index or the UUID of the entry
+
+`rekor get --uuid <entry_uuid> --log-index <log_index>`
+
+### Verify Consistency of Log
+
+The `logproof` command returns the required information log to generate a consistency proof of the Rekor transparency log between two specified size.
+
+`rekor logproof --first-size <int> --last-size <int>`
+
+where `--first-size` defaults to `0` which means the beginning of the log
+
+### Get Information about Log
+
+The `loginfo` command returns the current size and root hash value of the transparency log
+
+`rekor loginfo`
 
 # Run a rekor server
 
@@ -92,10 +110,10 @@ From `rekor/cmd/server`
 ## Start the rekor server
 
 ```
-./rekor-server serve
-2020-09-12T16:32:22.705+0100	INFO	cmd/root.go:87	Using config file: /Users/lukehinds/go/src/github.com/projectrekor/rekor-server/rekor-server.yaml
-2020-09-12T16:32:22.705+0100	INFO	app/server.go:55	Starting server...
-2020-09-12T16:32:22.705+0100	INFO	app/server.go:61	Listening on 127.0.0.1:3000
+./rekor-server server
+rekor-server_1         | 2020-12-16T17:06:22.613Z       INFO    app/serve.go:55 Loading support for pluggable type 'rekord'
+rekor-server_1         | 2020-12-16T17:06:22.614Z       INFO    app/serve.go:56 Loading version '0.0.1' for pluggable type 'rekord'
+rekor-server_1         | 2020-12-16T17:06:22.624Z       INFO    restapi/server.go:231   Serving rekor server at http://[::]:3000
 ```
 
 ## Contributions

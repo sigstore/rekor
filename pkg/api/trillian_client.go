@@ -23,6 +23,8 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/projectrekor/rekor/pkg/log"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
@@ -31,17 +33,16 @@ import (
 	"github.com/google/trillian/merkle"
 	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/google/trillian/types"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
-type trillianclient struct {
+type TrillianClient struct {
 	client trillian.TrillianLogClient
 	logID  int64
 }
 
 type Response struct {
 	status                    codes.Code
+	getAddResult              *trillian.QueueLeafResponse
 	getLeafResult             *trillian.GetLeavesByHashResponse
 	getProofResult            *trillian.GetInclusionProofByHashResponse
 	getLeafByIndexResult      *trillian.GetLeavesByIndexResponse
@@ -49,18 +50,18 @@ type Response struct {
 	getConsistencyProofResult *trillian.GetConsistencyProofResponse
 }
 
-func serverInstance(client trillian.TrillianLogClient, tLogID int64) *trillianclient {
-	return &trillianclient{
+func TrillianClientInstance(client trillian.TrillianLogClient, tLogID int64) *TrillianClient {
+	return &TrillianClient{
 		client: client,
 		logID:  tLogID,
 	}
 }
 
-func (s *trillianclient) root() (types.LogRootV1, error) {
+func (t *TrillianClient) root() (types.LogRootV1, error) {
 	rqst := &trillian.GetLatestSignedLogRootRequest{
-		LogId: s.logID,
+		LogId: t.logID,
 	}
-	resp, err := s.client.GetLatestSignedLogRoot(context.Background(), rqst)
+	resp, err := t.client.GetLatestSignedLogRoot(context.Background(), rqst)
 	if err != nil {
 		return types.LogRootV1{}, err
 	}
@@ -71,34 +72,32 @@ func (s *trillianclient) root() (types.LogRootV1, error) {
 	return root, nil
 }
 
-func (s *trillianclient) addLeaf(byteValue []byte, tLogID int64) (*Response, error) {
+func (t *TrillianClient) addLeaf(byteValue []byte) (*Response, error) {
 	leaf := &trillian.LogLeaf{
 		LeafValue: byteValue,
 	}
 	rqst := &trillian.QueueLeafRequest{
-		LogId: tLogID,
+		LogId: t.logID,
 		Leaf:  leaf,
 	}
-	resp, err := s.client.QueueLeaf(context.Background(), rqst)
+	resp, err := t.client.QueueLeaf(context.Background(), rqst)
 	if err != nil {
 		fmt.Println(err)
 	}
 
 	return &Response{
-		status: codes.Code(resp.QueuedLeaf.GetStatus().GetCode()),
+		status:       codes.Code(resp.QueuedLeaf.GetStatus().GetCode()),
+		getAddResult: resp,
 	}, nil
 }
 
-func (s *trillianclient) getLeaf(byteValue []byte, tlog_id int64) (*Response, error) {
-	hasher := rfc6962.DefaultHasher
-	leafHash := hasher.HashLeaf(byteValue)
-
+func (t *TrillianClient) getLeafByHash(hashValues [][]byte) (*Response, error) {
 	rqst := &trillian.GetLeavesByHashRequest{
-		LogId:    tlog_id,
-		LeafHash: [][]byte{leafHash},
+		LogId:    t.logID,
+		LeafHash: hashValues,
 	}
 
-	resp, err := s.client.GetLeavesByHash(context.Background(), rqst)
+	resp, err := t.client.GetLeavesByHash(context.Background(), rqst)
 	if err != nil {
 		log.Logger.Fatal(err)
 	}
@@ -109,15 +108,15 @@ func (s *trillianclient) getLeaf(byteValue []byte, tlog_id int64) (*Response, er
 	}, nil
 }
 
-func (s *trillianclient) getLeafByIndex(tLogID int64, leafSizeInt int64) (*Response, error) {
+func (t *TrillianClient) getLeafByIndex(indexes []int64) (*Response, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	resp, err := s.client.GetLeavesByIndex(ctx,
+	resp, err := t.client.GetLeavesByIndex(ctx,
 		&trillian.GetLeavesByIndexRequest{
-			LogId:     tLogID,
-			LeafIndex: []int64{leafSizeInt},
+			LogId:     t.logID,
+			LeafIndex: indexes,
 		})
 
 	return &Response{
@@ -126,22 +125,19 @@ func (s *trillianclient) getLeafByIndex(tLogID int64, leafSizeInt int64) (*Respo
 	}, nil
 }
 
-func (s *trillianclient) getProof(byteValue []byte, tLogID int64) (*Response, error) {
+func (t *TrillianClient) getProofByHash(hashValue []byte) (*Response, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	root, err := s.root()
+	root, err := t.root()
 	if err != nil {
 		return &Response{}, err
 	}
 
-	hasher := rfc6962.DefaultHasher
-	leafHash := hasher.HashLeaf(byteValue)
-
-	resp, err := s.client.GetInclusionProofByHash(ctx,
+	resp, err := t.client.GetInclusionProofByHash(ctx,
 		&trillian.GetInclusionProofByHashRequest{
-			LogId:    tLogID,
-			LeafHash: leafHash,
+			LogId:    t.logID,
+			LeafHash: hashValue,
 			TreeSize: int64(root.TreeSize),
 		})
 
@@ -153,7 +149,7 @@ func (s *trillianclient) getProof(byteValue []byte, tLogID int64) (*Response, er
 			for j, hash := range hashes {
 				log.Logger.Infof("Proof[%d],hash[%d] == %x\n", i, j, hash)
 			}
-			if err := v.VerifyInclusionProof(proof.LeafIndex, int64(root.TreeSize), hashes, root.RootHash, leafHash); err != nil {
+			if err := v.VerifyInclusionProof(proof.LeafIndex, int64(root.TreeSize), hashes, root.RootHash, hashValue); err != nil {
 				return &Response{}, err
 			}
 		}
@@ -165,14 +161,14 @@ func (s *trillianclient) getProof(byteValue []byte, tLogID int64) (*Response, er
 	}, nil
 }
 
-func (s *trillianclient) getLatest(tLogID int64, leafSizeInt int64) (*Response, error) {
+func (t *TrillianClient) getLatest(leafSizeInt int64) (*Response, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	resp, err := s.client.GetLatestSignedLogRoot(ctx,
+	resp, err := t.client.GetLatestSignedLogRoot(ctx,
 		&trillian.GetLatestSignedLogRootRequest{
-			LogId:         tLogID,
+			LogId:         t.logID,
 			FirstTreeSize: leafSizeInt,
 		})
 	if err != nil {
@@ -185,14 +181,14 @@ func (s *trillianclient) getLatest(tLogID int64, leafSizeInt int64) (*Response, 
 	}, nil
 }
 
-func (s *trillianclient) getConsistencyProof(tLogID int64, firstSize, lastSize int64) (*Response, error) {
+func (t *TrillianClient) getConsistencyProof(firstSize, lastSize int64) (*Response, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	resp, err := s.client.GetConsistencyProof(ctx,
+	resp, err := t.client.GetConsistencyProof(ctx,
 		&trillian.GetConsistencyProofRequest{
-			LogId:          tLogID,
+			LogId:          t.logID,
 			FirstTreeSize:  firstSize,
 			SecondTreeSize: lastSize,
 		})
