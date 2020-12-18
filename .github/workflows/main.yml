@@ -1,6 +1,8 @@
 # This is a basic workflow to help you get started with Actions
 
 name: CI
+env:
+  GOVERSION: 1.15.6
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the main branch
@@ -23,7 +25,7 @@ jobs:
       # Setup Go
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.15.6'
+          go-version: ${{ env.GOVERSION }}
       # Download go-swagger
       - name: download go-swagger
         run : go get -u github.com/go-swagger/go-swagger/cmd/swagger@master
@@ -55,7 +57,7 @@ jobs:
   e2e:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-
+    needs: build
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -66,6 +68,6 @@ jobs:
         run: docker-compose up -d
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.15.6'
+          go-version: ${{ env.GOVERSION }}
       - name: CLI
         run: ./tests/e2e-test.sh
