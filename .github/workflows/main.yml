@@ -68,4 +68,4 @@ jobs:
         with:
           go-version: '1.15.6'
       - name: CLI
-        run: .tests/e2e-test.sh
+        run: ./tests/e2e-test.sh
