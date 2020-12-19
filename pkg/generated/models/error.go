@@ -34,11 +34,11 @@ import (
 // swagger:model Error
 type Error struct {
 
+	// code
+	Code int64 `json:"code,omitempty"`
+
 	// message
 	Message string `json:"message,omitempty"`
-
-	// status
-	Status int64 `json:"status,omitempty"`
 }
 
 // Validate validates this error

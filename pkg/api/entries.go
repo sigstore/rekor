@@ -19,8 +19,11 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/google/trillian"
 
 	"github.com/go-openapi/swag"
 
@@ -39,29 +42,23 @@ import (
 )
 
 func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middleware.Responder {
-	api, _ := NewAPI(params.HTTPRequest.Context())
+	httpReq := params.HTTPRequest
+	api := apiFromRequest(httpReq)
 
-	indexes := []int64{params.LogIndex}
-	resp, err := api.client.getLeafByIndex(indexes)
-	if err != nil {
-		code := http.StatusInternalServerError
-		return logAndReturnError(entries.NewGetLogEntryByIndexDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
-	}
+	resp := api.client.getLeafByIndex(params.LogIndex)
 	switch resp.status {
 	case codes.OK:
 	case codes.NotFound, codes.OutOfRange:
-		return logAndReturnError(entries.NewGetLogEntryByIndexNotFound(), http.StatusNotFound, nil, "", params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusNotFound, fmt.Errorf("grpc error: %w", resp.err), "")
 	default:
-		code := http.StatusInternalServerError
-		return logAndReturnError(entries.NewGetLogEntryByIndexDefault(code), code, nil, trillianCommunicationError, params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc err: %w", resp.err), trillianCommunicationError)
 	}
 
-	leaves := resp.getLeafByIndexResult.GetLeaves()
+	leaves := resp.getLeafByRangeResult.GetLeaves()
 	if len(leaves) > 1 {
-		code := http.StatusInternalServerError
-		return logAndReturnError(entries.NewGetLogEntryByIndexDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("len(leaves): %v", len(leaves)), trillianUnexpectedResult)
 	} else if len(leaves) == 0 {
-		return logAndReturnError(entries.NewGetLogEntryByIndexNotFound(), http.StatusNotFound, nil, "", params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusNotFound, errors.New("grpc returned 0 leaves with success code"), "")
 	}
 	leaf := leaves[0]
 
@@ -75,30 +72,26 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 }
 
 func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Responder {
+	httpReq := params.HTTPRequest
 	entry, err := types.NewEntry(params.ProposedEntry)
 	if err != nil {
-		return logAndReturnError(entries.NewCreateLogEntryBadRequest(), http.StatusBadRequest, err, err.Error(), params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
 	}
 
-	leaf, err := entry.Canonicalize(params.HTTPRequest.Context())
+	leaf, err := entry.Canonicalize(httpReq.Context())
 	if err != nil {
-		code := http.StatusInternalServerError
-		return logAndReturnError(entries.NewCreateLogEntryDefault(code), code, err, failedToGenerateCanonicalEntry, params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalEntry)
 	}
 
-	api, _ := NewAPI(params.HTTPRequest.Context())
-	resp, err := api.client.addLeaf(leaf)
-	if err != nil {
-		code := http.StatusInternalServerError
-		return logAndReturnError(entries.NewCreateLogEntryDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
-	}
+	api := apiFromRequest(httpReq)
+
+	resp := api.client.addLeaf(leaf)
 	switch resp.status {
 	case codes.OK:
 	case codes.AlreadyExists, codes.FailedPrecondition:
-		return logAndReturnError(entries.NewCreateLogEntryConflict(), http.StatusConflict, nil, entryAlreadyExists, params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusConflict, fmt.Errorf("grpc error: %w", resp.err), entryAlreadyExists)
 	default:
-		code := http.StatusInternalServerError
-		return logAndReturnError(entries.NewCreateLogEntryDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
 	}
 
 	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
@@ -112,34 +105,30 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 		},
 	}
 
-	location := strfmt.URI(fmt.Sprintf("%v/%v", params.HTTPRequest.URL, uuid))
+	location := strfmt.URI(fmt.Sprintf("%v/%v", httpReq.URL, uuid))
 	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(location).WithETag(uuid)
 }
 
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
-	api, _ := NewAPI(params.HTTPRequest.Context())
+	httpReq := params.HTTPRequest
+	api := apiFromRequest(httpReq)
 	hashValue, _ := hex.DecodeString(params.EntryUUID)
 	hashes := [][]byte{hashValue}
-	resp, err := api.client.getLeafByHash(hashes)
-	if err != nil {
-		code := http.StatusInternalServerError
-		return logAndReturnError(entries.NewGetLogEntryByUUIDDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
-	}
+
+	resp := api.client.getLeafByHash(hashes) // TODO: if this API is deprecated, we need to ask for inclusion proof and then use index in proof result to get leaf
 	switch resp.status {
 	case codes.OK:
 	case codes.NotFound:
-		return logAndReturnError(entries.NewGetLogEntryByUUIDNotFound(), http.StatusNotFound, nil, "", params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusNotFound, fmt.Errorf("grpc error: %w", resp.err), "")
 	default:
-		code := http.StatusInternalServerError
-		return logAndReturnError(entries.NewGetLogEntryByUUIDDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
 	}
 
 	leaves := resp.getLeafResult.GetLeaves()
 	if len(leaves) > 1 {
-		code := http.StatusInternalServerError
-		return logAndReturnError(entries.NewGetLogEntryByUUIDDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("len(leaves): %v", len(leaves)), trillianUnexpectedResult)
 	} else if len(leaves) == 0 {
-		return logAndReturnError(entries.NewGetLogEntryByUUIDNotFound(), http.StatusNotFound, nil, "", params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusNotFound, errors.New("grpc returned 0 leaves with success code"), "")
 	}
 	leaf := leaves[0]
 
@@ -155,39 +144,33 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 }
 
 func GetLogEntryProofHandler(params entries.GetLogEntryProofParams) middleware.Responder {
-	api, _ := NewAPI(params.HTTPRequest.Context())
+	httpReq := params.HTTPRequest
+	api := apiFromRequest(httpReq)
 	hashValue, _ := hex.DecodeString(params.EntryUUID)
-	resp, err := api.client.getProofByHash(hashValue)
-	if err != nil {
-		code := http.StatusInternalServerError
-		return logAndReturnError(entries.NewGetLogEntryProofDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
-	}
+
+	resp := api.client.getProofByHash(hashValue)
 	switch resp.status {
 	case codes.OK:
 	case codes.NotFound:
-		return logAndReturnError(entries.NewGetLogEntryProofNotFound(), http.StatusNotFound, nil, "", params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusNotFound, fmt.Errorf("grpc error: %w", resp.err), "")
 	default:
-		code := http.StatusInternalServerError
-		return logAndReturnError(entries.NewGetLogEntryProofDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
 	}
 	result := resp.getProofResult
 
 	// validate result is signed with the key we're aware of
 	pub, err := x509.ParsePKIXPublicKey(api.pubkey.Der)
 	if err != nil {
-		code := http.StatusInternalServerError
-		return logAndReturnError(entries.NewGetLogEntryProofDefault(code), code, err, http.StatusText(code), params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
 	}
 	verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
 	root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, result.SignedLogRoot)
 	if err != nil {
-		code := http.StatusInternalServerError
-		return logAndReturnError(entries.NewGetLogEntryProofDefault(code), code, err, trillianUnexpectedResult, params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 	}
 
 	if len(result.Proof) != 1 {
-		code := http.StatusInternalServerError
-		return logAndReturnError(entries.NewGetLogEntryProofDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("len(result.Proof) = %v", len(result.Proof)), trillianUnexpectedResult)
 	}
 	proof := result.Proof[0]
 
@@ -207,7 +190,8 @@ func GetLogEntryProofHandler(params entries.GetLogEntryProofParams) middleware.R
 
 func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Responder {
 	resultPayload := []models.LogEntry{}
-	api, _ := NewAPI(params.HTTPRequest.Context())
+	httpReq := params.HTTPRequest
+	api := apiFromRequest(httpReq)
 
 	//TODO: parallelize this into different goroutines to speed up search
 	searchHashes := [][]byte{}
@@ -215,8 +199,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		for _, uuid := range params.Entry.EntryUUIDs {
 			hash, err := hex.DecodeString(uuid)
 			if err != nil {
-				code := http.StatusBadRequest
-				return logAndReturnError(entries.NewSearchLogQueryBadRequest(), code, err, http.StatusText(code), params.HTTPRequest)
+				return handleRekorAPIError(params, http.StatusBadRequest, err, malformedUUID)
 			}
 			searchHashes = append(searchHashes, hash)
 		}
@@ -224,37 +207,29 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		for _, e := range params.Entry.Entries() {
 			entry, err := types.NewEntry(e)
 			if err != nil {
-				code := http.StatusBadRequest
-				return logAndReturnError(entries.NewSearchLogQueryBadRequest(), code, err, err.Error(), params.HTTPRequest)
+				return handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
 			}
 
 			if entry.HasExternalEntities() {
-				if err := entry.FetchExternalEntities(params.HTTPRequest.Context()); err != nil {
-					code := http.StatusBadRequest
-					return logAndReturnError(entries.NewSearchLogQueryDefault(code), code, err, err.Error(), params.HTTPRequest)
+				if err := entry.FetchExternalEntities(httpReq.Context()); err != nil {
+					return handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
 				}
 			}
 
-			leaf, err := entry.Canonicalize(params.HTTPRequest.Context())
+			leaf, err := entry.Canonicalize(httpReq.Context())
 			if err != nil {
-				code := http.StatusInternalServerError
-				return logAndReturnError(entries.NewSearchLogQueryDefault(code), code, err, err.Error(), params.HTTPRequest)
+				return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
 			}
 			hasher := rfc6962.DefaultHasher
 			leafHash := hasher.HashLeaf(leaf)
 			searchHashes = append(searchHashes, leafHash)
 		}
 
-		resp, err := api.client.getLeafByHash(searchHashes)
-		if err != nil {
-			code := http.StatusInternalServerError
-			return logAndReturnError(entries.NewSearchLogQueryDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
-		}
+		resp := api.client.getLeafByHash(searchHashes) // TODO: if this API is deprecated, we need to ask for inclusion proof and then use index in proof result to get leaf
 		switch resp.status {
 		case codes.OK, codes.NotFound:
 		default:
-			code := http.StatusInternalServerError
-			return logAndReturnError(entries.NewSearchLogQueryDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
+			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
 		}
 
 		for _, leaf := range resp.getLeafResult.Leaves {
@@ -269,19 +244,18 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	}
 
 	if len(params.Entry.LogIndexes) > 0 {
-		resp, err := api.client.getLeafByIndex(swag.Int64ValueSlice(params.Entry.LogIndexes))
-		if err != nil {
-			code := http.StatusInternalServerError
-			return logAndReturnError(entries.NewSearchLogQueryDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
-		}
-		switch resp.status {
-		case codes.OK, codes.NotFound:
-		default:
-			code := http.StatusInternalServerError
-			return logAndReturnError(entries.NewSearchLogQueryDefault(code), code, nil, trillianUnexpectedResult, params.HTTPRequest)
+		leaves := []*trillian.LogLeaf{}
+		for _, logIndex := range params.Entry.LogIndexes {
+			resp := api.client.getLeafByIndex(swag.Int64Value(logIndex))
+			switch resp.status {
+			case codes.OK, codes.NotFound:
+			default:
+				return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
+			}
+			leaves = append(leaves, resp.getLeafResult.Leaves...)
 		}
 
-		for _, leaf := range resp.getLeafResult.Leaves {
+		for _, leaf := range leaves {
 			logEntry := models.LogEntry{
 				hex.EncodeToString(leaf.MerkleLeafHash): models.LogEntryAnon{
 					LogIndex: &leaf.LeafIndex,

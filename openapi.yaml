@@ -127,6 +127,7 @@ paths:
           name: entryUUID
           type: string
           required: true
+          pattern: '^[0-9a-fA-F]{64}$'
           description: the UUID of the entry to be retrieved from the log. The UUID is also the merkle tree hash of the entry.
       responses:
         200:
@@ -150,6 +151,7 @@ paths:
           name: entryUUID
           type: string
           required: true
+          pattern: '^[0-9a-fA-F]{64}$'
           description: the UUID of the entry for which the inclusion proof information should be returned
       responses:
         200:
@@ -234,6 +236,7 @@ definitions:
         items:
           type: string
           minItems: 1
+          pattern: '^[0-9a-fA-F]{64}$'
       logIndexes:
         type: array
         minItems: 1
@@ -309,7 +312,7 @@ definitions:
   Error:
     type: object
     properties:
-      status:
+      code:
         type: integer
       message:
         type: string

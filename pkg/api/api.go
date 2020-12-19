@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/google/trillian"
@@ -73,7 +74,23 @@ func NewAPI(ctx context.Context) (*API, error) {
 	}
 
 	return &API{
-		client: TrillianClientInstance(logClient, tLogID),
+		client: TrillianClientInstance(logClient, tLogID, ctx),
 		pubkey: t.PublicKey,
 	}, nil
+}
+
+type ctxKeyRekorAPI int
+
+const rekorAPILookupKey ctxKeyRekorAPI = 0
+
+func AddAPIToContext(ctx context.Context) (context.Context, error) {
+	api, err := NewAPI(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return context.WithValue(ctx, rekorAPILookupKey, api), nil
+}
+
+func apiFromRequest(r *http.Request) *API {
+	return r.Context().Value(rekorAPILookupKey).(*API)
 }

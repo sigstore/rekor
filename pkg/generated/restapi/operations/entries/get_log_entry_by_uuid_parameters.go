@@ -28,6 +28,7 @@ import (
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/validate"
 )
 
 // NewGetLogEntryByUUIDParams creates a new GetLogEntryByUUIDParams object
@@ -48,6 +49,7 @@ type GetLogEntryByUUIDParams struct {
 
 	/*the UUID of the entry to be retrieved from the log. The UUID is also the merkle tree hash of the entry.
 	  Required: true
+	  Pattern: ^[0-9a-fA-F]{64}$
 	  In: path
 	*/
 	EntryUUID string
@@ -84,6 +86,20 @@ func (o *GetLogEntryByUUIDParams) bindEntryUUID(rawData []string, hasKey bool, f
 	// Parameter is provided by construction from the route
 
 	o.EntryUUID = raw
+
+	if err := o.validateEntryUUID(formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateEntryUUID carries on validations for parameter EntryUUID
+func (o *GetLogEntryByUUIDParams) validateEntryUUID(formats strfmt.Registry) error {
+
+	if err := validate.Pattern("entryUUID", "path", o.EntryUUID, `^[0-9a-fA-F]{64}$`); err != nil {
+		return err
+	}
 
 	return nil
 }

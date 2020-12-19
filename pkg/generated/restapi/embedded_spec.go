@@ -195,6 +195,7 @@ func init() {
         "operationId": "getLogEntryByUUID",
         "parameters": [
           {
+            "pattern": "^[0-9a-fA-F]{64}$",
             "type": "string",
             "description": "the UUID of the entry to be retrieved from the log. The UUID is also the merkle tree hash of the entry.",
             "name": "entryUUID",
@@ -228,6 +229,7 @@ func init() {
         "operationId": "getLogEntryProof",
         "parameters": [
           {
+            "pattern": "^[0-9a-fA-F]{64}$",
             "type": "string",
             "description": "the UUID of the entry for which the inclusion proof information should be returned",
             "name": "entryUUID",
@@ -320,11 +322,11 @@ func init() {
     "Error": {
       "type": "object",
       "properties": {
+        "code": {
+          "type": "integer"
+        },
         "message": {
           "type": "string"
-        },
-        "status": {
-          "type": "integer"
         }
       }
     },
@@ -425,6 +427,7 @@ func init() {
           "type": "array",
           "items": {
             "type": "string",
+            "pattern": "^[0-9a-fA-F]{64}$",
             "minItems": 1
           }
         },
@@ -671,6 +674,7 @@ func init() {
         "operationId": "getLogEntryByUUID",
         "parameters": [
           {
+            "pattern": "^[0-9a-fA-F]{64}$",
             "type": "string",
             "description": "the UUID of the entry to be retrieved from the log. The UUID is also the merkle tree hash of the entry.",
             "name": "entryUUID",
@@ -707,6 +711,7 @@ func init() {
         "operationId": "getLogEntryProof",
         "parameters": [
           {
+            "pattern": "^[0-9a-fA-F]{64}$",
             "type": "string",
             "description": "the UUID of the entry for which the inclusion proof information should be returned",
             "name": "entryUUID",
@@ -808,11 +813,11 @@ func init() {
     "Error": {
       "type": "object",
       "properties": {
+        "code": {
+          "type": "integer"
+        },
         "message": {
           "type": "string"
-        },
-        "status": {
-          "type": "integer"
         }
       }
     },
@@ -1082,7 +1087,8 @@ func init() {
         "entryUUIDs": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{64}$"
           }
         },
         "logIndexes": {

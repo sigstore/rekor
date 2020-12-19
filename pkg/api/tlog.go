@@ -19,10 +19,12 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/projectrekor/rekor/pkg/generated/models"
+	"google.golang.org/grpc/codes"
 
 	"github.com/go-openapi/runtime/middleware"
 	tclient "github.com/google/trillian/client"
@@ -32,26 +34,24 @@ import (
 )
 
 func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
-	api, _ := NewAPI(params.HTTPRequest.Context())
+	httpReq := params.HTTPRequest
+	api, _ := NewAPI(httpReq.Context())
 
-	resp, err := api.client.getLatest(0)
-	if err != nil {
-		code := http.StatusInternalServerError
-		return logAndReturnError(tlog.NewGetLogInfoDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
+	resp := api.client.getLatest(0)
+	if resp.status != codes.OK {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianCommunicationError)
 	}
 	result := resp.getLatestResult
 
 	// validate result is signed with the key we're aware of
 	pub, err := x509.ParsePKIXPublicKey(api.pubkey.Der)
 	if err != nil {
-		code := http.StatusInternalServerError
-		return logAndReturnError(tlog.NewGetLogInfoDefault(code), code, err, http.StatusText(code), params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
 	}
 	verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
 	root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, result.SignedLogRoot)
 	if err != nil {
-		code := http.StatusInternalServerError
-		return logAndReturnError(tlog.NewGetLogInfoDefault(code), code, err, trillianUnexpectedResult, params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 	}
 
 	hashString := hex.EncodeToString(root.RootHash)
@@ -65,29 +65,27 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 }
 
 func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
+	httpReq := params.HTTPRequest
 	if *params.FirstSize > params.LastSize {
-		return logAndReturnError(tlog.NewGetLogProofBadRequest(), http.StatusBadRequest, nil, fmt.Sprintf(firstSizeLessThanLastSize, *params.FirstSize, params.LastSize), params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusBadRequest, nil, fmt.Sprintf(firstSizeLessThanLastSize, *params.FirstSize, params.LastSize))
 	}
-	api, _ := NewAPI(params.HTTPRequest.Context())
+	api, _ := NewAPI(httpReq.Context())
 
-	resp, err := api.client.getConsistencyProof(*params.FirstSize, params.LastSize)
-	if err != nil {
-		code := http.StatusInternalServerError
-		return logAndReturnError(tlog.NewGetLogProofDefault(code), code, err, trillianCommunicationError, params.HTTPRequest)
+	resp := api.client.getConsistencyProof(*params.FirstSize, params.LastSize)
+	if resp.status != codes.OK {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianCommunicationError)
 	}
 	result := resp.getConsistencyProofResult
 
 	// validate result is signed with the key we're aware of
 	pub, err := x509.ParsePKIXPublicKey(api.pubkey.Der)
 	if err != nil {
-		code := http.StatusInternalServerError
-		return logAndReturnError(tlog.NewGetLogProofDefault(code), code, err, http.StatusText(code), params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
 	}
 	verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
 	root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, result.SignedLogRoot)
 	if err != nil {
-		code := http.StatusInternalServerError
-		return logAndReturnError(tlog.NewGetLogProofDefault(code), code, err, trillianUnexpectedResult, params.HTTPRequest)
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 	}
 
 	hashString := hex.EncodeToString(root.RootHash)
@@ -97,6 +95,8 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 		for _, hash := range proof.Hashes {
 			proofHashes = append(proofHashes, hex.EncodeToString(hash))
 		}
+	} else {
+		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("grpc call succeeded but no proof returned"), trillianUnexpectedResult)
 	}
 
 	consistencyProof := models.ConsistencyProof{

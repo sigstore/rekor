@@ -1,6 +1,6 @@
 module github.com/projectrekor/rekor
 
-go 1.15
+go 1.14
 
 require (
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
@@ -33,6 +33,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.1
 	github.com/tidwall/sjson v1.1.2
+	github.com/urfave/negroni v1.0.0
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.etcd.io/etcd v3.3.25+incompatible // indirect
 	go.uber.org/goleak v1.1.10
