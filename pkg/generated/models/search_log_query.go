@@ -140,6 +140,10 @@ func (m *SearchLogQuery) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateEntryUUIDs(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateLogIndexes(formats); err != nil {
 		res = append(res, err)
 	}
@@ -161,6 +165,22 @@ func (m *SearchLogQuery) validateEntries(formats strfmt.Registry) error {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("entries" + "." + strconv.Itoa(i))
 			}
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func (m *SearchLogQuery) validateEntryUUIDs(formats strfmt.Registry) error {
+	if swag.IsZero(m.EntryUUIDs) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.EntryUUIDs); i++ {
+
+		if err := validate.Pattern("entryUUIDs"+"."+strconv.Itoa(i), "body", string(m.EntryUUIDs[i]), `^[0-9a-fA-F]{64}$`); err != nil {
 			return err
 		}
 

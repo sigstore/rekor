@@ -19,11 +19,13 @@ package restapi
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
+	"github.com/mitchellh/mapstructure"
 
 	pkgapi "github.com/projectrekor/rekor/pkg/api"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations"
@@ -31,6 +33,8 @@ import (
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/projectrekor/rekor/pkg/util"
+
+	"github.com/urfave/negroni"
 )
 
 //go:generate swagger generate server --target ../../generated --name RekorServer --spec ../../../openapi.yaml --principal interface{} --exclude-main
@@ -41,7 +45,7 @@ func configureFlags(api *operations.RekorServerAPI) {
 
 func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	// configure the api here
-	api.ServeError = errors.ServeError
+	api.ServeError = logAndServeError
 
 	// Set your custom logger if needed. Default one is log.Printf
 	// Expected interface func(string, ...interface{})
@@ -50,7 +54,7 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	// api.Logger = log.Printf
 	api.Logger = log.Logger.Infof
 
-	api.UseSwaggerUI()
+	// api.UseSwaggerUI()
 	// To continue using redoc as your UI, uncomment the following line
 	// api.UseRedoc()
 
@@ -72,6 +76,15 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.PreServerShutdown = func() {}
 
 	api.ServerShutdown = func() {}
+
+	//api object in context
+	api.AddMiddlewareFor("POST", "/api/v1/log/entries", addTrillianAPI)
+	api.AddMiddlewareFor("POST", "/api/v1/log/entries/retrieve", addTrillianAPI)
+	api.AddMiddlewareFor("GET", "/api/v1/log", addTrillianAPI)
+	api.AddMiddlewareFor("GET", "/api/v1/log/proof", addTrillianAPI)
+	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}/proof", addTrillianAPI)
+	api.AddMiddlewareFor("GET", "/api/v1/log/entries", addTrillianAPI)
+	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}", addTrillianAPI)
 
 	//not cacheable
 	api.AddMiddlewareFor("GET", "/api/v1/log", middleware.NoCache)
@@ -122,7 +135,32 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 
 func cacheForever(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "s-maxage=31536000, max-age=31536000, immutable")
-		handler.ServeHTTP(w, r)
+		ww := negroni.NewResponseWriter(w)
+		ww.Before(func(w negroni.ResponseWriter) {
+			if w.Status() >= 200 && w.Status() <= 299 {
+				w.Header().Set("Cache-Control", "s-maxage=31536000, max-age=31536000, immutable")
+			}
+		})
+		handler.ServeHTTP(ww, r)
 	})
+}
+
+func addTrillianAPI(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		apiCtx, err := pkgapi.AddAPIToContext(r.Context())
+		if err != nil {
+			logAndServeError(w, r, fmt.Errorf("error adding trillian API object to request context: %v", err))
+		} else {
+			handler.ServeHTTP(w, r.WithContext(apiCtx))
+		}
+	})
+}
+
+func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
+	log.RequestIDLogger(r).Error(err)
+	requestFields := map[string]interface{}{}
+	if err := mapstructure.Decode(r, &requestFields); err == nil {
+		log.RequestIDLogger(r).Debug(requestFields)
+	}
+	errors.ServeError(w, r, err)
 }
