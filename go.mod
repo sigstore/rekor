@@ -22,6 +22,7 @@ require (
 	github.com/google/martian v2.1.0+incompatible
 	github.com/google/trillian v1.3.10
 	github.com/gorilla/handlers v1.5.1 // indirect
+	github.com/jessevdk/go-flags v1.4.0
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mitchellh/go-homedir v1.1.0

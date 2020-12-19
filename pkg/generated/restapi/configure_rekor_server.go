@@ -18,6 +18,7 @@ limitations under the License.
 package restapi
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net/http"
@@ -77,15 +78,6 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 
 	api.ServerShutdown = func() {}
 
-	//api object in context
-	api.AddMiddlewareFor("POST", "/api/v1/log/entries", addTrillianAPI)
-	api.AddMiddlewareFor("POST", "/api/v1/log/entries/retrieve", addTrillianAPI)
-	api.AddMiddlewareFor("GET", "/api/v1/log", addTrillianAPI)
-	api.AddMiddlewareFor("GET", "/api/v1/log/proof", addTrillianAPI)
-	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}/proof", addTrillianAPI)
-	api.AddMiddlewareFor("GET", "/api/v1/log/entries", addTrillianAPI)
-	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}", addTrillianAPI)
-
 	//not cacheable
 	api.AddMiddlewareFor("GET", "/api/v1/log", middleware.NoCache)
 	api.AddMiddlewareFor("GET", "/api/v1/log/proof", middleware.NoCache)
@@ -122,6 +114,9 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 	returnHandler := middleware.Recoverer(handler)
 	returnHandler = middleware.Logger(returnHandler)
 	returnHandler = middleware.Heartbeat("/ping")(returnHandler)
+
+	// add the Trillian API object in context for all endpoints
+	returnHandler = addTrillianAPI(handler)
 	return middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		r = r.WithContext(log.WithRequestID(ctx, middleware.GetReqID(ctx)))
@@ -146,8 +141,12 @@ func cacheForever(handler http.Handler) http.Handler {
 }
 
 func addTrillianAPI(handler http.Handler) http.Handler {
+	api, err := pkgapi.NewAPI(context.Background())
+	if err != nil {
+		log.Logger.Panic(err)
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		apiCtx, err := pkgapi.AddAPIToContext(r.Context())
+		apiCtx, err := pkgapi.AddAPIToContext(r.Context(), api)
 		if err != nil {
 			logAndServeError(w, r, fmt.Errorf("error adding trillian API object to request context: %v", err))
 		} else {
