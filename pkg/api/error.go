@@ -61,9 +61,9 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		}
 	}
 
-	switch params.(type) {
+	switch params := params.(type) {
 	case entries.GetLogEntryByIndexParams:
-		logMsg(params.(entries.GetLogEntryByIndexParams).HTTPRequest)
+		logMsg(params.HTTPRequest)
 		switch code {
 		case http.StatusNotFound:
 			return entries.NewGetLogEntryByIndexNotFound()
@@ -71,7 +71,7 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 			return entries.NewGetLogEntryByIndexDefault(code).WithPayload(errorMsg(message, code))
 		}
 	case entries.GetLogEntryByUUIDParams:
-		logMsg(params.(entries.GetLogEntryByUUIDParams).HTTPRequest)
+		logMsg(params.HTTPRequest)
 		switch code {
 		case http.StatusNotFound:
 			return entries.NewGetLogEntryByUUIDNotFound()
@@ -79,7 +79,7 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 			return entries.NewGetLogEntryByUUIDDefault(code).WithPayload(errorMsg(message, code))
 		}
 	case entries.GetLogEntryProofParams:
-		logMsg(params.(entries.GetLogEntryProofParams).HTTPRequest)
+		logMsg(params.HTTPRequest)
 		switch code {
 		case http.StatusNotFound:
 			return entries.NewGetLogEntryProofNotFound()
@@ -87,7 +87,7 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 			return entries.NewGetLogEntryProofDefault(code).WithPayload(errorMsg(message, code))
 		}
 	case entries.CreateLogEntryParams:
-		logMsg(params.(entries.CreateLogEntryParams).HTTPRequest)
+		logMsg(params.HTTPRequest)
 		switch code {
 		case http.StatusBadRequest:
 			return entries.NewCreateLogEntryBadRequest()
@@ -97,7 +97,7 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 			return entries.NewCreateLogEntryDefault(code).WithPayload(errorMsg(message, code))
 		}
 	case entries.SearchLogQueryParams:
-		logMsg(params.(entries.SearchLogQueryParams).HTTPRequest)
+		logMsg(params.HTTPRequest)
 		switch code {
 		case http.StatusBadRequest:
 			return entries.NewSearchLogQueryBadRequest()
@@ -105,10 +105,10 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 			return entries.NewSearchLogQueryDefault(code).WithPayload(errorMsg(message, code))
 		}
 	case tlog.GetLogInfoParams:
-		logMsg(params.(tlog.GetLogInfoParams).HTTPRequest)
+		logMsg(params.HTTPRequest)
 		return tlog.NewGetLogInfoDefault(code).WithPayload(errorMsg(message, code))
 	case tlog.GetLogProofParams:
-		logMsg(params.(tlog.GetLogProofParams).HTTPRequest)
+		logMsg(params.HTTPRequest)
 		switch code {
 		case http.StatusBadRequest:
 			return tlog.NewGetLogProofBadRequest()
