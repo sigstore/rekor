@@ -35,7 +35,7 @@ import (
 
 func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	httpReq := params.HTTPRequest
-	api, _ := NewAPI(httpReq.Context())
+	api := apiFromRequest(httpReq)
 
 	resp := api.client.getLatest(0)
 	if resp.status != codes.OK {
@@ -69,7 +69,7 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	if *params.FirstSize > params.LastSize {
 		return handleRekorAPIError(params, http.StatusBadRequest, nil, fmt.Sprintf(firstSizeLessThanLastSize, *params.FirstSize, params.LastSize))
 	}
-	api, _ := NewAPI(httpReq.Context())
+	api := apiFromRequest(httpReq)
 
 	resp := api.client.getConsistencyProof(*params.FirstSize, params.LastSize)
 	if resp.status != codes.OK {

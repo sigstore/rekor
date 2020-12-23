@@ -83,11 +83,7 @@ type ctxKeyRekorAPI int
 
 const rekorAPILookupKey ctxKeyRekorAPI = 0
 
-func AddAPIToContext(ctx context.Context) (context.Context, error) {
-	api, err := NewAPI(ctx)
-	if err != nil {
-		return nil, err
-	}
+func AddAPIToContext(ctx context.Context, api *API) (context.Context, error) {
 	return context.WithValue(ctx, rekorAPILookupKey, api), nil
 }
 
