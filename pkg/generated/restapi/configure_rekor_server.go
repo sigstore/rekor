@@ -18,9 +18,7 @@ limitations under the License.
 package restapi
 
 import (
-	"context"
 	"crypto/tls"
-	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/middleware"
@@ -141,17 +139,13 @@ func cacheForever(handler http.Handler) http.Handler {
 }
 
 func addTrillianAPI(handler http.Handler) http.Handler {
-	api, err := pkgapi.NewAPI(context.Background())
+	api, err := pkgapi.NewAPI()
 	if err != nil {
 		log.Logger.Panic(err)
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		apiCtx, err := pkgapi.AddAPIToContext(r.Context(), api)
-		if err != nil {
-			logAndServeError(w, r, fmt.Errorf("error adding trillian API object to request context: %v", err))
-		} else {
-			handler.ServeHTTP(w, r.WithContext(apiCtx))
-		}
+		apiCtx := pkgapi.AddAPIToContext(r.Context(), api)
+		handler.ServeHTTP(w, r.WithContext(apiCtx))
 	})
 }
 

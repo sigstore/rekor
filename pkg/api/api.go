@@ -19,7 +19,6 @@ package api
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/google/trillian"
@@ -42,14 +41,16 @@ func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
 }
 
 type API struct {
-	client *TrillianClient
-	pubkey *keyspb.PublicKey
+	logClient trillian.TrillianLogClient
+	logID     int64
+	pubkey    *keyspb.PublicKey
 }
 
-func NewAPI(ctx context.Context) (*API, error) {
+func NewAPI() (*API, error) {
 	logRPCServer := fmt.Sprintf("%s:%d",
 		viper.GetString("trillian_log_server.address"),
 		viper.GetUint("trillian_log_server.port"))
+	ctx := context.Background()
 	tConn, err := dial(ctx, logRPCServer)
 	if err != nil {
 		return nil, err
@@ -74,8 +75,9 @@ func NewAPI(ctx context.Context) (*API, error) {
 	}
 
 	return &API{
-		client: TrillianClientInstance(logClient, tLogID, ctx),
-		pubkey: t.PublicKey,
+		logClient: logClient,
+		logID:     tLogID,
+		pubkey:    t.PublicKey,
 	}, nil
 }
 
@@ -83,10 +85,20 @@ type ctxKeyRekorAPI int
 
 const rekorAPILookupKey ctxKeyRekorAPI = 0
 
-func AddAPIToContext(ctx context.Context, api *API) (context.Context, error) {
-	return context.WithValue(ctx, rekorAPILookupKey, api), nil
+func AddAPIToContext(ctx context.Context, api *API) context.Context {
+	return context.WithValue(ctx, rekorAPILookupKey, api)
 }
 
-func apiFromRequest(r *http.Request) *API {
-	return r.Context().Value(rekorAPILookupKey).(*API)
+func NewTrillianClient(ctx context.Context) *TrillianClient {
+	api := ctx.Value(rekorAPILookupKey).(*API)
+	if api == nil {
+		return nil
+	}
+
+	return &TrillianClient{
+		client:  api.logClient,
+		logID:   api.logID,
+		context: ctx,
+		pubkey:  api.pubkey,
+	}
 }
