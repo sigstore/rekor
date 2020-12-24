@@ -34,17 +34,19 @@ import (
 )
 
 func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
-	httpReq := params.HTTPRequest
-	api := apiFromRequest(httpReq)
+	tc := NewTrillianClient(params.HTTPRequest.Context())
+	if tc == nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to get client from request context"), trillianCommunicationError)
+	}
 
-	resp := api.client.getLatest(0)
+	resp := tc.getLatest(0)
 	if resp.status != codes.OK {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianCommunicationError)
 	}
 	result := resp.getLatestResult
 
 	// validate result is signed with the key we're aware of
-	pub, err := x509.ParsePKIXPublicKey(api.pubkey.Der)
+	pub, err := x509.ParsePKIXPublicKey(tc.pubkey.Der)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
 	}
@@ -65,20 +67,22 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 }
 
 func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
-	httpReq := params.HTTPRequest
 	if *params.FirstSize > params.LastSize {
 		return handleRekorAPIError(params, http.StatusBadRequest, nil, fmt.Sprintf(firstSizeLessThanLastSize, *params.FirstSize, params.LastSize))
 	}
-	api := apiFromRequest(httpReq)
+	tc := NewTrillianClient(params.HTTPRequest.Context())
+	if tc == nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to get client from request context"), trillianCommunicationError)
+	}
 
-	resp := api.client.getConsistencyProof(*params.FirstSize, params.LastSize)
+	resp := tc.getConsistencyProof(*params.FirstSize, params.LastSize)
 	if resp.status != codes.OK {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianCommunicationError)
 	}
 	result := resp.getConsistencyProofResult
 
 	// validate result is signed with the key we're aware of
-	pub, err := x509.ParsePKIXPublicKey(api.pubkey.Der)
+	pub, err := x509.ParsePKIXPublicKey(tc.pubkey.Der)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
 	}

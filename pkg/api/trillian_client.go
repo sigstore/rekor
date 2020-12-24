@@ -37,6 +37,7 @@ type TrillianClient struct {
 	client  trillian.TrillianLogClient
 	logID   int64
 	context context.Context
+	pubkey  *keyspb.PublicKey
 }
 
 type Response struct {
@@ -48,14 +49,6 @@ type Response struct {
 	getLeafByRangeResult      *trillian.GetLeavesByRangeResponse
 	getLatestResult           *trillian.GetLatestSignedLogRootResponse
 	getConsistencyProofResult *trillian.GetConsistencyProofResponse
-}
-
-func TrillianClientInstance(client trillian.TrillianLogClient, tLogID int64, ctx context.Context) *TrillianClient {
-	return &TrillianClient{
-		client:  client,
-		logID:   tLogID,
-		context: ctx,
-	}
 }
 
 func (t *TrillianClient) root() (types.LogRootV1, error) {

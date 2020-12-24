@@ -42,10 +42,12 @@ import (
 )
 
 func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middleware.Responder {
-	httpReq := params.HTTPRequest
-	api := apiFromRequest(httpReq)
+	tc := NewTrillianClient(params.HTTPRequest.Context())
+	if tc == nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to get client from request context"), trillianCommunicationError)
+	}
 
-	resp := api.client.getLeafByIndex(params.LogIndex)
+	resp := tc.getLeafByIndex(params.LogIndex)
 	switch resp.status {
 	case codes.OK:
 	case codes.NotFound, codes.OutOfRange:
@@ -83,9 +85,12 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalEntry)
 	}
 
-	api := apiFromRequest(httpReq)
+	tc := NewTrillianClient(httpReq.Context())
+	if tc == nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to get client from request context"), trillianCommunicationError)
+	}
 
-	resp := api.client.addLeaf(leaf)
+	resp := tc.addLeaf(leaf)
 	switch resp.status {
 	case codes.OK:
 	case codes.AlreadyExists, codes.FailedPrecondition:
@@ -110,12 +115,15 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 }
 
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
-	httpReq := params.HTTPRequest
-	api := apiFromRequest(httpReq)
 	hashValue, _ := hex.DecodeString(params.EntryUUID)
 	hashes := [][]byte{hashValue}
 
-	resp := api.client.getLeafByHash(hashes) // TODO: if this API is deprecated, we need to ask for inclusion proof and then use index in proof result to get leaf
+	tc := NewTrillianClient(params.HTTPRequest.Context())
+	if tc == nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to get client from request context"), trillianCommunicationError)
+	}
+
+	resp := tc.getLeafByHash(hashes) // TODO: if this API is deprecated, we need to ask for inclusion proof and then use index in proof result to get leaf
 	switch resp.status {
 	case codes.OK:
 	case codes.NotFound:
@@ -144,11 +152,13 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 }
 
 func GetLogEntryProofHandler(params entries.GetLogEntryProofParams) middleware.Responder {
-	httpReq := params.HTTPRequest
-	api := apiFromRequest(httpReq)
 	hashValue, _ := hex.DecodeString(params.EntryUUID)
+	tc := NewTrillianClient(params.HTTPRequest.Context())
+	if tc == nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to get client from request context"), trillianCommunicationError)
+	}
 
-	resp := api.client.getProofByHash(hashValue)
+	resp := tc.getProofByHash(hashValue)
 	switch resp.status {
 	case codes.OK:
 	case codes.NotFound:
@@ -159,7 +169,7 @@ func GetLogEntryProofHandler(params entries.GetLogEntryProofParams) middleware.R
 	result := resp.getProofResult
 
 	// validate result is signed with the key we're aware of
-	pub, err := x509.ParsePKIXPublicKey(api.pubkey.Der)
+	pub, err := x509.ParsePKIXPublicKey(tc.pubkey.Der)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
 	}
@@ -189,9 +199,12 @@ func GetLogEntryProofHandler(params entries.GetLogEntryProofParams) middleware.R
 }
 
 func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Responder {
+	httpReqCtx := params.HTTPRequest.Context()
 	resultPayload := []models.LogEntry{}
-	httpReq := params.HTTPRequest
-	api := apiFromRequest(httpReq)
+	tc := NewTrillianClient(httpReqCtx)
+	if tc == nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to get client from request context"), trillianCommunicationError)
+	}
 
 	//TODO: parallelize this into different goroutines to speed up search
 	searchHashes := [][]byte{}
@@ -211,12 +224,12 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 			}
 
 			if entry.HasExternalEntities() {
-				if err := entry.FetchExternalEntities(httpReq.Context()); err != nil {
+				if err := entry.FetchExternalEntities(httpReqCtx); err != nil {
 					return handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
 				}
 			}
 
-			leaf, err := entry.Canonicalize(httpReq.Context())
+			leaf, err := entry.Canonicalize(httpReqCtx)
 			if err != nil {
 				return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
 			}
@@ -225,7 +238,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 			searchHashes = append(searchHashes, leafHash)
 		}
 
-		resp := api.client.getLeafByHash(searchHashes) // TODO: if this API is deprecated, we need to ask for inclusion proof and then use index in proof result to get leaf
+		resp := tc.getLeafByHash(searchHashes) // TODO: if this API is deprecated, we need to ask for inclusion proof and then use index in proof result to get leaf
 		switch resp.status {
 		case codes.OK, codes.NotFound:
 		default:
@@ -246,7 +259,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	if len(params.Entry.LogIndexes) > 0 {
 		leaves := []*trillian.LogLeaf{}
 		for _, logIndex := range params.Entry.LogIndexes {
-			resp := api.client.getLeafByIndex(swag.Int64Value(logIndex))
+			resp := tc.getLeafByIndex(swag.Int64Value(logIndex))
 			switch resp.status {
 			case codes.OK, codes.NotFound:
 			default:
