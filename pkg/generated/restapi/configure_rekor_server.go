@@ -113,8 +113,6 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 	returnHandler = middleware.Logger(returnHandler)
 	returnHandler = middleware.Heartbeat("/ping")(returnHandler)
 
-	// add the Trillian API object in context for all endpoints
-	returnHandler = addTrillianAPI(handler)
 	return middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		r = r.WithContext(log.WithRequestID(ctx, middleware.GetReqID(ctx)))
@@ -135,17 +133,6 @@ func cacheForever(handler http.Handler) http.Handler {
 			}
 		})
 		handler.ServeHTTP(ww, r)
-	})
-}
-
-func addTrillianAPI(handler http.Handler) http.Handler {
-	api, err := pkgapi.NewAPI()
-	if err != nil {
-		log.Logger.Panic(err)
-	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		apiCtx := pkgapi.AddAPIToContext(r.Context(), api)
-		handler.ServeHTTP(w, r.WithContext(apiCtx))
 	})
 }
 

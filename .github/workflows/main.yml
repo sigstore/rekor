@@ -64,8 +64,6 @@ jobs:
       - uses: actions/checkout@v2
       - name: Docker Build
         run: docker-compose build
-      - name: Docker Compose Start
-        run: docker-compose up -d
       - uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GOVERSION }}
