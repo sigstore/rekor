@@ -97,17 +97,19 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
 	}
 
-	//this represents the results of inserting the proposed leaf into the log
-	switch resp.getAddResult.QueuedLeaf.Status.Code {
-	case int32(code.Code_OK):
-	case int32(code.Code_ALREADY_EXISTS), int32(code.Code_FAILED_PRECONDITION):
-		return handleRekorAPIError(params, http.StatusConflict, fmt.Errorf("grpc error: %w", resp.err), entryAlreadyExists)
-	default:
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
+	//this represents the results of inserting the proposed leaf into the log; status is nil in success path
+	insertionStatus := resp.getAddResult.QueuedLeaf.Status
+	if insertionStatus != nil {
+		switch insertionStatus.Code {
+		case int32(code.Code_OK):
+		case int32(code.Code_ALREADY_EXISTS), int32(code.Code_FAILED_PRECONDITION):
+			return handleRekorAPIError(params, http.StatusConflict, fmt.Errorf("grpc error: %v", insertionStatus.String()), entryAlreadyExists)
+		default:
+			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %v", insertionStatus.String()), trillianUnexpectedResult)
+		}
 	}
 
 	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
-
 	uuid := hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
 
 	logEntry := models.LogEntry{
