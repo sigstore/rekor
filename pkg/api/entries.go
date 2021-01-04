@@ -24,6 +24,7 @@ import (
 	"net/http"
 
 	"github.com/google/trillian"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/go-openapi/swag"
 
@@ -200,36 +201,47 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	resultPayload := []models.LogEntry{}
 	tc := NewTrillianClient(httpReqCtx)
 
-	//TODO: parallelize this into different goroutines to speed up search
-	searchHashes := [][]byte{}
 	if len(params.Entry.EntryUUIDs) > 0 || len(params.Entry.Entries()) > 0 {
-		for _, uuid := range params.Entry.EntryUUIDs {
+		g, _ := errgroup.WithContext(httpReqCtx)
+
+		searchHashes := make([][]byte, len(params.Entry.EntryUUIDs)+len(params.Entry.Entries()))
+		for i, uuid := range params.Entry.EntryUUIDs {
 			hash, err := hex.DecodeString(uuid)
 			if err != nil {
 				return handleRekorAPIError(params, http.StatusBadRequest, err, malformedUUID)
 			}
-			searchHashes = append(searchHashes, hash)
+			searchHashes[i] = hash
 		}
 
-		for _, e := range params.Entry.Entries() {
-			entry, err := types.NewEntry(e)
-			if err != nil {
-				return handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
-			}
-
-			if entry.HasExternalEntities() {
-				if err := entry.FetchExternalEntities(httpReqCtx); err != nil {
-					return handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
+		code := http.StatusBadRequest
+		for i, e := range params.Entry.Entries() {
+			i, e := i, e // https://golang.org/doc/faq#closures_and_goroutines
+			g.Go(func() error {
+				entry, err := types.NewEntry(e)
+				if err != nil {
+					return err
 				}
-			}
 
-			leaf, err := entry.Canonicalize(httpReqCtx)
-			if err != nil {
-				return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
-			}
-			hasher := rfc6962.DefaultHasher
-			leafHash := hasher.HashLeaf(leaf)
-			searchHashes = append(searchHashes, leafHash)
+				if entry.HasExternalEntities() {
+					if err := entry.FetchExternalEntities(httpReqCtx); err != nil {
+						return err
+					}
+				}
+
+				leaf, err := entry.Canonicalize(httpReqCtx)
+				if err != nil {
+					code = http.StatusInternalServerError
+					return err
+				}
+				hasher := rfc6962.DefaultHasher
+				leafHash := hasher.HashLeaf(leaf)
+				searchHashes[i+len(params.Entry.EntryUUIDs)] = leafHash
+				return nil
+			})
+		}
+
+		if err := g.Wait(); err != nil {
+			return handleRekorAPIError(params, code, err, err.Error())
 		}
 
 		resp := tc.getLeafByHash(searchHashes) // TODO: if this API is deprecated, we need to ask for inclusion proof and then use index in proof result to get leaf
@@ -251,25 +263,44 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	}
 
 	if len(params.Entry.LogIndexes) > 0 {
-		leaves := []*trillian.LogLeaf{}
-		for _, logIndex := range params.Entry.LogIndexes {
-			resp := tc.getLeafByIndex(swag.Int64Value(logIndex))
-			switch resp.status {
-			case codes.OK, codes.NotFound:
-			default:
-				return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
+		g, _ := errgroup.WithContext(httpReqCtx)
+
+		leaves := make([]*trillian.LogLeaf, len(params.Entry.LogIndexes))
+		for i, logIndex := range params.Entry.LogIndexes {
+			i, logIndex := i, logIndex // https://golang.org/doc/faq#closures_and_goroutines
+			g.Go(func() error {
+				resp := tc.getLeafByIndex(swag.Int64Value(logIndex))
+				switch resp.status {
+				case codes.OK, codes.NotFound:
+				default:
+					return resp.err
+				}
+				if resp.getLeafByRangeResult != nil {
+					numLeaves := len(resp.getLeafByRangeResult.Leaves)
+					if numLeaves == 0 {
+						return nil
+					} else if numLeaves != 1 {
+						return errors.New("more than one leaf returned from getLeafByIndex call")
+					}
+					leaves[i] = resp.getLeafByRangeResult.Leaves[0]
+				}
+				return nil
+			})
+			if err := g.Wait(); err != nil {
+				return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", err), trillianUnexpectedResult)
 			}
-			leaves = append(leaves, resp.getLeafResult.Leaves...)
 		}
 
 		for _, leaf := range leaves {
-			logEntry := models.LogEntry{
-				hex.EncodeToString(leaf.MerkleLeafHash): models.LogEntryAnon{
-					LogIndex: &leaf.LeafIndex,
-					Body:     leaf.LeafValue,
-				},
+			if leaf != nil {
+				logEntry := models.LogEntry{
+					hex.EncodeToString(leaf.MerkleLeafHash): models.LogEntryAnon{
+						LogIndex: &leaf.LeafIndex,
+						Body:     leaf.LeafValue,
+					},
+				}
+				resultPayload = append(resultPayload, logEntry)
 			}
-			resultPayload = append(resultPayload, logEntry)
 		}
 	}
 
