@@ -2,6 +2,8 @@
 set -ex
 testdir=$(dirname "$0")
 
+docker-compose up -d
+
 # Node
 nodedir=${testdir}/node
 go run ./cmd/cli/ upload \

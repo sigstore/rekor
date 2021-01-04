@@ -35,9 +35,6 @@ import (
 
 func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	tc := NewTrillianClient(params.HTTPRequest.Context())
-	if tc == nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to get client from request context"), trillianCommunicationError)
-	}
 
 	resp := tc.getLatest(0)
 	if resp.status != codes.OK {
@@ -71,9 +68,6 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 		return handleRekorAPIError(params, http.StatusBadRequest, nil, fmt.Sprintf(firstSizeLessThanLastSize, *params.FirstSize, params.LastSize))
 	}
 	tc := NewTrillianClient(params.HTTPRequest.Context())
-	if tc == nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to get client from request context"), trillianCommunicationError)
-	}
 
 	resp := tc.getConsistencyProof(*params.FirstSize, params.LastSize)
 	if resp.status != codes.OK {

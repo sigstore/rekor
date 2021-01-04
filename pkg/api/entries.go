@@ -44,9 +44,6 @@ import (
 
 func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middleware.Responder {
 	tc := NewTrillianClient(params.HTTPRequest.Context())
-	if tc == nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to get client from request context"), trillianCommunicationError)
-	}
 
 	resp := tc.getLeafByIndex(params.LogIndex)
 	switch resp.status {
@@ -87,9 +84,6 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 	}
 
 	tc := NewTrillianClient(httpReq.Context())
-	if tc == nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to get client from request context"), trillianCommunicationError)
-	}
 
 	resp := tc.addLeaf(leaf)
 	//this represents overall GRPC response state (not the results of insertion into the log)
@@ -128,9 +122,6 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 	hashes := [][]byte{hashValue}
 
 	tc := NewTrillianClient(params.HTTPRequest.Context())
-	if tc == nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to get client from request context"), trillianCommunicationError)
-	}
 
 	resp := tc.getLeafByHash(hashes) // TODO: if this API is deprecated, we need to ask for inclusion proof and then use index in proof result to get leaf
 	switch resp.status {
@@ -163,9 +154,6 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 func GetLogEntryProofHandler(params entries.GetLogEntryProofParams) middleware.Responder {
 	hashValue, _ := hex.DecodeString(params.EntryUUID)
 	tc := NewTrillianClient(params.HTTPRequest.Context())
-	if tc == nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to get client from request context"), trillianCommunicationError)
-	}
 
 	resp := tc.getProofByHash(hashValue)
 	switch resp.status {
@@ -211,9 +199,6 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	httpReqCtx := params.HTTPRequest.Context()
 	resultPayload := []models.LogEntry{}
 	tc := NewTrillianClient(httpReqCtx)
-	if tc == nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to get client from request context"), trillianCommunicationError)
-	}
 
 	//TODO: parallelize this into different goroutines to speed up search
 	searchHashes := [][]byte{}
