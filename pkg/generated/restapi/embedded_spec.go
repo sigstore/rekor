@@ -115,6 +115,7 @@ func init() {
           {
             "name": "proposedEntry",
             "in": "body",
+            "required": true,
             "schema": {
               "$ref": "#/definitions/ProposedEntry"
             }
@@ -579,6 +580,7 @@ func init() {
           {
             "name": "proposedEntry",
             "in": "body",
+            "required": true,
             "schema": {
               "$ref": "#/definitions/ProposedEntry"
             }
