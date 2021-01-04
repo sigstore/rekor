@@ -1,7 +1,7 @@
 version: '3.1'
 services:
   mysql:
-    image: gcr.io/trillian-opensource-ci/db_server
+    image: gcr.io/trillian-opensource-ci/db_server:3c8193ebb2d7fedb44d18e9c810d0d2e4dbb7e4d
     environment:
       - MYSQL_ROOT_PASSWORD=zaphod
       - MYSQL_DATABASE=test

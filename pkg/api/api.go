@@ -81,21 +81,20 @@ func NewAPI() (*API, error) {
 	}, nil
 }
 
-type ctxKeyRekorAPI int
+var (
+	api *API
+)
 
-const rekorAPILookupKey ctxKeyRekorAPI = 0
-
-func AddAPIToContext(ctx context.Context, api *API) context.Context {
-	return context.WithValue(ctx, rekorAPILookupKey, api)
+func ConfigureAPI() {
+	var err error
+	api, err = NewAPI()
+	if err != nil {
+		log.Logger.Panic(err)
+	}
 }
 
-func NewTrillianClient(ctx context.Context) *TrillianClient {
-	api := ctx.Value(rekorAPILookupKey).(*API)
-	if api == nil {
-		return nil
-	}
-
-	return &TrillianClient{
+func NewTrillianClient(ctx context.Context) TrillianClient {
+	return TrillianClient{
 		client:  api.logClient,
 		logID:   api.logID,
 		context: ctx,

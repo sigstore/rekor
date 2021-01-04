@@ -18,6 +18,7 @@ package app
 
 import (
 	"github.com/go-openapi/loads"
+	"github.com/projectrekor/rekor/pkg/api"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations"
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/projectrekor/rekor/pkg/types/rekord"
@@ -58,6 +59,8 @@ var serveCmd = &cobra.Command{
 
 		server.Host = viper.GetString("rekor_server.address")
 		server.Port = int(viper.GetUint("rekor_server.port"))
+
+		api.ConfigureAPI()
 		server.ConfigureAPI()
 		if err := server.Serve(); err != nil {
 			log.Logger.Fatal(err)
