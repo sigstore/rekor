@@ -113,11 +113,6 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 	returnHandler = middleware.Recoverer(returnHandler)
 	returnHandler = middleware.Heartbeat("/ping")(returnHandler)
 
-<<<<<<< HEAD
-	// add the Trillian API object in context for all endpoints
-	returnHandler = addTrillianAPI(returnHandler)
-=======
->>>>>>> 3c1d3dcffd67e28016997424572f67f222424bed
 	return middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		r = r.WithContext(log.WithRequestID(ctx, middleware.GetReqID(ctx)))
