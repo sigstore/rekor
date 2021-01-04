@@ -24,6 +24,7 @@ package entries
 
 import (
 	"context"
+	"io"
 	"net/http"
 
 	"github.com/go-openapi/errors"
@@ -51,6 +52,7 @@ type CreateLogEntryParams struct {
 	HTTPRequest *http.Request `json:"-"`
 
 	/*
+	  Required: true
 	  In: body
 	*/
 	ProposedEntry models.ProposedEntry
@@ -69,6 +71,9 @@ func (o *CreateLogEntryParams) BindRequest(r *http.Request, route *middleware.Ma
 		defer r.Body.Close()
 		body, err := models.UnmarshalProposedEntry(r.Body, route.Consumer)
 		if err != nil {
+			if err == io.EOF {
+				err = errors.Required("proposedEntry", "body", "")
+			}
 			res = append(res, err)
 		} else {
 			// validate body object
@@ -85,6 +90,8 @@ func (o *CreateLogEntryParams) BindRequest(r *http.Request, route *middleware.Ma
 				o.ProposedEntry = body
 			}
 		}
+	} else {
+		res = append(res, errors.Required("proposedEntry", "body", ""))
 	}
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)

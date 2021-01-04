@@ -75,6 +75,7 @@ paths:
           name: proposedEntry
           schema:
             $ref: '#/definitions/ProposedEntry'
+          required: true
       responses:
         201:
           description: Returns the entry created in the transparency log
