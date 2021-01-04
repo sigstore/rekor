@@ -27,6 +27,7 @@ import (
 
 	"github.com/go-openapi/swag"
 
+	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/grpc/codes"
 
 	"github.com/projectrekor/rekor/pkg/types"
@@ -85,16 +86,24 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 	tc := NewTrillianClient(httpReq.Context())
 
 	resp := tc.addLeaf(leaf)
-	switch resp.status {
-	case codes.OK:
-	case codes.AlreadyExists, codes.FailedPrecondition:
-		return handleRekorAPIError(params, http.StatusConflict, fmt.Errorf("grpc error: %w", resp.err), entryAlreadyExists)
-	default:
+	//this represents overall GRPC response state (not the results of insertion into the log)
+	if resp.status != codes.OK {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
 	}
 
-	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
+	//this represents the results of inserting the proposed leaf into the log; status is nil in success path
+	insertionStatus := resp.getAddResult.QueuedLeaf.Status
+	if insertionStatus != nil {
+		switch insertionStatus.Code {
+		case int32(code.Code_OK):
+		case int32(code.Code_ALREADY_EXISTS), int32(code.Code_FAILED_PRECONDITION):
+			return handleRekorAPIError(params, http.StatusConflict, fmt.Errorf("grpc error: %v", insertionStatus.String()), entryAlreadyExists)
+		default:
+			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %v", insertionStatus.String()), trillianUnexpectedResult)
+		}
+	}
 
+	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
 	uuid := hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
 
 	logEntry := models.LogEntry{

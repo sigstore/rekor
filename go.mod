@@ -46,6 +46,7 @@ require (
 	golang.org/x/sys v0.0.0-20201207223542-d4d67f95c62d // indirect
 	golang.org/x/tools v0.0.0-20201208062317-e652b2f42cc7 // indirect
 	google.golang.org/appengine v1.6.7
+	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987
 	google.golang.org/grpc v1.32.0
 	gopkg.in/ini.v1 v1.62.0 // indirect
 )
