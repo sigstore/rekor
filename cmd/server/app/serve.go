@@ -17,6 +17,8 @@ limitations under the License.
 package app
 
 import (
+	"flag"
+
 	"github.com/go-openapi/loads"
 	"github.com/projectrekor/rekor/pkg/api"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations"
@@ -35,6 +37,10 @@ var serveCmd = &cobra.Command{
 	Short: "start http server with configured api",
 	Long:  `Starts a http server and serves the configured api`,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		// workaround for https://github.com/projectrekor/rekor/issues/68
+		// from https://github.com/golang/glog/commit/fca8c8854093a154ff1eb580aae10276ad6b1b5f
+		flag.CommandLine.Parse([]string{})
 
 		doc, _ := loads.Embedded(restapi.SwaggerJSON, restapi.FlatSwaggerJSON)
 		server := restapi.NewServer(operations.NewRekorServerAPI(doc))
