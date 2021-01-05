@@ -16,6 +16,7 @@ limitations under the License.
 package app
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/projectrekor/rekor/pkg/generated/client/entries"
@@ -57,10 +58,16 @@ var uploadCmd = &cobra.Command{
 
 		resp, err := rekorClient.Entries.CreateLogEntry(params)
 		if err != nil {
-			log.Fatal(err)
+			switch err.(type) {
+			case *entries.CreateLogEntryConflict:
+				fmt.Println("Entry already exists.")
+				return
+			default:
+				log.Fatal(err)
+			}
 		}
 
-		log.Infof("Created entry at: %v%v", viper.GetString("rekor_server"), resp.Location)
+		fmt.Printf("Created entry at: %v%v\n", viper.GetString("rekor_server"), resp.Location)
 	},
 }
 
