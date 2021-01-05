@@ -40,7 +40,7 @@ var serveCmd = &cobra.Command{
 
 		// workaround for https://github.com/projectrekor/rekor/issues/68
 		// from https://github.com/golang/glog/commit/fca8c8854093a154ff1eb580aae10276ad6b1b5f
-		flag.CommandLine.Parse([]string{})
+		_ = flag.CommandLine.Parse([]string{})
 
 		doc, _ := loads.Embedded(restapi.SwaggerJSON, restapi.FlatSwaggerJSON)
 		server := restapi.NewServer(operations.NewRekorServerAPI(doc))
