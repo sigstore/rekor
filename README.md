@@ -1,4 +1,4 @@
-# Rekor Command Line Interface
+# Rekor
 
 Rekór - Greek for “Record”
 
