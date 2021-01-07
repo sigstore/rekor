@@ -41,7 +41,7 @@ type ConsistencyProof struct {
 	// Required: true
 	Hashes []string `json:"hashes"`
 
-	// The hash value stored at the root of the merkle tree at time the proof was generated
+	// The hash value stored at the root of the merkle tree at the time the proof was generated
 	// Required: true
 	// Pattern: ^[0-9a-fA-F]{64}$
 	RootHash *string `json:"rootHash"`

@@ -18,9 +18,10 @@ package app
 import (
 	"encoding/hex"
 	"fmt"
+	"math/bits"
 	"os"
+	"strconv"
 
-	"github.com/google/trillian/merkle"
 	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/projectrekor/rekor/pkg/generated/client/entries"
 	"github.com/projectrekor/rekor/pkg/generated/models"
@@ -40,7 +41,7 @@ var verifyCmd = &cobra.Command{
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			log.Logger.Fatal("Error initializing cmd line args: ", err)
 		}
-		if err := validateArtifactPFlags(true); err != nil {
+		if err := validateArtifactPFlags(true, true); err != nil {
 			log.Logger.Error(err)
 			_ = cmd.Help()
 			os.Exit(1)
@@ -60,13 +61,22 @@ var verifyCmd = &cobra.Command{
 			searchParams := entries.NewSearchLogQueryParams()
 			searchLogQuery := models.SearchLogQuery{}
 
-			rekordEntry, err := CreateRekordFromPFlags()
-			if err != nil {
-				log.Fatal(err)
-			}
+			logIndex := viper.GetString("log-index")
+			if logIndex != "" {
+				logIndexInt, err := strconv.ParseInt(logIndex, 10, 0)
+				if err != nil {
+					log.Fatal(fmt.Errorf("error parsing --log-index: %w", err))
+				}
+				searchLogQuery.LogIndexes = []*int64{&logIndexInt}
+			} else {
+				rekordEntry, err := CreateRekordFromPFlags()
+				if err != nil {
+					log.Fatal(err)
+				}
 
-			entries := []models.ProposedEntry{rekordEntry}
-			searchLogQuery.SetEntries(entries)
+				entries := []models.ProposedEntry{rekordEntry}
+				searchLogQuery.SetEntries(entries)
+			}
 			searchParams.SetEntry(&searchLogQuery)
 
 			resp, err := rekorClient.Entries.SearchLogQuery(searchParams)
@@ -93,31 +103,38 @@ var verifyCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		inclusionProof := resp.GetPayload()
-		hashes := [][]byte{}
+		inclusionProof := resp.Payload
+		index := *inclusionProof.LogIndex
+		size := *inclusionProof.TreeSize
+		rootHash := *inclusionProof.RootHash
+		fmt.Printf("Current Root Hash: %v\n", rootHash)
+		fmt.Printf("Entry Hash: %v\n", params.EntryUUID)
+		fmt.Printf("Entry Index: %v\n", index)
+		fmt.Printf("Current Tree Size: %v\n\n", size)
 
-		for _, hash := range inclusionProof.Hashes {
-			val, err := hex.DecodeString(hash)
-			if err != nil {
-				log.Fatal(err)
+		hasher := rfc6962.DefaultHasher
+		inner := bits.Len64(uint64(index ^ (size - 1)))
+		var left, right []byte
+		result, _ := hex.DecodeString(params.EntryUUID)
+		fmt.Printf("Inclusion Proof:\n")
+		for i, h := range inclusionProof.Hashes {
+			if i < inner && (index>>uint(i))&1 == 0 {
+				left = result
+				right, _ = hex.DecodeString(h)
+			} else {
+				left, _ = hex.DecodeString(h)
+				right = result
 			}
-			hashes = append(hashes, val)
+			result = hasher.HashChildren(left, right)
+			fmt.Printf("SHA256(0x01 | %v | %v) =\n\t%v\n\n", hex.EncodeToString(left), hex.EncodeToString(right), hex.EncodeToString(result))
 		}
+		resultHash := hex.EncodeToString(result)
 
-		leafHash, err := hex.DecodeString(params.EntryUUID)
-		if err != nil {
-			log.Fatal(err)
+		if resultHash == rootHash {
+			fmt.Printf("%v == %v, proof complete\n", resultHash, rootHash)
+		} else {
+			fmt.Printf("proof could not be correctly generated!")
 		}
-		rootHash, err := hex.DecodeString(*inclusionProof.RootHash)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		v := merkle.NewLogVerifier(rfc6962.DefaultHasher)
-		if err := v.VerifyInclusionProof(*inclusionProof.LogIndex, *inclusionProof.TreeSize, hashes, rootHash, leafHash); err != nil {
-			log.Fatal(err)
-		}
-		log.Info("Proof correct!")
 	},
 }
 
@@ -126,6 +143,9 @@ func init() {
 		log.Logger.Fatal("Error parsing cmd line args:", err)
 	}
 	if err := addUUIDPFlags(verifyCmd, false); err != nil {
+		log.Logger.Fatal("Error parsing cmd line args:", err)
+	}
+	if err := addLogIndexFlag(verifyCmd, false); err != nil {
 		log.Logger.Fatal("Error parsing cmd line args:", err)
 	}
 

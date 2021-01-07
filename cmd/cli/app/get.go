@@ -16,7 +16,6 @@ limitations under the License.
 package app
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -48,13 +47,11 @@ var getCmd = &cobra.Command{
 		logIndex := viper.GetString("log-index")
 		if logIndex != "" {
 			params := entries.NewGetLogEntryByIndexParams()
-			logIndexInt, err := strconv.Atoi(logIndex)
+			logIndexInt, err := strconv.ParseInt(logIndex, 10, 0)
 			if err != nil {
 				log.Fatal(fmt.Errorf("error parsing --log-index: %w", err))
-			} else if logIndexInt < 0 {
-				log.Fatal(errors.New("--log-index must be greater than or equal to 0"))
 			}
-			params.LogIndex = int64(logIndexInt)
+			params.LogIndex = logIndexInt
 
 			resp, err := rekorClient.Entries.GetLogEntryByIndex(params)
 			if err != nil {
@@ -99,7 +96,9 @@ func init() {
 	if err := addUUIDPFlags(getCmd, false); err != nil {
 		log.Logger.Fatal("Error parsing cmd line args:", err)
 	}
-	getCmd.Flags().String("log-index", "", "the index of the entry in the transparency log")
+	if err := addLogIndexFlag(getCmd, false); err != nil {
+		log.Logger.Fatal("Error parsing cmd line args:", err)
+	}
 
 	rootCmd.AddCommand(getCmd)
 }
