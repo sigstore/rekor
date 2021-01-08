@@ -314,7 +314,7 @@ func init() {
           }
         },
         "rootHash": {
-          "description": "The hash value stored at the root of the merkle tree at time the proof was generated",
+          "description": "The hash value stored at the root of the merkle tree at the time the proof was generated",
           "type": "string",
           "pattern": "^[0-9a-fA-F]{64}$"
         }
@@ -806,7 +806,7 @@ func init() {
           }
         },
         "rootHash": {
-          "description": "The hash value stored at the root of the merkle tree at time the proof was generated",
+          "description": "The hash value stored at the root of the merkle tree at the time the proof was generated",
           "type": "string",
           "pattern": "^[0-9a-fA-F]{64}$"
         }

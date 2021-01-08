@@ -38,6 +38,8 @@ func TestArtifactPFlags(t *testing.T) {
 		sha                   string
 		uuid                  string
 		uuidRequired          bool
+		logIndex              string
+		logIndexRequired      bool
 		expectParseSuccess    bool
 		expectValidateSuccess bool
 	}
@@ -246,6 +248,34 @@ func TestArtifactPFlags(t *testing.T) {
 			expectValidateSuccess: false,
 		},
 		{
+			caseDesc:              "valid log index",
+			logIndex:              "1",
+			logIndexRequired:      true,
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "invalid log index",
+			logIndex:              "not_a_int",
+			logIndexRequired:      true,
+			expectParseSuccess:    false,
+			expectValidateSuccess: false,
+		},
+		{
+			caseDesc:              "invalid log index - less than 0",
+			logIndex:              "-1",
+			logIndexRequired:      true,
+			expectParseSuccess:    false,
+			expectValidateSuccess: false,
+		},
+		{
+			caseDesc:              "unwanted log index",
+			logIndex:              "1",
+			logIndexRequired:      false,
+			expectParseSuccess:    true,
+			expectValidateSuccess: false,
+		},
+		{
 			caseDesc:              "no flags when either uuid, rekord, or artifact++ are needed",
 			uuidRequired:          false,
 			expectParseSuccess:    true,
@@ -254,6 +284,12 @@ func TestArtifactPFlags(t *testing.T) {
 		{
 			caseDesc:              "missing uuid flag when it is needed",
 			uuidRequired:          true,
+			expectParseSuccess:    true,
+			expectValidateSuccess: false,
+		},
+		{
+			caseDesc:              "missing log index flag when it is needed",
+			logIndexRequired:      true,
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
@@ -266,6 +302,9 @@ func TestArtifactPFlags(t *testing.T) {
 		}
 		if err := addUUIDPFlags(blankCmd, tc.uuidRequired); err != nil {
 			t.Fatalf("unexpected error adding uuid flags in '%v': %v", tc.caseDesc, err)
+		}
+		if err := addLogIndexFlag(blankCmd, tc.logIndexRequired); err != nil {
+			t.Fatalf("unexpected error adding log index flags in '%v': %v", tc.caseDesc, err)
 		}
 
 		args := []string{}
@@ -288,6 +327,9 @@ func TestArtifactPFlags(t *testing.T) {
 		if tc.uuid != "" {
 			args = append(args, "--uuid", tc.uuid)
 		}
+		if tc.logIndex != "" {
+			args = append(args, "--log-index", tc.logIndex)
+		}
 
 		if err := blankCmd.ParseFlags(args); (err == nil) != tc.expectParseSuccess {
 			t.Errorf("unexpected result parsing '%v': %v", tc.caseDesc, err)
@@ -298,11 +340,11 @@ func TestArtifactPFlags(t *testing.T) {
 			if err := viper.BindPFlags(blankCmd.Flags()); err != nil {
 				t.Fatalf("unexpected result initializing viper in '%v': %v", tc.caseDesc, err)
 			}
-			if err := validateArtifactPFlags(tc.uuidRequired); (err == nil) != tc.expectValidateSuccess {
+			if err := validateArtifactPFlags(tc.uuidRequired, tc.logIndexRequired); (err == nil) != tc.expectValidateSuccess {
 				t.Errorf("unexpected result validating '%v': %v", tc.caseDesc, err)
 				continue
 			}
-			if !tc.uuidRequired {
+			if !tc.uuidRequired && !tc.logIndexRequired {
 				if _, err := CreateRekordFromPFlags(); err != nil {
 					t.Errorf("unexpected result in '%v' building Rekord: %v", tc.caseDesc, err)
 				}

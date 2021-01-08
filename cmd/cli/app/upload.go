@@ -34,7 +34,7 @@ var uploadCmd = &cobra.Command{
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			log.Logger.Fatal("Error initializing cmd line args: ", err)
 		}
-		if err := validateArtifactPFlags(false); err != nil {
+		if err := validateArtifactPFlags(false, false); err != nil {
 			log.Logger.Error(err)
 			_ = cmd.Help()
 			os.Exit(1)

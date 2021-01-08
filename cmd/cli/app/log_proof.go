@@ -68,7 +68,7 @@ var logProofCmd = &cobra.Command{
 		}
 
 		consistencyProof := result.GetPayload()
-		fmt.Printf("Root Hash: %v\n", *consistencyProof.RootHash)
+		fmt.Printf("Current Root Hash: %v\n", *consistencyProof.RootHash)
 		fmt.Printf("Hashes: [")
 		for i, hash := range consistencyProof.Hashes {
 			if i+1 == len(consistencyProof.Hashes) {

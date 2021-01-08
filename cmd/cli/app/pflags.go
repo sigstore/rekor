@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -48,7 +49,7 @@ func addArtifactPFlags(cmd *cobra.Command) error {
 	return nil
 }
 
-func validateArtifactPFlags(uuidValid bool) error {
+func validateArtifactPFlags(uuidValid, indexValid bool) error {
 	uuidGiven := false
 	if uuidValid {
 		uuid := shaFlag{}
@@ -59,6 +60,18 @@ func validateArtifactPFlags(uuidValid bool) error {
 				return err
 			}
 			uuidGiven = true
+		}
+	}
+	indexGiven := false
+	if indexValid {
+		logIndex := logIndexFlag{}
+		logIndexStr := viper.GetString("log-index")
+
+		if logIndexStr != "" {
+			if err := logIndex.Set(logIndexStr); err != nil {
+				return err
+			}
+			indexGiven = true
 		}
 	}
 	// we will need artifact, public-key, signature, and potentially SHA
@@ -77,7 +90,7 @@ func validateArtifactPFlags(uuidValid bool) error {
 	sha := viper.GetString("sha")
 
 	if rekord == "" && artifact.String() == "" {
-		if uuidGiven && uuidValid {
+		if (uuidGiven && uuidValid) || (indexGiven && indexValid) {
 			return nil
 		}
 		return errors.New("either 'rekord' or 'artifact' must be specified")
@@ -248,6 +261,42 @@ func addUUIDPFlags(cmd *cobra.Command, required bool) error {
 	cmd.Flags().Var(&shaFlag{}, "uuid", "UUID of entry in transparency log (if known)")
 	if required {
 		if err := cmd.MarkFlagRequired("uuid"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type logIndexFlag struct {
+	index int64
+}
+
+func (l *logIndexFlag) String() string {
+	return fmt.Sprint(l.index)
+}
+
+func (l *logIndexFlag) Set(v string) error {
+	if v == "" {
+		return errors.New("flag must be specified")
+	}
+	logIndexInt, err := strconv.ParseInt(v, 10, 0)
+	if err != nil {
+		return fmt.Errorf("error parsing --log-index: %w", err)
+	} else if logIndexInt < 0 {
+		return errors.New("--log-index must be greater than or equal to 0")
+	}
+	l.index = logIndexInt
+	return nil
+}
+
+func (l *logIndexFlag) Type() string {
+	return "logIndex"
+}
+
+func addLogIndexFlag(cmd *cobra.Command, required bool) error {
+	cmd.Flags().Var(&logIndexFlag{}, "log-index", "the index of the entry in the transparency log")
+	if required {
+		if err := cmd.MarkFlagRequired("log-index"); err != nil {
 			return err
 		}
 	}
