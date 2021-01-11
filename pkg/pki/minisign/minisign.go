@@ -14,34 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package ed25519
+package minisign
 
 import (
 	"bytes"
-	"context"
 	"crypto/ed25519"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"strings"
 
 	minisign "github.com/jedisct1/go-minisign"
 )
 
-// Signature Signature that follows the ed25519 standard; supports both minisign and signify generated signatures
+// Signature Signature that follows the minisign standard; supports both minisign and signify generated signatures
 type Signature struct {
 	signature *minisign.Signature
 }
 
-// NewSignature creates and validates a ed25519 signature object
+// NewSignature creates and validates a minisign signature object
 func NewSignature(r io.Reader) (*Signature, error) {
 	var s Signature
 	var inputBuffer bytes.Buffer
 
 	if _, err := io.Copy(&inputBuffer, r); err != nil {
-		return nil, fmt.Errorf("unable to read ed25519 signature: %w", err)
+		return nil, fmt.Errorf("unable to read minisign signature: %w", err)
 	}
 
 	inputString := inputBuffer.String()
@@ -56,51 +54,33 @@ func NewSignature(r io.Reader) (*Signature, error) {
 		if b64Err != nil {
 			return nil, fmt.Errorf("invalid signature provided: base64 decoding failed")
 		}
-		if len(sigBytes) != ed25519.SignatureSize+10 {
+		if len(sigBytes) != len(signature.SignatureAlgorithm)+len(signature.KeyId)+len(signature.Signature) {
 			return nil, fmt.Errorf("invalid signature provided: incorrect size %v detected", len(sigBytes))
 		}
+		copy(signature.SignatureAlgorithm[:], sigBytes[0:2])
+		copy(signature.KeyId[:], sigBytes[2:10])
 		copy(signature.Signature[:], sigBytes[10:])
 	}
 	s.signature = &signature
 	return &s, nil
 }
 
-// FetchSignature implements pki.Signature interface
-func FetchSignature(ctx context.Context, url string) (*Signature, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("error initializing fetch for ed25519 signature: %w", err)
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error fetching ed25519 signature: %w", err)
-	}
-	defer resp.Body.Close()
-
-	sig, err := NewSignature(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	return sig, nil
-}
-
 // CanonicalValue implements the pki.Signature interface
 func (s Signature) CanonicalValue() ([]byte, error) {
 	if s.signature == nil {
-		return nil, fmt.Errorf("ed25519 signature has not been initialized")
+		return nil, fmt.Errorf("minisign signature has not been initialized")
 	}
 
 	buf := bytes.NewBuffer([]byte("untrusted comment:\n"))
 	b64Buf := bytes.NewBuffer(s.signature.SignatureAlgorithm[:])
 	if _, err := b64Buf.Write(s.signature.KeyId[:]); err != nil {
-		return nil, fmt.Errorf("error canonicalizing ed25519 signature: %w", err)
+		return nil, fmt.Errorf("error canonicalizing minisign signature: %w", err)
 	}
 	if _, err := b64Buf.Write(s.signature.Signature[:]); err != nil {
-		return nil, fmt.Errorf("error canonicalizing ed25519 signature: %w", err)
+		return nil, fmt.Errorf("error canonicalizing minisign signature: %w", err)
 	}
 	if _, err := buf.WriteString(base64.StdEncoding.EncodeToString(b64Buf.Bytes())); err != nil {
-		return nil, fmt.Errorf("error canonicalizing ed25519 signature: %w", err)
+		return nil, fmt.Errorf("error canonicalizing minisign signature: %w", err)
 	}
 	return buf.Bytes(), nil
 }
@@ -108,15 +88,15 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 // Verify implements the pki.Signature interface
 func (s Signature) Verify(r io.Reader, k interface{}) error {
 	if s.signature == nil {
-		return fmt.Errorf("ed25519 signature has not been initialized")
+		return fmt.Errorf("minisign signature has not been initialized")
 	}
 
 	key, ok := k.(*PublicKey)
 	if !ok {
-		return fmt.Errorf("cannot use Verify with a non-ed25519 key")
+		return fmt.Errorf("cannot use Verify with a non-minisign key")
 	}
 	if key.key == nil {
-		return fmt.Errorf("ed25519 public key has not been initialized")
+		return fmt.Errorf("minisign public key has not been initialized")
 	}
 
 	msg, err := ioutil.ReadAll(r)
@@ -124,14 +104,14 @@ func (s Signature) Verify(r io.Reader, k interface{}) error {
 		return fmt.Errorf("error reading message to verify signature: %w", err)
 	}
 
-	if ok := ed25519.Verify(ed25519.PublicKey(key.key.PublicKey[:]), msg, s.signature.Signature[:]); !ok {
+	if !ed25519.Verify(ed25519.PublicKey(key.key.PublicKey[:]), msg, s.signature.Signature[:]) {
 		return fmt.Errorf("verification of signed message failed")
 	}
 
 	return nil
 }
 
-// PublicKey Public Key that follows the ed25519 standard; supports signify and minisign public keys
+// PublicKey Public Key that follows the minisign standard; supports signify and minisign public keys
 type PublicKey struct {
 	key *minisign.PublicKey
 }
@@ -142,7 +122,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	var inputBuffer bytes.Buffer
 
 	if _, err := io.Copy(&inputBuffer, r); err != nil {
-		return nil, fmt.Errorf("unable to read ed25519 public key: %w", err)
+		return nil, fmt.Errorf("unable to read minisign public key: %w", err)
 	}
 
 	inputString := inputBuffer.String()
@@ -151,39 +131,19 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 		//try as a standalone base64 string
 		key, err = minisign.NewPublicKey(inputString)
 		if err != nil {
-			return nil, fmt.Errorf("unable to read ed25519 public key: %w", err)
+			return nil, fmt.Errorf("unable to read minisign public key: %w", err)
 		}
 	}
 	k.key = &key
 	return &k, nil
 }
 
-// FetchPublicKey implements pki.PublicKey interface
-func FetchPublicKey(ctx context.Context, url string) (*PublicKey, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("error fetching ed25519 public key: %w", err)
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error fetching ed25519 public key: %w", err)
-	}
-	defer resp.Body.Close()
-
-	key, err := NewPublicKey(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return key, nil
-}
-
 // CanonicalValue implements the pki.PublicKey interface
 func (k PublicKey) CanonicalValue() ([]byte, error) {
 	if k.key == nil {
-		return nil, fmt.Errorf("ed25519 public key has not been initialized")
+		return nil, fmt.Errorf("minisign public key has not been initialized")
 	}
 
-	return k.key.PublicKey[:], nil
+	b64Key := base64.StdEncoding.EncodeToString(k.key.PublicKey[:])
+	return []byte(b64Key), nil
 }

@@ -14,16 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package ed25519
+package minisign
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"io"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -102,84 +98,6 @@ func TestReadErrorSignature(t *testing.T) {
 	br := new(BadReader)
 	if _, err := NewSignature(br); err == nil {
 		t.Errorf("KnownBadReader: unexpected success testing a broken reader for signature")
-	}
-}
-
-func TestFetchPublicKey(t *testing.T) {
-	type test struct {
-		caseDesc   string
-		inputFile  string
-		errorFound bool
-	}
-
-	testServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path[1:] == "premature_close" {
-				return
-			}
-
-			file, err := ioutil.ReadFile(r.URL.Path[1:])
-			if err != nil {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(file)
-		}))
-	defer testServer.Close()
-
-	tests := []test{
-		{caseDesc: "Not a valid URL", inputFile: "%invalid_url%", errorFound: true},
-		{caseDesc: "HTTP server prematurely closes transaction", inputFile: "premature_close", errorFound: true},
-		{caseDesc: "404 error fetching content", inputFile: "not_a_file", errorFound: true},
-		{caseDesc: "Invalid public key", inputFile: "testdata/hello_world.txt", errorFound: true},
-		{caseDesc: "Valid minisign public key", inputFile: "testdata/minisign.pub", errorFound: false},
-		{caseDesc: "Valid signify public key", inputFile: "testdata/signify.pub", errorFound: false},
-	}
-
-	for _, tc := range tests {
-		if got, err := FetchPublicKey(context.TODO(), testServer.URL+"/"+tc.inputFile); ((got != nil) == tc.errorFound) || ((err != nil) != tc.errorFound) {
-			t.Errorf("%v: unexpected result testing %v: %v", tc.caseDesc, tc.inputFile, got)
-		}
-	}
-}
-
-func TestFetchSignature(t *testing.T) {
-	type test struct {
-		caseDesc   string
-		inputFile  string
-		errorFound bool
-	}
-
-	testServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path[1:] == "premature_close" {
-				return
-			}
-
-			file, err := ioutil.ReadFile(r.URL.Path[1:])
-			if err != nil {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(file)
-		}))
-	defer testServer.Close()
-
-	tests := []test{
-		{caseDesc: "Not a valid URL", inputFile: "%invalid_url%", errorFound: true},
-		{caseDesc: "HTTP server prematurely closes transaction", inputFile: "premature_close", errorFound: true},
-		{caseDesc: "404 error fetching content", inputFile: "not_a_file", errorFound: true},
-		{caseDesc: "Invalid signature", inputFile: "testdata/hello_world.txt", errorFound: true},
-		{caseDesc: "Valid minisign signature", inputFile: "testdata/hello_world.txt.minisig", errorFound: false},
-		{caseDesc: "Valid signify signature", inputFile: "testdata/hello_world.txt.signify", errorFound: false},
-	}
-
-	for _, tc := range tests {
-		if got, err := FetchSignature(context.TODO(), testServer.URL+"/"+tc.inputFile); ((got != nil) == tc.errorFound) || ((err != nil) != tc.errorFound) {
-			t.Errorf("%v: unexpected result testing %v: %v", tc.caseDesc, tc.inputFile, got)
-		}
 	}
 }
 

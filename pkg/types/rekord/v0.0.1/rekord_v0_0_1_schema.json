@@ -12,7 +12,7 @@
                 "format": {
                     "description": "Specifies the format of the signature",
                     "type": "string",
-                    "enum": [ "pgp", "ed25519" ]
+                    "enum": [ "pgp", "minisign" ]
                 },
                 "url": {
                     "description": "Specifies the location of the signature",
