@@ -3,9 +3,11 @@ info:
   title: Rekor
   description: Rekor is a cryptographically secure, immutable transparency log for signed software releases.
   version: 0.0.1
-servers:
-  - url: http://104.198.250.40/api/v1
-    description: GKE hosted server
+
+host: 104.198.250.40
+basePath: /api/v1
+schemes:
+  - http
 
 consumes:
   - application/json
