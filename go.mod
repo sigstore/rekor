@@ -22,6 +22,7 @@ require (
 	github.com/google/martian v2.1.0+incompatible
 	github.com/google/trillian v1.3.10
 	github.com/gorilla/handlers v1.5.1 // indirect
+	github.com/jedisct1/go-minisign v0.0.0-20210106175330-e54e81d562c7
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/magiconair/properties v1.8.4 // indirect
@@ -39,7 +40,7 @@ require (
 	go.etcd.io/etcd v3.3.25+incompatible // indirect
 	go.uber.org/goleak v1.1.10
 	go.uber.org/zap v1.16.0
-	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/mod v0.4.0 // indirect
 	golang.org/x/net v0.0.0-20201207224615-747e23833adb
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
