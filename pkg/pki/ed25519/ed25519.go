@@ -44,7 +44,7 @@ func NewSignature(r io.Reader) (*Signature, error) {
 		return nil, fmt.Errorf("unable to read ed25519 signature: %w", err)
 	}
 
-	inputString := string(inputBuffer.Bytes())
+	inputString := inputBuffer.String()
 	signature, err := minisign.DecodeSignature(inputString)
 	if err != nil {
 		//try to parse as signify
@@ -145,7 +145,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 		return nil, fmt.Errorf("unable to read ed25519 public key: %w", err)
 	}
 
-	inputString := string(inputBuffer.Bytes())
+	inputString := inputBuffer.String()
 	key, err := minisign.DecodePublicKey(inputString)
 	if err != nil {
 		//try as a standalone base64 string
