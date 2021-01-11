@@ -13,6 +13,10 @@ produces:
   - application/xml
   - application/yaml
 
+servers:
+  - url: http://104.198.250.40/api/v1
+    description: GKE hosted server
+
 paths:
   /api/v1/log:
     get:
