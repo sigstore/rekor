@@ -70,13 +70,17 @@ var logInfoCmd = &cobra.Command{
 			LogRootSignature: signature,
 		}
 
-		// validate result is signed with the key we're aware of
-		keyResp, err := rekorClient.Tlog.GetPublicKey(nil)
-		if err != nil {
-			log.Fatal(err)
+		publicKey := viper.GetString("rekor_server_public_key")
+		if publicKey == "" {
+			// fetch key from server
+			keyResp, err := rekorClient.Tlog.GetPublicKey(nil)
+			if err != nil {
+				log.Fatal(err)
+			}
+			publicKey = keyResp.Payload
 		}
 
-		block, _ := pem.Decode([]byte(keyResp.Payload))
+		block, _ := pem.Decode([]byte(publicKey))
 		if block == nil {
 			log.Fatal("failed to decode public key of server")
 			return
