@@ -29,6 +29,23 @@ paths:
         default:
           $ref: '#/responses/InternalServerError'
 
+  /api/v1/log/publicKey:
+    get:
+      summary: Retrieve the public key that can be used to validate the signed tree head
+      description: Returns the public key that can be used to validate the signed tree head
+      operationId: getPublicKey
+      tags:
+        - tlog
+      produces:
+        - application/x-pem-file
+      responses:
+        200:
+          description: The public key
+          schema:
+            type: string
+        default:
+          $ref: '#/responses/InternalServerError'
+
   /api/v1/log/proof:
     get:
       summary: Get information required to generate a consistency proof for the transparency log
@@ -261,9 +278,30 @@ definitions:
         type: integer
         description: The current number of nodes in the merkle tree
         minimum: 1
+      signedTreeHead:
+        type: object
+        description: The current signed tree head
+        properties: 
+          keyHint:
+            type: string
+            description: Key hint
+            format: byte
+          logRoot:
+            type: string
+            description: Log root
+            format: byte
+          signature:
+            type: string
+            description: Signature for log root
+            format: byte
+        required:
+          - keyHint
+          - logRoot
+          - signature
     required:
       - rootHash
       - treeSize
+      - signedTreeHead
 
   ConsistencyProof:
     type: object

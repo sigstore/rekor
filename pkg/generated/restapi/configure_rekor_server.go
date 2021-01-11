@@ -71,6 +71,8 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 
 	api.TlogGetLogInfoHandler = tlog.GetLogInfoHandlerFunc(pkgapi.GetLogInfoHandler)
 	api.TlogGetLogProofHandler = tlog.GetLogProofHandlerFunc(pkgapi.GetLogProofHandler)
+	api.TlogGetPublicKeyHandler = tlog.GetPublicKeyHandlerFunc(pkgapi.GetPublicKeyHandler)
+	api.RegisterProducer("application/x-pem-file", runtime.TextProducer())
 
 	api.PreServerShutdown = func() {}
 
@@ -82,6 +84,7 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}/proof", middleware.NoCache)
 
 	//cache forever
+	api.AddMiddlewareFor("GET", "/api/v1/log/publicKey", cacheForever)
 	api.AddMiddlewareFor("GET", "/api/v1/log/entries", cacheForever)
 	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}", cacheForever)
 

@@ -16,7 +16,16 @@ limitations under the License.
 package app
 
 import (
+	"crypto"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
+
+	"github.com/google/trillian"
+	tclient "github.com/google/trillian/client"
+	tcrypto "github.com/google/trillian/crypto"
+	"github.com/google/trillian/merkle/rfc6962"
 
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/spf13/cobra"
@@ -42,6 +51,47 @@ var logInfoCmd = &cobra.Command{
 
 		logInfo := result.GetPayload()
 		fmt.Printf("Tree Size: %v, Root Hash: %v\n", *logInfo.TreeSize, *logInfo.RootHash)
+
+		keyHint, err := base64.StdEncoding.DecodeString(logInfo.SignedTreeHead.KeyHint.String())
+		if err != nil {
+			log.Fatal(err)
+		}
+		logRoot, err := base64.StdEncoding.DecodeString(logInfo.SignedTreeHead.LogRoot.String())
+		if err != nil {
+			log.Fatal(err)
+		}
+		signature, err := base64.StdEncoding.DecodeString(logInfo.SignedTreeHead.Signature.String())
+		if err != nil {
+			log.Fatal(err)
+		}
+		sth := trillian.SignedLogRoot{
+			KeyHint:          keyHint,
+			LogRoot:          logRoot,
+			LogRootSignature: signature,
+		}
+
+		// validate result is signed with the key we're aware of
+		keyResp, err := rekorClient.Tlog.GetPublicKey(nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		block, _ := pem.Decode([]byte(keyResp.Payload))
+		if block == nil {
+			log.Fatal("failed to decode public key of server")
+			return
+		}
+
+		pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
+		if _, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, &sth); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Verified signature of log root!\n")
 	},
 }
 

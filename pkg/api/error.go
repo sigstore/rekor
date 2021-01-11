@@ -115,6 +115,9 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		default:
 			return tlog.NewGetLogProofDefault(code).WithPayload(errorMsg(message, code))
 		}
+	case tlog.GetPublicKeyParams:
+		logMsg(params.HTTPRequest)
+		return tlog.NewGetPublicKeyDefault(code).WithPayload(errorMsg(message, code))
 	default:
 		log.Logger.Errorf("unable to find method for type %T; error: %v", params, err)
 		return middleware.Error(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))

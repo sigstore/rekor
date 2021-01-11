@@ -16,9 +16,11 @@ limitations under the License.
 package api
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/x509"
 	"encoding/hex"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/http"
@@ -27,6 +29,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	"github.com/go-openapi/runtime/middleware"
+	"github.com/go-openapi/strfmt"
 	tclient "github.com/google/trillian/client"
 	tcrypto "github.com/google/trillian/crypto"
 	"github.com/google/trillian/merkle/rfc6962"
@@ -55,10 +58,20 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 
 	hashString := hex.EncodeToString(root.RootHash)
 	treeSize := int64(root.TreeSize)
+	keyHint := strfmt.Base64(result.SignedLogRoot.GetKeyHint())
+	logRoot := strfmt.Base64(result.SignedLogRoot.GetLogRoot())
+	signature := strfmt.Base64(result.SignedLogRoot.GetLogRootSignature())
+
+	sth := models.LogInfoSignedTreeHead{
+		KeyHint:   &keyHint,
+		LogRoot:   &logRoot,
+		Signature: &signature,
+	}
 
 	logInfo := models.LogInfo{
-		RootHash: &hashString,
-		TreeSize: &treeSize,
+		RootHash:       &hashString,
+		TreeSize:       &treeSize,
+		SignedTreeHead: &sth,
 	}
 	return tlog.NewGetLogInfoOK().WithPayload(&logInfo)
 }
@@ -102,4 +115,20 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 		Hashes:   proofHashes,
 	}
 	return tlog.NewGetLogProofOK().WithPayload(&consistencyProof)
+}
+
+func GetPublicKeyHandler(params tlog.GetPublicKeyParams) middleware.Responder {
+	tc := NewTrillianClient(params.HTTPRequest.Context())
+
+	keyBuf := bytes.Buffer{}
+	block := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: tc.pubkey.Der,
+	}
+
+	if err := pem.Encode(&keyBuf, block); err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
+	}
+
+	return tlog.NewGetPublicKeyOK().WithPayload(keyBuf.String())
 }
