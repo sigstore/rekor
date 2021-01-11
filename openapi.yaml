@@ -5,7 +5,6 @@ info:
   version: 0.0.1
 
 host: 104.198.250.40
-basePath:
 schemes:
   - http
 
