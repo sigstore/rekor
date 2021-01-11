@@ -1011,7 +1011,8 @@ func init() {
           "description": "Specifies the format of the signature",
           "type": "string",
           "enum": [
-            "pgp"
+            "pgp",
+            "ed25519"
           ]
         },
         "publicKey": {
@@ -1233,7 +1234,8 @@ func init() {
               "description": "Specifies the format of the signature",
               "type": "string",
               "enum": [
-                "pgp"
+                "pgp",
+                "ed25519"
               ]
             },
             "publicKey": {

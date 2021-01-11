@@ -43,6 +43,12 @@ func TestFactoryNewKey(t *testing.T) {
 			expectSuccess: true,
 		},
 		{
+			format:        "minisign",
+			keyFile:       "minisign/testdata/minisign.pub",
+			sigFile:       "minisign/testdata/hello_world.txt.minisig",
+			expectSuccess: true,
+		},
+		{
 			format:        "bogus",
 			expectSuccess: false,
 		},

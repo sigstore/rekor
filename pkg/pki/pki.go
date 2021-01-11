@@ -21,6 +21,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/projectrekor/rekor/pkg/pki/minisign"
 	"github.com/projectrekor/rekor/pkg/pki/pgp"
 )
 
@@ -49,6 +50,8 @@ func (a ArtifactFactory) NewPublicKey(r io.Reader) (PublicKey, error) {
 	switch strings.ToLower(a.format) {
 	case "pgp":
 		return pgp.NewPublicKey(r)
+	case "minisign":
+		return minisign.NewPublicKey(r)
 	}
 	return nil, fmt.Errorf("unknown key format '%v'", a.format)
 }
@@ -57,6 +60,8 @@ func (a ArtifactFactory) NewSignature(r io.Reader) (Signature, error) {
 	switch strings.ToLower(a.format) {
 	case "pgp":
 		return pgp.NewSignature(r)
+	case "minisign":
+		return minisign.NewSignature(r)
 	}
 	return nil, fmt.Errorf("unknown key format '%v'", a.format)
 }
