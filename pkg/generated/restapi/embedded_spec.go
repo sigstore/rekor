@@ -45,12 +45,16 @@ func init() {
     "application/xml",
     "application/yaml"
   ],
+  "schemes": [
+    "http"
+  ],
   "swagger": "2.0",
   "info": {
     "description": "Rekor is a cryptographically secure, immutable transparency log for signed software releases.",
     "title": "Rekor",
     "version": "0.0.1"
   },
+  "host": "104.198.250.40",
   "paths": {
     "/api/v1/log": {
       "get": {
@@ -554,12 +558,16 @@ func init() {
     "application/xml",
     "application/yaml"
   ],
+  "schemes": [
+    "http"
+  ],
   "swagger": "2.0",
   "info": {
     "description": "Rekor is a cryptographically secure, immutable transparency log for signed software releases.",
     "title": "Rekor",
     "version": "0.0.1"
   },
+  "host": "104.198.250.40",
   "paths": {
     "/api/v1/log": {
       "get": {
@@ -1143,7 +1151,7 @@ func init() {
           "type": "string",
           "enum": [
             "pgp",
-            "ed25519"
+            "minisign"
           ]
         },
         "publicKey": {
@@ -1366,7 +1374,7 @@ func init() {
               "type": "string",
               "enum": [
                 "pgp",
-                "ed25519"
+                "minisign"
               ]
             },
             "publicKey": {

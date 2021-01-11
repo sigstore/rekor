@@ -183,7 +183,6 @@ func (o *GetLogProofParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 				return err
 			}
 		}
-
 	}
 
 	// query param lastSize
@@ -194,7 +193,6 @@ func (o *GetLogProofParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 			return err
 		}
 	}
-
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}

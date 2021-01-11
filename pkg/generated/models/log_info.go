@@ -79,7 +79,7 @@ func (m *LogInfo) validateRootHash(formats strfmt.Registry) error {
 		return err
 	}
 
-	if err := validate.Pattern("rootHash", "body", string(*m.RootHash), `^[0-9a-fA-F]{64}$`); err != nil {
+	if err := validate.Pattern("rootHash", "body", *m.RootHash, `^[0-9a-fA-F]{64}$`); err != nil {
 		return err
 	}
 
@@ -110,7 +110,7 @@ func (m *LogInfo) validateTreeSize(formats strfmt.Registry) error {
 		return err
 	}
 
-	if err := validate.MinimumInt("treeSize", "body", int64(*m.TreeSize), 1, false); err != nil {
+	if err := validate.MinimumInt("treeSize", "body", *m.TreeSize, 1, false); err != nil {
 		return err
 	}
 

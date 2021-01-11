@@ -142,7 +142,6 @@ func (o *CreateLogEntryParams) WriteToRequest(r runtime.ClientRequest, reg strfm
 	if err := r.SetBodyParam(o.ProposedEntry); err != nil {
 		return err
 	}
-
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}

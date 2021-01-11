@@ -144,7 +144,6 @@ func (o *GetLogEntryProofParams) WriteToRequest(r runtime.ClientRequest, reg str
 	if err := r.SetPathParam("entryUUID", o.EntryUUID); err != nil {
 		return err
 	}
-
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
