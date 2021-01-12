@@ -31,6 +31,7 @@
 //    - application/yaml
 //
 //  Produces:
+//    - application/x-pem-file
 //    - application/json
 //    - application/xml
 //    - application/yaml

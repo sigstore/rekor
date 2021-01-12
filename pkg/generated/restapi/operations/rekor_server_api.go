@@ -24,6 +24,7 @@ package operations
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -63,6 +64,9 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 		XMLConsumer:  runtime.XMLConsumer(),
 		YamlConsumer: yamlpc.YAMLConsumer(),
 
+		ApplicationXPemFileProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
+			return errors.NotImplemented("applicationXPemFile producer has not yet been implemented")
+		}),
 		JSONProducer: runtime.JSONProducer(),
 		XMLProducer:  runtime.XMLProducer(),
 		YamlProducer: yamlpc.YAMLProducer(),
@@ -84,6 +88,9 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 		}),
 		TlogGetLogProofHandler: tlog.GetLogProofHandlerFunc(func(params tlog.GetLogProofParams) middleware.Responder {
 			return middleware.NotImplemented("operation tlog.GetLogProof has not yet been implemented")
+		}),
+		TlogGetPublicKeyHandler: tlog.GetPublicKeyHandlerFunc(func(params tlog.GetPublicKeyParams) middleware.Responder {
+			return middleware.NotImplemented("operation tlog.GetPublicKey has not yet been implemented")
 		}),
 		EntriesSearchLogQueryHandler: entries.SearchLogQueryHandlerFunc(func(params entries.SearchLogQueryParams) middleware.Responder {
 			return middleware.NotImplemented("operation entries.SearchLogQuery has not yet been implemented")
@@ -124,6 +131,9 @@ type RekorServerAPI struct {
 	//   - application/yaml
 	YamlConsumer runtime.Consumer
 
+	// ApplicationXPemFileProducer registers a producer for the following mime types:
+	//   - application/x-pem-file
+	ApplicationXPemFileProducer runtime.Producer
 	// JSONProducer registers a producer for the following mime types:
 	//   - application/json
 	JSONProducer runtime.Producer
@@ -146,6 +156,8 @@ type RekorServerAPI struct {
 	TlogGetLogInfoHandler tlog.GetLogInfoHandler
 	// TlogGetLogProofHandler sets the operation handler for the get log proof operation
 	TlogGetLogProofHandler tlog.GetLogProofHandler
+	// TlogGetPublicKeyHandler sets the operation handler for the get public key operation
+	TlogGetPublicKeyHandler tlog.GetPublicKeyHandler
 	// EntriesSearchLogQueryHandler sets the operation handler for the search log query operation
 	EntriesSearchLogQueryHandler entries.SearchLogQueryHandler
 	// ServeError is called when an error is received, there is a default handler
@@ -226,6 +238,9 @@ func (o *RekorServerAPI) Validate() error {
 		unregistered = append(unregistered, "YamlConsumer")
 	}
 
+	if o.ApplicationXPemFileProducer == nil {
+		unregistered = append(unregistered, "ApplicationXPemFileProducer")
+	}
 	if o.JSONProducer == nil {
 		unregistered = append(unregistered, "JSONProducer")
 	}
@@ -253,6 +268,9 @@ func (o *RekorServerAPI) Validate() error {
 	}
 	if o.TlogGetLogProofHandler == nil {
 		unregistered = append(unregistered, "tlog.GetLogProofHandler")
+	}
+	if o.TlogGetPublicKeyHandler == nil {
+		unregistered = append(unregistered, "tlog.GetPublicKeyHandler")
 	}
 	if o.EntriesSearchLogQueryHandler == nil {
 		unregistered = append(unregistered, "entries.SearchLogQueryHandler")
@@ -307,6 +325,8 @@ func (o *RekorServerAPI) ProducersFor(mediaTypes []string) map[string]runtime.Pr
 	result := make(map[string]runtime.Producer, len(mediaTypes))
 	for _, mt := range mediaTypes {
 		switch mt {
+		case "application/x-pem-file":
+			result["application/x-pem-file"] = o.ApplicationXPemFileProducer
 		case "application/json":
 			result["application/json"] = o.JSONProducer
 		case "application/xml":
@@ -377,6 +397,10 @@ func (o *RekorServerAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/api/v1/log/proof"] = tlog.NewGetLogProof(o.context, o.TlogGetLogProofHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/api/v1/log/publicKey"] = tlog.NewGetPublicKey(o.context, o.TlogGetPublicKeyHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}

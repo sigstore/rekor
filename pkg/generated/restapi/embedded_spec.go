@@ -295,6 +295,30 @@ func init() {
           }
         }
       }
+    },
+    "/api/v1/log/publicKey": {
+      "get": {
+        "description": "Returns the public key that can be used to validate the signed tree head",
+        "produces": [
+          "application/x-pem-file"
+        ],
+        "tags": [
+          "tlog"
+        ],
+        "summary": "Retrieve the public key that can be used to validate the signed tree head",
+        "operationId": "getPublicKey",
+        "responses": {
+          "200": {
+            "description": "The public key",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "default": {
+            "$ref": "#/responses/InternalServerError"
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -387,13 +411,40 @@ func init() {
       "type": "object",
       "required": [
         "rootHash",
-        "treeSize"
+        "treeSize",
+        "signedTreeHead"
       ],
       "properties": {
         "rootHash": {
           "description": "The current hash value stored at the root of the merkle tree",
           "type": "string",
           "pattern": "^[0-9a-fA-F]{64}$"
+        },
+        "signedTreeHead": {
+          "description": "The current signed tree head",
+          "type": "object",
+          "required": [
+            "keyHint",
+            "logRoot",
+            "signature"
+          ],
+          "properties": {
+            "keyHint": {
+              "description": "Key hint",
+              "type": "string",
+              "format": "byte"
+            },
+            "logRoot": {
+              "description": "Log root",
+              "type": "string",
+              "format": "byte"
+            },
+            "signature": {
+              "description": "Signature for log root",
+              "type": "string",
+              "format": "byte"
+            }
+          }
         },
         "treeSize": {
           "description": "The current number of nodes in the merkle tree",
@@ -787,6 +838,33 @@ func init() {
           }
         }
       }
+    },
+    "/api/v1/log/publicKey": {
+      "get": {
+        "description": "Returns the public key that can be used to validate the signed tree head",
+        "produces": [
+          "application/x-pem-file"
+        ],
+        "tags": [
+          "tlog"
+        ],
+        "summary": "Retrieve the public key that can be used to validate the signed tree head",
+        "operationId": "getPublicKey",
+        "responses": {
+          "200": {
+            "description": "The public key",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "default": {
+            "description": "There was an internal error in the server while processing the request",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -884,7 +962,8 @@ func init() {
       "type": "object",
       "required": [
         "rootHash",
-        "treeSize"
+        "treeSize",
+        "signedTreeHead"
       ],
       "properties": {
         "rootHash": {
@@ -892,10 +971,62 @@ func init() {
           "type": "string",
           "pattern": "^[0-9a-fA-F]{64}$"
         },
+        "signedTreeHead": {
+          "description": "The current signed tree head",
+          "type": "object",
+          "required": [
+            "keyHint",
+            "logRoot",
+            "signature"
+          ],
+          "properties": {
+            "keyHint": {
+              "description": "Key hint",
+              "type": "string",
+              "format": "byte"
+            },
+            "logRoot": {
+              "description": "Log root",
+              "type": "string",
+              "format": "byte"
+            },
+            "signature": {
+              "description": "Signature for log root",
+              "type": "string",
+              "format": "byte"
+            }
+          }
+        },
         "treeSize": {
           "description": "The current number of nodes in the merkle tree",
           "type": "integer",
           "minimum": 1
+        }
+      }
+    },
+    "LogInfoSignedTreeHead": {
+      "description": "The current signed tree head",
+      "type": "object",
+      "required": [
+        "keyHint",
+        "logRoot",
+        "signature"
+      ],
+      "properties": {
+        "keyHint": {
+          "description": "Key hint",
+          "type": "string",
+          "format": "byte"
+        },
+        "logRoot": {
+          "description": "Log root",
+          "type": "string",
+          "format": "byte"
+        },
+        "signature": {
+          "description": "Signature for log root",
+          "type": "string",
+          "format": "byte"
         }
       }
     },
