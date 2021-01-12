@@ -268,11 +268,11 @@ func addUUIDPFlags(cmd *cobra.Command, required bool) error {
 }
 
 type logIndexFlag struct {
-	index int64
+	index string
 }
 
 func (l *logIndexFlag) String() string {
-	return fmt.Sprint(l.index)
+	return l.index
 }
 
 func (l *logIndexFlag) Set(v string) error {
@@ -285,7 +285,7 @@ func (l *logIndexFlag) Set(v string) error {
 	} else if logIndexInt < 0 {
 		return errors.New("--log-index must be greater than or equal to 0")
 	}
-	l.index = logIndexInt
+	l.index = v
 	return nil
 }
 
