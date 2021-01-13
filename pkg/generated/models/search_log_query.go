@@ -180,7 +180,7 @@ func (m *SearchLogQuery) validateEntryUUIDs(formats strfmt.Registry) error {
 
 	for i := 0; i < len(m.EntryUUIDs); i++ {
 
-		if err := validate.Pattern("entryUUIDs"+"."+strconv.Itoa(i), "body", string(m.EntryUUIDs[i]), `^[0-9a-fA-F]{64}$`); err != nil {
+		if err := validate.Pattern("entryUUIDs"+"."+strconv.Itoa(i), "body", m.EntryUUIDs[i], `^[0-9a-fA-F]{64}$`); err != nil {
 			return err
 		}
 
@@ -205,7 +205,7 @@ func (m *SearchLogQuery) validateLogIndexes(formats strfmt.Registry) error {
 			continue
 		}
 
-		if err := validate.MinimumInt("logIndexes"+"."+strconv.Itoa(i), "body", int64(*m.LogIndexes[i]), 0, false); err != nil {
+		if err := validate.MinimumInt("logIndexes"+"."+strconv.Itoa(i), "body", *m.LogIndexes[i], 0, false); err != nil {
 			return err
 		}
 

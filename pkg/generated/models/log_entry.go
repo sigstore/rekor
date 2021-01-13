@@ -125,7 +125,7 @@ func (m *LogEntryAnon) validateLogIndex(formats strfmt.Registry) error {
 		return nil
 	}
 
-	if err := validate.MinimumInt("logIndex", "body", int64(*m.LogIndex), 0, false); err != nil {
+	if err := validate.MinimumInt("logIndex", "body", *m.LogIndex, 0, false); err != nil {
 		return err
 	}
 
