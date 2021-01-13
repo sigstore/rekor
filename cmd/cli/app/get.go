@@ -16,10 +16,14 @@ limitations under the License.
 package app
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 
+	"github.com/projectrekor/rekor/cmd/cli/app/format"
 	"github.com/projectrekor/rekor/pkg/generated/client/entries"
+	"github.com/projectrekor/rekor/pkg/generated/models"
 	"github.com/projectrekor/rekor/pkg/log"
 
 	"github.com/spf13/cobra"
@@ -37,11 +41,10 @@ var getCmd = &cobra.Command{
 			log.Logger.Fatal("Error initializing cmd line args: ", err)
 		}
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-		log := log.Logger
+	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		logIndex := viper.GetString("log-index")
@@ -49,23 +52,21 @@ var getCmd = &cobra.Command{
 			params := entries.NewGetLogEntryByIndexParams()
 			logIndexInt, err := strconv.ParseInt(logIndex, 10, 0)
 			if err != nil {
-				log.Fatal(fmt.Errorf("error parsing --log-index: %w", err))
+				return nil, fmt.Errorf("error parsing --log-index: %w", err)
 			}
 			params.LogIndex = logIndexInt
 
 			resp, err := rekorClient.Entries.GetLogEntryByIndex(params)
 			if err != nil {
-				log.Fatal(err)
+				return nil, err
 			}
 
-			for _, entry := range resp.Payload {
-				bytes, err := entry.MarshalBinary()
-				if err != nil {
-					log.Fatal(err)
+			for k, entry := range resp.Payload {
+				if k != logIndex {
+					continue
 				}
-				log.Info(string(bytes))
+				return parseEntry(entry)
 			}
-			return
 		}
 
 		uuid := viper.GetString("uuid")
@@ -75,21 +76,36 @@ var getCmd = &cobra.Command{
 
 			resp, err := rekorClient.Entries.GetLogEntryByUUID(params)
 			if err != nil {
-				log.Fatal(err)
+				return nil, err
 			}
 
-			for _, entry := range resp.Payload {
-				bytes, err := entry.MarshalBinary()
-				if err != nil {
-					log.Fatal(err)
+			for k, entry := range resp.Payload {
+				if k != uuid {
+					continue
 				}
-				log.Info(string(bytes))
+				return parseEntry(entry)
 			}
-			return
 		}
 
-		log.Fatal("either --uuid or --log-index must be specified")
-	},
+		return nil, errors.New("either --uuid or --log-index must be specified")
+	}),
+}
+
+func parseEntry(e models.LogEntryAnon) (interface{}, error) {
+	bytes, err := e.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	// Now parse that back into JSON in the format "body, logindex"
+	obj := struct {
+		Body     []byte
+		LogIndex int
+	}{}
+	if err := json.Unmarshal(bytes, &obj); err != nil {
+		return nil, err
+	}
+
+	return obj, nil
 }
 
 func init() {
