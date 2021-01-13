@@ -31,3 +31,11 @@ test:
 
 clean:
 	rm -rf cli server
+
+up:
+	docker-compose -f docker-compose.yml build
+	docker-compose -f docker-compose.yml up
+
+debug:
+	docker-compose -f docker-compose.yml -f docker-compose.debug.yml build rekor-server-debug
+	docker-compose -f docker-compose.yml -f docker-compose.debug.yml up rekor-server-debug
