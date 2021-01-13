@@ -38,6 +38,7 @@ import (
 
 func addArtifactPFlags(cmd *cobra.Command) error {
 	cmd.Flags().Var(&fileOrURLFlag{}, "signature", "path or URL to detached signature file")
+	cmd.Flags().Var(&sigFormatFlag{value: "pgp"}, "signature-format", "format of the signature")
 
 	cmd.Flags().Var(&fileOrURLFlag{}, "public-key", "path or URL to public key file")
 
@@ -160,7 +161,13 @@ func CreateRekordFromPFlags() (models.ProposedEntry, error) {
 		}
 
 		re.RekordObj.Signature = &models.RekordV001SchemaSignature{}
-		re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatPgp
+		sigFormat := viper.GetString("signature-format")
+		switch sigFormat {
+		case "pgp":
+			re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatPgp
+		case "minisign":
+			re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatMinisign
+		}
 		signature := viper.GetString("signature")
 		sigURL, err := url.Parse(signature)
 		if err == nil && sigURL.IsAbs() {
@@ -229,6 +236,30 @@ func (f *fileOrURLFlag) Set(s string) error {
 
 func (f *fileOrURLFlag) Type() string {
 	return "fileOrURLFlag"
+}
+
+type sigFormatFlag struct {
+	value string
+}
+
+func (f *sigFormatFlag) Type() string {
+	return "sigFormat"
+}
+
+func (f *sigFormatFlag) String() string {
+	return f.value
+}
+
+func (f *sigFormatFlag) Set(s string) error {
+	set := map[string]struct{}{
+		"pgp":      {},
+		"minisign": {},
+	}
+	if _, ok := set[s]; ok {
+		f.value = s
+		return nil
+	}
+	return fmt.Errorf("value specified is invalid: [%s] supported values are: [pgp, minisign]", s)
 }
 
 type shaFlag struct {
