@@ -41,6 +41,7 @@ services:
   rekor-server:
     build:
       context: .
+      target: "deploy"
     command: [
       "rekor-server",
       "serve",
