@@ -17,6 +17,13 @@ const (
 	nodeDataDir = "node"
 )
 
+func outputContains(t *testing.T, output, sub string) {
+	t.Helper()
+	if !strings.Contains(output, sub) {
+		t.Errorf("Expected [%s] in response, got %s", sub, output)
+	}
+}
+
 func runCli(t *testing.T, arg ...string) string {
 	t.Helper()
 	cmd := exec.Command(cli, arg...)

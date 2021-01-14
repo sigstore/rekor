@@ -19,6 +19,7 @@ require (
 	github.com/go-swagger/go-swagger v0.25.1-0.20201206132650-7c73d972c8b9 // indirect
 	github.com/golang/protobuf v1.4.3
 	github.com/google/certificate-transparency-go v1.1.0 // indirect
+	github.com/google/go-cmp v0.5.2
 	github.com/google/martian v2.1.0+incompatible
 	github.com/google/trillian v1.3.10
 	github.com/gorilla/handlers v1.5.1 // indirect
