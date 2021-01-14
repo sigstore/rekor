@@ -106,3 +106,33 @@ func TestGet(t *testing.T) {
 	}
 	// TODO: check the actual data in here.
 }
+
+func TestMinisign(t *testing.T) {
+	// Create a keypair
+	keyPath := filepath.Join(t.TempDir(), "minisign.key")
+	pubPath := filepath.Join(t.TempDir(), "minisign.pub")
+
+	// Set an empty password, we have to hit enter twice to confirm
+	run(t, "\n\n", "minisign", "-G", "-s", keyPath, "-p", pubPath)
+
+	// Create a random artifact and sign it.
+	artifactPath := filepath.Join(t.TempDir(), "artifact")
+	sigPath := filepath.Join(t.TempDir(), "signature.asc")
+	createArtifact(t, artifactPath)
+
+	// Send in one empty password over stdin
+	out := run(t, "\n", "minisign", "-S", "-s", keyPath, "-m", artifactPath, "-x", sigPath)
+	t.Log(out)
+
+	// Now upload to the log!
+	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
+		"--public-key", pubPath, "--signature-format", "minisign")
+	outputContains(t, out, "Created entry at")
+
+	// Wait and check it.
+	time.Sleep(3 * time.Second)
+
+	out = runCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
+		"--public-key", pubPath, "--signature-format", "minisign")
+	outputContains(t, out, "Inclusion Proof")
+}
