@@ -56,11 +56,13 @@ func (s Signature) Verify(r io.Reader, k interface{}) error {
 		return fmt.Errorf("X509 signature has not been initialized")
 	}
 
-	message, err := ioutil.ReadAll(r)
+	hasher := sha256.New()
+	tee := io.TeeReader(r, hasher)
+	message, err := ioutil.ReadAll(tee)
 	if err != nil {
 		return err
 	}
-	hashed := sha256.Sum256(message)
+	hash := hasher.Sum(nil)
 
 	key, ok := k.(*PublicKey)
 	if !ok {
@@ -69,14 +71,14 @@ func (s Signature) Verify(r io.Reader, k interface{}) error {
 
 	switch pub := key.key.(type) {
 	case *rsa.PublicKey:
-		return rsa.VerifyPKCS1v15(pub, crypto.SHA256, hashed[:], s.signature)
+		return rsa.VerifyPKCS1v15(pub, crypto.SHA256, hash, s.signature)
 	case ed25519.PublicKey:
 		if ed25519.Verify(pub, message, s.signature) {
 			return nil
 		}
 		return fmt.Errorf("signature mismatch for %s", string(s.signature))
 	case *ecdsa.PublicKey:
-		if ecdsa.VerifyASN1(pub, hashed[:], s.signature) {
+		if ecdsa.VerifyASN1(pub, hash, s.signature) {
 			return nil
 		}
 		return fmt.Errorf("signature mismatch for %s", string(s.signature))
