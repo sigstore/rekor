@@ -61,14 +61,12 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 		BearerAuthenticator: security.BearerAuth,
 
 		JSONConsumer: runtime.JSONConsumer(),
-		XMLConsumer:  runtime.XMLConsumer(),
 		YamlConsumer: yamlpc.YAMLConsumer(),
 
 		ApplicationXPemFileProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
 			return errors.NotImplemented("applicationXPemFile producer has not yet been implemented")
 		}),
 		JSONProducer: runtime.JSONProducer(),
-		XMLProducer:  runtime.XMLProducer(),
 		YamlProducer: yamlpc.YAMLProducer(),
 
 		EntriesCreateLogEntryHandler: entries.CreateLogEntryHandlerFunc(func(params entries.CreateLogEntryParams) middleware.Responder {
@@ -124,9 +122,6 @@ type RekorServerAPI struct {
 	// JSONConsumer registers a consumer for the following mime types:
 	//   - application/json
 	JSONConsumer runtime.Consumer
-	// XMLConsumer registers a consumer for the following mime types:
-	//   - application/xml
-	XMLConsumer runtime.Consumer
 	// YamlConsumer registers a consumer for the following mime types:
 	//   - application/yaml
 	YamlConsumer runtime.Consumer
@@ -137,9 +132,6 @@ type RekorServerAPI struct {
 	// JSONProducer registers a producer for the following mime types:
 	//   - application/json
 	JSONProducer runtime.Producer
-	// XMLProducer registers a producer for the following mime types:
-	//   - application/xml
-	XMLProducer runtime.Producer
 	// YamlProducer registers a producer for the following mime types:
 	//   - application/yaml
 	YamlProducer runtime.Producer
@@ -231,9 +223,6 @@ func (o *RekorServerAPI) Validate() error {
 	if o.JSONConsumer == nil {
 		unregistered = append(unregistered, "JSONConsumer")
 	}
-	if o.XMLConsumer == nil {
-		unregistered = append(unregistered, "XMLConsumer")
-	}
 	if o.YamlConsumer == nil {
 		unregistered = append(unregistered, "YamlConsumer")
 	}
@@ -243,9 +232,6 @@ func (o *RekorServerAPI) Validate() error {
 	}
 	if o.JSONProducer == nil {
 		unregistered = append(unregistered, "JSONProducer")
-	}
-	if o.XMLProducer == nil {
-		unregistered = append(unregistered, "XMLProducer")
 	}
 	if o.YamlProducer == nil {
 		unregistered = append(unregistered, "YamlProducer")
@@ -306,8 +292,6 @@ func (o *RekorServerAPI) ConsumersFor(mediaTypes []string) map[string]runtime.Co
 		switch mt {
 		case "application/json":
 			result["application/json"] = o.JSONConsumer
-		case "application/xml":
-			result["application/xml"] = o.XMLConsumer
 		case "application/yaml":
 			result["application/yaml"] = o.YamlConsumer
 		}
@@ -329,8 +313,6 @@ func (o *RekorServerAPI) ProducersFor(mediaTypes []string) map[string]runtime.Pr
 			result["application/x-pem-file"] = o.ApplicationXPemFileProducer
 		case "application/json":
 			result["application/json"] = o.JSONProducer
-		case "application/xml":
-			result["application/xml"] = o.XMLProducer
 		case "application/yaml":
 			result["application/yaml"] = o.YamlProducer
 		}
