@@ -28,7 +28,7 @@ jobs:
           go-version: ${{ env.GOVERSION }}
       # Download go-swagger
       - name: download go-swagger
-        run : cd $HOME && go get -u github.com/go-swagger/go-swagger/cmd/swagger@master
+        run : cp go.* $HOME && go get -u github.com/go-swagger/go-swagger/cmd/swagger@master && cp $HOME/go.* .
       #  run : go get -u github.com/go-swagger/go-swagger/cmd/swagger@v0.25.0
       - name: Validate OpenAPI with Swagger
         run: swagger validate openapi.yaml
