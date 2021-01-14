@@ -63,6 +63,8 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.YamlConsumer = util.YamlConsumer()
 	api.YamlProducer = util.YamlProducer()
 
+	api.ApplicationXPemFileProducer = runtime.TextProducer()
+
 	api.EntriesCreateLogEntryHandler = entries.CreateLogEntryHandlerFunc(pkgapi.CreateLogEntryHandler)
 	api.EntriesGetLogEntryByIndexHandler = entries.GetLogEntryByIndexHandlerFunc(pkgapi.GetLogEntryByIndexHandler)
 	api.EntriesGetLogEntryByUUIDHandler = entries.GetLogEntryByUUIDHandlerFunc(pkgapi.GetLogEntryByUUIDHandler)
@@ -72,7 +74,6 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.TlogGetLogInfoHandler = tlog.GetLogInfoHandlerFunc(pkgapi.GetLogInfoHandler)
 	api.TlogGetLogProofHandler = tlog.GetLogProofHandlerFunc(pkgapi.GetLogProofHandler)
 	api.TlogGetPublicKeyHandler = tlog.GetPublicKeyHandlerFunc(pkgapi.GetPublicKeyHandler)
-	api.RegisterProducer("application/x-pem-file", runtime.TextProducer())
 
 	api.PreServerShutdown = func() {}
 

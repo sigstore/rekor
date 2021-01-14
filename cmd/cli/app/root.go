@@ -94,10 +94,8 @@ func GetRekorClient(rekorServerURL string) (*client.Rekor, error) {
 
 	rt := httptransport.New(url.Host, client.DefaultBasePath, client.DefaultSchemes)
 	rt.Consumers["application/yaml"] = util.YamlConsumer()
-	rt.Consumers["application/xml"] = runtime.XMLConsumer()
 	rt.Consumers["application/x-pem-file"] = runtime.TextConsumer()
 	rt.Producers["application/yaml"] = util.YamlProducer()
-	rt.Producers["application/xml"] = runtime.XMLProducer()
 
 	return client.New(rt, strfmt.Default), nil
 }
