@@ -7,7 +7,6 @@ info:
 host: api.rekor.dev
 schemes:
   - http
-  - https
 
 consumes:
   - application/json
@@ -17,6 +16,31 @@ produces:
   - application/yaml
 
 paths:
+  /api/v1/index/retrieve:
+    post:
+      summary: Searches index by entry metadata
+      operationId: searchIndex
+      tags:
+        - index
+      parameters:
+        - in: body
+          name: query
+          required: true
+          schema:
+            $ref: '#/definitions/SearchIndex'
+      responses:
+        200:
+          description: Returns zero or more entry UUIDs from the transparency log based on search query
+          schema:
+            type: array
+            items:
+              type: string
+              description: Entry UUID in transparency log
+              pattern: '^[0-9a-fA-F]{64}$'
+        400:
+          $ref: '#/responses/BadContent'
+        default:
+          $ref: '#/responses/InternalServerError'
   /api/v1/log:
     get:
       summary: Get information about the current state of the transparency log
@@ -248,6 +272,27 @@ definitions:
           additionalProperties: true
       required:
         - "body"
+
+  SearchIndex:
+    type: object
+    properties:
+      publicKey:
+        type: object
+        properties:
+          format:
+            type: string
+            enum: ['pgp','x509','minisign']
+          content:
+            type: string
+            format: byte
+          url:
+            type: string
+            format: uri
+        required:
+          - "format"
+      hash:
+        type: string
+        pattern: '^[0-9a-fA-F]{64}$'
 
   SearchLogQuery:
     type: object

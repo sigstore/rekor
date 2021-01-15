@@ -31,6 +31,7 @@ type TypeImpl interface {
 
 type EntryImpl interface {
 	APIVersion() string
+	IndexKeys() []string
 	Canonicalize(ctx context.Context) ([]byte, error)
 	FetchExternalEntities(ctx context.Context) error
 	HasExternalEntities() bool

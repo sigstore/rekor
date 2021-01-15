@@ -8,6 +8,15 @@ services:
       - MYSQL_USER=test
       - MYSQL_PASSWORD=zaphod
     restart: always # keep the MySQL server running
+  redis-server:
+    image: docker.io/redis:6.0.10
+    command: [
+      "--bind",
+      "0.0.0.0",
+    ]
+    ports:
+      - "6379:6379"
+    restart: always # keep the redis server running
   trillian-log-server:
     image: gcr.io/trillian-opensource-ci/log_server
     command: [
@@ -47,6 +56,8 @@ services:
       "serve",
       "--trillian_log_server.address=trillian-log-server",
       "--trillian_log_server.port=8091",
+      "--redis_server.address=redis-server",
+      "--redis_server.port=6379",
       "--rekor_server.address=0.0.0.0",
       ]
     restart: always # keep the server running
@@ -54,4 +65,5 @@ services:
       - "3000:3000"
     depends_on:
       - mysql
+      - redis-server
       - trillian-log-server

@@ -16,6 +16,7 @@ limitations under the License.
 package api
 
 import (
+	"context"
 	"crypto"
 	"crypto/x509"
 	"encoding/hex"
@@ -31,6 +32,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/grpc/codes"
 
+	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/projectrekor/rekor/pkg/types"
 
 	"github.com/projectrekor/rekor/pkg/generated/models"
@@ -113,6 +115,14 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 			Body: queuedLeaf.GetLeafValue(),
 		},
 	}
+
+	go func() {
+		for _, key := range entry.IndexKeys() {
+			if err := addToIndex(context.Background(), key, uuid); err != nil {
+				log.RequestIDLogger(params.HTTPRequest).Error(err)
+			}
+		}
+	}()
 
 	location := strfmt.URI(fmt.Sprintf("%v/%v", httpReq.URL, uuid))
 	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(location).WithETag(uuid)

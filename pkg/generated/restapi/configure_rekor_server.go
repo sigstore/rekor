@@ -29,6 +29,7 @@ import (
 	pkgapi "github.com/projectrekor/rekor/pkg/api"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/entries"
+	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/index"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/projectrekor/rekor/pkg/util"
@@ -74,6 +75,8 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.TlogGetLogInfoHandler = tlog.GetLogInfoHandlerFunc(pkgapi.GetLogInfoHandler)
 	api.TlogGetLogProofHandler = tlog.GetLogProofHandlerFunc(pkgapi.GetLogProofHandler)
 	api.TlogGetPublicKeyHandler = tlog.GetPublicKeyHandlerFunc(pkgapi.GetPublicKeyHandler)
+
+	api.IndexSearchIndexHandler = index.SearchIndexHandlerFunc(pkgapi.SearchIndexHandler)
 
 	api.PreServerShutdown = func() {}
 

@@ -27,6 +27,7 @@ require (
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/magiconair/properties v1.8.4 // indirect
+	github.com/mediocregopher/radix/v4 v4.0.0-beta.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.4.0
 	github.com/pelletier/go-toml v1.8.1 // indirect

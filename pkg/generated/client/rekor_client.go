@@ -28,6 +28,7 @@ import (
 	"github.com/go-openapi/strfmt"
 
 	"github.com/projectrekor/rekor/pkg/generated/client/entries"
+	"github.com/projectrekor/rekor/pkg/generated/client/index"
 	"github.com/projectrekor/rekor/pkg/generated/client/tlog"
 )
 
@@ -74,6 +75,7 @@ func New(transport runtime.ClientTransport, formats strfmt.Registry) *Rekor {
 	cli := new(Rekor)
 	cli.Transport = transport
 	cli.Entries = entries.New(transport, formats)
+	cli.Index = index.New(transport, formats)
 	cli.Tlog = tlog.New(transport, formats)
 	return cli
 }
@@ -121,6 +123,8 @@ func (cfg *TransportConfig) WithSchemes(schemes []string) *TransportConfig {
 type Rekor struct {
 	Entries entries.ClientService
 
+	Index index.ClientService
+
 	Tlog tlog.ClientService
 
 	Transport runtime.ClientTransport
@@ -130,5 +134,6 @@ type Rekor struct {
 func (c *Rekor) SetTransport(transport runtime.ClientTransport) {
 	c.Transport = transport
 	c.Entries.SetTransport(transport)
+	c.Index.SetTransport(transport)
 	c.Tlog.SetTransport(transport)
 }

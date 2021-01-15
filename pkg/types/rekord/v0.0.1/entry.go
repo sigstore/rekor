@@ -16,9 +16,6 @@ limitations under the License.
 package rekord
 
 import (
-	"bufio"
-	"bytes"
-	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -27,12 +24,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/projectrekor/rekor/pkg/types"
+	"github.com/projectrekor/rekor/pkg/util"
 
 	"github.com/asaskevich/govalidator"
 
@@ -84,6 +81,32 @@ func Base64StringtoByteArray() mapstructure.DecodeHookFunc {
 	}
 }
 
+func (v V001Entry) IndexKeys() []string {
+	if v.HasExternalEntities() {
+		v.FetchExternalEntities(context.Background())
+	}
+
+	var result []string
+
+	key, err := v.keyObj.CanonicalValue()
+	if err != nil {
+		log.Logger.Error(err)
+	} else {
+		hasher := sha256.New()
+		if _, err := hasher.Write(key); err != nil {
+			log.Logger.Error(err)
+		} else {
+			result = append(result, strings.ToLower(hex.EncodeToString(hasher.Sum(nil))))
+		}
+	}
+
+	if v.RekordObj.Data.Hash != nil {
+		result = append(result, strings.ToLower(swag.StringValue(v.RekordObj.Data.Hash.Value)))
+	}
+
+	return result
+}
+
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	rekord, ok := pe.(*models.Rekord)
 	if !ok {
@@ -129,46 +152,6 @@ func (v V001Entry) HasExternalEntities() bool {
 	return false
 }
 
-// fileOrURLReadCloser Note: caller is responsible for closing ReadCloser returned from method!
-func fileOrURLReadCloser(ctx context.Context, url string, content []byte, checkGZIP bool) (io.ReadCloser, error) {
-	var dataReader io.ReadCloser
-	if url != "" {
-		//TODO: set timeout here, SSL settings?
-		client := &http.Client{}
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-		if err != nil {
-			return nil, err
-		}
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, err
-		}
-		if resp.StatusCode < 200 || resp.StatusCode > 299 {
-			return nil, fmt.Errorf("error received while fetching artifact: %v", resp.Status)
-		}
-
-		if checkGZIP {
-			// read first 512 bytes to determine if content is gzip compressed
-			bufReader := bufio.NewReaderSize(resp.Body, 512)
-			ctBuf, err := bufReader.Peek(512)
-			if err != nil && err != bufio.ErrBufferFull && err != io.EOF {
-				return nil, err
-			}
-
-			if http.DetectContentType(ctBuf) == "application/x-gzip" {
-				dataReader, _ = gzip.NewReader(io.MultiReader(bufReader, resp.Body))
-			} else {
-				dataReader = ioutil.NopCloser(io.MultiReader(bufReader, resp.Body))
-			}
-		} else {
-			dataReader = resp.Body
-		}
-	} else {
-		dataReader = ioutil.NopCloser(bytes.NewReader(content))
-	}
-	return dataReader, nil
-}
-
 func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	if v.fetchedExternalEntities {
 		return nil
@@ -209,7 +192,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		defer hashW.Close()
 		defer sigW.Close()
 
-		dataReadCloser, err := fileOrURLReadCloser(ctx, v.RekordObj.Data.URL.String(), v.RekordObj.Data.Content, true)
+		dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.RekordObj.Data.URL.String(), v.RekordObj.Data.Content, true)
 		if err != nil {
 			return closePipesOnError(err)
 		}
@@ -250,7 +233,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	g.Go(func() error {
 		defer close(sigResult)
 
-		sigReadCloser, err := fileOrURLReadCloser(ctx, v.RekordObj.Signature.URL.String(),
+		sigReadCloser, err := util.FileOrURLReadCloser(ctx, v.RekordObj.Signature.URL.String(),
 			v.RekordObj.Signature.Content, false)
 		if err != nil {
 			return closePipesOnError(err)
@@ -275,7 +258,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	g.Go(func() error {
 		defer close(keyResult)
 
-		keyReadCloser, err := fileOrURLReadCloser(ctx, v.RekordObj.Signature.PublicKey.URL.String(),
+		keyReadCloser, err := util.FileOrURLReadCloser(ctx, v.RekordObj.Signature.PublicKey.URL.String(),
 			v.RekordObj.Signature.PublicKey.Content, false)
 		if err != nil {
 			return closePipesOnError(err)

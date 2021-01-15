@@ -55,6 +55,44 @@ func init() {
   },
   "host": "api.rekor.dev",
   "paths": {
+    "/api/v1/index/retrieve": {
+      "post": {
+        "tags": [
+          "index"
+        ],
+        "summary": "Searches index by entry metadata",
+        "operationId": "searchIndex",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SearchIndex"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns zero or more entry UUIDs from the transparency log based on search query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "description": "Entry UUID in transparency log",
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{64}$"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/responses/BadContent"
+          },
+          "default": {
+            "$ref": "#/responses/InternalServerError"
+          }
+        }
+      }
+    },
     "/api/v1/log": {
       "get": {
         "description": "Returns the current root hash and size of the merkle tree used to store the log entries.",
@@ -468,6 +506,39 @@ func init() {
       },
       "discriminator": "kind"
     },
+    "SearchIndex": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$"
+        },
+        "publicKey": {
+          "type": "object",
+          "required": [
+            "format"
+          ],
+          "properties": {
+            "content": {
+              "type": "string",
+              "format": "byte"
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "pgp",
+                "x509",
+                "minisign"
+              ]
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        }
+      }
+    },
     "SearchLogQuery": {
       "type": "object",
       "properties": {
@@ -567,6 +638,50 @@ func init() {
   },
   "host": "api.rekor.dev",
   "paths": {
+    "/api/v1/index/retrieve": {
+      "post": {
+        "tags": [
+          "index"
+        ],
+        "summary": "Searches index by entry metadata",
+        "operationId": "searchIndex",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SearchIndex"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns zero or more entry UUIDs from the transparency log based on search query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "description": "Entry UUID in transparency log",
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{64}$"
+              }
+            }
+          },
+          "400": {
+            "description": "The content supplied to the server was invalid",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          },
+          "default": {
+            "description": "There was an internal error in the server while processing the request",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
     "/api/v1/log": {
       "get": {
         "description": "Returns the current root hash and size of the merkle tree used to store the log entries.",
@@ -1211,6 +1326,63 @@ func init() {
         },
         "url": {
           "description": "Specifies the location of the public key",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "SearchIndex": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$"
+        },
+        "publicKey": {
+          "type": "object",
+          "required": [
+            "format"
+          ],
+          "properties": {
+            "content": {
+              "type": "string",
+              "format": "byte"
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "pgp",
+                "x509",
+                "minisign"
+              ]
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        }
+      }
+    },
+    "SearchIndexPublicKey": {
+      "type": "object",
+      "required": [
+        "format"
+      ],
+      "properties": {
+        "content": {
+          "type": "string",
+          "format": "byte"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "pgp",
+            "x509",
+            "minisign"
+          ]
+        },
+        "url": {
           "type": "string",
           "format": "uri"
         }

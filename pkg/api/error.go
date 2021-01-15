@@ -24,6 +24,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/projectrekor/rekor/pkg/generated/models"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/entries"
+	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/index"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/projectrekor/rekor/pkg/log"
 )
@@ -35,6 +36,10 @@ const (
 	entryAlreadyExists             = "An equivalent entry already exists in the transparency log"
 	firstSizeLessThanLastSize      = "firstSize(%v) must be less than lastSize(%v)"
 	malformedUUID                  = "UUID must be a 64-character hexadecimal string"
+	malformedHash                  = "Hash must be a 64-character hexadecimal string created from SHA256 algorithm"
+	malformedPublicKey             = "Public key provided could not be parsed"
+	failedToGenerateCanonicalKey   = "Error generating canonicalized public key"
+	redisUnexpectedResult          = "Unexpected result from searching index"
 )
 
 func errorMsg(message string, code int) *models.Error {
@@ -118,6 +123,14 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 	case tlog.GetPublicKeyParams:
 		logMsg(params.HTTPRequest)
 		return tlog.NewGetPublicKeyDefault(code).WithPayload(errorMsg(message, code))
+	case index.SearchIndexParams:
+		logMsg(params.HTTPRequest)
+		switch code {
+		case http.StatusBadRequest:
+			return index.NewSearchIndexBadRequest()
+		default:
+			return index.NewSearchIndexDefault(code).WithPayload(errorMsg(message, code))
+		}
 	default:
 		log.Logger.Errorf("unable to find method for type %T; error: %v", params, err)
 		return middleware.Error(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
