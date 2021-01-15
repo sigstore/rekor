@@ -21,7 +21,8 @@
 //  Rekor is a cryptographically secure, immutable transparency log for signed software releases.
 //  Schemes:
 //    http
-//  Host: 104.198.250.40
+//    https
+//  Host: api.rekor.dev
 //  BasePath: /
 //  Version: 0.0.1
 //

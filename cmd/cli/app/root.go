@@ -92,7 +92,7 @@ func GetRekorClient(rekorServerURL string) (*client.Rekor, error) {
 		return nil, err
 	}
 
-	rt := httptransport.New(url.Host, client.DefaultBasePath, client.DefaultSchemes)
+	rt := httptransport.New(url.Host, client.DefaultBasePath, []string{url.Scheme})
 	rt.Consumers["application/yaml"] = util.YamlConsumer()
 	rt.Consumers["application/x-pem-file"] = runtime.TextConsumer()
 	rt.Producers["application/yaml"] = util.YamlProducer()

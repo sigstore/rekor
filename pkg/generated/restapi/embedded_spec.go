@@ -44,7 +44,8 @@ func init() {
     "application/yaml"
   ],
   "schemes": [
-    "http"
+    "http",
+    "https"
   ],
   "swagger": "2.0",
   "info": {
@@ -52,7 +53,7 @@ func init() {
     "title": "Rekor",
     "version": "0.0.1"
   },
-  "host": "104.198.250.40",
+  "host": "api.rekor.dev",
   "paths": {
     "/api/v1/log": {
       "get": {
@@ -555,7 +556,8 @@ func init() {
     "application/yaml"
   ],
   "schemes": [
-    "http"
+    "http",
+    "https"
   ],
   "swagger": "2.0",
   "info": {
@@ -563,7 +565,7 @@ func init() {
     "title": "Rekor",
     "version": "0.0.1"
   },
-  "host": "104.198.250.40",
+  "host": "api.rekor.dev",
   "paths": {
     "/api/v1/log": {
       "get": {
