@@ -34,3 +34,9 @@ Then deploy with:
 ```
 ko apply -f config/
 ```
+
+## Ingress
+
+Install cert-manager with helm, using https://cert-manager.io/docs/installation/kubernetes/#installing-with-helm
+
+Install nginx-ingress with: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.43.0/deploy/static/provider/cloud/deploy.yaml
