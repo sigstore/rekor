@@ -49,6 +49,12 @@ func TestFactoryNewKey(t *testing.T) {
 			expectSuccess: true,
 		},
 		{
+			format:        "x509",
+			keyFile:       "x509/testdata/ec.pub",
+			sigFile:       "x509/testdata/hello_world.txt.sig",
+			expectSuccess: true,
+		},
+		{
 			format:        "bogus",
 			expectSuccess: false,
 		},

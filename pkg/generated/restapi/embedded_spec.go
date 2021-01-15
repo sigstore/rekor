@@ -1147,7 +1147,8 @@ func init() {
           "type": "string",
           "enum": [
             "pgp",
-            "minisign"
+            "minisign",
+            "x509"
           ]
         },
         "publicKey": {
@@ -1370,7 +1371,8 @@ func init() {
               "type": "string",
               "enum": [
                 "pgp",
-                "minisign"
+                "minisign",
+                "x509"
               ]
             },
             "publicKey": {

@@ -1,4 +1,5 @@
-FROM registry.access.redhat.com/ubi8/go-toolset AS builder
+FROM golang:1.15 AS builder
+ENV APP_ROOT=/opt/app-root
 ENV GOPATH=$APP_ROOT
 
 WORKDIR $APP_ROOT/src/
