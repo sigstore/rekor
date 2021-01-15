@@ -82,11 +82,14 @@ func Base64StringtoByteArray() mapstructure.DecodeHookFunc {
 }
 
 func (v V001Entry) IndexKeys() []string {
-	if v.HasExternalEntities() {
-		v.FetchExternalEntities(context.Background())
-	}
-
 	var result []string
+
+	if v.HasExternalEntities() {
+		if err := v.FetchExternalEntities(context.Background()); err != nil {
+			log.Logger.Error(err)
+			return result
+		}
+	}
 
 	key, err := v.keyObj.CanonicalValue()
 	if err != nil {
