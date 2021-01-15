@@ -37,14 +37,14 @@ var Default = NewHTTPClient(nil)
 const (
 	// DefaultHost is the default Host
 	// found in Meta (info) section of spec file
-	DefaultHost string = "104.198.250.40"
+	DefaultHost string = "api.rekor.dev"
 	// DefaultBasePath is the default BasePath
 	// found in Meta (info) section of spec file
 	DefaultBasePath string = "/"
 )
 
 // DefaultSchemes are the default schemes found in Meta (info) section of spec file
-var DefaultSchemes = []string{"http"}
+var DefaultSchemes = []string{"http", "https"}
 
 // NewHTTPClient creates a new rekor HTTP client.
 func NewHTTPClient(formats strfmt.Registry) *Rekor {
