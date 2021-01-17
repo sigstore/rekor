@@ -17,12 +17,15 @@ package app
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/bits"
 	"os"
 	"strconv"
 
+	"github.com/google/trillian/merkle"
 	"github.com/google/trillian/merkle/rfc6962"
+	"github.com/projectrekor/rekor/cmd/cli/app/format"
 	"github.com/projectrekor/rekor/pkg/generated/client/entries"
 	"github.com/projectrekor/rekor/pkg/generated/models"
 	"github.com/projectrekor/rekor/pkg/log"
@@ -30,6 +33,40 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+type verifyCmdOutput struct {
+	RootHash  string
+	EntryUUID string
+	Index     int64
+	Size      int64
+	Hashes    []string
+}
+
+func (v *verifyCmdOutput) String() string {
+	s := fmt.Sprintf("Current Root Hash: %v\n", v.RootHash)
+	s += fmt.Sprintf("Entry Hash: %v\n", v.EntryUUID)
+	s += fmt.Sprintf("Entry Index: %v\n", v.Index)
+	s += fmt.Sprintf("Current Tree Size: %v\n\n", v.Size)
+
+	s += "Inclusion Proof:\n"
+	hasher := rfc6962.DefaultHasher
+	inner := bits.Len64(uint64(v.Index ^ (v.Size - 1)))
+	var left, right []byte
+	result, _ := hex.DecodeString(v.EntryUUID)
+	for i, h := range v.Hashes {
+		if i < inner && (v.Index>>uint(i))&1 == 0 {
+			left = []byte(hex.EncodeToString([]byte(v.RootHash)))
+			right, _ = hex.DecodeString(h)
+		} else {
+			left, _ = hex.DecodeString(h)
+			right = result
+		}
+		result = hasher.HashChildren(left, right)
+		s += fmt.Sprintf("SHA256(0x01 | %v | %v) =\n\t%v\n\n",
+			hex.EncodeToString(left), hex.EncodeToString(right), hex.EncodeToString(result))
+	}
+	return s
+}
 
 // verifyCmd represents the get command
 var verifyCmd = &cobra.Command{
@@ -47,11 +84,10 @@ var verifyCmd = &cobra.Command{
 			os.Exit(1)
 		}
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-		log := log.Logger
+	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		params := entries.NewGetLogEntryProofParams()
@@ -65,13 +101,13 @@ var verifyCmd = &cobra.Command{
 			if logIndex != "" {
 				logIndexInt, err := strconv.ParseInt(logIndex, 10, 0)
 				if err != nil {
-					log.Fatal(fmt.Errorf("error parsing --log-index: %w", err))
+					return nil, fmt.Errorf("error parsing --log-index: %w", err)
 				}
 				searchLogQuery.LogIndexes = []*int64{&logIndexInt}
 			} else {
 				rekordEntry, err := CreateRekordFromPFlags()
 				if err != nil {
-					log.Fatal(err)
+					return nil, err
 				}
 
 				entries := []models.ProposedEntry{rekordEntry}
@@ -81,17 +117,17 @@ var verifyCmd = &cobra.Command{
 
 			resp, err := rekorClient.Entries.SearchLogQuery(searchParams)
 			if err != nil {
-				log.Fatal(err)
+				return nil, err
 			}
 
 			if len(resp.Payload) == 0 {
-				log.Fatal(fmt.Errorf("entry in log cannot be located"))
+				return nil, fmt.Errorf("entry in log cannot be located")
 			} else if len(resp.Payload) > 1 {
-				log.Fatal(fmt.Errorf("multiple entries returned; this should not happen"))
+				return nil, fmt.Errorf("multiple entries returned; this should not happen")
 			}
 			logEntry := resp.Payload[0]
 			if len(logEntry) != 1 {
-				log.Fatal("UUID value can not be extracted")
+				return nil, errors.New("UUID value can not be extracted")
 			}
 			for k := range logEntry {
 				params.EntryUUID = k
@@ -100,42 +136,33 @@ var verifyCmd = &cobra.Command{
 
 		resp, err := rekorClient.Entries.GetLogEntryProof(params)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
-		inclusionProof := resp.Payload
-		index := *inclusionProof.LogIndex
-		size := *inclusionProof.TreeSize
-		rootHash := *inclusionProof.RootHash
-		fmt.Printf("Current Root Hash: %v\n", rootHash)
-		fmt.Printf("Entry Hash: %v\n", params.EntryUUID)
-		fmt.Printf("Entry Index: %v\n", index)
-		fmt.Printf("Current Tree Size: %v\n\n", size)
-
-		hasher := rfc6962.DefaultHasher
-		inner := bits.Len64(uint64(index ^ (size - 1)))
-		var left, right []byte
-		result, _ := hex.DecodeString(params.EntryUUID)
-		fmt.Printf("Inclusion Proof:\n")
-		for i, h := range inclusionProof.Hashes {
-			if i < inner && (index>>uint(i))&1 == 0 {
-				left = result
-				right, _ = hex.DecodeString(h)
-			} else {
-				left, _ = hex.DecodeString(h)
-				right = result
-			}
-			result = hasher.HashChildren(left, right)
-			fmt.Printf("SHA256(0x01 | %v | %v) =\n\t%v\n\n", hex.EncodeToString(left), hex.EncodeToString(right), hex.EncodeToString(result))
+		o := &verifyCmdOutput{
+			RootHash:  *resp.Payload.RootHash,
+			EntryUUID: params.EntryUUID,
+			Index:     *resp.Payload.LogIndex,
+			Size:      *resp.Payload.TreeSize,
+			Hashes:    resp.Payload.Hashes,
 		}
-		resultHash := hex.EncodeToString(result)
 
-		if resultHash == rootHash {
-			fmt.Printf("%v == %v, proof complete\n", resultHash, rootHash)
-		} else {
-			fmt.Printf("proof could not be correctly generated!")
+		hashes := [][]byte{}
+		for _, h := range resp.Payload.Hashes {
+			hb, _ := hex.DecodeString(h)
+			hashes = append(hashes, hb)
 		}
-	},
+
+		rootHash, _ := hex.DecodeString(*resp.Payload.RootHash)
+		leafHash, _ := hex.DecodeString(params.EntryUUID)
+
+		v := merkle.NewLogVerifier(rfc6962.DefaultHasher)
+		if err := v.VerifyInclusionProof(*resp.Payload.LogIndex, *resp.Payload.TreeSize,
+			hashes, rootHash, leafHash); err != nil {
+			return nil, err
+		}
+		return o, err
+	}),
 }
 
 func init() {

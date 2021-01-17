@@ -19,11 +19,31 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/projectrekor/rekor/cmd/cli/app/format"
 	"github.com/projectrekor/rekor/pkg/generated/client/tlog"
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+type logProofOutput struct {
+	RootHash string
+	Hashes   []string
+}
+
+func (l *logProofOutput) String() string {
+	s := fmt.Sprintf("Current Root Hash: %v\n", l.RootHash)
+	s += "Hashes: ["
+	for i, hash := range l.Hashes {
+		if i+1 == len(l.Hashes) {
+			s += hash
+		} else {
+			s += fmt.Sprintf("%v,", hash)
+		}
+	}
+	s += "]\n"
+	return s
+}
 
 // logProof represents the consistency proof
 var logProofCmd = &cobra.Command{
@@ -48,11 +68,10 @@ var logProofCmd = &cobra.Command{
 			os.Exit(1)
 		}
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-		log := log.Logger
+	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		firstSize := int64(viper.GetUint64("first-size"))
@@ -64,21 +83,15 @@ var logProofCmd = &cobra.Command{
 
 		result, err := rekorClient.Tlog.GetLogProof(params)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		consistencyProof := result.GetPayload()
-		fmt.Printf("Current Root Hash: %v\n", *consistencyProof.RootHash)
-		fmt.Printf("Hashes: [")
-		for i, hash := range consistencyProof.Hashes {
-			if i+1 == len(consistencyProof.Hashes) {
-				fmt.Printf("%v", hash)
-			} else {
-				fmt.Printf("%v,", hash)
-			}
-		}
-		fmt.Printf("]\n")
-	},
+		return &logProofOutput{
+			RootHash: *consistencyProof.RootHash,
+			Hashes:   consistencyProof.Hashes,
+		}, nil
+	}),
 }
 
 func init() {

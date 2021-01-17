@@ -69,7 +69,7 @@ func TestUploadVerify(t *testing.T) {
 func TestLogInfo(t *testing.T) {
 	// TODO: figure out some way to check the length, add something, and make sure the length increments!
 	out := runCli(t, "loginfo")
-	outputContains(t, out, "Verified signature of log root!")
+	outputContains(t, out, "Verification Successful!")
 }
 
 func TestGet(t *testing.T) {
