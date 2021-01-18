@@ -36,7 +36,8 @@ import (
 )
 
 // NewSearchIndexParams creates a new SearchIndexParams object
-// no default values defined in spec.
+//
+// There are no default values defined in the spec.
 func NewSearchIndexParams() SearchIndexParams {
 
 	return SearchIndexParams{}

@@ -69,7 +69,7 @@ func NewSearchIndexOK() *SearchIndexOK {
 	return &SearchIndexOK{}
 }
 
-/*SearchIndexOK handles this case with default header values.
+/* SearchIndexOK describes a response with status code 200, with default header values.
 
 Returns zero or more entry UUIDs from the transparency log based on search query
 */
@@ -80,7 +80,6 @@ type SearchIndexOK struct {
 func (o *SearchIndexOK) Error() string {
 	return fmt.Sprintf("[POST /api/v1/index/retrieve][%d] searchIndexOK  %+v", 200, o.Payload)
 }
-
 func (o *SearchIndexOK) GetPayload() []string {
 	return o.Payload
 }
@@ -100,7 +99,7 @@ func NewSearchIndexBadRequest() *SearchIndexBadRequest {
 	return &SearchIndexBadRequest{}
 }
 
-/*SearchIndexBadRequest handles this case with default header values.
+/* SearchIndexBadRequest describes a response with status code 400, with default header values.
 
 The content supplied to the server was invalid
 */
@@ -111,7 +110,6 @@ type SearchIndexBadRequest struct {
 func (o *SearchIndexBadRequest) Error() string {
 	return fmt.Sprintf("[POST /api/v1/index/retrieve][%d] searchIndexBadRequest  %+v", 400, o.Payload)
 }
-
 func (o *SearchIndexBadRequest) GetPayload() *models.Error {
 	return o.Payload
 }
@@ -135,7 +133,7 @@ func NewSearchIndexDefault(code int) *SearchIndexDefault {
 	}
 }
 
-/*SearchIndexDefault handles this case with default header values.
+/* SearchIndexDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */
@@ -153,7 +151,6 @@ func (o *SearchIndexDefault) Code() int {
 func (o *SearchIndexDefault) Error() string {
 	return fmt.Sprintf("[POST /api/v1/index/retrieve][%d] searchIndex default  %+v", o._statusCode, o.Payload)
 }
-
 func (o *SearchIndexDefault) GetPayload() *models.Error {
 	return o.Payload
 }

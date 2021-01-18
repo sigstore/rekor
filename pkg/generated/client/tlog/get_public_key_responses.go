@@ -63,7 +63,7 @@ func NewGetPublicKeyOK() *GetPublicKeyOK {
 	return &GetPublicKeyOK{}
 }
 
-/*GetPublicKeyOK handles this case with default header values.
+/* GetPublicKeyOK describes a response with status code 200, with default header values.
 
 The public key
 */
@@ -74,7 +74,6 @@ type GetPublicKeyOK struct {
 func (o *GetPublicKeyOK) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log/publicKey][%d] getPublicKeyOK  %+v", 200, o.Payload)
 }
-
 func (o *GetPublicKeyOK) GetPayload() string {
 	return o.Payload
 }
@@ -96,7 +95,7 @@ func NewGetPublicKeyDefault(code int) *GetPublicKeyDefault {
 	}
 }
 
-/*GetPublicKeyDefault handles this case with default header values.
+/* GetPublicKeyDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */
@@ -114,7 +113,6 @@ func (o *GetPublicKeyDefault) Code() int {
 func (o *GetPublicKeyDefault) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log/publicKey][%d] getPublicKey default  %+v", o._statusCode, o.Payload)
 }
-
 func (o *GetPublicKeyDefault) GetPayload() *models.Error {
 	return o.Payload
 }

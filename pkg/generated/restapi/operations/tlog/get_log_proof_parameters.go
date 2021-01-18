@@ -92,7 +92,6 @@ func (o *GetLogProofParams) BindRequest(r *http.Request, route *middleware.Match
 	if err := o.bindLastSize(qLastSize, qhkLastSize, route.Formats); err != nil {
 		res = append(res, err)
 	}
-
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
@@ -108,6 +107,7 @@ func (o *GetLogProofParams) bindFirstSize(rawData []string, hasKey bool, formats
 
 	// Required: false
 	// AllowEmptyValue: false
+
 	if raw == "" { // empty values pass all other validations
 		// Default values have been previously initialized by NewGetLogProofParams()
 		return nil
@@ -148,6 +148,7 @@ func (o *GetLogProofParams) bindLastSize(rawData []string, hasKey bool, formats 
 
 	// Required: true
 	// AllowEmptyValue: false
+
 	if err := validate.RequiredString("lastSize", "query", raw); err != nil {
 		return err
 	}

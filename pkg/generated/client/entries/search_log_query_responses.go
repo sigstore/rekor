@@ -69,7 +69,7 @@ func NewSearchLogQueryOK() *SearchLogQueryOK {
 	return &SearchLogQueryOK{}
 }
 
-/*SearchLogQueryOK handles this case with default header values.
+/* SearchLogQueryOK describes a response with status code 200, with default header values.
 
 Returns zero or more entries from the transparency log, according to how many were included in request query
 */
@@ -80,7 +80,6 @@ type SearchLogQueryOK struct {
 func (o *SearchLogQueryOK) Error() string {
 	return fmt.Sprintf("[POST /api/v1/log/entries/retrieve][%d] searchLogQueryOK  %+v", 200, o.Payload)
 }
-
 func (o *SearchLogQueryOK) GetPayload() []models.LogEntry {
 	return o.Payload
 }
@@ -100,7 +99,7 @@ func NewSearchLogQueryBadRequest() *SearchLogQueryBadRequest {
 	return &SearchLogQueryBadRequest{}
 }
 
-/*SearchLogQueryBadRequest handles this case with default header values.
+/* SearchLogQueryBadRequest describes a response with status code 400, with default header values.
 
 The content supplied to the server was invalid
 */
@@ -111,7 +110,6 @@ type SearchLogQueryBadRequest struct {
 func (o *SearchLogQueryBadRequest) Error() string {
 	return fmt.Sprintf("[POST /api/v1/log/entries/retrieve][%d] searchLogQueryBadRequest  %+v", 400, o.Payload)
 }
-
 func (o *SearchLogQueryBadRequest) GetPayload() *models.Error {
 	return o.Payload
 }
@@ -135,7 +133,7 @@ func NewSearchLogQueryDefault(code int) *SearchLogQueryDefault {
 	}
 }
 
-/*SearchLogQueryDefault handles this case with default header values.
+/* SearchLogQueryDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */
@@ -153,7 +151,6 @@ func (o *SearchLogQueryDefault) Code() int {
 func (o *SearchLogQueryDefault) Error() string {
 	return fmt.Sprintf("[POST /api/v1/log/entries/retrieve][%d] searchLogQuery default  %+v", o._statusCode, o.Payload)
 }
-
 func (o *SearchLogQueryDefault) GetPayload() *models.Error {
 	return o.Payload
 }
