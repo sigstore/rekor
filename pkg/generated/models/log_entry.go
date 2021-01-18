@@ -23,8 +23,6 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
-	"context"
-
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -47,26 +45,6 @@ func (m LogEntry) Validate(formats strfmt.Registry) error {
 		}
 		if val, ok := m[k]; ok {
 			if err := val.Validate(formats); err != nil {
-				return err
-			}
-		}
-
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-// ContextValidate validate this log entry based on the context it is used
-func (m LogEntry) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	for k := range m {
-
-		if val, ok := m[k]; ok {
-			if err := val.ContextValidate(ctx, formats); err != nil {
 				return err
 			}
 		}
@@ -113,27 +91,19 @@ func (m *LogEntryAnon) Validate(formats strfmt.Registry) error {
 
 func (m *LogEntryAnon) validateBody(formats strfmt.Registry) error {
 
-	if m.Body == nil {
-		return errors.Required("body", "body", nil)
-	}
-
 	return nil
 }
 
 func (m *LogEntryAnon) validateLogIndex(formats strfmt.Registry) error {
+
 	if swag.IsZero(m.LogIndex) { // not required
 		return nil
 	}
 
-	if err := validate.MinimumInt("logIndex", "body", *m.LogIndex, 0, false); err != nil {
+	if err := validate.MinimumInt("logIndex", "body", int64(*m.LogIndex), 0, false); err != nil {
 		return err
 	}
 
-	return nil
-}
-
-// ContextValidate validates this log entry anon based on context it is used
-func (m *LogEntryAnon) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 

@@ -111,7 +111,7 @@ func (o *GetLogEntryByIndexParams) bindLogIndex(rawData []string, hasKey bool, f
 // validateLogIndex carries on validations for parameter LogIndex
 func (o *GetLogEntryByIndexParams) validateLogIndex(formats strfmt.Registry) error {
 
-	if err := validate.MinimumInt("logIndex", "query", o.LogIndex, 0, false); err != nil {
+	if err := validate.MinimumInt("logIndex", "query", int64(o.LogIndex), 0, false); err != nil {
 		return err
 	}
 

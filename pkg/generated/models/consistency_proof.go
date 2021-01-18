@@ -23,7 +23,6 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
-	"context"
 	"strconv"
 
 	"github.com/go-openapi/errors"
@@ -73,7 +72,7 @@ func (m *ConsistencyProof) validateHashes(formats strfmt.Registry) error {
 
 	for i := 0; i < len(m.Hashes); i++ {
 
-		if err := validate.Pattern("hashes"+"."+strconv.Itoa(i), "body", m.Hashes[i], `^[0-9a-fA-F]{64}$`); err != nil {
+		if err := validate.Pattern("hashes"+"."+strconv.Itoa(i), "body", string(m.Hashes[i]), `^[0-9a-fA-F]{64}$`); err != nil {
 			return err
 		}
 
@@ -88,15 +87,10 @@ func (m *ConsistencyProof) validateRootHash(formats strfmt.Registry) error {
 		return err
 	}
 
-	if err := validate.Pattern("rootHash", "body", *m.RootHash, `^[0-9a-fA-F]{64}$`); err != nil {
+	if err := validate.Pattern("rootHash", "body", string(*m.RootHash), `^[0-9a-fA-F]{64}$`); err != nil {
 		return err
 	}
 
-	return nil
-}
-
-// ContextValidate validates this consistency proof based on context it is used
-func (m *ConsistencyProof) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 
