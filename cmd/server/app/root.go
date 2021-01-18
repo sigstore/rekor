@@ -60,10 +60,12 @@ func init() {
 
 	rootCmd.PersistentFlags().String("trillian_log_server.address", "127.0.0.1", "Trillian log server address")
 	rootCmd.PersistentFlags().Uint16("trillian_log_server.port", 8091, "Trillian log server port")
-	rootCmd.PersistentFlags().String("redis_server.address", "127.0.0.1", "Redis server address")
-	rootCmd.PersistentFlags().Uint16("redis_server.port", 6379, "Redis server port")
 	rootCmd.PersistentFlags().String("rekor_server.address", "127.0.0.1", "Address to bind to")
 	rootCmd.PersistentFlags().Uint16("rekor_server.port", 3000, "Port to bind to")
+
+	rootCmd.PersistentFlags().Bool("enable_retrieve_api", true, "enables Redis-based index API endpoint")
+	rootCmd.PersistentFlags().String("redis_server.address", "127.0.0.1", "Redis server address")
+	rootCmd.PersistentFlags().Uint16("redis_server.port", 6379, "Redis server port")
 
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)

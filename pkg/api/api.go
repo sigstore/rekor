@@ -94,9 +94,11 @@ func ConfigureAPI() {
 	if err != nil {
 		log.Logger.Panic(err)
 	}
-	redisClient, err = cfg.New(context.Background(), "tcp", fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")))
-	if err != nil {
-		log.Logger.Panic(err)
+	if viper.GetBool("enable_retrieve_api") {
+		redisClient, err = cfg.New(context.Background(), "tcp", fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")))
+		if err != nil {
+			log.Logger.Panic(err)
+		}
 	}
 }
 

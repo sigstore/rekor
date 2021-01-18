@@ -26,6 +26,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/cors"
+	"github.com/spf13/viper"
 
 	pkgapi "github.com/projectrekor/rekor/pkg/api"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations"
@@ -77,7 +78,11 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.TlogGetLogProofHandler = tlog.GetLogProofHandlerFunc(pkgapi.GetLogProofHandler)
 	api.TlogGetPublicKeyHandler = tlog.GetPublicKeyHandlerFunc(pkgapi.GetPublicKeyHandler)
 
-	api.IndexSearchIndexHandler = index.SearchIndexHandlerFunc(pkgapi.SearchIndexHandler)
+	if viper.GetBool("enable_retrieve_api") {
+		api.IndexSearchIndexHandler = index.SearchIndexHandlerFunc(pkgapi.SearchIndexHandler)
+	} else {
+		api.IndexSearchIndexHandler = index.SearchIndexHandlerFunc(pkgapi.SearchIndexNotImplementedHandler)
+	}
 
 	api.PreServerShutdown = func() {}
 

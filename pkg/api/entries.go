@@ -25,6 +25,7 @@ import (
 	"net/http"
 
 	"github.com/google/trillian"
+	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/go-openapi/swag"
@@ -116,13 +117,15 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 		},
 	}
 
-	go func() {
-		for _, key := range entry.IndexKeys() {
-			if err := addToIndex(context.Background(), key, uuid); err != nil {
-				log.RequestIDLogger(params.HTTPRequest).Error(err)
+	if viper.GetBool("enable_retrieve_api") {
+		go func() {
+			for _, key := range entry.IndexKeys() {
+				if err := addToIndex(context.Background(), key, uuid); err != nil {
+					log.RequestIDLogger(params.HTTPRequest).Error(err)
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	location := strfmt.URI(fmt.Sprintf("%v/%v", httpReq.URL, uuid))
 	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(location).WithETag(uuid)

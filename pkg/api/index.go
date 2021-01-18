@@ -31,6 +31,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/swag"
+	"github.com/projectrekor/rekor/pkg/generated/models"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/index"
 	"github.com/projectrekor/rekor/pkg/util"
 )
@@ -80,6 +81,16 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 	}
 
 	return index.NewSearchIndexOK().WithPayload(result)
+}
+
+func SearchIndexNotImplementedHandler(params index.SearchIndexParams) middleware.Responder {
+	err := models.Error{
+		Code:    http.StatusNotImplemented,
+		Message: "Search Index API not enabled in this Rekor instance",
+	}
+
+	return index.NewSearchIndexDefault(http.StatusNotImplemented).WithPayload(&err)
+
 }
 
 func addToIndex(ctx context.Context, key, value string) error {
