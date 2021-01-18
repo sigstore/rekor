@@ -25,6 +25,7 @@ import (
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
 	"github.com/mitchellh/mapstructure"
+	"github.com/rs/cors"
 
 	pkgapi "github.com/projectrekor/rekor/pkg/api"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations"
@@ -119,6 +120,9 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 	returnHandler := middleware.Logger(handler)
 	returnHandler = middleware.Recoverer(returnHandler)
 	returnHandler = middleware.Heartbeat("/ping")(returnHandler)
+
+	handleCORS := cors.Default().Handler
+	returnHandler = handleCORS(returnHandler)
 
 	return middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
