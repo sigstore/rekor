@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type cobraCmd func(cmd *cobra.Command, args []string)
@@ -20,14 +21,24 @@ func WrapCmd(f formatCmd) cobraCmd {
 		}
 
 		// TODO: add flags to control output formatting (JSON, plaintext, etc.)
-		if s, ok := obj.(fmt.Stringer); ok {
-			fmt.Print(s.String())
-		} else {
-			b, err := json.Marshal(obj)
-			if err != nil {
-				log.Fatal(err)
+		format := viper.GetString("format")
+		switch format {
+		case "default":
+			if s, ok := obj.(fmt.Stringer); ok {
+				fmt.Print(s.String())
+			} else {
+				fmt.Println(toJson(s))
 			}
-			fmt.Println(string(b))
+		case "json":
+			fmt.Println(toJson(obj))
 		}
 	}
+}
+
+func toJson(i interface{}) string {
+	b, err := json.Marshal(i)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return string(b)
 }
