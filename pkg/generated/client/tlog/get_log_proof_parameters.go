@@ -34,93 +34,77 @@ import (
 	"github.com/go-openapi/swag"
 )
 
-// NewGetLogProofParams creates a new GetLogProofParams object,
-// with the default timeout for this client.
-//
-// Default values are not hydrated, since defaults are normally applied by the API server side.
-//
-// To enforce default values in parameter, use SetDefaults or WithDefaults.
+// NewGetLogProofParams creates a new GetLogProofParams object
+// with the default values initialized.
 func NewGetLogProofParams() *GetLogProofParams {
+	var (
+		firstSizeDefault = int64(1)
+	)
 	return &GetLogProofParams{
+		FirstSize: &firstSizeDefault,
+
 		timeout: cr.DefaultTimeout,
 	}
 }
 
 // NewGetLogProofParamsWithTimeout creates a new GetLogProofParams object
-// with the ability to set a timeout on a request.
+// with the default values initialized, and the ability to set a timeout on a request
 func NewGetLogProofParamsWithTimeout(timeout time.Duration) *GetLogProofParams {
+	var (
+		firstSizeDefault = int64(1)
+	)
 	return &GetLogProofParams{
+		FirstSize: &firstSizeDefault,
+
 		timeout: timeout,
 	}
 }
 
 // NewGetLogProofParamsWithContext creates a new GetLogProofParams object
-// with the ability to set a context for a request.
+// with the default values initialized, and the ability to set a context for a request
 func NewGetLogProofParamsWithContext(ctx context.Context) *GetLogProofParams {
+	var (
+		firstSizeDefault = int64(1)
+	)
 	return &GetLogProofParams{
+		FirstSize: &firstSizeDefault,
+
 		Context: ctx,
 	}
 }
 
 // NewGetLogProofParamsWithHTTPClient creates a new GetLogProofParams object
-// with the ability to set a custom HTTPClient for a request.
+// with the default values initialized, and the ability to set a custom HTTPClient for a request
 func NewGetLogProofParamsWithHTTPClient(client *http.Client) *GetLogProofParams {
+	var (
+		firstSizeDefault = int64(1)
+	)
 	return &GetLogProofParams{
+		FirstSize:  &firstSizeDefault,
 		HTTPClient: client,
 	}
 }
 
-/* GetLogProofParams contains all the parameters to send to the API endpoint
-   for the get log proof operation.
-
-   Typically these are written to a http.Request.
+/*GetLogProofParams contains all the parameters to send to the API endpoint
+for the get log proof operation typically these are written to a http.Request
 */
 type GetLogProofParams struct {
 
-	/* FirstSize.
+	/*FirstSize
+	  The size of the tree that you wish to prove consistency from (1 means the beginning of the log) Defaults to 1 if not specified
 
-	   The size of the tree that you wish to prove consistency from (1 means the beginning of the log) Defaults to 1 if not specified
 
-
-	   Default: 1
 	*/
 	FirstSize *int64
+	/*LastSize
+	  The size of the tree that you wish to prove consistency to
 
-	/* LastSize.
-
-	   The size of the tree that you wish to prove consistency to
 	*/
 	LastSize int64
 
 	timeout    time.Duration
 	Context    context.Context
 	HTTPClient *http.Client
-}
-
-// WithDefaults hydrates default values in the get log proof params (not the query body).
-//
-// All values with no default are reset to their zero value.
-func (o *GetLogProofParams) WithDefaults() *GetLogProofParams {
-	o.SetDefaults()
-	return o
-}
-
-// SetDefaults hydrates default values in the get log proof params (not the query body).
-//
-// All values with no default are reset to their zero value.
-func (o *GetLogProofParams) SetDefaults() {
-	var (
-		firstSizeDefault = int64(1)
-	)
-
-	val := GetLogProofParams{
-		FirstSize: &firstSizeDefault,
-	}
-
-	val.timeout = o.timeout
-	val.Context = o.Context
-	val.HTTPClient = o.HTTPClient
-	*o = val
 }
 
 // WithTimeout adds the timeout to the get log proof params
@@ -190,13 +174,11 @@ func (o *GetLogProofParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 
 		// query param firstSize
 		var qrFirstSize int64
-
 		if o.FirstSize != nil {
 			qrFirstSize = *o.FirstSize
 		}
 		qFirstSize := swag.FormatInt64(qrFirstSize)
 		if qFirstSize != "" {
-
 			if err := r.SetQueryParam("firstSize", qFirstSize); err != nil {
 				return err
 			}
@@ -208,7 +190,6 @@ func (o *GetLogProofParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 	qrLastSize := o.LastSize
 	qLastSize := swag.FormatInt64(qrLastSize)
 	if qLastSize != "" {
-
 		if err := r.SetQueryParam("lastSize", qLastSize); err != nil {
 			return err
 		}

@@ -34,8 +34,7 @@ import (
 )
 
 // NewGetLogEntryByIndexParams creates a new GetLogEntryByIndexParams object
-//
-// There are no default values defined in the spec.
+// no default values defined in spec.
 func NewGetLogEntryByIndexParams() GetLogEntryByIndexParams {
 
 	return GetLogEntryByIndexParams{}
@@ -73,6 +72,7 @@ func (o *GetLogEntryByIndexParams) BindRequest(r *http.Request, route *middlewar
 	if err := o.bindLogIndex(qLogIndex, qhkLogIndex, route.Formats); err != nil {
 		res = append(res, err)
 	}
+
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
@@ -91,7 +91,6 @@ func (o *GetLogEntryByIndexParams) bindLogIndex(rawData []string, hasKey bool, f
 
 	// Required: true
 	// AllowEmptyValue: false
-
 	if err := validate.RequiredString("logIndex", "query", raw); err != nil {
 		return err
 	}

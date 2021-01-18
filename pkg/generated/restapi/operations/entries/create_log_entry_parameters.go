@@ -34,8 +34,7 @@ import (
 )
 
 // NewCreateLogEntryParams creates a new CreateLogEntryParams object
-//
-// There are no default values defined in the spec.
+// no default values defined in spec.
 func NewCreateLogEntryParams() CreateLogEntryParams {
 
 	return CreateLogEntryParams{}

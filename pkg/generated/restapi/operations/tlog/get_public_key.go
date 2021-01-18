@@ -46,7 +46,7 @@ func NewGetPublicKey(ctx *middleware.Context, handler GetPublicKeyHandler) *GetP
 	return &GetPublicKey{Context: ctx, Handler: handler}
 }
 
-/* GetPublicKey swagger:route GET /api/v1/log/publicKey tlog getPublicKey
+/*GetPublicKey swagger:route GET /api/v1/log/publicKey tlog getPublicKey
 
 Retrieve the public key that can be used to validate the signed tree head
 

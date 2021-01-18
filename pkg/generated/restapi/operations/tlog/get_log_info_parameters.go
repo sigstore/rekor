@@ -30,8 +30,7 @@ import (
 )
 
 // NewGetLogInfoParams creates a new GetLogInfoParams object
-//
-// There are no default values defined in the spec.
+// no default values defined in spec.
 func NewGetLogInfoParams() GetLogInfoParams {
 
 	return GetLogInfoParams{}

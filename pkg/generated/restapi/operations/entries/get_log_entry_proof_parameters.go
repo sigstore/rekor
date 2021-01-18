@@ -32,8 +32,7 @@ import (
 )
 
 // NewGetLogEntryProofParams creates a new GetLogEntryProofParams object
-//
-// There are no default values defined in the spec.
+// no default values defined in spec.
 func NewGetLogEntryProofParams() GetLogEntryProofParams {
 
 	return GetLogEntryProofParams{}
@@ -69,6 +68,7 @@ func (o *GetLogEntryProofParams) BindRequest(r *http.Request, route *middleware.
 	if err := o.bindEntryUUID(rEntryUUID, rhkEntryUUID, route.Formats); err != nil {
 		res = append(res, err)
 	}
+
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
@@ -84,6 +84,7 @@ func (o *GetLogEntryProofParams) bindEntryUUID(rawData []string, hasKey bool, fo
 
 	// Required: true
 	// Parameter is provided by construction from the route
+
 	o.EntryUUID = raw
 
 	if err := o.validateEntryUUID(formats); err != nil {

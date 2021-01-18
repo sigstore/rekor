@@ -34,73 +34,59 @@ import (
 	"github.com/go-openapi/swag"
 )
 
-// NewGetLogEntryByIndexParams creates a new GetLogEntryByIndexParams object,
-// with the default timeout for this client.
-//
-// Default values are not hydrated, since defaults are normally applied by the API server side.
-//
-// To enforce default values in parameter, use SetDefaults or WithDefaults.
+// NewGetLogEntryByIndexParams creates a new GetLogEntryByIndexParams object
+// with the default values initialized.
 func NewGetLogEntryByIndexParams() *GetLogEntryByIndexParams {
+	var ()
 	return &GetLogEntryByIndexParams{
+
 		timeout: cr.DefaultTimeout,
 	}
 }
 
 // NewGetLogEntryByIndexParamsWithTimeout creates a new GetLogEntryByIndexParams object
-// with the ability to set a timeout on a request.
+// with the default values initialized, and the ability to set a timeout on a request
 func NewGetLogEntryByIndexParamsWithTimeout(timeout time.Duration) *GetLogEntryByIndexParams {
+	var ()
 	return &GetLogEntryByIndexParams{
+
 		timeout: timeout,
 	}
 }
 
 // NewGetLogEntryByIndexParamsWithContext creates a new GetLogEntryByIndexParams object
-// with the ability to set a context for a request.
+// with the default values initialized, and the ability to set a context for a request
 func NewGetLogEntryByIndexParamsWithContext(ctx context.Context) *GetLogEntryByIndexParams {
+	var ()
 	return &GetLogEntryByIndexParams{
+
 		Context: ctx,
 	}
 }
 
 // NewGetLogEntryByIndexParamsWithHTTPClient creates a new GetLogEntryByIndexParams object
-// with the ability to set a custom HTTPClient for a request.
+// with the default values initialized, and the ability to set a custom HTTPClient for a request
 func NewGetLogEntryByIndexParamsWithHTTPClient(client *http.Client) *GetLogEntryByIndexParams {
+	var ()
 	return &GetLogEntryByIndexParams{
 		HTTPClient: client,
 	}
 }
 
-/* GetLogEntryByIndexParams contains all the parameters to send to the API endpoint
-   for the get log entry by index operation.
-
-   Typically these are written to a http.Request.
+/*GetLogEntryByIndexParams contains all the parameters to send to the API endpoint
+for the get log entry by index operation typically these are written to a http.Request
 */
 type GetLogEntryByIndexParams struct {
 
-	/* LogIndex.
+	/*LogIndex
+	  specifies the index of the entry in the transparency log to be retrieved
 
-	   specifies the index of the entry in the transparency log to be retrieved
 	*/
 	LogIndex int64
 
 	timeout    time.Duration
 	Context    context.Context
 	HTTPClient *http.Client
-}
-
-// WithDefaults hydrates default values in the get log entry by index params (not the query body).
-//
-// All values with no default are reset to their zero value.
-func (o *GetLogEntryByIndexParams) WithDefaults() *GetLogEntryByIndexParams {
-	o.SetDefaults()
-	return o
-}
-
-// SetDefaults hydrates default values in the get log entry by index params (not the query body).
-//
-// All values with no default are reset to their zero value.
-func (o *GetLogEntryByIndexParams) SetDefaults() {
-	// no default values defined for this parameter
 }
 
 // WithTimeout adds the timeout to the get log entry by index params
@@ -159,7 +145,6 @@ func (o *GetLogEntryByIndexParams) WriteToRequest(r runtime.ClientRequest, reg s
 	qrLogIndex := o.LogIndex
 	qLogIndex := swag.FormatInt64(qrLogIndex)
 	if qLogIndex != "" {
-
 		if err := r.SetQueryParam("logIndex", qLogIndex); err != nil {
 			return err
 		}

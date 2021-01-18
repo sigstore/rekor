@@ -126,13 +126,13 @@ func TestMinisign(t *testing.T) {
 
 	// Now upload to the log!
 	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
-		"--public-key", pubPath, "--signature-format", "minisign")
+		"--public-key", pubPath, "--pki-format", "minisign")
 	outputContains(t, out, "Created entry at")
 
 	// Wait and check it.
 	time.Sleep(3 * time.Second)
 
 	out = runCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
-		"--public-key", pubPath, "--signature-format", "minisign")
+		"--public-key", pubPath, "--pki-format", "minisign")
 	outputContains(t, out, "Inclusion Proof")
 }

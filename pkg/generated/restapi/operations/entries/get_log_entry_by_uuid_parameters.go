@@ -32,8 +32,7 @@ import (
 )
 
 // NewGetLogEntryByUUIDParams creates a new GetLogEntryByUUIDParams object
-//
-// There are no default values defined in the spec.
+// no default values defined in spec.
 func NewGetLogEntryByUUIDParams() GetLogEntryByUUIDParams {
 
 	return GetLogEntryByUUIDParams{}
@@ -69,6 +68,7 @@ func (o *GetLogEntryByUUIDParams) BindRequest(r *http.Request, route *middleware
 	if err := o.bindEntryUUID(rEntryUUID, rhkEntryUUID, route.Formats); err != nil {
 		res = append(res, err)
 	}
+
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
@@ -84,6 +84,7 @@ func (o *GetLogEntryByUUIDParams) bindEntryUUID(rawData []string, hasKey bool, f
 
 	// Required: true
 	// Parameter is provided by construction from the route
+
 	o.EntryUUID = raw
 
 	if err := o.validateEntryUUID(formats); err != nil {

@@ -76,20 +76,16 @@ func NewCreateLogEntryCreated() *CreateLogEntryCreated {
 	return &CreateLogEntryCreated{}
 }
 
-/* CreateLogEntryCreated describes a response with status code 201, with default header values.
+/*CreateLogEntryCreated handles this case with default header values.
 
 Returns the entry created in the transparency log
 */
 type CreateLogEntryCreated struct {
-
-	/* UUID of log entry
+	/*UUID of log entry
 	 */
 	ETag string
-
-	/* URI location of log entry
-
-	   Format: uri
-	*/
+	/*URI location of log entry
+	 */
 	Location strfmt.URI
 
 	Payload models.LogEntry
@@ -98,29 +94,23 @@ type CreateLogEntryCreated struct {
 func (o *CreateLogEntryCreated) Error() string {
 	return fmt.Sprintf("[POST /api/v1/log/entries][%d] createLogEntryCreated  %+v", 201, o.Payload)
 }
+
 func (o *CreateLogEntryCreated) GetPayload() models.LogEntry {
 	return o.Payload
 }
 
 func (o *CreateLogEntryCreated) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	// hydrates response header ETag
-	hdrETag := response.GetHeader("ETag")
+	// response header ETag
+	o.ETag = response.GetHeader("ETag")
 
-	if hdrETag != "" {
-		o.ETag = hdrETag
+	// response header Location
+
+	location, err := formats.Parse("uri", response.GetHeader("Location"))
+	if err != nil {
+		return errors.InvalidType("Location", "header", "strfmt.URI", response.GetHeader("Location"))
 	}
-
-	// hydrates response header Location
-	hdrLocation := response.GetHeader("Location")
-
-	if hdrLocation != "" {
-		vallocation, err := formats.Parse("uri", hdrLocation)
-		if err != nil {
-			return errors.InvalidType("Location", "header", "strfmt.URI", hdrLocation)
-		}
-		o.Location = vallocation.(strfmt.URI)
-	}
+	o.Location = *(location.(*strfmt.URI))
 
 	// response payload
 	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && err != io.EOF {
@@ -135,7 +125,7 @@ func NewCreateLogEntryBadRequest() *CreateLogEntryBadRequest {
 	return &CreateLogEntryBadRequest{}
 }
 
-/* CreateLogEntryBadRequest describes a response with status code 400, with default header values.
+/*CreateLogEntryBadRequest handles this case with default header values.
 
 The content supplied to the server was invalid
 */
@@ -146,6 +136,7 @@ type CreateLogEntryBadRequest struct {
 func (o *CreateLogEntryBadRequest) Error() string {
 	return fmt.Sprintf("[POST /api/v1/log/entries][%d] createLogEntryBadRequest  %+v", 400, o.Payload)
 }
+
 func (o *CreateLogEntryBadRequest) GetPayload() *models.Error {
 	return o.Payload
 }
@@ -167,7 +158,7 @@ func NewCreateLogEntryConflict() *CreateLogEntryConflict {
 	return &CreateLogEntryConflict{}
 }
 
-/* CreateLogEntryConflict describes a response with status code 409, with default header values.
+/*CreateLogEntryConflict handles this case with default header values.
 
 The request conflicts with the current state of the transparency log
 */
@@ -178,6 +169,7 @@ type CreateLogEntryConflict struct {
 func (o *CreateLogEntryConflict) Error() string {
 	return fmt.Sprintf("[POST /api/v1/log/entries][%d] createLogEntryConflict  %+v", 409, o.Payload)
 }
+
 func (o *CreateLogEntryConflict) GetPayload() *models.Error {
 	return o.Payload
 }
@@ -201,7 +193,7 @@ func NewCreateLogEntryDefault(code int) *CreateLogEntryDefault {
 	}
 }
 
-/* CreateLogEntryDefault describes a response with status code -1, with default header values.
+/*CreateLogEntryDefault handles this case with default header values.
 
 There was an internal error in the server while processing the request
 */
@@ -219,6 +211,7 @@ func (o *CreateLogEntryDefault) Code() int {
 func (o *CreateLogEntryDefault) Error() string {
 	return fmt.Sprintf("[POST /api/v1/log/entries][%d] createLogEntry default  %+v", o._statusCode, o.Payload)
 }
+
 func (o *CreateLogEntryDefault) GetPayload() *models.Error {
 	return o.Payload
 }

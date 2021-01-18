@@ -46,7 +46,7 @@ func NewGetLogEntryByUUID(ctx *middleware.Context, handler GetLogEntryByUUIDHand
 	return &GetLogEntryByUUID{Context: ctx, Handler: handler}
 }
 
-/* GetLogEntryByUUID swagger:route GET /api/v1/log/entries/{entryUUID} entries getLogEntryByUuid
+/*GetLogEntryByUUID swagger:route GET /api/v1/log/entries/{entryUUID} entries getLogEntryByUuid
 
 Retrieves an entry from the transparency log (if it exists) by UUID
 

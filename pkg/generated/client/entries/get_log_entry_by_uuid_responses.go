@@ -69,7 +69,7 @@ func NewGetLogEntryByUUIDOK() *GetLogEntryByUUIDOK {
 	return &GetLogEntryByUUIDOK{}
 }
 
-/* GetLogEntryByUUIDOK describes a response with status code 200, with default header values.
+/*GetLogEntryByUUIDOK handles this case with default header values.
 
 the entry in the transparency log requested
 */
@@ -80,6 +80,7 @@ type GetLogEntryByUUIDOK struct {
 func (o *GetLogEntryByUUIDOK) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log/entries/{entryUUID}][%d] getLogEntryByUuidOK  %+v", 200, o.Payload)
 }
+
 func (o *GetLogEntryByUUIDOK) GetPayload() models.LogEntry {
 	return o.Payload
 }
@@ -99,7 +100,7 @@ func NewGetLogEntryByUUIDNotFound() *GetLogEntryByUUIDNotFound {
 	return &GetLogEntryByUUIDNotFound{}
 }
 
-/* GetLogEntryByUUIDNotFound describes a response with status code 404, with default header values.
+/*GetLogEntryByUUIDNotFound handles this case with default header values.
 
 The content requested could not be found
 */
@@ -122,7 +123,7 @@ func NewGetLogEntryByUUIDDefault(code int) *GetLogEntryByUUIDDefault {
 	}
 }
 
-/* GetLogEntryByUUIDDefault describes a response with status code -1, with default header values.
+/*GetLogEntryByUUIDDefault handles this case with default header values.
 
 There was an internal error in the server while processing the request
 */
@@ -140,6 +141,7 @@ func (o *GetLogEntryByUUIDDefault) Code() int {
 func (o *GetLogEntryByUUIDDefault) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log/entries/{entryUUID}][%d] getLogEntryByUUID default  %+v", o._statusCode, o.Payload)
 }
+
 func (o *GetLogEntryByUUIDDefault) GetPayload() *models.Error {
 	return o.Payload
 }

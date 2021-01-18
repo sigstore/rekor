@@ -23,7 +23,6 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
-	"context"
 	"encoding/json"
 
 	"github.com/go-openapi/errors"
@@ -64,11 +63,12 @@ func (m *SearchIndex) Validate(formats strfmt.Registry) error {
 }
 
 func (m *SearchIndex) validateHash(formats strfmt.Registry) error {
+
 	if swag.IsZero(m.Hash) { // not required
 		return nil
 	}
 
-	if err := validate.Pattern("hash", "body", m.Hash, `^[0-9a-fA-F]{64}$`); err != nil {
+	if err := validate.Pattern("hash", "body", string(m.Hash), `^[0-9a-fA-F]{64}$`); err != nil {
 		return err
 	}
 
@@ -76,40 +76,13 @@ func (m *SearchIndex) validateHash(formats strfmt.Registry) error {
 }
 
 func (m *SearchIndex) validatePublicKey(formats strfmt.Registry) error {
+
 	if swag.IsZero(m.PublicKey) { // not required
 		return nil
 	}
 
 	if m.PublicKey != nil {
 		if err := m.PublicKey.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("publicKey")
-			}
-			return err
-		}
-	}
-
-	return nil
-}
-
-// ContextValidate validate this search index based on the context it is used
-func (m *SearchIndex) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidatePublicKey(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *SearchIndex) contextValidatePublicKey(ctx context.Context, formats strfmt.Registry) error {
-
-	if m.PublicKey != nil {
-		if err := m.PublicKey.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("publicKey")
 			}
@@ -222,6 +195,7 @@ func (m *SearchIndexPublicKey) validateFormat(formats strfmt.Registry) error {
 }
 
 func (m *SearchIndexPublicKey) validateURL(formats strfmt.Registry) error {
+
 	if swag.IsZero(m.URL) { // not required
 		return nil
 	}
@@ -230,11 +204,6 @@ func (m *SearchIndexPublicKey) validateURL(formats strfmt.Registry) error {
 		return err
 	}
 
-	return nil
-}
-
-// ContextValidate validates this search index public key based on context it is used
-func (m *SearchIndexPublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 

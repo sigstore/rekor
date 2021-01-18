@@ -69,7 +69,7 @@ func NewGetLogProofOK() *GetLogProofOK {
 	return &GetLogProofOK{}
 }
 
-/* GetLogProofOK describes a response with status code 200, with default header values.
+/*GetLogProofOK handles this case with default header values.
 
 All hashes required to compute the consistency proof
 */
@@ -80,6 +80,7 @@ type GetLogProofOK struct {
 func (o *GetLogProofOK) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log/proof][%d] getLogProofOK  %+v", 200, o.Payload)
 }
+
 func (o *GetLogProofOK) GetPayload() *models.ConsistencyProof {
 	return o.Payload
 }
@@ -101,7 +102,7 @@ func NewGetLogProofBadRequest() *GetLogProofBadRequest {
 	return &GetLogProofBadRequest{}
 }
 
-/* GetLogProofBadRequest describes a response with status code 400, with default header values.
+/*GetLogProofBadRequest handles this case with default header values.
 
 The content supplied to the server was invalid
 */
@@ -112,6 +113,7 @@ type GetLogProofBadRequest struct {
 func (o *GetLogProofBadRequest) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log/proof][%d] getLogProofBadRequest  %+v", 400, o.Payload)
 }
+
 func (o *GetLogProofBadRequest) GetPayload() *models.Error {
 	return o.Payload
 }
@@ -135,7 +137,7 @@ func NewGetLogProofDefault(code int) *GetLogProofDefault {
 	}
 }
 
-/* GetLogProofDefault describes a response with status code -1, with default header values.
+/*GetLogProofDefault handles this case with default header values.
 
 There was an internal error in the server while processing the request
 */
@@ -153,6 +155,7 @@ func (o *GetLogProofDefault) Code() int {
 func (o *GetLogProofDefault) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log/proof][%d] getLogProof default  %+v", o._statusCode, o.Payload)
 }
+
 func (o *GetLogProofDefault) GetPayload() *models.Error {
 	return o.Payload
 }
