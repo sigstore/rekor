@@ -46,7 +46,7 @@ func NewGetLogEntryProof(ctx *middleware.Context, handler GetLogEntryProofHandle
 	return &GetLogEntryProof{Context: ctx, Handler: handler}
 }
 
-/*GetLogEntryProof swagger:route GET /api/v1/log/entries/{entryUUID}/proof entries getLogEntryProof
+/* GetLogEntryProof swagger:route GET /api/v1/log/entries/{entryUUID}/proof entries getLogEntryProof
 
 Get information required to generate an inclusion proof for a specified entry in the transparency log
 

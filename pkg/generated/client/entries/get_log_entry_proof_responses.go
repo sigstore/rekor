@@ -69,7 +69,7 @@ func NewGetLogEntryProofOK() *GetLogEntryProofOK {
 	return &GetLogEntryProofOK{}
 }
 
-/*GetLogEntryProofOK handles this case with default header values.
+/* GetLogEntryProofOK describes a response with status code 200, with default header values.
 
 Information needed for a client to compute the inclusion proof
 */
@@ -80,7 +80,6 @@ type GetLogEntryProofOK struct {
 func (o *GetLogEntryProofOK) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log/entries/{entryUUID}/proof][%d] getLogEntryProofOK  %+v", 200, o.Payload)
 }
-
 func (o *GetLogEntryProofOK) GetPayload() *models.InclusionProof {
 	return o.Payload
 }
@@ -102,7 +101,7 @@ func NewGetLogEntryProofNotFound() *GetLogEntryProofNotFound {
 	return &GetLogEntryProofNotFound{}
 }
 
-/*GetLogEntryProofNotFound handles this case with default header values.
+/* GetLogEntryProofNotFound describes a response with status code 404, with default header values.
 
 The content requested could not be found
 */
@@ -125,7 +124,7 @@ func NewGetLogEntryProofDefault(code int) *GetLogEntryProofDefault {
 	}
 }
 
-/*GetLogEntryProofDefault handles this case with default header values.
+/* GetLogEntryProofDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */
@@ -143,7 +142,6 @@ func (o *GetLogEntryProofDefault) Code() int {
 func (o *GetLogEntryProofDefault) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log/entries/{entryUUID}/proof][%d] getLogEntryProof default  %+v", o._statusCode, o.Payload)
 }
-
 func (o *GetLogEntryProofDefault) GetPayload() *models.Error {
 	return o.Payload
 }

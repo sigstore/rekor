@@ -46,7 +46,7 @@ func NewCreateLogEntry(ctx *middleware.Context, handler CreateLogEntryHandler) *
 	return &CreateLogEntry{Context: ctx, Handler: handler}
 }
 
-/*CreateLogEntry swagger:route POST /api/v1/log/entries entries createLogEntry
+/* CreateLogEntry swagger:route POST /api/v1/log/entries entries createLogEntry
 
 Creates an entry in the transparency log
 
