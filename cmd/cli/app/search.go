@@ -30,6 +30,7 @@ import (
 
 	"github.com/go-openapi/strfmt"
 
+	"github.com/projectrekor/rekor/cmd/cli/app/format"
 	"github.com/projectrekor/rekor/pkg/generated/client/index"
 	"github.com/projectrekor/rekor/pkg/generated/models"
 	"github.com/projectrekor/rekor/pkg/log"
@@ -38,7 +39,21 @@ import (
 	"github.com/spf13/viper"
 )
 
-//TODO: unit tests for pflags
+type searchCmdOutput struct {
+	uuids []string
+}
+
+func (s *searchCmdOutput) String() string {
+	str := "No matching entries were found\n"
+	for i, uuid := range s.uuids {
+		if i == 0 {
+			str = "Found matching entries (listed by UUID):\n"
+		}
+		str += fmt.Sprintf("%v\n", uuid)
+	}
+	return str
+}
+
 // searchCmd represents the get command
 var searchCmd = &cobra.Command{
 	Use:   "search",
@@ -55,11 +70,11 @@ var searchCmd = &cobra.Command{
 			os.Exit(1)
 		}
 	},
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		log := log.Logger
 		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		params := index.NewSearchIndexParams()
@@ -72,7 +87,7 @@ var searchCmd = &cobra.Command{
 		} else if artifactStr != "" {
 			artifact := fileOrURLFlag{}
 			if err := artifact.Set(artifactStr); err != nil {
-				log.Fatal(err)
+				return nil, err
 			}
 
 			hasher := sha256.New()
@@ -81,14 +96,14 @@ var searchCmd = &cobra.Command{
 				/* #nosec G107 */
 				resp, err := http.Get(artifact.String())
 				if err != nil {
-					log.Fatal(fmt.Errorf("error fetching '%v': %w", artifact.String(), err))
+					return nil, fmt.Errorf("error fetching '%v': %w", artifact.String(), err)
 				}
 				defer resp.Body.Close()
 				tee = io.TeeReader(resp.Body, hasher)
 			} else {
 				file, err := os.Open(filepath.Clean(artifact.String()))
 				if err != nil {
-					log.Fatal(fmt.Errorf("error opening file '%v': %w", artifact.String(), err))
+					return nil, fmt.Errorf("error opening file '%v': %w", artifact.String(), err)
 				}
 				defer func() {
 					if err := file.Close(); err != nil {
@@ -99,7 +114,7 @@ var searchCmd = &cobra.Command{
 				tee = io.TeeReader(file, hasher)
 			}
 			if _, err := ioutil.ReadAll(tee); err != nil {
-				log.Fatal(fmt.Errorf("error processing '%v': %w", artifact.String(), err))
+				return nil, fmt.Errorf("error processing '%v': %w", artifact.String(), err)
 			}
 
 			hashVal := strings.ToLower(hex.EncodeToString(hasher.Sum(nil)))
@@ -118,18 +133,18 @@ var searchCmd = &cobra.Command{
 			case "x509":
 				params.Query.PublicKey.Format = swag.String(models.SearchIndexPublicKeyFormatX509)
 			default:
-				log.Fatal(fmt.Errorf("unknown pki-format %v", pkiFormat))
+				return nil, fmt.Errorf("unknown pki-format %v", pkiFormat)
 			}
 			publicKey := fileOrURLFlag{}
 			if err := publicKey.Set(publicKeyStr); err != nil {
-				log.Fatal(err)
+				return nil, err
 			}
 			if publicKey.IsURL {
 				params.Query.PublicKey.URL = strfmt.URI(publicKey.String())
 			} else {
 				keyBytes, err := ioutil.ReadFile(filepath.Clean(publicKey.String()))
 				if err != nil {
-					log.Fatal(fmt.Errorf("error reading public key file: %w", err))
+					return nil, fmt.Errorf("error reading public key file: %w", err)
 				}
 				params.Query.PublicKey.Content = strfmt.Base64(keyBytes)
 			}
@@ -140,21 +155,17 @@ var searchCmd = &cobra.Command{
 			switch err.(type) {
 			case *index.SearchIndexDefault:
 				if err.(*index.SearchIndexDefault).Code() == http.StatusNotImplemented {
-					fmt.Printf("Search index not enabled on %v\n", viper.GetString("rekor_server"))
-					return
+					return nil, fmt.Errorf("Search index not enabled on %v\n", viper.GetString("rekor_server"))
 				}
 			default:
-				log.Fatal(err)
+				return nil, err
 			}
 		}
 
-		for i, val := range resp.GetPayload() {
-			if i == 0 {
-				fmt.Println("Found matching entries (listed by UUID):")
-			}
-			fmt.Println(val)
-		}
-	},
+		return &searchCmdOutput{
+			uuids: resp.GetPayload(),
+		}, nil
+	}),
 }
 
 func init() {
