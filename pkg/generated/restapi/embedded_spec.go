@@ -44,8 +44,7 @@ func init() {
     "application/yaml"
   ],
   "schemes": [
-    "http",
-    "https"
+    "http"
   ],
   "swagger": "2.0",
   "info": {
@@ -627,8 +626,7 @@ func init() {
     "application/yaml"
   ],
   "schemes": [
-    "http",
-    "https"
+    "http"
   ],
   "swagger": "2.0",
   "info": {
