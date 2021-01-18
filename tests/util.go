@@ -24,15 +24,23 @@ func outputContains(t *testing.T, output, sub string) {
 	}
 }
 
-func runCli(t *testing.T, arg ...string) string {
+func run(t *testing.T, stdin, cmd string, arg ...string) string {
 	t.Helper()
-	cmd := exec.Command(cli, arg...)
-	b, err := cmd.CombinedOutput()
+	c := exec.Command(cmd, arg...)
+	if stdin != "" {
+		c.Stdin = strings.NewReader(stdin)
+	}
+	b, err := c.CombinedOutput()
 	if err != nil {
 		t.Log(string(b))
 		t.Fatal(err)
 	}
 	return string(b)
+}
+
+func runCli(t *testing.T, arg ...string) string {
+	t.Helper()
+	return run(t, "", cli, arg...)
 }
 
 func runCliErr(t *testing.T, arg ...string) {
@@ -53,8 +61,7 @@ func readFile(t *testing.T, p string) string {
 	return strings.TrimSpace(string(b))
 }
 
-// createdSignedArtifact gets the test dir setup correctly with some random artifacts and keys.
-func createdSignedArtifact(t *testing.T, artifactPath, sigPath string) {
+func createArtifact(t *testing.T, artifactPath string) string {
 	t.Helper()
 	// First let's generate some random data so we don't have to worry about dupes.
 	rand.Seed(time.Now().UnixNano())
@@ -68,10 +75,5 @@ func createdSignedArtifact(t *testing.T, artifactPath, sigPath string) {
 	if err := ioutil.WriteFile(artifactPath, []byte(artifact), 0644); err != nil {
 		t.Fatal(err)
 	}
-
-	// Sign it with our key and write that to a file
-	signature := Sign(t, strings.NewReader(artifact))
-	if err := ioutil.WriteFile(sigPath, []byte(signature), 0644); err != nil {
-		t.Fatal(err)
-	}
+	return artifact
 }
