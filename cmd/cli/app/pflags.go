@@ -36,9 +36,37 @@ import (
 	"github.com/spf13/viper"
 )
 
+func addSearchPFlags(cmd *cobra.Command) error {
+	cmd.Flags().Var(&pkiFormatFlag{value: "pgp"}, "pki-format", "format of the signature and/or public key")
+
+	cmd.Flags().Var(&fileOrURLFlag{}, "public-key", "path or URL to public key file")
+
+	cmd.Flags().Var(&fileOrURLFlag{}, "artifact", "path or URL to artifact file")
+
+	cmd.Flags().Var(&shaFlag{}, "sha", "the sha of the artifact")
+	return nil
+}
+
+func validateSearchPFlags() error {
+	artifactStr := viper.GetString("artifact")
+
+	publicKey := viper.GetString("public-key")
+	sha := viper.GetString("sha")
+
+	if artifactStr == "" && publicKey == "" && sha == "" {
+		return errors.New("either 'sha' or 'artifact' or 'public-key' must be specified")
+	}
+	if publicKey != "" {
+		if viper.GetString("pki-format") == "" {
+			return errors.New("pki-format must be specified if searching by public-key")
+		}
+	}
+	return nil
+}
+
 func addArtifactPFlags(cmd *cobra.Command) error {
 	cmd.Flags().Var(&fileOrURLFlag{}, "signature", "path or URL to detached signature file")
-	cmd.Flags().Var(&sigFormatFlag{value: "pgp"}, "signature-format", "format of the signature")
+	cmd.Flags().Var(&pkiFormatFlag{value: "pgp"}, "pki-format", "format of the signature and/or public key")
 
 	cmd.Flags().Var(&fileOrURLFlag{}, "public-key", "path or URL to public key file")
 
@@ -161,8 +189,8 @@ func CreateRekordFromPFlags() (models.ProposedEntry, error) {
 		}
 
 		re.RekordObj.Signature = &models.RekordV001SchemaSignature{}
-		sigFormat := viper.GetString("signature-format")
-		switch sigFormat {
+		pkiFormat := viper.GetString("pki-format")
+		switch pkiFormat {
 		case "pgp":
 			re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatPgp
 		case "minisign":
@@ -240,19 +268,19 @@ func (f *fileOrURLFlag) Type() string {
 	return "fileOrURLFlag"
 }
 
-type sigFormatFlag struct {
+type pkiFormatFlag struct {
 	value string
 }
 
-func (f *sigFormatFlag) Type() string {
-	return "sigFormat"
+func (f *pkiFormatFlag) Type() string {
+	return "pkiFormat"
 }
 
-func (f *sigFormatFlag) String() string {
+func (f *pkiFormatFlag) String() string {
 	return f.value
 }
 
-func (f *sigFormatFlag) Set(s string) error {
+func (f *pkiFormatFlag) Set(s string) error {
 	set := map[string]struct{}{
 		"pgp":      {},
 		"minisign": {},
