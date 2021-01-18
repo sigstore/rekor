@@ -152,9 +152,9 @@ var searchCmd = &cobra.Command{
 
 		resp, err := rekorClient.Index.SearchIndex(params)
 		if err != nil {
-			switch err.(type) {
+			switch t := err.(type) {
 			case *index.SearchIndexDefault:
-				if err.(*index.SearchIndexDefault).Code() == http.StatusNotImplemented {
+				if t.Code() == http.StatusNotImplemented {
 					return nil, fmt.Errorf("Search index not enabled on %v\n", viper.GetString("rekor_server"))
 				}
 			default:
