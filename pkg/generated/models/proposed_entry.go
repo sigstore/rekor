@@ -24,7 +24,6 @@ package models
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -40,7 +39,6 @@ import (
 // swagger:discriminator ProposedEntry kind
 type ProposedEntry interface {
 	runtime.Validatable
-	runtime.ContextValidatable
 
 	// kind
 	// Required: true
@@ -128,10 +126,5 @@ func unmarshalProposedEntry(data []byte, consumer runtime.Consumer) (ProposedEnt
 
 // Validate validates this proposed entry
 func (m *proposedEntry) Validate(formats strfmt.Registry) error {
-	return nil
-}
-
-// ContextValidate validates this proposed entry based on context it is used
-func (m *proposedEntry) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }

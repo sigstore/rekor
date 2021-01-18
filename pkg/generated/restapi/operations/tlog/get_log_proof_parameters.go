@@ -129,7 +129,7 @@ func (o *GetLogProofParams) bindFirstSize(rawData []string, hasKey bool, formats
 // validateFirstSize carries on validations for parameter FirstSize
 func (o *GetLogProofParams) validateFirstSize(formats strfmt.Registry) error {
 
-	if err := validate.MinimumInt("firstSize", "query", *o.FirstSize, 1, false); err != nil {
+	if err := validate.MinimumInt("firstSize", "query", int64(*o.FirstSize), 1, false); err != nil {
 		return err
 	}
 
@@ -168,7 +168,7 @@ func (o *GetLogProofParams) bindLastSize(rawData []string, hasKey bool, formats 
 // validateLastSize carries on validations for parameter LastSize
 func (o *GetLogProofParams) validateLastSize(formats strfmt.Registry) error {
 
-	if err := validate.MinimumInt("lastSize", "query", o.LastSize, 1, false); err != nil {
+	if err := validate.MinimumInt("lastSize", "query", int64(o.LastSize), 1, false); err != nil {
 		return err
 	}
 

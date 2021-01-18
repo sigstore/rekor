@@ -149,6 +149,7 @@ func (o *GetLogEntryByIndexParams) WriteToRequest(r runtime.ClientRequest, reg s
 			return err
 		}
 	}
+
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}

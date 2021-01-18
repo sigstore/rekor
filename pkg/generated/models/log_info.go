@@ -23,8 +23,6 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
-	"context"
-
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -79,7 +77,7 @@ func (m *LogInfo) validateRootHash(formats strfmt.Registry) error {
 		return err
 	}
 
-	if err := validate.Pattern("rootHash", "body", *m.RootHash, `^[0-9a-fA-F]{64}$`); err != nil {
+	if err := validate.Pattern("rootHash", "body", string(*m.RootHash), `^[0-9a-fA-F]{64}$`); err != nil {
 		return err
 	}
 
@@ -110,36 +108,8 @@ func (m *LogInfo) validateTreeSize(formats strfmt.Registry) error {
 		return err
 	}
 
-	if err := validate.MinimumInt("treeSize", "body", *m.TreeSize, 1, false); err != nil {
+	if err := validate.MinimumInt("treeSize", "body", int64(*m.TreeSize), 1, false); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-// ContextValidate validate this log info based on the context it is used
-func (m *LogInfo) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateSignedTreeHead(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *LogInfo) contextValidateSignedTreeHead(ctx context.Context, formats strfmt.Registry) error {
-
-	if m.SignedTreeHead != nil {
-		if err := m.SignedTreeHead.ContextValidate(ctx, formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("signedTreeHead")
-			}
-			return err
-		}
 	}
 
 	return nil
@@ -230,11 +200,6 @@ func (m *LogInfoSignedTreeHead) validateSignature(formats strfmt.Registry) error
 		return err
 	}
 
-	return nil
-}
-
-// ContextValidate validates this log info signed tree head based on context it is used
-func (m *LogInfoSignedTreeHead) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 
