@@ -201,6 +201,7 @@ func (o *GetLogProofParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 				return err
 			}
 		}
+
 	}
 
 	// query param lastSize
