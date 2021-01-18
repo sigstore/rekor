@@ -28,7 +28,7 @@ jobs:
           go-version: ${{ env.GOVERSION }}
       # Download go-swagger
       - name: download go-swagger
-        run : go get -u github.com/go-swagger/go-swagger/cmd/swagger@master
+        run : cp go.* $HOME && go get -u github.com/go-swagger/go-swagger/cmd/swagger@master && cp $HOME/go.* .
       #  run : go get -u github.com/go-swagger/go-swagger/cmd/swagger@v0.25.0
       - name: Validate OpenAPI with Swagger
         run: swagger validate openapi.yaml
@@ -52,8 +52,6 @@ jobs:
           args: ./...
       - name: Ensure no files were modified as a result of the build
         run: git update-index --refresh && git diff-index --quiet HEAD --
-        # ignore errors here while we are using 'go get' above
-        continue-on-error: true
   e2e:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
