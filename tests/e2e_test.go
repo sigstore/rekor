@@ -105,6 +105,13 @@ func TestGet(t *testing.T) {
 		t.Error(err)
 	}
 	// TODO: check the actual data in here.
+
+	// check index via the file and public key to ensure that the index has updated correctly
+	out = runCli(t, "search", "--artifact", artifactPath)
+	outputContains(t, out, uuid)
+
+	out = runCli(t, "search", "--public-key", pubPath)
+	outputContains(t, out, uuid)
 }
 
 func TestMinisign(t *testing.T) {
@@ -129,10 +136,18 @@ func TestMinisign(t *testing.T) {
 		"--public-key", pubPath, "--pki-format", "minisign")
 	outputContains(t, out, "Created entry at")
 
+	// Output looks like "Created entry at $URL/UUID", so grab the UUID:
+	url := strings.Split(strings.TrimSpace(out), " ")[3]
+	splitUrl := strings.Split(url, "/")
+	uuid := splitUrl[len(splitUrl)-1]
+
 	// Wait and check it.
 	time.Sleep(3 * time.Second)
 
 	out = runCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", pubPath, "--pki-format", "minisign")
 	outputContains(t, out, "Inclusion Proof")
+
+	out = runCli(t, "search", "--public-key", pubPath, "--pki-format", "minisign")
+	outputContains(t, out, uuid)
 }
