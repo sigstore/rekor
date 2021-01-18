@@ -13,7 +13,7 @@ RUN go build ./cmd/server
 RUN CGO_ENABLED=0 go build -gcflags "all=-N -l" -o server_debug ./cmd/server
 
 # Multi-Stage production build
-FROM registry.access.redhat.com/ubi8/ubi-minimal as deploy
+FROM golang:1.15 as deploy
 
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/server /usr/local/bin/rekor-server
@@ -23,7 +23,7 @@ CMD ["rekor-server", "serve"]
 
 # debug compile options & debugger
 FROM deploy as debug
+RUN go get github.com/go-delve/delve/cmd/dlv
 
 # overwrite server and include debugger
 COPY --from=builder /opt/app-root/src/server_debug /usr/local/bin/rekor-server
-COPY --from=builder /usr/bin/dlv /usr/local/bin/dlv

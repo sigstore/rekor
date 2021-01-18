@@ -17,7 +17,7 @@ services:
       "--trillian_log_server.address=trillian-log-server",
       "--trillian_log_server.port=8091",
       "--redis_server.address=redis-server",
-      "--redis_server.port=6357",
+      "--redis_server.port=6379",
       "--rekor_server.address=0.0.0.0",
       ]
     restart: always # keep the server running

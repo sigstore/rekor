@@ -155,8 +155,9 @@ var searchCmd = &cobra.Command{
 			switch t := err.(type) {
 			case *index.SearchIndexDefault:
 				if t.Code() == http.StatusNotImplemented {
-					return nil, fmt.Errorf("Search index not enabled on %v\n", viper.GetString("rekor_server"))
+					return nil, fmt.Errorf("search index not enabled on %v", viper.GetString("rekor_server"))
 				}
+				return nil, err
 			default:
 				return nil, err
 			}

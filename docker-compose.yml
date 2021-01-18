@@ -9,7 +9,7 @@ services:
       - MYSQL_PASSWORD=zaphod
     restart: always # keep the MySQL server running
   redis-server:
-    image: docker.io/redis:6.0.10
+    image: docker.io/redis:5.0.10
     command: [
       "--bind",
       "0.0.0.0",
