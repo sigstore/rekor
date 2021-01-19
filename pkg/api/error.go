@@ -95,9 +95,9 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		logMsg(params.HTTPRequest)
 		switch code {
 		case http.StatusBadRequest:
-			return entries.NewCreateLogEntryBadRequest()
+			return entries.NewCreateLogEntryBadRequest().WithPayload(errorMsg(message, code))
 		case http.StatusConflict:
-			return entries.NewCreateLogEntryConflict()
+			return entries.NewCreateLogEntryConflict().WithPayload(errorMsg(message, code))
 		default:
 			return entries.NewCreateLogEntryDefault(code).WithPayload(errorMsg(message, code))
 		}
@@ -105,7 +105,7 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		logMsg(params.HTTPRequest)
 		switch code {
 		case http.StatusBadRequest:
-			return entries.NewSearchLogQueryBadRequest()
+			return entries.NewSearchLogQueryBadRequest().WithPayload(errorMsg(message, code))
 		default:
 			return entries.NewSearchLogQueryDefault(code).WithPayload(errorMsg(message, code))
 		}
@@ -116,7 +116,7 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		logMsg(params.HTTPRequest)
 		switch code {
 		case http.StatusBadRequest:
-			return tlog.NewGetLogProofBadRequest()
+			return tlog.NewGetLogProofBadRequest().WithPayload(errorMsg(message, code))
 		default:
 			return tlog.NewGetLogProofDefault(code).WithPayload(errorMsg(message, code))
 		}
@@ -127,7 +127,7 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		logMsg(params.HTTPRequest)
 		switch code {
 		case http.StatusBadRequest:
-			return index.NewSearchIndexBadRequest()
+			return index.NewSearchIndexBadRequest().WithPayload(errorMsg(message, code))
 		default:
 			return index.NewSearchIndexDefault(code).WithPayload(errorMsg(message, code))
 		}
