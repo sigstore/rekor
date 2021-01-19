@@ -55,6 +55,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rekor.yaml)")
 
 	rootCmd.PersistentFlags().Var(&urlFlag{url: "http://localhost:3000"}, "rekor_server", "Server address:port")
+	rootCmd.PersistentFlags().Var(&formatFlag{format: "default"}, "format", "Command output format")
 
 	// these are bound here and not in PreRun so that all child commands can use them
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
@@ -129,4 +130,29 @@ func (u *urlFlag) Set(s string) error {
 
 func (u *urlFlag) Type() string {
 	return "url"
+}
+
+type formatFlag struct {
+	format string
+}
+
+func (f *formatFlag) String() string {
+	return f.format
+}
+
+func (f *formatFlag) Set(s string) error {
+	choices := map[string]struct{}{"default": {}, "json": {}}
+	if s == "" {
+		f.format = "default"
+		return nil
+	}
+	if _, ok := choices[s]; ok {
+		f.format = s
+		return nil
+	}
+	return fmt.Errorf("invalid flag value: %s, valid values are [default, json]", s)
+}
+
+func (u *formatFlag) Type() string {
+	return "format"
 }
