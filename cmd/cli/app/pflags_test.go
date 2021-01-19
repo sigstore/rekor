@@ -393,3 +393,147 @@ func TestValidateRekorServerURL(t *testing.T) {
 		}
 	}
 }
+
+func TestSearchPFlags(t *testing.T) {
+	type test struct {
+		caseDesc              string
+		artifact              string
+		publicKey             string
+		sha                   string
+		pkiFormat             string
+		expectParseSuccess    bool
+		expectValidateSuccess bool
+	}
+
+	testServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			file := []byte{}
+			var err error
+
+			switch r.URL.Path {
+			case "/artifact":
+				file, err = ioutil.ReadFile("../../../tests/test_file.txt")
+			case "/publicKey":
+				file, err = ioutil.ReadFile("../../../tests/test_public_key.key")
+			case "/not_found":
+				err = errors.New("file not found")
+			}
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(file)
+		}))
+	defer testServer.Close()
+
+	tests := []test{
+		{
+			caseDesc:              "valid local artifact",
+			artifact:              "../../../tests/test_file.txt",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "valid remote artifact",
+			artifact:              testServer.URL + "/artifact",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "nonexistant local artifact",
+			artifact:              "../../../tests/not_a_file",
+			expectParseSuccess:    false,
+			expectValidateSuccess: false,
+		},
+		{
+			caseDesc:              "nonexistant remote artifact",
+			artifact:              testServer.URL + "/not_found",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "valid local public key",
+			publicKey:             "../../../tests/test_public_key.key",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "valid local minisign public key",
+			publicKey:             "../../../pkg/pki/minisign/testdata/minisign.pub",
+			pkiFormat:             "minisign",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "valid remote public key",
+			publicKey:             testServer.URL + "/publicKey",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "nonexistant local public key",
+			publicKey:             "../../../tests/not_a_file",
+			expectParseSuccess:    false,
+			expectValidateSuccess: false,
+		},
+		{
+			caseDesc:              "nonexistant remote public key",
+			publicKey:             testServer.URL + "/not_found",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "valid SHA",
+			sha:                   "45c7b11fcbf07dec1694adecd8c5b85770a12a6c8dfdcf2580a2db0c47c31779",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "invalid SHA",
+			sha:                   "45c7b11fcbf",
+			expectParseSuccess:    false,
+			expectValidateSuccess: false,
+		},
+		{
+			caseDesc:              "no flags when either artifact, sha, or public key are needed",
+			expectParseSuccess:    true,
+			expectValidateSuccess: false,
+		},
+	}
+
+	for _, tc := range tests {
+		var blankCmd = &cobra.Command{}
+		if err := addSearchPFlags(blankCmd); err != nil {
+			t.Fatalf("unexpected error adding flags in '%v': %v", tc.caseDesc, err)
+		}
+
+		args := []string{}
+
+		if tc.artifact != "" {
+			args = append(args, "--artifact", tc.artifact)
+		}
+		if tc.publicKey != "" {
+			args = append(args, "--public-key", tc.publicKey)
+		}
+		if tc.pkiFormat != "" {
+			args = append(args, "--pki-format", tc.pkiFormat)
+		}
+		if tc.sha != "" {
+			args = append(args, "--sha", tc.sha)
+		}
+
+		if err := blankCmd.ParseFlags(args); (err == nil) != tc.expectParseSuccess {
+			t.Errorf("unexpected result parsing '%v': %v", tc.caseDesc, err)
+			continue
+		}
+
+		if err := viper.BindPFlags(blankCmd.Flags()); err != nil {
+			t.Fatalf("unexpected result initializing viper in '%v': %v", tc.caseDesc, err)
+		}
+		if err := validateSearchPFlags(); (err == nil) != tc.expectValidateSuccess {
+			t.Errorf("unexpected result validating '%v': %v", tc.caseDesc, err)
+			continue
+		}
+	}
+}

@@ -16,6 +16,7 @@ limitations under the License.
 package api
 
 import (
+	"context"
 	"crypto"
 	"crypto/x509"
 	"encoding/hex"
@@ -24,6 +25,7 @@ import (
 	"net/http"
 
 	"github.com/google/trillian"
+	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/go-openapi/swag"
@@ -31,6 +33,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/grpc/codes"
 
+	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/projectrekor/rekor/pkg/types"
 
 	"github.com/projectrekor/rekor/pkg/generated/models"
@@ -112,6 +115,16 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 			//LogIndex is not given here because it is always returned as 0
 			Body: queuedLeaf.GetLeafValue(),
 		},
+	}
+
+	if viper.GetBool("enable_retrieve_api") {
+		go func() {
+			for _, key := range entry.IndexKeys() {
+				if err := addToIndex(context.Background(), key, uuid); err != nil {
+					log.RequestIDLogger(params.HTTPRequest).Error(err)
+				}
+			}
+		}()
 	}
 
 	location := strfmt.URI(fmt.Sprintf("%v/%v", httpReq.URL, uuid))

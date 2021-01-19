@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/crypto/keyspb"
+	radix "github.com/mediocregopher/radix/v4"
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -82,14 +83,22 @@ func NewAPI() (*API, error) {
 }
 
 var (
-	api *API
+	api         *API
+	redisClient radix.Client
 )
 
 func ConfigureAPI() {
+	cfg := radix.PoolConfig{}
 	var err error
 	api, err = NewAPI()
 	if err != nil {
 		log.Logger.Panic(err)
+	}
+	if viper.GetBool("enable_retrieve_api") {
+		redisClient, err = cfg.New(context.Background(), "tcp", fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")))
+		if err != nil {
+			log.Logger.Panic(err)
+		}
 	}
 }
 

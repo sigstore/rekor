@@ -39,6 +39,7 @@ import (
 	"github.com/go-openapi/swag"
 
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/entries"
+	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/index"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/tlog"
 )
 
@@ -89,6 +90,9 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 		}),
 		TlogGetPublicKeyHandler: tlog.GetPublicKeyHandlerFunc(func(params tlog.GetPublicKeyParams) middleware.Responder {
 			return middleware.NotImplemented("operation tlog.GetPublicKey has not yet been implemented")
+		}),
+		IndexSearchIndexHandler: index.SearchIndexHandlerFunc(func(params index.SearchIndexParams) middleware.Responder {
+			return middleware.NotImplemented("operation index.SearchIndex has not yet been implemented")
 		}),
 		EntriesSearchLogQueryHandler: entries.SearchLogQueryHandlerFunc(func(params entries.SearchLogQueryParams) middleware.Responder {
 			return middleware.NotImplemented("operation entries.SearchLogQuery has not yet been implemented")
@@ -150,6 +154,8 @@ type RekorServerAPI struct {
 	TlogGetLogProofHandler tlog.GetLogProofHandler
 	// TlogGetPublicKeyHandler sets the operation handler for the get public key operation
 	TlogGetPublicKeyHandler tlog.GetPublicKeyHandler
+	// IndexSearchIndexHandler sets the operation handler for the search index operation
+	IndexSearchIndexHandler index.SearchIndexHandler
 	// EntriesSearchLogQueryHandler sets the operation handler for the search log query operation
 	EntriesSearchLogQueryHandler entries.SearchLogQueryHandler
 	// ServeError is called when an error is received, there is a default handler
@@ -257,6 +263,9 @@ func (o *RekorServerAPI) Validate() error {
 	}
 	if o.TlogGetPublicKeyHandler == nil {
 		unregistered = append(unregistered, "tlog.GetPublicKeyHandler")
+	}
+	if o.IndexSearchIndexHandler == nil {
+		unregistered = append(unregistered, "index.SearchIndexHandler")
 	}
 	if o.EntriesSearchLogQueryHandler == nil {
 		unregistered = append(unregistered, "entries.SearchLogQueryHandler")
@@ -383,6 +392,10 @@ func (o *RekorServerAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/api/v1/log/publicKey"] = tlog.NewGetPublicKey(o.context, o.TlogGetPublicKeyHandler)
+	if o.handlers["POST"] == nil {
+		o.handlers["POST"] = make(map[string]http.Handler)
+	}
+	o.handlers["POST"]["/api/v1/index/retrieve"] = index.NewSearchIndex(o.context, o.IndexSearchIndexHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}

@@ -38,6 +38,10 @@ func (u UnmarshalTester) APIVersion() string {
 	return "2.0.1"
 }
 
+func (u UnmarshalTester) IndexKeys() []string {
+	return []string{}
+}
+
 func (u UnmarshalTester) Canonicalize(ctx context.Context) ([]byte, error) {
 	return nil, nil
 }
