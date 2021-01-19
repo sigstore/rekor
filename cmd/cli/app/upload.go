@@ -19,11 +19,23 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/projectrekor/rekor/cmd/cli/app/format"
 	"github.com/projectrekor/rekor/pkg/generated/client/entries"
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+type uploadCmdOutput struct {
+	Location string
+}
+
+func (u *uploadCmdOutput) String() string {
+	if u.Location != "" {
+		return fmt.Sprintf("Created entry at: %v%v\n", viper.GetString("rekor_server"), u.Location)
+	}
+	return "Entry already exists.\n"
+}
 
 // uploadCmd represents the upload command
 var uploadCmd = &cobra.Command{
@@ -41,17 +53,16 @@ var uploadCmd = &cobra.Command{
 		}
 	},
 	Long: `This command takes the public key, signature and URL of the release artifact and uploads it to the rekor server.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		log := log.Logger
+	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		params := entries.NewCreateLogEntryParams()
 
 		rekordEntry, err := CreateRekordFromPFlags()
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		params.SetProposedEntry(rekordEntry)
@@ -60,15 +71,16 @@ var uploadCmd = &cobra.Command{
 		if err != nil {
 			switch err.(type) {
 			case *entries.CreateLogEntryConflict:
-				fmt.Println("Entry already exists.")
-				return
+				return &uploadCmdOutput{Location: ""}, nil
 			default:
-				log.Fatal(err)
+				return nil, err
 			}
 		}
 
-		fmt.Printf("Created entry at: %v%v\n", viper.GetString("rekor_server"), resp.Location)
-	},
+		return &uploadCmdOutput{
+			Location: string(resp.Location),
+		}, nil
+	}),
 }
 
 func init() {

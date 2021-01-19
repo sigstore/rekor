@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 
 	"github.com/google/trillian"
@@ -27,42 +28,54 @@ import (
 	tcrypto "github.com/google/trillian/crypto"
 	"github.com/google/trillian/merkle/rfc6962"
 
-	"github.com/projectrekor/rekor/pkg/log"
+	"github.com/projectrekor/rekor/cmd/cli/app/format"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+type getCmdOutput struct {
+	TreeSize int64
+	RootHash string
+}
+
+func (g *getCmdOutput) String() string {
+	// Verification is always successful if we return an object.
+	return fmt.Sprintf("Verification Successful!\nTree Size: %v\nRoot Hash: %s\n", g.TreeSize, g.RootHash)
+}
 
 // logInfoCmd represents the current information about the transparency log
 var logInfoCmd = &cobra.Command{
 	Use:   "loginfo",
 	Short: "Rekor loginfo command",
 	Long:  `Prints info about the transparency log`,
-	Run: func(cmd *cobra.Command, args []string) {
-		log := log.Logger
+	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		result, err := rekorClient.Tlog.GetLogInfo(nil)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		logInfo := result.GetPayload()
-		fmt.Printf("Tree Size: %v, Root Hash: %v\n", *logInfo.TreeSize, *logInfo.RootHash)
+		cmdOutput := &getCmdOutput{
+			TreeSize: *logInfo.TreeSize,
+			RootHash: *logInfo.RootHash,
+		}
 
 		keyHint, err := base64.StdEncoding.DecodeString(logInfo.SignedTreeHead.KeyHint.String())
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		logRoot, err := base64.StdEncoding.DecodeString(logInfo.SignedTreeHead.LogRoot.String())
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		signature, err := base64.StdEncoding.DecodeString(logInfo.SignedTreeHead.Signature.String())
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		sth := trillian.SignedLogRoot{
 			KeyHint:          keyHint,
@@ -75,28 +88,27 @@ var logInfoCmd = &cobra.Command{
 			// fetch key from server
 			keyResp, err := rekorClient.Tlog.GetPublicKey(nil)
 			if err != nil {
-				log.Fatal(err)
+				return nil, err
 			}
 			publicKey = keyResp.Payload
 		}
 
 		block, _ := pem.Decode([]byte(publicKey))
 		if block == nil {
-			log.Fatal("failed to decode public key of server")
-			return
+			return nil, errors.New("failed to decode public key of server")
 		}
 
 		pub, err := x509.ParsePKIXPublicKey(block.Bytes)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
 		if _, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, &sth); err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
-		fmt.Printf("Verified signature of log root!\n")
-	},
+		return cmdOutput, nil
+	}),
 }
 
 func init() {
