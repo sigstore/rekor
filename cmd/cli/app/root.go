@@ -54,7 +54,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rekor.yaml)")
 
-	rootCmd.PersistentFlags().Var(&urlFlag{url: "http://localhost:3000"}, "rekor_server", "Server address:port")
+	rootCmd.PersistentFlags().Var(&urlFlag{url: "https://api.rekor.dev"}, "rekor_server", "Server address:port")
 	rootCmd.PersistentFlags().Var(&formatFlag{format: "default"}, "format", "Command output format")
 
 	// these are bound here and not in PreRun so that all child commands can use them
