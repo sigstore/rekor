@@ -40,6 +40,7 @@ func run(t *testing.T, stdin, cmd string, arg ...string) string {
 
 func runCli(t *testing.T, arg ...string) string {
 	t.Helper()
+	arg = append(arg, "--rekor_server=http://localhost:3000")
 	return run(t, "", cli, arg...)
 }
 
