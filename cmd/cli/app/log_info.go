@@ -33,14 +33,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-type getCmdOutput struct {
+type logInfoCmdOutput struct {
 	TreeSize int64
 	RootHash string
 }
 
-func (g *getCmdOutput) String() string {
+func (l *logInfoCmdOutput) String() string {
 	// Verification is always successful if we return an object.
-	return fmt.Sprintf("Verification Successful!\nTree Size: %v\nRoot Hash: %s\n", g.TreeSize, g.RootHash)
+	return fmt.Sprintf("Verification Successful!\nTree Size: %v\nRoot Hash: %s\n", l.TreeSize, l.RootHash)
 }
 
 // logInfoCmd represents the current information about the transparency log
@@ -60,7 +60,7 @@ var logInfoCmd = &cobra.Command{
 		}
 
 		logInfo := result.GetPayload()
-		cmdOutput := &getCmdOutput{
+		cmdOutput := &logInfoCmdOutput{
 			TreeSize: *logInfo.TreeSize,
 			RootHash: *logInfo.RootHash,
 		}

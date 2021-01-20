@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -95,7 +96,7 @@ func TestGet(t *testing.T) {
 	splitUrl := strings.Split(url, "/")
 	uuid := splitUrl[len(splitUrl)-1]
 
-	out = runCli(t, "get", "--uuid", uuid)
+	out = runCli(t, "get", "--format=json", "--uuid", uuid)
 	// The output here should be in JSON with this structure:
 	g := struct {
 		Body     string
@@ -104,7 +105,8 @@ func TestGet(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Error(err)
 	}
-	// TODO: check the actual data in here.
+	// Get it with the logindex as well
+	runCli(t, "get", "--format=json", "--log-index", strconv.Itoa(g.LogIndex))
 
 	// check index via the file and public key to ensure that the index has updated correctly
 	out = runCli(t, "search", "--artifact", artifactPath)
