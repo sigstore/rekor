@@ -30,6 +30,17 @@ import (
 	"github.com/spf13/viper"
 )
 
+type getCmdOutput struct {
+	Body     []byte
+	LogIndex int
+}
+
+func (g *getCmdOutput) String() string {
+	s := fmt.Sprintf("%d\n", g.LogIndex)
+	s += fmt.Sprintf("%s\n", g.Body)
+	return s
+}
+
 // getCmd represents the get command
 var getCmd = &cobra.Command{
 	Use:   "get",
@@ -60,11 +71,7 @@ var getCmd = &cobra.Command{
 			if err != nil {
 				return nil, err
 			}
-
-			for k, entry := range resp.Payload {
-				if k != logIndex {
-					continue
-				}
+			for _, entry := range resp.Payload {
 				return parseEntry(entry)
 			}
 		}
@@ -97,15 +104,12 @@ func parseEntry(e models.LogEntryAnon) (interface{}, error) {
 		return nil, err
 	}
 	// Now parse that back into JSON in the format "body, logindex"
-	obj := struct {
-		Body     []byte
-		LogIndex int
-	}{}
+	obj := getCmdOutput{}
 	if err := json.Unmarshal(bytes, &obj); err != nil {
 		return nil, err
 	}
 
-	return obj, nil
+	return &obj, nil
 }
 
 func init() {
