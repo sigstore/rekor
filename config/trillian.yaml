@@ -27,6 +27,10 @@ spec:
           "--http_endpoint=0.0.0.0:8090",
           "--alsologtostderr",
         ]
+        resources:
+          requests:
+            memory: "1G"
+            cpu: ".5"
       - name: cloud-sql-proxy
         image: gcr.io/cloudsql-docker/gce-proxy:1.17
         command:
@@ -77,6 +81,10 @@ spec:
           "--force_master",
           "--alsologtostderr",
         ]
+        resources:
+          requests:
+            memory: "1G"
+            cpu: ".5"
       - name: cloud-sql-proxy
         image: gcr.io/cloudsql-docker/gce-proxy:1.17
         command:
