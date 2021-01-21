@@ -55,7 +55,7 @@ func (v *verifyCmdOutput) String() string {
 	result, _ := hex.DecodeString(v.EntryUUID)
 	for i, h := range v.Hashes {
 		if i < inner && (v.Index>>uint(i))&1 == 0 {
-			left = []byte(hex.EncodeToString([]byte(v.RootHash)))
+			left = result
 			right, _ = hex.DecodeString(h)
 		} else {
 			left, _ = hex.DecodeString(h)
