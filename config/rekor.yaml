@@ -13,12 +13,17 @@ spec:
     metadata:
       labels:
         app: rekor-server
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "2112"
     spec:
       containers:
       - name: rekor-server
         image: ko://github.com/projectrekor/rekor/cmd/server
         ports:
         - containerPort: 3000
+        - containerPort: 2112 # metrics
         args: [
           "serve",
           "--trillian_log_server.address=trillian-server",
