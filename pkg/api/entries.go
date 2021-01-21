@@ -68,8 +68,9 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 
 	logEntry := models.LogEntry{
 		hex.EncodeToString(leaf.MerkleLeafHash): models.LogEntryAnon{
-			LogIndex: &leaf.LeafIndex,
-			Body:     leaf.LeafValue,
+			LogIndex:       &leaf.LeafIndex,
+			Body:           leaf.LeafValue,
+			IntegratedTime: leaf.IntegrateTimestamp.AsTime().Unix(),
 		},
 	}
 	return entries.NewGetLogEntryByIndexOK().WithPayload(logEntry)
@@ -158,8 +159,9 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 
 	logEntry := models.LogEntry{
 		uuid: models.LogEntryAnon{
-			LogIndex: swag.Int64(leaf.GetLeafIndex()),
-			Body:     leaf.LeafValue,
+			LogIndex:       swag.Int64(leaf.GetLeafIndex()),
+			Body:           leaf.LeafValue,
+			IntegratedTime: leaf.IntegrateTimestamp.AsTime().Unix(),
 		},
 	}
 	return entries.NewGetLogEntryByUUIDOK().WithPayload(logEntry)

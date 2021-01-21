@@ -66,6 +66,9 @@ type LogEntryAnon struct {
 	// Required: true
 	Body interface{} `json:"body"`
 
+	// integrated time
+	IntegratedTime int64 `json:"integratedTime,omitempty"`
+
 	// log index
 	// Minimum: 0
 	LogIndex *int64 `json:"logIndex,omitempty"`

@@ -270,6 +270,8 @@ definitions:
         body:
           type: object
           additionalProperties: true
+        integratedTime:
+          type: integer
       required:
         - "body"
 
