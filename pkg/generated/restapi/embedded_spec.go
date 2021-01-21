@@ -441,6 +441,9 @@ func init() {
             "type": "object",
             "additionalProperties": true
           },
+          "integratedTime": {
+            "type": "integer"
+          },
           "logIndex": {
             "type": "integer"
           }
@@ -1070,6 +1073,9 @@ func init() {
         "body": {
           "type": "object",
           "additionalProperties": true
+        },
+        "integratedTime": {
+          "type": "integer"
         },
         "logIndex": {
           "type": "integer",

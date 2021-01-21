@@ -31,13 +31,15 @@ import (
 )
 
 type getCmdOutput struct {
-	Body     []byte
-	LogIndex int
+	Body           []byte
+	LogIndex       int
+	IntegratedTime int64
 }
 
 func (g *getCmdOutput) String() string {
-	s := fmt.Sprintf("%d\n", g.LogIndex)
-	s += fmt.Sprintf("%s\n", g.Body)
+	s := fmt.Sprintf("Index: %d\n", g.LogIndex)
+	s += fmt.Sprintf("IntegratedTime: %d\n", g.IntegratedTime)
+	s += fmt.Sprintf("Body: %s\n", g.Body)
 	return s
 }
 
@@ -108,6 +110,7 @@ func parseEntry(e models.LogEntryAnon) (interface{}, error) {
 	if err := json.Unmarshal(bytes, &obj); err != nil {
 		return nil, err
 	}
+	obj.IntegratedTime = e.IntegratedTime
 
 	return &obj, nil
 }
