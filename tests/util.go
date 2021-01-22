@@ -62,12 +62,20 @@ func readFile(t *testing.T, p string) string {
 	return strings.TrimSpace(string(b))
 }
 
+func randomData(n int) ([]byte, error) {
+	rand.Seed(time.Now().UnixNano())
+	data := make([]byte, n)
+	if _, err := rand.Read(data[:]); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
 func createArtifact(t *testing.T, artifactPath string) string {
 	t.Helper()
 	// First let's generate some random data so we don't have to worry about dupes.
-	rand.Seed(time.Now().UnixNano())
-	data := [100]byte{}
-	if _, err := rand.Read(data[:]); err != nil {
+	data, err := randomData(100)
+	if err != nil {
 		t.Fatal(err)
 	}
 

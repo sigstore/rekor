@@ -25,6 +25,8 @@ import (
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/projectrekor/rekor/pkg/types/rekord"
 	rekord_v001 "github.com/projectrekor/rekor/pkg/types/rekord/v0.0.1"
+	"github.com/projectrekor/rekor/pkg/types/rpm"
+	rpm_v001 "github.com/projectrekor/rekor/pkg/types/rpm/v0.0.1"
 
 	"github.com/projectrekor/rekor/pkg/generated/restapi"
 	"github.com/spf13/cobra"
@@ -56,6 +58,7 @@ var serveCmd = &cobra.Command{
 		// these trigger loading of package and therefore init() methods to run
 		pluggableTypeMap := map[string]string{
 			rekord.KIND: rekord_v001.APIVERSION,
+			rpm.KIND:    rpm_v001.APIVERSION,
 		}
 
 		for k, v := range pluggableTypeMap {

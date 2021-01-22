@@ -1,5 +1,5 @@
 /*
-Copyright © 2020 Bob Callaway <bcallawa@redhat.com>
+Copyright © 2021 Bob Callaway <bcallawa@redhat.com>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package rekord
+package rpm
 
 import (
 	"context"
@@ -27,7 +27,7 @@ import (
 )
 
 type UnmarshalTester struct {
-	models.Rekord
+	models.Rpm
 }
 
 func (u UnmarshalTester) NewEntry() types.EntryImpl {
@@ -70,7 +70,7 @@ func (u UnmarshalFailsTester) Unmarshal(pe models.ProposedEntry) error {
 	return errors.New("error")
 }
 
-func TestRekordType(t *testing.T) {
+func TestRPMType(t *testing.T) {
 	// empty to start
 	if len(SemVerToFacFnMap.VersionFactories) != 0 {
 		t.Error("semver range was not blank at start of test")
@@ -90,31 +90,31 @@ func TestRekordType(t *testing.T) {
 		t.Error("valid semver range was not added to SemVerToFacFnMap")
 	}
 
-	u.Rekord.APIVersion = swag.String("2.0.1")
-	brt := BaseRekordType{}
+	u.Rpm.APIVersion = swag.String("2.0.1")
+	brt := BaseRPMType{}
 
 	// version requested matches implementation in map
-	if _, err := brt.UnmarshalEntry(&u.Rekord); err != nil {
+	if _, err := brt.UnmarshalEntry(&u.Rpm); err != nil {
 		t.Errorf("unexpected error in Unmarshal: %v", err)
 	}
 
 	// version requested fails to match implementation in map
-	u.Rekord.APIVersion = swag.String("1.2.2")
-	if _, err := brt.UnmarshalEntry(&u.Rekord); err == nil {
+	u.Rpm.APIVersion = swag.String("1.2.2")
+	if _, err := brt.UnmarshalEntry(&u.Rpm); err == nil {
 		t.Error("unexpected success in Unmarshal for non-matching version")
 	}
 
 	// error in Unmarshal call is raised appropriately
-	u.Rekord.APIVersion = swag.String("2.2.0")
+	u.Rpm.APIVersion = swag.String("2.2.0")
 	u2 := UnmarshalFailsTester{}
 	SemVerToFacFnMap.Set(">= 1.2.3", u2.NewEntry)
-	if _, err := brt.UnmarshalEntry(&u.Rekord); err == nil {
+	if _, err := brt.UnmarshalEntry(&u.Rpm); err == nil {
 		t.Error("unexpected success in Unmarshal when error is thrown")
 	}
 
 	// version requested fails to match implementation in map
-	u.Rekord.APIVersion = swag.String("not_a_version")
-	if _, err := brt.UnmarshalEntry(&u.Rekord); err == nil {
+	u.Rpm.APIVersion = swag.String("not_a_version")
+	if _, err := brt.UnmarshalEntry(&u.Rpm); err == nil {
 		t.Error("unexpected success in Unmarshal for invalid version")
 	}
 }

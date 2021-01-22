@@ -32,6 +32,7 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/projectrekor/rekor/pkg/generated/models"
 	rekord_v001 "github.com/projectrekor/rekor/pkg/types/rekord/v0.0.1"
+	rpm_v001 "github.com/projectrekor/rekor/pkg/types/rpm/v0.0.1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -66,13 +67,14 @@ func validateSearchPFlags() error {
 
 func addArtifactPFlags(cmd *cobra.Command) error {
 	cmd.Flags().Var(&fileOrURLFlag{}, "signature", "path or URL to detached signature file")
+	cmd.Flags().Var(&typeFlag{value: "rekord"}, "type", "type of entry")
 	cmd.Flags().Var(&pkiFormatFlag{value: "pgp"}, "pki-format", "format of the signature and/or public key")
 
 	cmd.Flags().Var(&fileOrURLFlag{}, "public-key", "path or URL to public key file")
 
 	cmd.Flags().Var(&fileOrURLFlag{}, "artifact", "path or URL to artifact file")
 
-	cmd.Flags().Var(&fileOrURLFlag{}, "rekord", "path or URL to Rekor rekord file")
+	cmd.Flags().Var(&fileOrURLFlag{}, "entry", "path or URL to pre-formatted entry file")
 
 	cmd.Flags().Var(&shaFlag{}, "sha", "the sha of the artifact")
 	return nil
@@ -104,7 +106,8 @@ func validateArtifactPFlags(uuidValid, indexValid bool) error {
 		}
 	}
 	// we will need artifact, public-key, signature, and potentially SHA
-	rekord := viper.GetString("rekord")
+	typeStr := viper.GetString("type")
+	entry := viper.GetString("entry")
 
 	artifact := fileOrURLFlag{}
 	artifactStr := viper.GetString("artifact")
@@ -118,18 +121,18 @@ func validateArtifactPFlags(uuidValid, indexValid bool) error {
 	publicKey := viper.GetString("public-key")
 	sha := viper.GetString("sha")
 
-	if rekord == "" && artifact.String() == "" {
+	if entry == "" && artifact.String() == "" {
 		if (uuidGiven && uuidValid) || (indexGiven && indexValid) {
 			return nil
 		}
-		return errors.New("either 'rekord' or 'artifact' must be specified")
+		return errors.New("either 'entry' or 'artifact' must be specified")
 	}
 
-	if rekord == "" {
+	if entry == "" {
 		if artifact.IsURL && sha == "" {
 			return errors.New("a valid SHA hash must be specified when specifying a URL for --artifact")
 		}
-		if signature == "" {
+		if signature == "" && typeStr == "rekord" {
 			return errors.New("--signature is required when --artifact is used")
 		}
 		if publicKey == "" {
@@ -140,12 +143,91 @@ func validateArtifactPFlags(uuidValid, indexValid bool) error {
 	return nil
 }
 
+func CreateRpmFromPFlags() (models.ProposedEntry, error) {
+	//TODO: how to select version of item to create
+	returnVal := models.Rpm{}
+	re := new(rpm_v001.V001Entry)
+
+	rpm := viper.GetString("entry")
+	if rpm != "" {
+		var rpmBytes []byte
+		rpmURL, err := url.Parse(rpm)
+		if err == nil && rpmURL.IsAbs() {
+			/* #nosec G107 */
+			rpmResp, err := http.Get(rpm)
+			if err != nil {
+				return nil, fmt.Errorf("error fetching 'rpm': %w", err)
+			}
+			defer rpmResp.Body.Close()
+			rpmBytes, err = ioutil.ReadAll(rpmResp.Body)
+			if err != nil {
+				return nil, fmt.Errorf("error fetching 'rpm': %w", err)
+			}
+		} else {
+			rpmBytes, err = ioutil.ReadFile(filepath.Clean(rpm))
+			if err != nil {
+				return nil, fmt.Errorf("error processing 'rpm' file: %w", err)
+			}
+		}
+		if err := json.Unmarshal(rpmBytes, &returnVal); err != nil {
+			return nil, fmt.Errorf("error parsing rpm file: %w", err)
+		}
+	} else {
+		// we will need artifact, public-key, signature, and potentially SHA
+		re.RPMModel = models.RpmV001Schema{}
+		re.RPMModel.Package = &models.RpmV001SchemaPackage{}
+
+		artifact := viper.GetString("artifact")
+		dataURL, err := url.Parse(artifact)
+		if err == nil && dataURL.IsAbs() {
+			re.RPMModel.Package.URL = strfmt.URI(artifact)
+			re.RPMModel.Package.Hash = &models.RpmV001SchemaPackageHash{}
+			re.RPMModel.Package.Hash.Algorithm = swag.String(models.RpmV001SchemaPackageHashAlgorithmSha256)
+			re.RPMModel.Package.Hash.Value = swag.String(viper.GetString("sha"))
+		} else {
+			artifactBytes, err := ioutil.ReadFile(filepath.Clean(artifact))
+			if err != nil {
+				return nil, fmt.Errorf("error reading artifact file: %w", err)
+			}
+			re.RPMModel.Package.Content = strfmt.Base64(artifactBytes)
+		}
+
+		re.RPMModel.PublicKey = &models.RpmV001SchemaPublicKey{}
+		publicKey := viper.GetString("public-key")
+		keyURL, err := url.Parse(publicKey)
+		if err == nil && keyURL.IsAbs() {
+			re.RPMModel.PublicKey.URL = strfmt.URI(publicKey)
+		} else {
+			keyBytes, err := ioutil.ReadFile(filepath.Clean(publicKey))
+			if err != nil {
+				return nil, fmt.Errorf("error reading public key file: %w", err)
+			}
+			re.RPMModel.PublicKey.Content = strfmt.Base64(keyBytes)
+		}
+
+		if err := re.Validate(); err != nil {
+			return nil, err
+		}
+
+		if re.HasExternalEntities() {
+			if err := re.FetchExternalEntities(context.Background()); err != nil {
+				return nil, fmt.Errorf("error retrieving external entities: %v", err)
+			}
+		}
+
+		returnVal.APIVersion = swag.String(re.APIVersion())
+		returnVal.Spec = re.RPMModel
+	}
+
+	return &returnVal, nil
+}
+
 func CreateRekordFromPFlags() (models.ProposedEntry, error) {
 	//TODO: how to select version of item to create
 	returnVal := models.Rekord{}
 	re := new(rekord_v001.V001Entry)
 
-	rekord := viper.GetString("rekord")
+	rekord := viper.GetString("entry")
 	if rekord != "" {
 		var rekordBytes []byte
 		rekordURL, err := url.Parse(rekord)
@@ -266,6 +348,30 @@ func (f *fileOrURLFlag) Set(s string) error {
 
 func (f *fileOrURLFlag) Type() string {
 	return "fileOrURLFlag"
+}
+
+type typeFlag struct {
+	value string
+}
+
+func (t *typeFlag) Type() string {
+	return "typeFormat"
+}
+
+func (t *typeFlag) String() string {
+	return t.value
+}
+
+func (t *typeFlag) Set(s string) error {
+	set := map[string]struct{}{
+		"rekord": {},
+		"rpm":    {},
+	}
+	if _, ok := set[s]; ok {
+		t.value = s
+		return nil
+	}
+	return fmt.Errorf("value specified is invalid: [%s] supported values are: [rekord, rpm]", s)
 }
 
 type pkiFormatFlag struct {

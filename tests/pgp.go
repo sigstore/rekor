@@ -4,7 +4,6 @@ package e2e
 
 import (
 	"bytes"
-	"io"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -150,13 +149,12 @@ func init() {
 	}
 }
 
-func Sign(t *testing.T, m io.Reader) []byte {
-	t.Helper()
-	var b bytes.Buffer
-	if err := openpgp.ArmoredDetachSign(&b, keys[0], m, nil); err != nil {
-		t.Fatal(err)
+func Sign(b []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := openpgp.DetachSign(&buf, keys[0], bytes.NewReader(b), nil); err != nil {
+		return nil, err
 	}
-	return b.Bytes()
+	return buf.Bytes(), nil
 }
 
 // createdSignedArtifact gets the test dir setup correctly with some random artifacts and keys.
@@ -165,7 +163,10 @@ func createdSignedArtifact(t *testing.T, artifactPath, sigPath string) {
 	artifact := createArtifact(t, artifactPath)
 
 	// Sign it with our key and write that to a file
-	signature := Sign(t, strings.NewReader(artifact))
+	signature, err := Sign([]byte(artifact))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := ioutil.WriteFile(sigPath, []byte(signature), 0644); err != nil {
 		t.Fatal(err)
 	}
