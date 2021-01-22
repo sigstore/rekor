@@ -13,6 +13,8 @@ services:
     command: [
       "--bind",
       "0.0.0.0",
+      "--appendonly",
+      "yes"
     ]
     ports:
       - "6379:6379"
