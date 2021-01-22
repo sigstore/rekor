@@ -82,9 +82,8 @@ func initConfig() {
 	viper.SetEnvPrefix("rekor")
 	viper.AutomaticEnv()
 
-	if err := viper.ReadInConfig(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	if err := viper.ReadInConfig(); err == nil {
+		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
 }
 
