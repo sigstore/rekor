@@ -16,7 +16,7 @@ on:
 jobs:
   build:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -53,7 +53,7 @@ jobs:
         run: git update-index --refresh && git diff-index --quiet HEAD -- || git diff
   e2e:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04 
     needs: build
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:

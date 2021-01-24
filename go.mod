@@ -21,6 +21,7 @@ require (
 	github.com/go-openapi/validate v0.20.1
 	github.com/golang/protobuf v1.4.3
 	github.com/google/certificate-transparency-go v1.1.0 // indirect
+	github.com/google/go-cmp v0.5.2
 	github.com/google/rpmpack v0.0.0-20210107155803-d6befbf05148
 	github.com/google/trillian v1.3.10
 	github.com/jedisct1/go-minisign v0.0.0-20210106175330-e54e81d562c7
