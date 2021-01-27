@@ -38,6 +38,7 @@ type TrillianClient struct {
 	logID   int64
 	context context.Context
 	pubkey  *keyspb.PublicKey
+	tree    *trillian.Tree
 }
 
 type Response struct {
@@ -75,6 +76,52 @@ func (t *TrillianClient) addLeaf(byteValue []byte) *Response {
 		Leaf:  leaf,
 	}
 	resp, err := t.client.QueueLeaf(t.context, rqst)
+
+	// check for error
+	if err != nil || (resp.QueuedLeaf.Status != nil && resp.QueuedLeaf.Status.Code != int32(codes.OK)) {
+		return &Response{
+			status:       status.Code(err),
+			err:          err,
+			getAddResult: resp,
+		}
+	}
+
+	root, err := t.root()
+	if err != nil {
+		return &Response{
+			status:       status.Code(err),
+			err:          err,
+			getAddResult: resp,
+		}
+	}
+	verifier, err := client.NewLogVerifierFromTree(t.tree)
+	if err != nil {
+		return &Response{
+			status:       status.Code(err),
+			err:          err,
+			getAddResult: resp,
+		}
+	}
+	logClient := client.New(t.logID, t.client, verifier, root)
+	if err := logClient.WaitForInclusion(t.context, byteValue); err != nil {
+		return &Response{
+			status:       status.Code(err),
+			err:          err,
+			getAddResult: resp,
+		}
+	}
+
+	leafResp := t.getLeafByHash([][]byte{resp.QueuedLeaf.Leaf.MerkleLeafHash})
+	if leafResp.err != nil {
+		return &Response{
+			status:       status.Code(leafResp.err),
+			err:          leafResp.err,
+			getAddResult: resp,
+		}
+	}
+
+	//overwrite queued leaf that doesn't have index set
+	resp.QueuedLeaf.Leaf = leafResp.getLeafResult.Leaves[0]
 
 	return &Response{
 		status:       status.Code(err),

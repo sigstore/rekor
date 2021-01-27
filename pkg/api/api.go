@@ -45,6 +45,7 @@ type API struct {
 	logClient trillian.TrillianLogClient
 	logID     int64
 	pubkey    *keyspb.PublicKey
+	tree      *trillian.Tree
 }
 
 func NewAPI() (*API, error) {
@@ -79,6 +80,7 @@ func NewAPI() (*API, error) {
 		logClient: logClient,
 		logID:     tLogID,
 		pubkey:    t.PublicKey,
+		tree:      t,
 	}, nil
 }
 
@@ -108,5 +110,6 @@ func NewTrillianClient(ctx context.Context) TrillianClient {
 		logID:   api.logID,
 		context: ctx,
 		pubkey:  api.pubkey,
+		tree:    api.tree,
 	}
 }

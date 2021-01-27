@@ -113,8 +113,8 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 
 	logEntry := models.LogEntry{
 		uuid: models.LogEntryAnon{
-			//LogIndex is not given here because it is always returned as 0
-			Body: queuedLeaf.GetLeafValue(),
+			LogIndex: swag.Int64(queuedLeaf.LeafIndex),
+			Body:     queuedLeaf.GetLeafValue(),
 		},
 	}
 
