@@ -10,17 +10,26 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var Logger = createGlobalLogger()
+// Set the default logger to development mode
+var Logger *zap.SugaredLogger
 
-func createGlobalLogger() *zap.SugaredLogger {
-	cfg := zap.NewDevelopmentConfig()
-	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+func init() {
+	ConfigureLogger("dev")
+}
+
+func ConfigureLogger(logType string) {
+	var cfg zap.Config
+	if logType == "prod" {
+		cfg = zap.NewProductionConfig()
+	} else {
+		cfg = zap.NewDevelopmentConfig()
+		cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	}
 	logger, err := cfg.Build()
 	if err != nil {
 		log.Fatalln("createLogger", err)
 	}
-
-	return logger.Sugar()
+	Logger = logger.Sugar()
 }
 
 func WithRequestID(ctx context.Context, id string) context.Context {
