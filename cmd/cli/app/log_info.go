@@ -19,16 +19,22 @@ import (
 	"crypto"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
 
+	"github.com/projectrekor/rekor/cmd/cli/app/state"
+
 	"github.com/google/trillian"
 	tclient "github.com/google/trillian/client"
 	tcrypto "github.com/google/trillian/crypto"
+	"github.com/google/trillian/merkle"
 	"github.com/google/trillian/merkle/rfc6962"
 
 	"github.com/projectrekor/rekor/cmd/cli/app/format"
+	"github.com/projectrekor/rekor/pkg/generated/client/tlog"
+	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -104,8 +110,41 @@ var logInfoCmd = &cobra.Command{
 		}
 
 		verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
-		if _, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, &sth); err != nil {
+		lr, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, &sth)
+		if err != nil {
 			return nil, err
+		}
+
+		oldState := state.Load()
+		if oldState != nil {
+			log.CliLogger.Infof("Found previous log state, proving consistency between %d and %d", oldState.TreeSize, lr.TreeSize)
+			params := tlog.NewGetLogProofParams()
+			firstSize := int64(oldState.TreeSize)
+			params.FirstSize = &firstSize
+			params.LastSize = int64(lr.TreeSize)
+			proof, err := rekorClient.Tlog.GetLogProof(params)
+			if err != nil {
+				return nil, err
+			}
+			hashes := [][]byte{}
+			for _, h := range proof.Payload.Hashes {
+				b, _ := hex.DecodeString(h)
+				hashes = append(hashes, b)
+			}
+			v := merkle.NewLogVerifier(rfc6962.DefaultHasher)
+			if err := v.VerifyConsistencyProof(firstSize, int64(lr.TreeSize), oldState.RootHash,
+				lr.RootHash, hashes); err != nil {
+				return nil, err
+			}
+			log.CliLogger.Infof("Consistency proof valid!")
+		} else {
+			log.CliLogger.Infof("No previous log state stored, unable to prove consistency")
+		}
+
+		if viper.GetBool("store_tree_state") {
+			if err := state.Dump(lr); err != nil {
+				log.CliLogger.Infof("Unable to store previous state: %v", err)
+			}
 		}
 		return cmdOutput, nil
 	}),

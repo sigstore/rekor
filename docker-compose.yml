@@ -13,6 +13,8 @@ services:
     command: [
       "--bind",
       "0.0.0.0",
+      "--appendonly",
+      "yes"
     ]
     ports:
       - "6379:6379"
@@ -59,6 +61,8 @@ services:
       "--redis_server.address=redis-server",
       "--redis_server.port=6379",
       "--rekor_server.address=0.0.0.0",
+      # Uncomment this for production logging
+      # "--log_type=prod",
       ]
     restart: always # keep the server running
     ports:
