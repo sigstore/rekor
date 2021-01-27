@@ -34,6 +34,7 @@ import (
 )
 
 var cfgFile string
+var storeState bool
 
 var rootCmd = &cobra.Command{
 	Use:   "rekor",
@@ -53,6 +54,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rekor.yaml)")
+	rootCmd.PersistentFlags().BoolVar(&storeState, "store_tree_state", true, "whether to store tree state in between invocations for additional verification")
 
 	rootCmd.PersistentFlags().Var(&urlFlag{url: "https://api.rekor.dev"}, "rekor_server", "Server address:port")
 	rootCmd.PersistentFlags().Var(&formatFlag{format: "default"}, "format", "Command output format")

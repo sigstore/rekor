@@ -32,6 +32,21 @@ func ConfigureLogger(logType string) {
 	Logger = logger.Sugar()
 }
 
+var CliLogger = createCliLogger()
+
+func createCliLogger() *zap.SugaredLogger {
+	cfg := zap.NewDevelopmentConfig()
+	cfg.EncoderConfig.TimeKey = ""
+	cfg.EncoderConfig.LevelKey = ""
+	cfg.DisableCaller = true
+	logger, err := cfg.Build()
+	if err != nil {
+		log.Fatalln("createLogger", err)
+	}
+
+	return logger.Sugar()
+}
+
 func WithRequestID(ctx context.Context, id string) context.Context {
 	return context.WithValue(ctx, middleware.RequestIDKey, id)
 }
