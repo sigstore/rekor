@@ -38,6 +38,9 @@ var serveCmd = &cobra.Command{
 	Long:  `Starts a http server and serves the configured api`,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		// Setup the logger to dev/prod
+		log.ConfigureLogger(viper.GetString("log_type"))
+
 		// workaround for https://github.com/projectrekor/rekor/issues/68
 		// from https://github.com/golang/glog/commit/fca8c8854093a154ff1eb580aae10276ad6b1b5f
 		_ = flag.CommandLine.Parse([]string{})
