@@ -177,3 +177,47 @@ func TestMinisign(t *testing.T) {
 	out = runCli(t, "search", "--public-key", pubPath, "--pki-format", "minisign")
 	outputContains(t, out, uuid)
 }
+
+func TestSSH(t *testing.T) {
+	td := t.TempDir()
+	// Create a keypair
+	keyPath := filepath.Join(td, "id_rsa")
+	pubPath := filepath.Join(td, "id_rsa.pub")
+
+	if err := ioutil.WriteFile(pubPath, []byte(sshPublicKey), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(keyPath, []byte(sshPrivateKey), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a random artifact and sign it.
+	artifactPath := filepath.Join(td, "artifact")
+	sigPath := filepath.Join(td, "signature.sig")
+	artifact := createArtifact(t, artifactPath)
+
+	sig := SSHSign(t, strings.NewReader(artifact))
+	if err := ioutil.WriteFile(sigPath, []byte(sig), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Now upload to the log!
+	out := runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
+		"--public-key", pubPath, "--pki-format", "ssh")
+	outputContains(t, out, "Created entry at")
+
+	// Output looks like "Created entry at $URL/UUID", so grab the UUID:
+	url := strings.Split(strings.TrimSpace(out), " ")[3]
+	splitUrl := strings.Split(url, "/")
+	uuid := splitUrl[len(splitUrl)-1]
+
+	// Wait and check it.
+	time.Sleep(3 * time.Second)
+
+	out = runCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
+		"--public-key", pubPath, "--pki-format", "ssh")
+	outputContains(t, out, "Inclusion Proof")
+
+	out = runCli(t, "search", "--public-key", pubPath, "--pki-format", "ssh")
+	outputContains(t, out, uuid)
+}

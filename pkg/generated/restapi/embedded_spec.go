@@ -530,7 +530,8 @@ func init() {
               "enum": [
                 "pgp",
                 "x509",
-                "minisign"
+                "minisign",
+                "ssh"
               ]
             },
             "url": {
@@ -1295,7 +1296,8 @@ func init() {
           "enum": [
             "pgp",
             "minisign",
-            "x509"
+            "x509",
+            "ssh"
           ]
         },
         "publicKey": {
@@ -1489,7 +1491,8 @@ func init() {
               "enum": [
                 "pgp",
                 "x509",
-                "minisign"
+                "minisign",
+                "ssh"
               ]
             },
             "url": {
@@ -1515,7 +1518,8 @@ func init() {
           "enum": [
             "pgp",
             "x509",
-            "minisign"
+            "minisign",
+            "ssh"
           ]
         },
         "url": {
@@ -1684,7 +1688,8 @@ func init() {
               "enum": [
                 "pgp",
                 "minisign",
-                "x509"
+                "x509",
+                "ssh"
               ]
             },
             "publicKey": {
