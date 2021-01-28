@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -269,4 +270,12 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 	}
 
 	return canonicalBuffer.Bytes(), nil
+}
+
+func (k PublicKey) KeyRing() (openpgp.KeyRing, error) {
+	if k.key == nil {
+		return nil, errors.New("PGP public key has not been initialized")
+	}
+
+	return k.key, nil
 }

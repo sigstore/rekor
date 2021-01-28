@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/projectrekor/rekor/pkg/generated/models"
 	"github.com/spf13/viper"
 
 	"github.com/spf13/cobra"
@@ -31,7 +32,8 @@ import (
 func TestArtifactPFlags(t *testing.T) {
 	type test struct {
 		caseDesc              string
-		rekord                string
+		typeStr               string
+		entry                 string
 		artifact              string
 		signature             string
 		publicKey             string
@@ -58,6 +60,12 @@ func TestArtifactPFlags(t *testing.T) {
 				file, err = ioutil.ReadFile("../../../tests/test_public_key.key")
 			case "/rekord":
 				file, err = ioutil.ReadFile("../../../tests/rekor.json")
+			case "/rpmEntry":
+				file, err = ioutil.ReadFile("../../../tests/rpm.json")
+			case "/rpm":
+				file, err = ioutil.ReadFile("../../../tests/test.rpm")
+			case "/rpmPublicKey":
+				file, err = ioutil.ReadFile("../../../tests/test_rpm_public_key.key")
 			case "/not_found":
 				err = errors.New("file not found")
 			}
@@ -73,33 +81,69 @@ func TestArtifactPFlags(t *testing.T) {
 	tests := []test{
 		{
 			caseDesc:              "valid rekord file",
-			rekord:                "../../../tests/rekor.json",
+			entry:                 "../../../tests/rekor.json",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
 		{
 			caseDesc:              "valid rekord URL",
-			rekord:                testServer.URL + "/rekord",
+			entry:                 testServer.URL + "/rekord",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
 		{
+			caseDesc:              "valid rekord file, wrong type",
+			typeStr:               "rpm",
+			entry:                 "../../../tests/rekor.json",
+			expectParseSuccess:    true,
+			expectValidateSuccess: false,
+		},
+		{
+			caseDesc:              "valid rpm file",
+			entry:                 "../../../tests/rpm.json",
+			typeStr:               "rpm",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "valid rpm URL",
+			entry:                 testServer.URL + "/rpmEntry",
+			typeStr:               "rpm",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "valid rpm file, wrong type",
+			typeStr:               "rekord",
+			entry:                 "../../../tests/rpm.json",
+			expectParseSuccess:    true,
+			expectValidateSuccess: false,
+		},
+		{
 			caseDesc:              "non-existant rekord file",
-			rekord:                "../../../tests/not_there.json",
+			entry:                 "../../../tests/not_there.json",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "non-existant rekord url",
-			rekord:                testServer.URL + "/not_found",
+			entry:                 testServer.URL + "/not_found",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
 		{
-			caseDesc:              "valid local artifact with required flags",
+			caseDesc:              "valid rekord - local artifact with required flags",
 			artifact:              "../../../tests/test_file.txt",
 			signature:             "../../../tests/test_file.sig",
 			publicKey:             "../../../tests/test_public_key.key",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "valid rpm - local artifact with required flags",
+			typeStr:               "rpm",
+			artifact:              "../../../tests/test.rpm",
+			publicKey:             "../../../tests/test_rpm_public_key.key",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -113,7 +157,7 @@ func TestArtifactPFlags(t *testing.T) {
 			expectValidateSuccess: false,
 		},
 		{
-			caseDesc:              "valid remote artifact with incorrect length hex SHA value",
+			caseDesc:              "valid rekord - remote artifact with incorrect length hex SHA value",
 			artifact:              testServer.URL + "/artifact",
 			sha:                   "12345abcde",
 			signature:             "../../../tests/test_file.sig",
@@ -192,11 +236,20 @@ func TestArtifactPFlags(t *testing.T) {
 			expectValidateSuccess: false,
 		},
 		{
-			caseDesc:              "valid remote artifact with required flags",
+			caseDesc:              "valid rekord - remote artifact with required flags",
 			artifact:              testServer.URL + "/artifact",
 			sha:                   "45c7b11fcbf07dec1694adecd8c5b85770a12a6c8dfdcf2580a2db0c47c31779",
 			signature:             "../../../tests/test_file.sig",
 			publicKey:             "../../../tests/test_public_key.key",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "valid rpm - remote artifact with required flags",
+			typeStr:               "rpm",
+			artifact:              testServer.URL + "/rpm",
+			sha:                   "c8b0bc59708d74f53aab0089ac587d5c348d6ead143dab9f6d9c4b48c973bfd8",
+			publicKey:             "../../../tests/test_rpm_public_key.key",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -309,8 +362,11 @@ func TestArtifactPFlags(t *testing.T) {
 
 		args := []string{}
 
-		if tc.rekord != "" {
-			args = append(args, "--rekord", tc.rekord)
+		if tc.entry != "" {
+			args = append(args, "--entry", tc.entry)
+		}
+		if tc.typeStr != "" {
+			args = append(args, "--type", tc.typeStr)
 		}
 		if tc.artifact != "" {
 			args = append(args, "--artifact", tc.artifact)
@@ -345,8 +401,15 @@ func TestArtifactPFlags(t *testing.T) {
 				continue
 			}
 			if !tc.uuidRequired && !tc.logIndexRequired {
-				if _, err := CreateRekordFromPFlags(); err != nil {
-					t.Errorf("unexpected result in '%v' building Rekord: %v", tc.caseDesc, err)
+				var createFn func() (models.ProposedEntry, error)
+				switch tc.typeStr {
+				case "", "rekord":
+					createFn = CreateRekordFromPFlags
+				case "rpm":
+					createFn = CreateRpmFromPFlags
+				}
+				if _, err := createFn(); err != nil {
+					t.Errorf("unexpected result in '%v' building entry: %v", tc.caseDesc, err)
 				}
 			}
 		}

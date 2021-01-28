@@ -38,7 +38,7 @@ func TestDuplicates(t *testing.T) {
 	outputContains(t, out, "Created entry at")
 }
 
-func TestUploadVerify(t *testing.T) {
+func TestUploadVerifyRekord(t *testing.T) {
 
 	// Create a random artifact and sign it.
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
@@ -64,6 +64,34 @@ func TestUploadVerify(t *testing.T) {
 
 	// Now we should be able to verify it.
 	out = runCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	outputContains(t, out, "Inclusion Proof:")
+}
+
+func TestUploadVerifyRpm(t *testing.T) {
+
+	// Create a random rpm and sign it.
+	rpmPath := filepath.Join("rpm")
+
+	createSignedRpm(t, rpmPath)
+
+	// Write the public key to a file
+	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
+	if err := ioutil.WriteFile(pubPath, []byte(publicKey), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify should fail initially
+	runCliErr(t, "verify", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
+
+	// It should upload successfully.
+	out := runCli(t, "upload", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
+	outputContains(t, out, "Created entry at")
+
+	// We have to wait some time for the log to get signed and included.
+	time.Sleep(3 * time.Second)
+
+	// Now we should be able to verify it.
+	out = runCli(t, "verify", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
 	outputContains(t, out, "Inclusion Proof:")
 }
 

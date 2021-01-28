@@ -5,6 +5,8 @@ go 1.14
 require (
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/cavaliercoder/badio v0.0.0-20160213150051-ce5280129e9e // indirect
+	github.com/cavaliercoder/go-rpm v0.0.0-20200122174316-8cb9fd9c31a8
 	github.com/coreos/bbolt v1.3.3 // indirect
 	github.com/coreos/etcd v3.3.18+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
@@ -17,13 +19,11 @@ require (
 	github.com/go-openapi/strfmt v0.20.0
 	github.com/go-openapi/swag v0.19.13
 	github.com/go-openapi/validate v0.20.1
-	github.com/go-swagger/go-swagger v0.25.0 // indirect
 	github.com/golang/protobuf v1.4.3
 	github.com/google/certificate-transparency-go v1.1.0 // indirect
+	github.com/google/rpmpack v0.0.0-20210107155803-d6befbf05148
 	github.com/google/trillian v1.3.10
-	github.com/gorilla/handlers v1.5.1 // indirect
 	github.com/jedisct1/go-minisign v0.0.0-20210106175330-e54e81d562c7
-	github.com/kr/pretty v0.2.1 // indirect
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mediocregopher/radix/v4 v4.0.0-beta.1
 	github.com/mitchellh/go-homedir v1.1.0
