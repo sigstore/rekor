@@ -70,7 +70,8 @@ func TestUploadVerifyRekord(t *testing.T) {
 func TestUploadVerifyRpm(t *testing.T) {
 
 	// Create a random rpm and sign it.
-	rpmPath := filepath.Join("rpm")
+	td := t.TempDir()
+	rpmPath := filepath.Join(td, "rpm")
 
 	createSignedRpm(t, rpmPath)
 
