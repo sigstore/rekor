@@ -28,17 +28,25 @@ import (
 	"github.com/google/trillian/client"
 	"github.com/google/trillian/crypto/keyspb"
 	"github.com/google/trillian/crypto/sigpb"
-	"github.com/google/trillian/merkle"
-	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/google/trillian/types"
 )
 
 type TrillianClient struct {
-	client  trillian.TrillianLogClient
-	logID   int64
-	context context.Context
-	pubkey  *keyspb.PublicKey
-	tree    *trillian.Tree
+	client   trillian.TrillianLogClient
+	logID    int64
+	context  context.Context
+	pubkey   *keyspb.PublicKey
+	verifier *client.LogVerifier
+}
+
+func NewTrillianClient(ctx context.Context) TrillianClient {
+	return TrillianClient{
+		client:   api.logClient,
+		logID:    api.logID,
+		context:  ctx,
+		pubkey:   api.pubkey,
+		verifier: api.verifier,
+	}
 }
 
 type Response struct {
@@ -94,15 +102,7 @@ func (t *TrillianClient) addLeaf(byteValue []byte) *Response {
 			getAddResult: resp,
 		}
 	}
-	verifier, err := client.NewLogVerifierFromTree(t.tree)
-	if err != nil {
-		return &Response{
-			status:       status.Code(err),
-			err:          err,
-			getAddResult: resp,
-		}
-	}
-	logClient := client.New(t.logID, t.client, verifier, root)
+	logClient := client.New(t.logID, t.client, t.verifier, root)
 	if err := logClient.WaitForInclusion(t.context, byteValue); err != nil {
 		return &Response{
 			status:       status.Code(err),
@@ -183,11 +183,9 @@ func (t *TrillianClient) getProofByHash(hashValue []byte) *Response {
 			TreeSize: int64(root.TreeSize),
 		})
 
-	v := merkle.NewLogVerifier(rfc6962.DefaultHasher)
-
 	if resp != nil {
 		for _, proof := range resp.Proof {
-			if err := v.VerifyInclusionProof(proof.LeafIndex, int64(root.TreeSize), proof.GetHashes(), root.RootHash, hashValue); err != nil {
+			if err := t.verifier.VerifyInclusionByHash(&root, hashValue, proof); err != nil {
 				return &Response{
 					status: status.Code(err),
 					err:    err,
