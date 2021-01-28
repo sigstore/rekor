@@ -21,6 +21,8 @@ func ConfigureLogger(logType string) {
 	var cfg zap.Config
 	if logType == "prod" {
 		cfg = zap.NewProductionConfig()
+		cfg.EncoderConfig.LevelKey = "severity"
+		cfg.EncoderConfig.MessageKey = "message"
 	} else {
 		cfg = zap.NewDevelopmentConfig()
 		cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
