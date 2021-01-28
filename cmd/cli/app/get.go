@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/projectrekor/rekor/cmd/cli/app/format"
 	"github.com/projectrekor/rekor/pkg/generated/client/entries"
@@ -38,7 +39,8 @@ type getCmdOutput struct {
 
 func (g *getCmdOutput) String() string {
 	s := fmt.Sprintf("Index: %d\n", g.LogIndex)
-	s += fmt.Sprintf("IntegratedTime: %d\n", g.IntegratedTime)
+	dt := time.Unix(g.IntegratedTime, 0).UTC().Format(time.RFC3339)
+	s += fmt.Sprintf("IntegratedTime: %s\n", dt)
 	s += fmt.Sprintf("Body: %s\n", g.Body)
 	return s
 }

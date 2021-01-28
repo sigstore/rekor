@@ -99,11 +99,16 @@ func TestGet(t *testing.T) {
 	out = runCli(t, "get", "--format=json", "--uuid", uuid)
 	// The output here should be in JSON with this structure:
 	g := struct {
-		Body     string
-		LogIndex int
+		Body           string
+		LogIndex       int
+		IntegratedTime int64
 	}{}
 	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Error(err)
+	}
+
+	if g.IntegratedTime == 0 {
+		t.Errorf("Expected IntegratedTime to be set. Got %s", out)
 	}
 	// Get it with the logindex as well
 	runCli(t, "get", "--format=json", "--log-index", strconv.Itoa(g.LogIndex))
