@@ -25,7 +25,8 @@ spec:
           "--trillian_log_server.port=8091",
           "--rekor_server.address=0.0.0.0",
           "--redis_server.address=10.234.175.59",
-          "--redis_server.port=6379"
+          "--redis_server.port=6379",
+          "--log_type=prod",
         ]
         resources:
           requests:

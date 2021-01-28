@@ -119,9 +119,19 @@ func setupMiddlewares(handler http.Handler) http.Handler {
 	return handler
 }
 
+// We need this type to act as an adapter between zap and the middleware request logger.
+type logAdapter struct {
+}
+
+func (l *logAdapter) Print(v ...interface{}) {
+	log.Logger.Info(v...)
+}
+
 // The middleware configuration happens before anything, this middleware also applies to serving the swagger.json document.
 // So this is a good place to plug in a panic handling middleware, logging and metrics
 func setupGlobalMiddleware(handler http.Handler) http.Handler {
+	middleware.DefaultLogger = middleware.RequestLogger(
+		&middleware.DefaultLogFormatter{Logger: &logAdapter{}})
 	returnHandler := middleware.Logger(handler)
 	returnHandler = middleware.Recoverer(returnHandler)
 	returnHandler = middleware.Heartbeat("/ping")(returnHandler)

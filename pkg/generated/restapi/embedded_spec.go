@@ -593,6 +593,32 @@ func init() {
           "additionalProperties": false
         }
       ]
+    },
+    "rpm": {
+      "description": "RPM object",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "type": "object",
+              "$ref": "pkg/types/rpm/rpm_schema.json"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
     }
   },
   "responses": {
@@ -1335,6 +1361,112 @@ func init() {
         }
       }
     },
+    "RpmV001SchemaPackage": {
+      "description": "Information about the package associated with the entry",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "hash",
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "content"
+          ]
+        }
+      ],
+      "properties": {
+        "content": {
+          "description": "Specifies the package inline within the document",
+          "type": "string",
+          "format": "byte"
+        },
+        "hash": {
+          "description": "Specifies the hash algorithm and value for the package",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value": {
+              "description": "The hash value for the package",
+              "type": "string"
+            }
+          }
+        },
+        "headers": {
+          "description": "Values of the RPM headers",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "url": {
+          "description": "Specifies the location of the package; if this is specified, a hash value must also be provided",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "RpmV001SchemaPackageHash": {
+      "description": "Specifies the hash algorithm and value for the package",
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "The hashing function used to compute the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value": {
+          "description": "The hash value for the package",
+          "type": "string"
+        }
+      }
+    },
+    "RpmV001SchemaPublicKey": {
+      "description": "The PGP public key that can verify the RPM signature",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "content"
+          ]
+        }
+      ],
+      "properties": {
+        "content": {
+          "description": "Specifies the content of the public key inline within the document",
+          "type": "string",
+          "format": "byte"
+        },
+        "url": {
+          "description": "Specifies the location of the public key",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
     "SearchIndex": {
       "type": "object",
       "properties": {
@@ -1593,6 +1725,146 @@ func init() {
       },
       "$schema": "http://json-schema.org/draft-07/schema",
       "$id": "http://rekor.dev/types/rekord/rekord_v0_0_1_schema.json"
+    },
+    "rpm": {
+      "description": "RPM object",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "$ref": "#/definitions/rpmSchema"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "rpmSchema": {
+      "description": "Schema for RPM objects",
+      "type": "object",
+      "title": "RPM Schema",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/rpmV001Schema"
+        }
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.dev/types/rpm/rpm_schema.json"
+    },
+    "rpmV001Schema": {
+      "description": "Schema for RPM entries",
+      "type": "object",
+      "title": "RPM v0.0.1 Schema",
+      "required": [
+        "publicKey",
+        "package"
+      ],
+      "properties": {
+        "extraData": {
+          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
+          "type": "object",
+          "additionalProperties": true
+        },
+        "package": {
+          "description": "Information about the package associated with the entry",
+          "type": "object",
+          "oneOf": [
+            {
+              "required": [
+                "hash",
+                "url"
+              ]
+            },
+            {
+              "required": [
+                "content"
+              ]
+            }
+          ],
+          "properties": {
+            "content": {
+              "description": "Specifies the package inline within the document",
+              "type": "string",
+              "format": "byte"
+            },
+            "hash": {
+              "description": "Specifies the hash algorithm and value for the package",
+              "type": "object",
+              "required": [
+                "algorithm",
+                "value"
+              ],
+              "properties": {
+                "algorithm": {
+                  "description": "The hashing function used to compute the hash value",
+                  "type": "string",
+                  "enum": [
+                    "sha256"
+                  ]
+                },
+                "value": {
+                  "description": "The hash value for the package",
+                  "type": "string"
+                }
+              }
+            },
+            "headers": {
+              "description": "Values of the RPM headers",
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "url": {
+              "description": "Specifies the location of the package; if this is specified, a hash value must also be provided",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "publicKey": {
+          "description": "The PGP public key that can verify the RPM signature",
+          "type": "object",
+          "oneOf": [
+            {
+              "required": [
+                "url"
+              ]
+            },
+            {
+              "required": [
+                "content"
+              ]
+            }
+          ],
+          "properties": {
+            "content": {
+              "description": "Specifies the content of the public key inline within the document",
+              "type": "string",
+              "format": "byte"
+            },
+            "url": {
+              "description": "Specifies the location of the public key",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.dev/types/rpm/rpm_v0_0_1_schema.json"
     }
   },
   "responses": {

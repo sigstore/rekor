@@ -105,12 +105,23 @@ var verifyCmd = &cobra.Command{
 				}
 				searchLogQuery.LogIndexes = []*int64{&logIndexInt}
 			} else {
-				rekordEntry, err := CreateRekordFromPFlags()
-				if err != nil {
-					return nil, err
+				var entry models.ProposedEntry
+				switch viper.GetString("type") {
+				case "rekord":
+					entry, err = CreateRekordFromPFlags()
+					if err != nil {
+						return nil, err
+					}
+				case "rpm":
+					entry, err = CreateRpmFromPFlags()
+					if err != nil {
+						return nil, err
+					}
+				default:
+					return nil, errors.New("invalid type specified")
 				}
 
-				entries := []models.ProposedEntry{rekordEntry}
+				entries := []models.ProposedEntry{entry}
 				searchLogQuery.SetEntries(entries)
 			}
 			searchParams.SetEntry(&searchLogQuery)

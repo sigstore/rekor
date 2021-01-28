@@ -16,12 +16,14 @@ limitations under the License.
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/go-openapi/swag"
 	"github.com/projectrekor/rekor/cmd/cli/app/format"
 	"github.com/projectrekor/rekor/pkg/generated/client/entries"
+	"github.com/projectrekor/rekor/pkg/generated/models"
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -62,12 +64,23 @@ var uploadCmd = &cobra.Command{
 		}
 		params := entries.NewCreateLogEntryParams()
 
-		rekordEntry, err := CreateRekordFromPFlags()
-		if err != nil {
-			return nil, err
+		var entry models.ProposedEntry
+		switch viper.GetString("type") {
+		case "rekord":
+			entry, err = CreateRekordFromPFlags()
+			if err != nil {
+				return nil, err
+			}
+		case "rpm":
+			entry, err = CreateRpmFromPFlags()
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, errors.New("unknown type specified")
 		}
 
-		params.SetProposedEntry(rekordEntry)
+		params.SetProposedEntry(entry)
 
 		resp, err := rekorClient.Entries.CreateLogEntry(params)
 		if err != nil {

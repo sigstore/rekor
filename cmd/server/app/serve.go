@@ -25,6 +25,8 @@ import (
 	"github.com/projectrekor/rekor/pkg/log"
 	"github.com/projectrekor/rekor/pkg/types/rekord"
 	rekord_v001 "github.com/projectrekor/rekor/pkg/types/rekord/v0.0.1"
+	"github.com/projectrekor/rekor/pkg/types/rpm"
+	rpm_v001 "github.com/projectrekor/rekor/pkg/types/rpm/v0.0.1"
 
 	"github.com/projectrekor/rekor/pkg/generated/restapi"
 	"github.com/spf13/cobra"
@@ -37,6 +39,9 @@ var serveCmd = &cobra.Command{
 	Short: "start http server with configured api",
 	Long:  `Starts a http server and serves the configured api`,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		// Setup the logger to dev/prod
+		log.ConfigureLogger(viper.GetString("log_type"))
 
 		// workaround for https://github.com/projectrekor/rekor/issues/68
 		// from https://github.com/golang/glog/commit/fca8c8854093a154ff1eb580aae10276ad6b1b5f
@@ -56,6 +61,7 @@ var serveCmd = &cobra.Command{
 		// these trigger loading of package and therefore init() methods to run
 		pluggableTypeMap := map[string]string{
 			rekord.KIND: rekord_v001.APIVERSION,
+			rpm.KIND:    rpm_v001.APIVERSION,
 		}
 
 		for k, v := range pluggableTypeMap {

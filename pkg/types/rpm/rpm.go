@@ -1,5 +1,5 @@
 /*
-Copyright © 2020 Bob Callaway <bcallawa@redhat.com>
+Copyright © 2021 Bob Callaway <bcallawa@redhat.com>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package rekord
+package rpm
 
 import (
 	"errors"
@@ -27,12 +27,12 @@ import (
 )
 
 const (
-	KIND = "rekord"
+	KIND = "rpm"
 )
 
-type BaseRekordType struct{}
+type BaseRPMType struct{}
 
-func (rt BaseRekordType) Kind() string {
+func (rt BaseRPMType) Kind() string {
 	return KIND
 }
 
@@ -41,26 +41,26 @@ func init() {
 }
 
 func New() types.TypeImpl {
-	return &BaseRekordType{}
+	return &BaseRPMType{}
 }
 
 var SemVerToFacFnMap = &util.VersionFactoryMap{VersionFactories: make(map[string]util.VersionFactory)}
 
-func (rt BaseRekordType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
-	rekord, ok := pe.(*models.Rekord)
+func (rt BaseRPMType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
+	rpm, ok := pe.(*models.Rpm)
 	if !ok {
-		return nil, errors.New("cannot unmarshal non-Rekord types")
+		return nil, errors.New("cannot unmarshal non-RPM types")
 	}
 
-	if genFn, found := SemVerToFacFnMap.Get(swag.StringValue(rekord.APIVersion)); found {
+	if genFn, found := SemVerToFacFnMap.Get(swag.StringValue(rpm.APIVersion)); found {
 		entry := genFn()
 		if entry == nil {
-			return nil, fmt.Errorf("failure generating Rekord object for version '%v'", rekord.APIVersion)
+			return nil, fmt.Errorf("failure generating RPM object for version '%v'", rpm.APIVersion)
 		}
-		if err := entry.Unmarshal(rekord); err != nil {
+		if err := entry.Unmarshal(rpm); err != nil {
 			return nil, err
 		}
 		return entry, nil
 	}
-	return nil, fmt.Errorf("RekordType implementation for version '%v' not found", swag.StringValue(rekord.APIVersion))
+	return nil, fmt.Errorf("RPMType implementation for version '%v' not found", swag.StringValue(rpm.APIVersion))
 }
