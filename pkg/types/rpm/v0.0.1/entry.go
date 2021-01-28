@@ -334,6 +334,15 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	canonicalEntry.Package.Headers["Version"] = v.rpmObj.Version()
 	canonicalEntry.Package.Headers["Release"] = v.rpmObj.Release()
 	canonicalEntry.Package.Headers["Architecture"] = v.rpmObj.Architecture()
+	if md5sum := v.rpmObj.GetBytes(0, 1004); md5sum != nil {
+		canonicalEntry.Package.Headers["RPMSIGTAG_MD5"] = hex.EncodeToString(md5sum)
+	}
+	if sha1sum := v.rpmObj.GetBytes(0, 1012); sha1sum != nil {
+		canonicalEntry.Package.Headers["RPMSIGTAG_SHA1"] = hex.EncodeToString(sha1sum)
+	}
+	if sha256sum := v.rpmObj.GetBytes(0, 1016); sha256sum != nil {
+		canonicalEntry.Package.Headers["RPMSIGTAG_SHA256"] = hex.EncodeToString(sha256sum)
+	}
 
 	// ExtraData is copied through unfiltered
 	canonicalEntry.ExtraData = v.RPMModel.ExtraData
