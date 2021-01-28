@@ -93,9 +93,6 @@ func TestUploadVerifyRpm(t *testing.T) {
 	out := runCli(t, "upload", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
 
-	// We have to wait some time for the log to get signed and included.
-	time.Sleep(3 * time.Second)
-
 	// Now we should be able to verify it.
 	out = runCli(t, "verify", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
 	outputContains(t, out, "Inclusion Proof:")
