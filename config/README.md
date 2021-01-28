@@ -39,4 +39,8 @@ ko apply -f config/
 
 Install cert-manager with helm, using https://cert-manager.io/docs/installation/kubernetes/#installing-with-helm
 
-Install nginx-ingress with: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.43.0/deploy/static/provider/cloud/deploy.yaml
+Install nginx-ingress with: kubectl apply -f nginx.yaml
+
+This was taken from https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.43.0/deploy/static/provider/cloud/deploy.yaml
+
+Local modification was to scale replicas to 3.
