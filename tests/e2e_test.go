@@ -9,8 +9,16 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 )
+
+func getUUIDFromUploadOutput(t *testing.T, out string) string {
+	t.Helper()
+	// Output looks like "Created entry at index X, available at $URL/UUID", so grab the UUID:
+	urlTokens := strings.Split(strings.TrimSpace(out), " ")
+	url := urlTokens[len(urlTokens)-1]
+	splitUrl := strings.Split(url, "/")
+	return splitUrl[len(splitUrl)-1]
+}
 
 func TestDuplicates(t *testing.T) {
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
@@ -59,9 +67,6 @@ func TestUploadVerifyRekord(t *testing.T) {
 	out := runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
 
-	// We have to wait some time for the log to get signed and included.
-	time.Sleep(3 * time.Second)
-
 	// Now we should be able to verify it.
 	out = runCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Inclusion Proof:")
@@ -87,9 +92,6 @@ func TestUploadVerifyRpm(t *testing.T) {
 	// It should upload successfully.
 	out := runCli(t, "upload", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
-
-	// We have to wait some time for the log to get signed and included.
-	time.Sleep(3 * time.Second)
 
 	// Now we should be able to verify it.
 	out = runCli(t, "verify", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
@@ -117,13 +119,7 @@ func TestGet(t *testing.T) {
 	out := runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
 
-	// Wait a second for the entry to be added.
-	time.Sleep(1 * time.Second)
-
-	// Output looks like "Created entry at $URL/UUID", so grab the UUID:
-	url := strings.Split(strings.TrimSpace(out), " ")[3]
-	splitUrl := strings.Split(url, "/")
-	uuid := splitUrl[len(splitUrl)-1]
+	uuid := getUUIDFromUploadOutput(t, out)
 
 	out = runCli(t, "get", "--format=json", "--uuid", uuid)
 	// The output here should be in JSON with this structure:
@@ -172,13 +168,7 @@ func TestMinisign(t *testing.T) {
 		"--public-key", pubPath, "--pki-format", "minisign")
 	outputContains(t, out, "Created entry at")
 
-	// Output looks like "Created entry at $URL/UUID", so grab the UUID:
-	url := strings.Split(strings.TrimSpace(out), " ")[3]
-	splitUrl := strings.Split(url, "/")
-	uuid := splitUrl[len(splitUrl)-1]
-
-	// Wait and check it.
-	time.Sleep(3 * time.Second)
+	uuid := getUUIDFromUploadOutput(t, out)
 
 	out = runCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", pubPath, "--pki-format", "minisign")

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/google/trillian"
+	"github.com/google/trillian/client"
 	"github.com/google/trillian/crypto/keyspb"
 	radix "github.com/mediocregopher/radix/v4"
 	"github.com/projectrekor/rekor/pkg/log"
@@ -45,6 +46,7 @@ type API struct {
 	logClient trillian.TrillianLogClient
 	logID     int64
 	pubkey    *keyspb.PublicKey
+	verifier  *client.LogVerifier
 }
 
 func NewAPI() (*API, error) {
@@ -74,11 +76,16 @@ func NewAPI() (*API, error) {
 	if err != nil {
 		return nil, err
 	}
+	verifier, err := client.NewLogVerifierFromTree(t)
+	if err != nil {
+		return nil, err
+	}
 
 	return &API{
 		logClient: logClient,
 		logID:     tLogID,
 		pubkey:    t.PublicKey,
+		verifier:  verifier,
 	}, nil
 }
 
@@ -99,14 +106,5 @@ func ConfigureAPI() {
 		if err != nil {
 			log.Logger.Panic(err)
 		}
-	}
-}
-
-func NewTrillianClient(ctx context.Context) TrillianClient {
-	return TrillianClient{
-		client:  api.logClient,
-		logID:   api.logID,
-		context: ctx,
-		pubkey:  api.pubkey,
 	}
 }

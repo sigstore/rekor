@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/go-openapi/swag"
 	"github.com/projectrekor/rekor/cmd/cli/app/format"
 	"github.com/projectrekor/rekor/pkg/generated/client/entries"
 	"github.com/projectrekor/rekor/pkg/generated/models"
@@ -30,11 +31,12 @@ import (
 
 type uploadCmdOutput struct {
 	Location string
+	Index    int64
 }
 
 func (u *uploadCmdOutput) String() string {
 	if u.Location != "" {
-		return fmt.Sprintf("Created entry at: %v%v\n", viper.GetString("rekor_server"), u.Location)
+		return fmt.Sprintf("Created entry at index %d, available at: %v%v\n", u.Index, viper.GetString("rekor_server"), u.Location)
 	}
 	return "Entry already exists.\n"
 }
@@ -90,8 +92,14 @@ var uploadCmd = &cobra.Command{
 			}
 		}
 
+		var newIndex int64
+		for _, entry := range resp.Payload {
+			newIndex = swag.Int64Value(entry.LogIndex)
+		}
+
 		return &uploadCmdOutput{
 			Location: string(resp.Location),
+			Index:    newIndex,
 		}, nil
 	}),
 }
