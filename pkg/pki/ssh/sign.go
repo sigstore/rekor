@@ -56,20 +56,20 @@ func sign(s ssh.AlgorithmSigner, m io.Reader) (*ssh.Signature, error) {
 	return sig, nil
 }
 
-func Sign(sshPrivateKey string, data io.Reader) (string, error) {
+func Sign(sshPrivateKey string, data io.Reader) ([]byte, error) {
 	s, err := ssh.ParsePrivateKey([]byte(sshPrivateKey))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	as, ok := s.(ssh.AlgorithmSigner)
 	if !ok {
-		return "", err
+		return nil, err
 	}
 
 	sig, err := sign(as, data)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	armored := Armor(sig, s.PublicKey())

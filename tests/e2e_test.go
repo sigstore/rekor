@@ -206,13 +206,7 @@ func TestSSH(t *testing.T) {
 		"--public-key", pubPath, "--pki-format", "ssh")
 	outputContains(t, out, "Created entry at")
 
-	// Output looks like "Created entry at $URL/UUID", so grab the UUID:
-	url := strings.Split(strings.TrimSpace(out), " ")[3]
-	splitUrl := strings.Split(url, "/")
-	uuid := splitUrl[len(splitUrl)-1]
-
-	// Wait and check it.
-	time.Sleep(3 * time.Second)
+	uuid := getUUIDFromUploadOutput(t, out)
 
 	out = runCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", pubPath, "--pki-format", "ssh")

@@ -17,7 +17,6 @@ limitations under the License.
 package ssh
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -36,14 +35,11 @@ func NewSignature(r io.Reader) (*Signature, error) {
 	if err != nil {
 		return nil, err
 	}
-	sig, pk, err := Decode(string(b))
+	sig, err := Decode(b)
 	if err != nil {
 		return nil, err
 	}
-	return &Signature{
-		signature: sig,
-		pk:        pk,
-	}, nil
+	return sig, nil
 }
 
 // CanonicalValue implements the pki.Signature interface
@@ -55,11 +51,6 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 func (s Signature) Verify(r io.Reader, k interface{}) error {
 	if s.signature == nil {
 		return fmt.Errorf("ssh signature has not been initialized")
-	}
-
-	message, err := ioutil.ReadAll(r)
-	if err != nil {
-		return err
 	}
 
 	key, ok := k.(*PublicKey)
@@ -75,7 +66,7 @@ func (s Signature) Verify(r io.Reader, k interface{}) error {
 	if err != nil {
 		return err
 	}
-	return Verify(bytes.NewReader(message), string(cs), ck)
+	return Verify(r, cs, ck)
 }
 
 // PublicKey contains an ssh PublicKey
@@ -101,7 +92,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 // CanonicalValue implements the pki.PublicKey interface
 func (k PublicKey) CanonicalValue() ([]byte, error) {
 	if k.key == nil {
-		return nil, fmt.Errorf("x509 public key has not been initialized")
+		return nil, fmt.Errorf("ssh public key has not been initialized")
 	}
 	return ssh.MarshalAuthorizedKey(k.key), nil
 }
