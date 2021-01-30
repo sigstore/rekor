@@ -2,7 +2,9 @@ package ssh
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/sha512"
+	"hash"
 	"io"
 
 	"golang.org/x/crypto/ssh"
@@ -28,12 +30,16 @@ type WrappedSig struct {
 }
 
 const (
-	magicHeader   = "SSHSIG"
-	hashAlgorithm = "sha512"
+	magicHeader          = "SSHSIG"
+	defaultHashAlgorithm = "sha512"
 )
 
-func sign(s ssh.AlgorithmSigner, m io.Reader) (*ssh.Signature, error) {
+var supportedHashAlgorithms = map[string]func() hash.Hash{
+	"sha256": sha256.New,
+	"sha512": sha512.New,
+}
 
+func sign(s ssh.AlgorithmSigner, m io.Reader) (*ssh.Signature, error) {
 	hf := sha512.New()
 	if _, err := io.Copy(hf, m); err != nil {
 		return nil, err
@@ -42,14 +48,21 @@ func sign(s ssh.AlgorithmSigner, m io.Reader) (*ssh.Signature, error) {
 
 	sp := MessageWrapper{
 		Namespace:     "file",
-		HashAlgorithm: hashAlgorithm,
+		HashAlgorithm: defaultHashAlgorithm,
 		Hash:          string(mh),
 	}
 
 	dataMessageWrapper := ssh.Marshal(sp)
 	dataMessageWrapper = append([]byte(magicHeader), dataMessageWrapper...)
 
-	sig, err := s.SignWithAlgorithm(rand.Reader, dataMessageWrapper, ssh.SigAlgoRSASHA2512)
+	// ssh-rsa is not supported for RSA keys:
+	// https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.sshsig#L71
+	// We can use the default value of "" for other key types though.
+	algo := ""
+	if s.PublicKey().Type() == ssh.KeyAlgoRSA {
+		algo = ssh.SigAlgoRSASHA2512
+	}
+	sig, err := s.SignWithAlgorithm(rand.Reader, dataMessageWrapper, algo)
 	if err != nil {
 		return nil, err
 	}

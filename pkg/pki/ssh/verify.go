@@ -1,7 +1,6 @@
 package ssh
 
 import (
-	"crypto/sha512"
 	"io"
 
 	"golang.org/x/crypto/ssh"
@@ -19,7 +18,7 @@ func Verify(message io.Reader, armoredSignature []byte, publicKey []byte) error 
 	}
 
 	// Hash the message so we can verify it against the signature.
-	h := sha512.New()
+	h := supportedHashAlgorithms[decodedSignature.hashAlg]()
 	if _, err := io.Copy(h, message); err != nil {
 		return err
 	}
@@ -27,7 +26,7 @@ func Verify(message io.Reader, armoredSignature []byte, publicKey []byte) error 
 
 	toVerify := MessageWrapper{
 		Namespace:     "file",
-		HashAlgorithm: "sha512",
+		HashAlgorithm: decodedSignature.hashAlg,
 		Hash:          string(hm),
 	}
 	signedMessage := ssh.Marshal(toVerify)

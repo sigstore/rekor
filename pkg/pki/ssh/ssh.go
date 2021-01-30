@@ -27,6 +27,7 @@ import (
 type Signature struct {
 	signature *ssh.Signature
 	pk        ssh.PublicKey
+	hashAlg   string
 }
 
 // NewSignature creates and Validates an ssh signature object

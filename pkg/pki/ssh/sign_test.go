@@ -94,113 +94,186 @@ Wry/EKQvgvOUjbAAAAFG90aGVyLXRlc3RAcmVrb3IuZGV2AQIDBAUG
 `
 	otherSshPublicKey = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDD9YJJYL1MS8JA7A75PrwS81rc5Ii/VjT6xPy5K/KM/IQ7T6nS3wKD/PLru87GJClTmM3owi2NcCMyZ4KbwYoy3qCT5wOhoB6/9l+O7NIvtFrITGmaEGV6HZfcYouSRcX0AEU1yGVOpIs5mISMOg2lsW/XopPWwToKpbwOPFdCRCT0krrmEsf4HF5Yw0IQlVoKZrhfThomYLvMkCLnIZ55PRIpWoyiFq8X3Q7peJgUJAe7Bc8/Id+hyqC52ZeejPP7oPprEkpkzBCw2ndYq6Y6OXNafEEIIHWXaM3pFqDxonbbvuIwVdHCNMv/yNoSxbgqTKwN/QaNXb+KpuvSrlvRqsNhu/sKsYFH64fTAbP9miDXHmJkA05uFlQukOstUmJ0QxzbsdcFvs8yw0PLsEZhEHXJzR3TLzenyZSq86VZICvGfVacBk7TikCBOtyWuESHhlc6SfZKfzZ67cOlDyKeSiVjgh+eEh9s4h56ahQ2rW05Sq6GjD0YtEzog2J4csE= other-test@rekor.dev
 `
+
+	// Generated with ssh-keygen -C test@rekor.dev -t ed25519 -f id_ed25519
+	ed25519PrivateKey = `-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACBB45zRHxPPFtabwS3Vd6Lb9vMe+tIHZj2qN5VQ+bgLfQAAAJgyRa3cMkWt
+3AAAAAtzc2gtZWQyNTUxOQAAACBB45zRHxPPFtabwS3Vd6Lb9vMe+tIHZj2qN5VQ+bgLfQ
+AAAED7y4N/DsVnRQiBZNxEWdsJ9RmbranvtQ3X9jnb6gFed0HjnNEfE88W1pvBLdV3otv2
+8x760gdmPao3lVD5uAt9AAAADnRlc3RAcmVrb3IuZGV2AQIDBAUGBw==
+-----END OPENSSH PRIVATE KEY-----
+`
+	ed25519PublicKey = `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEHjnNEfE88W1pvBLdV3otv28x760gdmPao3lVD5uAt9 test@rekor.dev
+`
 )
 
 func TestFromOpenSSH(t *testing.T) {
-	// Test that a signature from the cli can validate here.
-	td := t.TempDir()
+	for _, tt := range []struct {
+		name string
+		pub  string
+		priv string
+	}{
+		{
+			name: "rsa",
+			pub:  sshPublicKey,
+			priv: sshPrivateKey,
+		},
+		{
+			name: "ed25519",
+			pub:  ed25519PublicKey,
+			priv: ed25519PrivateKey,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
 
-	data := []byte("hello, ssh world")
-	dataPath := write(t, []byte(data), td, "data")
-	privPath := write(t, []byte(sshPrivateKey), td, "id_rsa")
-	write(t, []byte(sshPublicKey), td, "id_rsa.pub")
+			// Test that a signature from the cli can validate here.
+			td := t.TempDir()
 
-	sigPath := dataPath + ".sig"
-	run(t, nil, "ssh-keygen", "-Y", "sign", "-n", "file", "-f", privPath, dataPath)
+			data := []byte("hello, ssh world")
+			dataPath := write(t, []byte(data), td, "data")
 
-	sigBytes, err := ioutil.ReadFile(sigPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := Verify(bytes.NewReader(data), sigBytes, []byte(sshPublicKey)); err != nil {
-		t.Error(err)
-	}
+			privPath := write(t, []byte(tt.priv), td, "id")
+			write(t, []byte(tt.pub), td, "id.pub")
 
-	// It should not verify if we check against the other public key
-	if err := Verify(bytes.NewReader(data), sigBytes, []byte(otherSshPublicKey)); err == nil {
-		t.Error("expected error with incorrect key")
-	}
+			sigPath := dataPath + ".sig"
+			run(t, nil, "ssh-keygen", "-Y", "sign", "-n", "file", "-f", privPath, dataPath)
 
-	// It should not verify if the data is tampered
-	if err := Verify(strings.NewReader("bad data"), sigBytes, []byte(sshPublicKey)); err == nil {
-		t.Error("expected error with incorrect data")
+			sigBytes, err := ioutil.ReadFile(sigPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := Verify(bytes.NewReader(data), sigBytes, []byte(tt.pub)); err != nil {
+				t.Error(err)
+			}
+
+			// It should not verify if we check against another public key
+			if err := Verify(bytes.NewReader(data), sigBytes, []byte(otherSshPublicKey)); err == nil {
+				t.Error("expected error with incorrect key")
+			}
+
+			// It should not verify if the data is tampered
+			if err := Verify(strings.NewReader("bad data"), sigBytes, []byte(sshPublicKey)); err == nil {
+				t.Error("expected error with incorrect data")
+			}
+		})
 	}
 }
 
 func TestToOpenSSH(t *testing.T) {
-	// Test that a signature from here can validate in the CLI.
-	td := t.TempDir()
+	for _, tt := range []struct {
+		name string
+		pub  string
+		priv string
+	}{
+		{
+			name: "rsa",
+			pub:  sshPublicKey,
+			priv: sshPrivateKey,
+		},
+		{
+			name: "ed25519",
+			pub:  ed25519PublicKey,
+			priv: ed25519PrivateKey,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
+			// Test that a signature from here can validate in the CLI.
+			td := t.TempDir()
 
-	data := []byte("hello, ssh world")
-	write(t, []byte(data), td, "data")
-	write(t, []byte(sshPrivateKey), td, "id_rsa")
+			data := []byte("hello, ssh world")
+			write(t, []byte(data), td, "data")
 
-	armored, err := Sign(sshPrivateKey, bytes.NewReader(data))
-	if err != nil {
-		t.Fatal(err)
+			armored, err := Sign(tt.priv, bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			sigPath := write(t, []byte(armored), td, "oursig")
+
+			// Create an allowed_signers file with two keys to check against.
+			allowedSigner := "test@rekor.dev " + tt.pub + "\n"
+			allowedSigner += "othertest@rekor.dev " + otherSshPublicKey + "\n"
+			allowedSigners := write(t, []byte(allowedSigner), td, "allowed_signer")
+
+			// We use the correct principal here so it should work.
+			run(t, data, "ssh-keygen", "-Y", "verify", "-f", allowedSigners,
+				"-I", "test@rekor.dev", "-n", "file", "-s", sigPath)
+
+			// Just to be sure, check against the other public key as well.
+			runErr(t, data, "ssh-keygen", "-Y", "verify", "-f", allowedSigners,
+				"-I", "othertest@rekor.dev", "-n", "file", "-s", sigPath)
+
+			// It should error if we run it against other data
+			data = []byte("other data!")
+			runErr(t, data, "ssh-keygen", "-Y", "check-novalidate", "-n", "file", "-s", sigPath)
+		})
 	}
-
-	sigPath := write(t, []byte(armored), td, "oursig")
-
-	// Create an allowed_signers file with two keys to check against.
-	allowedSigner := "test@rekor.dev " + sshPublicKey + "\n"
-	allowedSigner += "othertest@rekor.dev " + sshPrivateKey + "\n"
-	allowedSigners := write(t, []byte(allowedSigner), td, "allowed_signer")
-
-	// We use the correct principal here so it should work.
-	run(t, data, "ssh-keygen", "-Y", "verify", "-f", allowedSigners,
-		"-I", "test@rekor.dev", "-n", "file", "-s", sigPath)
-
-	// Just to be sure, check against the other public key as well.
-	runErr(t, data, "ssh-keygen", "-Y", "verify", "-f", allowedSigners,
-		"-I", "othertest@rekor.dev", "-n", "file", "-s", sigPath)
-
-	// It should error if we run it against other data
-	data = []byte("other data!")
-	runErr(t, data, "ssh-keygen", "-Y", "check-novalidate", "-n", "file", "-s", sigPath)
 }
 
 func TestRoundTrip(t *testing.T) {
 	data := []byte("my good data to be signed!")
 
-	// Create two signatures from two private keys.
-	sig, err := Sign(sshPrivateKey, bytes.NewReader(data))
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	// Create one extra signature for all the tests.
 	otherSig, err := Sign(otherSshPrivateKey, bytes.NewReader(data))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Check the signature against that data and public key
-	if err := Verify(bytes.NewReader(data), sig, []byte(sshPublicKey)); err != nil {
-		t.Error(err)
-	}
+	for _, tt := range []struct {
+		name string
+		pub  string
+		priv string
+	}{
+		{
+			name: "rsa",
+			pub:  sshPublicKey,
+			priv: sshPrivateKey,
+		},
+		{
+			name: "ed25519",
+			pub:  ed25519PublicKey,
+			priv: ed25519PrivateKey,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
+			sig, err := Sign(tt.priv, bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	// Now check it against invalid data.
-	if err := Verify(strings.NewReader("invalid data!"), sig, []byte(sshPublicKey)); err == nil {
-		t.Error("expected error!")
-	}
+			// Check the signature against that data and public key
+			if err := Verify(bytes.NewReader(data), sig, []byte(tt.pub)); err != nil {
+				t.Error(err)
+			}
 
-	// Now check it against the wrong key.
-	if err := Verify(bytes.NewReader(data), sig, []byte(otherSshPublicKey)); err == nil {
-		t.Error("expected error!")
-	}
+			// Now check it against invalid data.
+			if err := Verify(strings.NewReader("invalid data!"), sig, []byte(tt.pub)); err == nil {
+				t.Error("expected error!")
+			}
 
-	// Now check it against an invalid signature data.
-	if err := Verify(bytes.NewReader(data), []byte("invalid signature!"), []byte(sshPublicKey)); err == nil {
-		t.Error("expected error!")
-	}
+			// Now check it against the wrong key.
+			if err := Verify(bytes.NewReader(data), sig, []byte(otherSshPublicKey)); err == nil {
+				t.Error("expected error!")
+			}
 
-	// Once more, use the wrong signature and check it against the original (wrong public key)
-	if err := Verify(bytes.NewReader(data), otherSig, []byte(sshPublicKey)); err == nil {
-		t.Error("expected error!")
-	}
-	// It should work against the correct public key.
-	if err := Verify(bytes.NewReader(data), otherSig, []byte(otherSshPublicKey)); err != nil {
-		t.Error(err)
+			// Now check it against an invalid signature data.
+			if err := Verify(bytes.NewReader(data), []byte("invalid signature!"), []byte(tt.pub)); err == nil {
+				t.Error("expected error!")
+			}
+
+			// Once more, use the wrong signature and check it against the original (wrong public key)
+			if err := Verify(bytes.NewReader(data), otherSig, []byte(tt.pub)); err == nil {
+				t.Error("expected error!")
+			}
+			// It should work against the correct public key.
+			if err := Verify(bytes.NewReader(data), otherSig, []byte(otherSshPublicKey)); err != nil {
+				t.Error(err)
+			}
+		})
 	}
 
 }

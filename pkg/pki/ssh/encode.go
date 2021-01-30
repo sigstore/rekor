@@ -18,7 +18,7 @@ func Armor(s *ssh.Signature, p ssh.PublicKey) []byte {
 		Version:       1,
 		PublicKey:     string(p.Marshal()),
 		Namespace:     namespace,
-		HashAlgorithm: hashAlgorithm,
+		HashAlgorithm: defaultHashAlgorithm,
 		Signature:     string(ssh.Marshal(s)),
 	}
 	copy(sig.MagicHeader[:], []byte(magicHeader))
@@ -55,7 +55,9 @@ func Decode(b []byte) (*Signature, error) {
 	if sig.Namespace != "file" {
 		return nil, fmt.Errorf("invalid signature namespace: %s", sig.Namespace)
 	}
-	// TODO: Also check the HashAlgorithm type here.
+	if _, ok := supportedHashAlgorithms[sig.HashAlgorithm]; !ok {
+		return nil, fmt.Errorf("unsupported hash algorithm: %s", sig.HashAlgorithm)
+	}
 
 	// Now we can unpack the Signature and PublicKey blocks
 	sshSig := ssh.Signature{}
@@ -72,5 +74,6 @@ func Decode(b []byte) (*Signature, error) {
 	return &Signature{
 		signature: &sshSig,
 		pk:        pk,
+		hashAlg:   sig.HashAlgorithm,
 	}, nil
 }
