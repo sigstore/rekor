@@ -84,7 +84,14 @@ func initConfig() {
 	viper.SetEnvPrefix("rekor")
 	viper.AutomaticEnv()
 
-	if err := viper.ReadInConfig(); err == nil {
+	if err := viper.ReadInConfig(); err != nil {
+		switch err.(type) {
+		case viper.ConfigFileNotFoundError:
+		default:
+			fmt.Println(fmt.Errorf("Error parsing config file %v: %w", viper.ConfigFileUsed(), err))
+			os.Exit(1)
+		}
+	} else if viper.GetString("format") == "default" {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
 }
@@ -155,6 +162,6 @@ func (f *formatFlag) Set(s string) error {
 	return fmt.Errorf("invalid flag value: %s, valid values are [default, json]", s)
 }
 
-func (u *formatFlag) Type() string {
+func (f *formatFlag) Type() string {
 	return "format"
 }

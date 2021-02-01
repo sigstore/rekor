@@ -55,7 +55,8 @@ var logInfoCmd = &cobra.Command{
 	Short: "Rekor loginfo command",
 	Long:  `Prints info about the transparency log`,
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
-		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
+		serverURL := viper.GetString("rekor_server")
+		rekorClient, err := GetRekorClient(serverURL)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +116,7 @@ var logInfoCmd = &cobra.Command{
 			return nil, err
 		}
 
-		oldState := state.Load()
+		oldState := state.Load(serverURL)
 		if oldState != nil {
 			log.CliLogger.Infof("Found previous log state, proving consistency between %d and %d", oldState.TreeSize, lr.TreeSize)
 			params := tlog.NewGetLogProofParams()
@@ -142,7 +143,7 @@ var logInfoCmd = &cobra.Command{
 		}
 
 		if viper.GetBool("store_tree_state") {
-			if err := state.Dump(lr); err != nil {
+			if err := state.Dump(serverURL, lr); err != nil {
 				log.CliLogger.Infof("Unable to store previous state: %v", err)
 			}
 		}
