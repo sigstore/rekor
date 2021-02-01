@@ -112,17 +112,17 @@ func TestFromOpenSSH(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Verify(bytes.NewReader(data), string(sigBytes), []byte(sshPublicKey)); err != nil {
+	if err := Verify(bytes.NewReader(data), sigBytes, []byte(sshPublicKey)); err != nil {
 		t.Error(err)
 	}
 
 	// It should not verify if we check against the other public key
-	if err := Verify(bytes.NewReader(data), string(sigBytes), []byte(otherSshPublicKey)); err == nil {
+	if err := Verify(bytes.NewReader(data), sigBytes, []byte(otherSshPublicKey)); err == nil {
 		t.Error("expected error with incorrect key")
 	}
 
 	// It should not verify if the data is tampered
-	if err := Verify(strings.NewReader("bad data"), string(sigBytes), []byte(sshPublicKey)); err == nil {
+	if err := Verify(strings.NewReader("bad data"), sigBytes, []byte(sshPublicKey)); err == nil {
 		t.Error("expected error with incorrect data")
 	}
 }
@@ -190,7 +190,7 @@ func TestRoundTrip(t *testing.T) {
 	}
 
 	// Now check it against an invalid signature data.
-	if err := Verify(bytes.NewReader(data), "invalid signature!", []byte(sshPublicKey)); err == nil {
+	if err := Verify(bytes.NewReader(data), []byte("invalid signature!"), []byte(sshPublicKey)); err == nil {
 		t.Error("expected error!")
 	}
 

@@ -122,7 +122,7 @@ type SearchIndexPublicKey struct {
 
 	// format
 	// Required: true
-	// Enum: [pgp x509 minisign]
+	// Enum: [pgp x509 minisign ssh]
 	Format *string `json:"format"`
 
 	// url
@@ -152,7 +152,7 @@ var searchIndexPublicKeyTypeFormatPropEnum []interface{}
 
 func init() {
 	var res []string
-	if err := json.Unmarshal([]byte(`["pgp","x509","minisign"]`), &res); err != nil {
+	if err := json.Unmarshal([]byte(`["pgp","x509","minisign","ssh"]`), &res); err != nil {
 		panic(err)
 	}
 	for _, v := range res {
@@ -170,6 +170,9 @@ const (
 
 	// SearchIndexPublicKeyFormatMinisign captures enum value "minisign"
 	SearchIndexPublicKeyFormatMinisign string = "minisign"
+
+	// SearchIndexPublicKeyFormatSSH captures enum value "ssh"
+	SearchIndexPublicKeyFormatSSH string = "ssh"
 )
 
 // prop value enum

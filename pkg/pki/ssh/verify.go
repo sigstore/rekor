@@ -7,8 +7,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func Verify(message io.Reader, armoredSignature string, publicKey []byte) error {
-	decodedSignature, _, err := Decode(armoredSignature)
+func Verify(message io.Reader, armoredSignature []byte, publicKey []byte) error {
+	decodedSignature, err := Decode(armoredSignature)
 	if err != nil {
 		return err
 	}
@@ -32,5 +32,5 @@ func Verify(message io.Reader, armoredSignature string, publicKey []byte) error 
 	}
 	signedMessage := ssh.Marshal(toVerify)
 	signedMessage = append([]byte(magicHeader), signedMessage...)
-	return desiredPk.Verify(signedMessage, decodedSignature)
+	return desiredPk.Verify(signedMessage, decodedSignature.signature)
 }

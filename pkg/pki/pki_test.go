@@ -29,6 +29,7 @@ func TestMain(m *testing.M) {
 
 func TestFactoryNewKey(t *testing.T) {
 	type TestCase struct {
+		name          string
 		format        string
 		keyFile       string
 		sigFile       string
@@ -37,22 +38,46 @@ func TestFactoryNewKey(t *testing.T) {
 
 	testCases := []TestCase{
 		{
+			name:          "valid pgp",
 			format:        "pgp",
 			keyFile:       "pgp/testdata/valid_armored_public.pgp",
 			sigFile:       "pgp/testdata/hello_world.txt.asc.sig",
 			expectSuccess: true,
 		},
 		{
+			name:          "valid minisign",
 			format:        "minisign",
 			keyFile:       "minisign/testdata/minisign.pub",
 			sigFile:       "minisign/testdata/hello_world.txt.minisig",
 			expectSuccess: true,
 		},
 		{
+			name:          "valid x509",
 			format:        "x509",
 			keyFile:       "x509/testdata/ec.pub",
 			sigFile:       "x509/testdata/hello_world.txt.sig",
 			expectSuccess: true,
+		},
+		{
+			name:          "valid ssh",
+			format:        "ssh",
+			keyFile:       "ssh/testdata/id_rsa.pub",
+			sigFile:       "ssh/testdata/hello_world.txt.sig",
+			expectSuccess: true,
+		},
+		{
+			name:          "invalid ssh signature",
+			format:        "ssh",
+			keyFile:       "ssh/testdata/id_rsa.pub",
+			sigFile:       "ssh/testdata/hello_world.txt",
+			expectSuccess: false,
+		},
+		{
+			name:          "invalid ssh key",
+			format:        "ssh",
+			keyFile:       "ssh/testdata/hello_world.txt",
+			sigFile:       "ssh/testdata/hello_world.txt.sig",
+			expectSuccess: false,
 		},
 		{
 			format:        "bogus",
@@ -61,14 +86,24 @@ func TestFactoryNewKey(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		factory := NewArtifactFactory(tc.format)
-		keyFile, _ := os.Open(tc.keyFile)
-		if _, err := factory.NewPublicKey(keyFile); (err == nil) != tc.expectSuccess {
-			t.Errorf("unexpected error generating public key for '%v': %v", tc.format, err)
-		}
-		sigFile, _ := os.Open(tc.sigFile)
-		if _, err := factory.NewSignature(sigFile); (err == nil) != tc.expectSuccess {
-			t.Errorf("unexpected error generating signature for '%v': %v", tc.format, err)
-		}
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			factory := NewArtifactFactory(tc.format)
+			keyFile, _ := os.Open(tc.keyFile)
+			_, newKeyErr := factory.NewPublicKey(keyFile)
+
+			sigFile, _ := os.Open(tc.sigFile)
+			_, newSigErr := factory.NewSignature(sigFile)
+
+			if tc.expectSuccess {
+				if newKeyErr != nil || newSigErr != nil {
+					t.Errorf("unexpected error generating public key %v or signature %v", newKeyErr, newSigErr)
+				}
+			} else { // expect a failure{
+				if newKeyErr == nil && newSigErr == nil {
+					t.Error("expected error generating public key and signature. got none")
+				}
+			}
+		})
 	}
 }

@@ -279,6 +279,8 @@ func CreateRekordFromPFlags() (models.ProposedEntry, error) {
 			re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatMinisign
 		case "x509":
 			re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatX509
+		case "ssh":
+			re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatSSH
 		}
 		signature := viper.GetString("signature")
 		sigURL, err := url.Parse(signature)
@@ -391,12 +393,13 @@ func (f *pkiFormatFlag) Set(s string) error {
 		"pgp":      {},
 		"minisign": {},
 		"x509":     {},
+		"ssh":      {},
 	}
 	if _, ok := set[s]; ok {
 		f.value = s
 		return nil
 	}
-	return fmt.Errorf("value specified is invalid: [%s] supported values are: [pgp, minisign, x509]", s)
+	return fmt.Errorf("value specified is invalid: [%s] supported values are: [pgp, minisign, x509, ssh]", s)
 }
 
 type shaFlag struct {

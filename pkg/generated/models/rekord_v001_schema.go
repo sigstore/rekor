@@ -316,7 +316,7 @@ type RekordV001SchemaSignature struct {
 	Content strfmt.Base64 `json:"content,omitempty"`
 
 	// Specifies the format of the signature
-	// Enum: [pgp minisign x509]
+	// Enum: [pgp minisign x509 ssh]
 	Format string `json:"format,omitempty"`
 
 	// public key
@@ -353,7 +353,7 @@ var rekordV001SchemaSignatureTypeFormatPropEnum []interface{}
 
 func init() {
 	var res []string
-	if err := json.Unmarshal([]byte(`["pgp","minisign","x509"]`), &res); err != nil {
+	if err := json.Unmarshal([]byte(`["pgp","minisign","x509","ssh"]`), &res); err != nil {
 		panic(err)
 	}
 	for _, v := range res {
@@ -371,6 +371,9 @@ const (
 
 	// RekordV001SchemaSignatureFormatX509 captures enum value "x509"
 	RekordV001SchemaSignatureFormatX509 string = "x509"
+
+	// RekordV001SchemaSignatureFormatSSH captures enum value "ssh"
+	RekordV001SchemaSignatureFormatSSH string = "ssh"
 )
 
 // prop value enum
