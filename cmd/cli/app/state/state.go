@@ -26,14 +26,22 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
-func Dump(lr *types.LogRootV1) error {
+type persistedState map[string]*types.LogRootV1
+
+func Dump(url string, lr *types.LogRootV1) error {
 	rekorDir, err := getRekorDir()
 	if err != nil {
 		return err
 	}
 	statePath := filepath.Join(rekorDir, "state.json")
 
-	b, err := json.Marshal(lr)
+	state := loadStateFile()
+	if state == nil {
+		state = make(persistedState)
+	}
+	state[url] = lr
+
+	b, err := json.Marshal(&state)
 	if err != nil {
 		return err
 	}
@@ -43,7 +51,7 @@ func Dump(lr *types.LogRootV1) error {
 	return nil
 }
 
-func Load() *types.LogRootV1 {
+func loadStateFile() persistedState {
 	rekorDir, err := getRekorDir()
 	if err != nil {
 		return nil
@@ -53,11 +61,18 @@ func Load() *types.LogRootV1 {
 	if err != nil {
 		return nil
 	}
-	result := &types.LogRootV1{}
-	if err := json.Unmarshal(b, result); err != nil {
+	result := persistedState{}
+	if err := json.Unmarshal(b, &result); err != nil {
 		return nil
 	}
 	return result
+}
+
+func Load(url string) *types.LogRootV1 {
+	if state := loadStateFile(); state != nil {
+		return state[url]
+	}
+	return nil
 }
 
 func getRekorDir() (string, error) {

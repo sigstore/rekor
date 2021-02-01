@@ -16,6 +16,7 @@ limitations under the License.
 package app
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/x509"
 	"encoding/base64"
@@ -55,7 +56,8 @@ var logInfoCmd = &cobra.Command{
 	Short: "Rekor loginfo command",
 	Long:  `Prints info about the transparency log`,
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
-		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
+		serverURL := viper.GetString("rekor_server")
+		rekorClient, err := GetRekorClient(serverURL)
 		if err != nil {
 			return nil, err
 		}
@@ -115,34 +117,44 @@ var logInfoCmd = &cobra.Command{
 			return nil, err
 		}
 
-		oldState := state.Load()
+		oldState := state.Load(serverURL)
 		if oldState != nil {
-			log.CliLogger.Infof("Found previous log state, proving consistency between %d and %d", oldState.TreeSize, lr.TreeSize)
-			params := tlog.NewGetLogProofParams()
-			firstSize := int64(oldState.TreeSize)
-			params.FirstSize = &firstSize
-			params.LastSize = int64(lr.TreeSize)
-			proof, err := rekorClient.Tlog.GetLogProof(params)
-			if err != nil {
-				return nil, err
+			persistedSize := oldState.TreeSize
+			if persistedSize < lr.TreeSize {
+				log.CliLogger.Infof("Found previous log state, proving consistency between %d and %d", oldState.TreeSize, lr.TreeSize)
+				params := tlog.NewGetLogProofParams()
+				firstSize := int64(persistedSize)
+				params.FirstSize = &firstSize
+				params.LastSize = int64(lr.TreeSize)
+				proof, err := rekorClient.Tlog.GetLogProof(params)
+				if err != nil {
+					return nil, err
+				}
+				hashes := [][]byte{}
+				for _, h := range proof.Payload.Hashes {
+					b, _ := hex.DecodeString(h)
+					hashes = append(hashes, b)
+				}
+				v := merkle.NewLogVerifier(rfc6962.DefaultHasher)
+				if err := v.VerifyConsistencyProof(firstSize, int64(lr.TreeSize), oldState.RootHash,
+					lr.RootHash, hashes); err != nil {
+					return nil, err
+				}
+				log.CliLogger.Infof("Consistency proof valid!")
+			} else if persistedSize == lr.TreeSize {
+				if !bytes.Equal(oldState.RootHash, lr.RootHash) {
+					return nil, errors.New("Root hash returned from server does not match previously persisted state")
+				}
+				log.CliLogger.Infof("Persisted log state matches the current state of the log")
+			} else if persistedSize > lr.TreeSize {
+				return nil, fmt.Errorf("Current size of tree reported from server %d is less than previously persisted state %d", lr.TreeSize, persistedSize)
 			}
-			hashes := [][]byte{}
-			for _, h := range proof.Payload.Hashes {
-				b, _ := hex.DecodeString(h)
-				hashes = append(hashes, b)
-			}
-			v := merkle.NewLogVerifier(rfc6962.DefaultHasher)
-			if err := v.VerifyConsistencyProof(firstSize, int64(lr.TreeSize), oldState.RootHash,
-				lr.RootHash, hashes); err != nil {
-				return nil, err
-			}
-			log.CliLogger.Infof("Consistency proof valid!")
 		} else {
 			log.CliLogger.Infof("No previous log state stored, unable to prove consistency")
 		}
 
 		if viper.GetBool("store_tree_state") {
-			if err := state.Dump(lr); err != nil {
+			if err := state.Dump(serverURL, lr); err != nil {
 				log.CliLogger.Infof("Unable to store previous state: %v", err)
 			}
 		}
