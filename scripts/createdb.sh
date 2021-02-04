@@ -19,4 +19,4 @@ MYSQL_SCRIPT
 
 echo -e "Loading table data.."
 
-mysql -u $USER -p$PASS -D test < ./storage.sql
+mysql -u $USER -p$PASS -D $DB < ./storage.sql
