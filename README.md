@@ -13,7 +13,7 @@ For details on CLI usage, [visit the following link](https://rekor.dev/get_start
 
 If you're interesting in integration with rekor, we have an [OpenAPI swagger editor](https://rekor.dev/swagger/)
 
-A public instance of rekor can be found at [api.rekor.dev](https://rekor.dev/api/v1/log/)
+A public instance of rekor can be found at [api.rekor.dev](https://api.rekor.dev/api/v1/log/)
 
 Rekor allows customized manifests (which term them as types), [type customization is outlined here](https://github.com/projectrekor/rekor/tree/main/pkg/types).
 
