@@ -6,7 +6,7 @@ Rekor supports pluggable types (aka different schemas) for entries stored in the
 
 ### Currently supported types
 
-- Rekord (default type) [schema](rekord/rekord_schema.md)
+- Rekord (default type) [schema](rekord/rekord_schema.json)
   - Versions: 0.0.1 
 
 
