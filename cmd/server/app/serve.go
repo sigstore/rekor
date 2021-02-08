@@ -18,6 +18,7 @@ package app
 
 import (
 	"flag"
+	"net/http"
 
 	"github.com/go-openapi/loads"
 	"github.com/projectrekor/rekor/pkg/api"
@@ -29,6 +30,7 @@ import (
 	rpm_v001 "github.com/projectrekor/rekor/pkg/types/rpm/v0.0.1"
 
 	"github.com/projectrekor/rekor/pkg/generated/restapi"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -75,6 +77,12 @@ var serveCmd = &cobra.Command{
 
 		api.ConfigureAPI()
 		server.ConfigureAPI()
+
+		http.Handle("/metrics", promhttp.Handler())
+		go func() {
+			_ = http.ListenAndServe(":2112", nil)
+		}()
+
 		if err := server.Serve(); err != nil {
 			log.Logger.Fatal(err)
 		}

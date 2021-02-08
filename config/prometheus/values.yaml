@@ -1,0 +1,17 @@
+
+server:
+  sidecarContainers:
+    sidecar:
+      image: gcr.io/stackdriver-prometheus/stackdriver-prometheus-sidecar:0.8.2
+      imagePullPolicy: Always
+      args:
+      - "--stackdriver.project-id=project-rekor"
+      - "--prometheus.wal-directory=/data/wal"
+      - "--stackdriver.kubernetes.location=us-central1"
+      - "--stackdriver.kubernetes.cluster-name=rekor-dev"
+      ports:
+      - name: sidecar
+        containerPort: 9091
+      volumeMounts:
+      - name: storage-volume
+        mountPath: /data
