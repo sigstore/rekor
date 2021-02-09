@@ -108,6 +108,9 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 		}
 	}
 
+	// We made it this far, that means the entry was successfully added.
+	metricNewEntries.Inc()
+
 	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
 	uuid := hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
 
