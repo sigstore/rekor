@@ -10,4 +10,9 @@ var (
 		Name: "rekor_new_entries",
 		Help: "The total number of new log entries",
 	})
+
+	MetricLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "rekor_api_latency",
+		Help: "Api Latency on calls",
+	}, []string{"path", "code"})
 )

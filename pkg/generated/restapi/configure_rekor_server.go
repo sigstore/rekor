@@ -20,6 +20,8 @@ package restapi
 import (
 	"crypto/tls"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-openapi/errors"
@@ -28,6 +30,7 @@ import (
 	"github.com/rs/cors"
 	"github.com/spf13/viper"
 
+	"github.com/projectrekor/rekor/pkg/api"
 	pkgapi "github.com/projectrekor/rekor/pkg/api"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/entries"
@@ -139,6 +142,8 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 	handleCORS := cors.Default().Handler
 	returnHandler = handleCORS(returnHandler)
 
+	returnHandler = wrapMetrics(returnHandler)
+
 	return middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		r = r.WithContext(log.WithRequestID(ctx, middleware.GetReqID(ctx)))
@@ -148,6 +153,23 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 
 		returnHandler.ServeHTTP(w, r)
 	}))
+}
+
+func wrapMetrics(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+		defer func() {
+			// This logs latency broken down by URL path and response code
+			api.MetricLatency.With(map[string]string{
+				"path": r.URL.Path,
+				"code": strconv.Itoa(ww.Status()),
+			}).Observe(float64(time.Since(start)))
+		}()
+
+		handler.ServeHTTP(ww, r)
+
+	})
 }
 
 func cacheForever(handler http.Handler) http.Handler {
