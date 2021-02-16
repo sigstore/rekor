@@ -28,18 +28,19 @@ import (
 	"github.com/projectrekor/rekor/pkg/generated/client"
 	"github.com/projectrekor/rekor/pkg/util"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
-var storeState bool
-
 var rootCmd = &cobra.Command{
 	Use:   "rekor",
 	Short: "Rekor CLI",
 	Long:  `Rekor command line interface tool`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		return initConfig(cmd)
+	},
 }
 
 //Execute runs the base CLI
@@ -51,10 +52,8 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
-
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rekor.yaml)")
-	rootCmd.PersistentFlags().BoolVar(&storeState, "store_tree_state", true, "whether to store tree state in between invocations for additional verification")
+	rootCmd.PersistentFlags().String("config", "", "config file (default is $HOME/.rekor.yaml)")
+	rootCmd.PersistentFlags().Bool("store_tree_state", true, "whether to store tree state in between invocations for additional verification")
 
 	rootCmd.PersistentFlags().Var(&urlFlag{url: "https://api.rekor.dev"}, "rekor_server", "Server address:port")
 	rootCmd.PersistentFlags().Var(&formatFlag{format: "default"}, "format", "Command output format")
@@ -66,34 +65,51 @@ func init() {
 	}
 }
 
-func initConfig() {
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
+func initConfig(cmd *cobra.Command) error {
+
+	viper.SetEnvPrefix("rekor")
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	viper.AutomaticEnv()
+
+	// manually set all values provided from viper through pflag validation logic
+	var changedFlags []string
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		if !f.Changed && viper.IsSet(f.Name) {
+			changedFlags = append(changedFlags, f.Name)
+		}
+	})
+
+	for _, flag := range changedFlags {
+		val := viper.Get(flag)
+		if err := cmd.Flags().Set(flag, fmt.Sprintf("%v", val)); err != nil {
+			return err
+		}
+	}
+
+	if viper.GetString("config") != "" {
+		viper.SetConfigFile(viper.GetString("config"))
 	} else {
 		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			return err
 		}
 
 		viper.AddConfigPath(home)
 		viper.SetConfigName(".rekor")
 	}
 
-	viper.SetEnvPrefix("rekor")
-	viper.AutomaticEnv()
-
 	if err := viper.ReadInConfig(); err != nil {
 		switch err.(type) {
 		case viper.ConfigFileNotFoundError:
 		default:
-			fmt.Println(fmt.Errorf("Error parsing config file %v: %w", viper.ConfigFileUsed(), err))
-			os.Exit(1)
+			return err
 		}
 	} else if viper.GetString("format") == "default" {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+
+	return nil
 }
 
 func GetRekorClient(rekorServerURL string) (*client.Rekor, error) {
