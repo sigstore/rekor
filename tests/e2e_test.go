@@ -5,6 +5,7 @@ package e2e
 import (
 	"encoding/json"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -18,6 +19,13 @@ func getUUIDFromUploadOutput(t *testing.T, out string) string {
 	url := urlTokens[len(urlTokens)-1]
 	splitUrl := strings.Split(url, "/")
 	return splitUrl[len(splitUrl)-1]
+}
+
+func TestEnvVariableValidation(t *testing.T) {
+	os.Setenv("REKOR_FORMAT", "bogus")
+	defer os.Unsetenv("REKOR_FORMAT")
+
+	runCliErr(t, "loginfo")
 }
 
 func TestDuplicates(t *testing.T) {
