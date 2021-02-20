@@ -7,8 +7,6 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cavaliercoder/badio v0.0.0-20160213150051-ce5280129e9e // indirect
 	github.com/cavaliercoder/go-rpm v0.0.0-20200122174316-8cb9fd9c31a8
-	github.com/coreos/bbolt v1.3.3 // indirect
-	github.com/coreos/etcd v3.3.18+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-chi/chi v4.1.2+incompatible
@@ -22,7 +20,7 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/google/certificate-transparency-go v1.1.0 // indirect
 	github.com/google/rpmpack v0.0.0-20210107155803-d6befbf05148
-	github.com/google/trillian v1.3.10
+	github.com/google/trillian v1.3.13
 	github.com/jedisct1/go-minisign v0.0.0-20210106175330-e54e81d562c7
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mediocregopher/radix/v4 v4.0.0-beta.1
@@ -39,20 +37,18 @@ require (
 	github.com/spf13/viper v1.7.1
 	github.com/tidwall/pretty v1.0.2 // indirect
 	github.com/urfave/negroni v1.0.0
-	go.etcd.io/etcd v3.3.25+incompatible // indirect
 	go.uber.org/goleak v1.1.10
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/mod v0.4.1 // indirect
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
-	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58 // indirect
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78 // indirect
 	golang.org/x/tools v0.0.0-20210115202250-e0d201561e39 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987
 	google.golang.org/grpc v1.35.0
 	gopkg.in/ini.v1 v1.62.0 // indirect
+	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 )
 
 replace google.golang.org/grpc => google.golang.org/grpc v1.29.1
