@@ -36,7 +36,7 @@ jobs:
         run: make -C $GITHUB_WORKSPACE all
       # Lint it
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v2.4.0
         with:
           version: v1.32
       # Test It
@@ -44,7 +44,7 @@ jobs:
         run: go test -v ./...
       # Gosec It
       - name: Run Gosec Security Scanner
-        uses: securego/gosec@v2.5.0
+        uses: securego/gosec@v2.6.1
         env:
           GOROOT: ""
         with:
