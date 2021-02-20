@@ -149,7 +149,7 @@ func init() {
 	}
 }
 
-func Sign(b []byte) ([]byte, error) {
+func SignPGP(b []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	if err := openpgp.DetachSign(&buf, keys[0], bytes.NewReader(b), nil); err != nil {
 		return nil, err
@@ -157,13 +157,13 @@ func Sign(b []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// createdSignedArtifact gets the test dir setup correctly with some random artifacts and keys.
-func createdSignedArtifact(t *testing.T, artifactPath, sigPath string) {
+// createdPGPSignedArtifact gets the test dir setup correctly with some random artifacts and keys.
+func createdPGPSignedArtifact(t *testing.T, artifactPath, sigPath string) {
 	t.Helper()
 	artifact := createArtifact(t, artifactPath)
 
 	// Sign it with our key and write that to a file
-	signature, err := Sign([]byte(artifact))
+	signature, err := SignPGP([]byte(artifact))
 	if err != nil {
 		t.Fatal(err)
 	}

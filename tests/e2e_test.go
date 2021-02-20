@@ -32,7 +32,7 @@ func TestDuplicates(t *testing.T) {
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
 	sigPath := filepath.Join(t.TempDir(), "signature.asc")
 
-	createdSignedArtifact(t, artifactPath, sigPath)
+	createdPGPSignedArtifact(t, artifactPath, sigPath)
 
 	// Write the public key to a file
 	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
@@ -49,7 +49,7 @@ func TestDuplicates(t *testing.T) {
 	outputContains(t, out, "Entry already exists")
 
 	// Now do a new one, we should get a new entry
-	createdSignedArtifact(t, artifactPath, sigPath)
+	createdPGPSignedArtifact(t, artifactPath, sigPath)
 	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
 }
@@ -60,7 +60,7 @@ func TestUploadVerifyRekord(t *testing.T) {
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
 	sigPath := filepath.Join(t.TempDir(), "signature.asc")
 
-	createdSignedArtifact(t, artifactPath, sigPath)
+	createdPGPSignedArtifact(t, artifactPath, sigPath)
 
 	// Write the public key to a file
 	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
@@ -117,7 +117,7 @@ func TestGet(t *testing.T) {
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
 	sigPath := filepath.Join(t.TempDir(), "signature.asc")
 
-	createdSignedArtifact(t, artifactPath, sigPath)
+	createdPGPSignedArtifact(t, artifactPath, sigPath)
 
 	// Write the public key to a file
 	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
@@ -222,4 +222,43 @@ func TestSSH(t *testing.T) {
 
 	out = runCli(t, "search", "--public-key", pubPath, "--pki-format", "ssh")
 	outputContains(t, out, uuid)
+}
+
+func TestX509(t *testing.T) {
+	td := t.TempDir()
+	artifactPath := filepath.Join(td, "artifact")
+	sigPath := filepath.Join(td, "signature")
+	certPath := filepath.Join(td, "cert.pem")
+	pubKeyPath := filepath.Join(td, "key.pem")
+
+	createdX509SignedArtifact(t, artifactPath, sigPath)
+
+	// Write the cert and public keys to disk as well
+	if err := ioutil.WriteFile(certPath, []byte(rsaCert), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(pubKeyPath, []byte(pubKey), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
+		"--public-key", certPath, "--pki-format", "x509")
+	outputContains(t, out, "Created entry at")
+
+	// Now upload with the public key rather than the cert. They should be deduped.
+	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
+		"--public-key", pubKeyPath, "--pki-format", "x509")
+	outputContains(t, out, "Entry already exists")
+
+	// Now let's go the other order to be sure. New artifact, key first then cert.
+	createdX509SignedArtifact(t, artifactPath, sigPath)
+
+	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
+		"--public-key", pubKeyPath, "--pki-format", "x509")
+	outputContains(t, out, "Created entry at")
+	// This should already exist
+	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
+		"--public-key", certPath, "--pki-format", "x509")
+	outputContains(t, out, "Entry already exists")
+
 }
