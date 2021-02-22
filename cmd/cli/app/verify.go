@@ -24,7 +24,7 @@ import (
 	"strconv"
 
 	"github.com/google/trillian/merkle/logverifier"
-	"github.com/google/trillian/merkle/rfc6962/hasher"
+	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/projectrekor/rekor/cmd/cli/app/format"
 	"github.com/projectrekor/rekor/pkg/generated/client/entries"
 	"github.com/projectrekor/rekor/pkg/generated/models"
@@ -49,7 +49,7 @@ func (v *verifyCmdOutput) String() string {
 	s += fmt.Sprintf("Current Tree Size: %v\n\n", v.Size)
 
 	s += "Inclusion Proof:\n"
-	hasher := hasher.DefaultHasher
+	hasher := rfc6962.DefaultHasher
 	inner := bits.Len64(uint64(v.Index ^ (v.Size - 1)))
 	var left, right []byte
 	result, _ := hex.DecodeString(v.EntryUUID)
@@ -167,7 +167,7 @@ var verifyCmd = &cobra.Command{
 		rootHash, _ := hex.DecodeString(*resp.Payload.RootHash)
 		leafHash, _ := hex.DecodeString(params.EntryUUID)
 
-		v := logverifier.New(hasher.DefaultHasher)
+		v := logverifier.New(rfc6962.DefaultHasher)
 		if err := v.VerifyInclusionProof(*resp.Payload.LogIndex, *resp.Payload.TreeSize,
 			hashes, rootHash, leafHash); err != nil {
 			return nil, err

@@ -31,7 +31,7 @@ import (
 	tclient "github.com/google/trillian/client"
 	tcrypto "github.com/google/trillian/crypto"
 	"github.com/google/trillian/merkle/logverifier"
-	"github.com/google/trillian/merkle/rfc6962/hasher"
+	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
 
 	"github.com/projectrekor/rekor/cmd/cli/app/format"
 	"github.com/projectrekor/rekor/pkg/generated/client/tlog"
@@ -111,7 +111,7 @@ var logInfoCmd = &cobra.Command{
 			return nil, err
 		}
 
-		verifier := tclient.NewLogVerifier(hasher.DefaultHasher, pub, crypto.SHA256)
+		verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
 		lr, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, &sth)
 		if err != nil {
 			return nil, err
@@ -135,7 +135,7 @@ var logInfoCmd = &cobra.Command{
 					b, _ := hex.DecodeString(h)
 					hashes = append(hashes, b)
 				}
-				v := logverifier.New(hasher.DefaultHasher)
+				v := logverifier.New(rfc6962.DefaultHasher)
 				if err := v.VerifyConsistencyProof(firstSize, int64(lr.TreeSize), oldState.RootHash,
 					lr.RootHash, hashes); err != nil {
 					return nil, err

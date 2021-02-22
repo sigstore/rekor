@@ -32,7 +32,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	tclient "github.com/google/trillian/client"
 	tcrypto "github.com/google/trillian/crypto"
-	"github.com/google/trillian/merkle/rfc6962/hasher"
+	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/tlog"
 )
 
@@ -50,7 +50,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
 	}
-	verifier := tclient.NewLogVerifier(hasher.DefaultHasher, pub, crypto.SHA256)
+	verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
 	root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, result.SignedLogRoot)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
@@ -93,7 +93,7 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
 	}
-	verifier := tclient.NewLogVerifier(hasher.DefaultHasher, pub, crypto.SHA256)
+	verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
 	root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, result.SignedLogRoot)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
