@@ -104,12 +104,21 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 		return nil, fmt.Errorf("invalid public key: %s", string(rawPub))
 	}
 
-	key, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, err
+	switch block.Type {
+	case "PUBLIC KEY":
+		key, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		return &PublicKey{key: key}, nil
+	case "CERTIFICATE":
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		return &PublicKey{key: cert.PublicKey}, nil
 	}
-
-	return &PublicKey{key: key}, nil
+	return nil, fmt.Errorf("invalid public key: %s", string(rawPub))
 }
 
 // CanonicalValue implements the pki.PublicKey interface
