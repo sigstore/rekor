@@ -28,6 +28,7 @@ import (
 	"github.com/google/trillian/client"
 	"github.com/google/trillian/crypto/keyspb"
 	"github.com/google/trillian/crypto/sigpb"
+	_ "github.com/google/trillian/merkle/rfc6962" //register hasher
 	"github.com/google/trillian/types"
 )
 

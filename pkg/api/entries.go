@@ -42,7 +42,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	tclient "github.com/google/trillian/client"
 	tcrypto "github.com/google/trillian/crypto"
-	"github.com/google/trillian/merkle/rfc6962"
+	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/entries"
 )
 

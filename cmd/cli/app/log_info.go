@@ -30,8 +30,8 @@ import (
 	"github.com/google/trillian"
 	tclient "github.com/google/trillian/client"
 	tcrypto "github.com/google/trillian/crypto"
-	"github.com/google/trillian/merkle"
-	"github.com/google/trillian/merkle/rfc6962"
+	"github.com/google/trillian/merkle/logverifier"
+	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
 
 	"github.com/projectrekor/rekor/cmd/cli/app/format"
 	"github.com/projectrekor/rekor/pkg/generated/client/tlog"
@@ -135,7 +135,7 @@ var logInfoCmd = &cobra.Command{
 					b, _ := hex.DecodeString(h)
 					hashes = append(hashes, b)
 				}
-				v := merkle.NewLogVerifier(rfc6962.DefaultHasher)
+				v := logverifier.New(rfc6962.DefaultHasher)
 				if err := v.VerifyConsistencyProof(firstSize, int64(lr.TreeSize), oldState.RootHash,
 					lr.RootHash, hashes); err != nil {
 					return nil, err

@@ -23,8 +23,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/google/trillian/merkle"
-	"github.com/google/trillian/merkle/rfc6962"
+	"github.com/google/trillian/merkle/logverifier"
+	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/projectrekor/rekor/cmd/cli/app/format"
 	"github.com/projectrekor/rekor/pkg/generated/client/entries"
 	"github.com/projectrekor/rekor/pkg/generated/models"
@@ -167,7 +167,7 @@ var verifyCmd = &cobra.Command{
 		rootHash, _ := hex.DecodeString(*resp.Payload.RootHash)
 		leafHash, _ := hex.DecodeString(params.EntryUUID)
 
-		v := merkle.NewLogVerifier(rfc6962.DefaultHasher)
+		v := logverifier.New(rfc6962.DefaultHasher)
 		if err := v.VerifyInclusionProof(*resp.Payload.LogIndex, *resp.Payload.TreeSize,
 			hashes, rootHash, leafHash); err != nil {
 			return nil, err
