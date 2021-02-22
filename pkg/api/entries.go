@@ -42,7 +42,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	tclient "github.com/google/trillian/client"
 	tcrypto "github.com/google/trillian/crypto"
-	"github.com/google/trillian/merkle/rfc6962"
+	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/entries"
 )
 
@@ -189,7 +189,7 @@ func GetLogEntryProofHandler(params entries.GetLogEntryProofParams) middleware.R
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
 	}
-	verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
+	verifier := tclient.NewLogVerifier(hasher.DefaultHasher, pub, crypto.SHA256)
 	root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, result.SignedLogRoot)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
@@ -251,7 +251,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 					code = http.StatusInternalServerError
 					return err
 				}
-				hasher := rfc6962.DefaultHasher
+				hasher := hasher.DefaultHasher
 				leafHash := hasher.HashLeaf(leaf)
 				searchHashes[i+len(params.Entry.EntryUUIDs)] = leafHash
 				return nil
