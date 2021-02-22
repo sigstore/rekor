@@ -52,7 +52,7 @@ func createSignedRpm(t *testing.T, artifactPath string) {
 		t.Error(err)
 	}
 
-	rpm.SetPGPSigner(Sign)
+	rpm.SetPGPSigner(SignPGP)
 
 	data, err := randomData(100)
 	if err != nil {
