@@ -58,6 +58,8 @@ func init() {
 	rootCmd.PersistentFlags().Var(&urlFlag{url: "https://api.rekor.dev"}, "rekor_server", "Server address:port")
 	rootCmd.PersistentFlags().Var(&formatFlag{format: "default"}, "format", "Command output format")
 
+	rootCmd.PersistentFlags().String("api-key", "", "API key for api.rekor.dev")
+
 	// these are bound here and not in PreRun so that all child commands can use them
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		fmt.Println(err)
@@ -123,6 +125,9 @@ func GetRekorClient(rekorServerURL string) (*client.Rekor, error) {
 	rt.Consumers["application/x-pem-file"] = runtime.TextConsumer()
 	rt.Producers["application/yaml"] = util.YamlProducer()
 
+	if viper.GetString("api-key") != "" {
+		rt.DefaultAuthentication = httptransport.APIKeyAuth("apiKey", "query", viper.GetString("api-key"))
+	}
 	return client.New(rt, strfmt.Default), nil
 }
 
