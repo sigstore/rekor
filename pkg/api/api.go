@@ -25,7 +25,7 @@ import (
 	"github.com/google/trillian/client"
 	"github.com/google/trillian/crypto/keyspb"
 	radix "github.com/mediocregopher/radix/v4"
-	"github.com/projectrekor/rekor/pkg/log"
+	"github.com/SigStore/rekor/pkg/log"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 )

@@ -30,7 +30,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 
-	"github.com/projectrekor/rekor/pkg/generated/models"
+	"github.com/SigStore/rekor/pkg/generated/models"
 )
 
 // NewSearchLogQueryParams creates a new SearchLogQueryParams object

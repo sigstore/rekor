@@ -10,7 +10,7 @@
              }
         },
         "data": {
-            "url": "https://raw.githubusercontent.com/projectrekor/rekor/main/tests/test_file.txt",
+            "url": "https://raw.githubusercontent.com/SigStore/rekor/main/tests/test_file.txt",
             "hash": {
                 "algorithm": "sha256",
                 "value": "45c7b11fcbf07dec1694adecd8c5b85770a12a6c8dfdcf2580a2db0c47c31779"

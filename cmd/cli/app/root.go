@@ -25,8 +25,8 @@ import (
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
-	"github.com/projectrekor/rekor/pkg/generated/client"
-	"github.com/projectrekor/rekor/pkg/util"
+	"github.com/SigStore/rekor/pkg/generated/client"
+	"github.com/SigStore/rekor/pkg/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 

@@ -22,11 +22,11 @@ import (
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/mitchellh/mapstructure"
-	"github.com/projectrekor/rekor/pkg/generated/models"
-	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/entries"
-	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/index"
-	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/tlog"
-	"github.com/projectrekor/rekor/pkg/log"
+	"github.com/SigStore/rekor/pkg/generated/models"
+	"github.com/SigStore/rekor/pkg/generated/restapi/operations/entries"
+	"github.com/SigStore/rekor/pkg/generated/restapi/operations/index"
+	"github.com/SigStore/rekor/pkg/generated/restapi/operations/tlog"
+	"github.com/SigStore/rekor/pkg/log"
 )
 
 const (

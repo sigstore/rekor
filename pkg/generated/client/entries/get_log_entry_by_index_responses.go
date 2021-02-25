@@ -29,7 +29,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 
-	"github.com/projectrekor/rekor/pkg/generated/models"
+	"github.com/SigStore/rekor/pkg/generated/models"
 )
 
 // GetLogEntryByIndexReader is a Reader for the GetLogEntryByIndex structure.

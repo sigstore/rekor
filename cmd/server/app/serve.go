@@ -21,15 +21,15 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/loads"
-	"github.com/projectrekor/rekor/pkg/api"
-	"github.com/projectrekor/rekor/pkg/generated/restapi/operations"
-	"github.com/projectrekor/rekor/pkg/log"
-	"github.com/projectrekor/rekor/pkg/types/rekord"
-	rekord_v001 "github.com/projectrekor/rekor/pkg/types/rekord/v0.0.1"
-	"github.com/projectrekor/rekor/pkg/types/rpm"
-	rpm_v001 "github.com/projectrekor/rekor/pkg/types/rpm/v0.0.1"
+	"github.com/SigStore/rekor/pkg/api"
+	"github.com/SigStore/rekor/pkg/generated/restapi/operations"
+	"github.com/SigStore/rekor/pkg/log"
+	"github.com/SigStore/rekor/pkg/types/rekord"
+	rekord_v001 "github.com/SigStore/rekor/pkg/types/rekord/v0.0.1"
+	"github.com/SigStore/rekor/pkg/types/rpm"
+	rpm_v001 "github.com/SigStore/rekor/pkg/types/rpm/v0.0.1"
 
-	"github.com/projectrekor/rekor/pkg/generated/restapi"
+	"github.com/SigStore/rekor/pkg/generated/restapi"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -45,7 +45,7 @@ var serveCmd = &cobra.Command{
 		// Setup the logger to dev/prod
 		log.ConfigureLogger(viper.GetString("log_type"))
 
-		// workaround for https://github.com/projectrekor/rekor/issues/68
+		// workaround for https://github.com/SigStore/rekor/issues/68
 		// from https://github.com/golang/glog/commit/fca8c8854093a154ff1eb580aae10276ad6b1b5f
 		_ = flag.CommandLine.Parse([]string{})
 
