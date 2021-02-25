@@ -29,22 +29,22 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/projectrekor/rekor/pkg/log"
-	"github.com/projectrekor/rekor/pkg/pki/pgp"
-	"github.com/projectrekor/rekor/pkg/types"
-	"github.com/projectrekor/rekor/pkg/types/rpm"
-	"github.com/projectrekor/rekor/pkg/util"
+	"github.com/SigStore/rekor/pkg/log"
+	"github.com/SigStore/rekor/pkg/pki/pgp"
+	"github.com/SigStore/rekor/pkg/types"
+	"github.com/SigStore/rekor/pkg/types/rpm"
+	"github.com/SigStore/rekor/pkg/util"
 
 	"github.com/asaskevich/govalidator"
 
 	"github.com/go-openapi/strfmt"
 
-	"github.com/projectrekor/rekor/pkg/pki"
+	"github.com/SigStore/rekor/pkg/pki"
 
 	rpmutils "github.com/cavaliercoder/go-rpm"
 	"github.com/go-openapi/swag"
 	"github.com/mitchellh/mapstructure"
-	"github.com/projectrekor/rekor/pkg/generated/models"
+	"github.com/SigStore/rekor/pkg/generated/models"
 	"golang.org/x/sync/errgroup"
 )
 

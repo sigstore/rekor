@@ -24,16 +24,16 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/projectrekor/rekor/pkg/pki"
+	"github.com/SigStore/rekor/pkg/pki"
 
 	radix "github.com/mediocregopher/radix/v4"
 
 	"github.com/asaskevich/govalidator"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/swag"
-	"github.com/projectrekor/rekor/pkg/generated/models"
-	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/index"
-	"github.com/projectrekor/rekor/pkg/util"
+	"github.com/SigStore/rekor/pkg/generated/models"
+	"github.com/SigStore/rekor/pkg/generated/restapi/operations/index"
+	"github.com/SigStore/rekor/pkg/util"
 )
 
 func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {

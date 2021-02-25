@@ -22,10 +22,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/projectrekor/rekor/cmd/cli/app/format"
-	"github.com/projectrekor/rekor/pkg/generated/client/entries"
-	"github.com/projectrekor/rekor/pkg/generated/models"
-	"github.com/projectrekor/rekor/pkg/log"
+	"github.com/SigStore/rekor/cmd/cli/app/format"
+	"github.com/SigStore/rekor/pkg/generated/client/entries"
+	"github.com/SigStore/rekor/pkg/generated/models"
+	"github.com/SigStore/rekor/pkg/log"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

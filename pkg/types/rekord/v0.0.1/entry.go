@@ -27,20 +27,20 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/projectrekor/rekor/pkg/log"
-	"github.com/projectrekor/rekor/pkg/types"
-	"github.com/projectrekor/rekor/pkg/util"
+	"github.com/SigStore/rekor/pkg/log"
+	"github.com/SigStore/rekor/pkg/types"
+	"github.com/SigStore/rekor/pkg/util"
 
 	"github.com/asaskevich/govalidator"
 
 	"github.com/go-openapi/strfmt"
 
-	"github.com/projectrekor/rekor/pkg/pki"
-	"github.com/projectrekor/rekor/pkg/types/rekord"
+	"github.com/SigStore/rekor/pkg/pki"
+	"github.com/SigStore/rekor/pkg/types/rekord"
 
 	"github.com/go-openapi/swag"
 	"github.com/mitchellh/mapstructure"
-	"github.com/projectrekor/rekor/pkg/generated/models"
+	"github.com/SigStore/rekor/pkg/generated/models"
 	"golang.org/x/sync/errgroup"
 )
 

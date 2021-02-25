@@ -32,7 +32,7 @@ import (
 	cr "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 
-	"github.com/projectrekor/rekor/pkg/generated/models"
+	"github.com/SigStore/rekor/pkg/generated/models"
 )
 
 // NewCreateLogEntryParams creates a new CreateLogEntryParams object

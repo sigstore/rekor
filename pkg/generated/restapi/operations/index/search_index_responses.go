@@ -27,7 +27,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 
-	"github.com/projectrekor/rekor/pkg/generated/models"
+	"github.com/SigStore/rekor/pkg/generated/models"
 )
 
 // SearchIndexOKCode is the HTTP code returned for type SearchIndexOK

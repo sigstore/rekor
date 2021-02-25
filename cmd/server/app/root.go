@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/projectrekor/rekor/pkg/log"
+	"github.com/SigStore/rekor/pkg/log"
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"

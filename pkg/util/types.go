@@ -19,8 +19,8 @@ import (
 	"sync"
 
 	"github.com/blang/semver"
-	"github.com/projectrekor/rekor/pkg/log"
-	"github.com/projectrekor/rekor/pkg/types"
+	"github.com/SigStore/rekor/pkg/log"
+	"github.com/SigStore/rekor/pkg/types"
 )
 
 type VersionFactory func() types.EntryImpl

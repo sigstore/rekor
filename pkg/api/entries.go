@@ -33,17 +33,17 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/grpc/codes"
 
-	"github.com/projectrekor/rekor/pkg/log"
-	"github.com/projectrekor/rekor/pkg/types"
+	"github.com/SigStore/rekor/pkg/log"
+	"github.com/SigStore/rekor/pkg/types"
 
-	"github.com/projectrekor/rekor/pkg/generated/models"
+	"github.com/SigStore/rekor/pkg/generated/models"
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
 	tclient "github.com/google/trillian/client"
 	tcrypto "github.com/google/trillian/crypto"
 	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
-	"github.com/projectrekor/rekor/pkg/generated/restapi/operations/entries"
+	"github.com/SigStore/rekor/pkg/generated/restapi/operations/entries"
 )
 
 func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middleware.Responder {
