@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/SigStore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"google.golang.org/grpc/codes"
 
 	"github.com/go-openapi/runtime/middleware"
@@ -33,7 +33,7 @@ import (
 	tclient "github.com/google/trillian/client"
 	tcrypto "github.com/google/trillian/crypto"
 	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
-	"github.com/SigStore/rekor/pkg/generated/restapi/operations/tlog"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 )
 
 func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {

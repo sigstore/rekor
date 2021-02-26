@@ -1,11 +1,11 @@
 # Contributing
 
 When contributing to this repository, please first discuss the change you wish
-to make via an [issue](https://github.com/SigStore/rekor/issues).
+to make via an [issue](https://github.com/sigstore/rekor/issues).
 
 ## Pull Request Process
 
-1. Create an [issue](https://github.com/SigStore/rekor/issues)
+1. Create an [issue](https://github.com/sigstore/rekor/issues)
    outlining the fix or feature.
 2. Fork the rekor repository to your own github account and clone it locally.
 3. Hack on your changes.
@@ -15,7 +15,7 @@ to make via an [issue](https://github.com/SigStore/rekor/issues).
 5. Correctly format your commit message see [Commit Messages](#Commit Message Guidelines)
    below.
 6. Ensure that CI passes, if it fails, fix the failures.
-7. Every pull request requires a review from the [core rekor team](https://github.com/orgs/SigStore/teams/core-team)
+7. Every pull request requires a review from the [core rekor team](https://github.com/orgs/github.com/sigstore/teams/core-team)
    before merging.
 8. If your pull request consists of more than one commit, please squash your
    commits as described in [Squash Commits](#Squash Commits)
@@ -112,5 +112,5 @@ Alternatively, a core member can squash your commits within Github.
 ## Code of Conduct
 
 Rekor adheres to and enforces the [Contributor Covenant](http://contributor-covenant.org/version/1/4/) Code of Conduct.
-Please take a moment to read the [CODE_OF_CONDUCT.md](https://github.com/SigStore/rekor/blob/master/CODE_OF_CONDUCT.md) document.
+Please take a moment to read the [CODE_OF_CONDUCT.md](https://github.com/sigstore/rekor/blob/master/CODE_OF_CONDUCT.md) document.
 

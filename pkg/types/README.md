@@ -90,7 +90,7 @@ type EntryImpl interface {
   - `Unmarshal` will be called with a pointer to a struct that was automatically generated for the type defined in `openapi.yaml` by the [go-swagger](http://github.com/go-swagger/go-swagger) tool used by Rekor
     - This method should validate the contents of the struct to ensure any string or cross-field dependencies are met to successfully insert an entry of this type into the transparency log
 
-5. In the Go package you have created for the new type, be sure to add an entry in the `TypeMap` in `github.com/SigStore/rekor/pkg/types` for your new type in the `init` method for your package. The key for the map is the unique string used to define your type in `openapi.yaml` (e.g. `newType`), and the value for the map is the name of a factory function for an instance of `TypeImpl`.
+5. In the Go package you have created for the new type, be sure to add an entry in the `TypeMap` in `github.com/sigstore/rekor/pkg/types` for your new type in the `init` method for your package. The key for the map is the unique string used to define your type in `openapi.yaml` (e.g. `newType`), and the value for the map is the name of a factory function for an instance of `TypeImpl`.
 
 ```go
 func init() {
@@ -100,7 +100,7 @@ func init() {
 
 6. Add an entry to `pluggableTypeMap` in `cmd/server/app/serve.go` that provides a reference to your package. This ensures that the `init` function of your type (and optionally, your version implementation) will be called before the server starts to process incoming requests and therefore will be added to the map that is used to route request processing for different types.
 
-7. After adding sufficient unit & integration tests, submit a pull request to `SigStore/rekor` for review and addition to the codebase.
+7. After adding sufficient unit & integration tests, submit a pull request to `github.com/sigstore/rekor` for review and addition to the codebase.
 
 ## Adding a New Version of the `Rekord` type
 
@@ -116,4 +116,4 @@ To add new version of the default `Rekord` type:
 
 5. Add an entry to `pluggableTypeMap` in `cmd/server/app/serve.go` that provides a reference to the Go package implementing the new version. This ensures that the `init` function will be called before the server starts to process incoming requests and therefore will be added to the map that is used to route request processing for different types.
 
-6. After adding sufficient unit & integration tests, submit a pull request to `SigStore/rekor` for review and addition to the codebase.
+6. After adding sufficient unit & integration tests, submit a pull request to `github.com/sigstore/rekor` for review and addition to the codebase.

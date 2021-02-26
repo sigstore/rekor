@@ -15,7 +15,7 @@ If you're interesting in integration with rekor, we have an [OpenAPI swagger edi
 
 A public instance of rekor can be found at [api.rekor.dev](https://api.rekor.dev/api/v1/log/)
 
-Rekor allows customized manifests (which term them as types), [type customization is outlined here](https://github.com/SigStore/rekor/tree/main/pkg/types).
+Rekor allows customized manifests (which term them as types), [type customization is outlined here](https://github.com/sigstore/rekor/tree/main/pkg/types).
 
 ## Contributions
 

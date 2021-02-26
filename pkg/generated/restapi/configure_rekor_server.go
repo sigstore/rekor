@@ -30,14 +30,14 @@ import (
 	"github.com/rs/cors"
 	"github.com/spf13/viper"
 
-	"github.com/SigStore/rekor/pkg/api"
-	pkgapi "github.com/SigStore/rekor/pkg/api"
-	"github.com/SigStore/rekor/pkg/generated/restapi/operations"
-	"github.com/SigStore/rekor/pkg/generated/restapi/operations/entries"
-	"github.com/SigStore/rekor/pkg/generated/restapi/operations/index"
-	"github.com/SigStore/rekor/pkg/generated/restapi/operations/tlog"
-	"github.com/SigStore/rekor/pkg/log"
-	"github.com/SigStore/rekor/pkg/util"
+	"github.com/sigstore/rekor/pkg/api"
+	pkgapi "github.com/sigstore/rekor/pkg/api"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
+	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/util"
 
 	"github.com/urfave/negroni"
 )
