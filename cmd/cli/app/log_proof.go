@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/SigStore/rekor/cmd/cli/app/format"
-	"github.com/SigStore/rekor/pkg/generated/client/tlog"
-	"github.com/SigStore/rekor/pkg/log"
+	"github.com/sigstore/rekor/cmd/cli/app/format"
+	"github.com/sigstore/rekor/pkg/generated/client/tlog"
+	"github.com/sigstore/rekor/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

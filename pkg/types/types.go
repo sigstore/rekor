@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/SigStore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 type TypeImpl interface {

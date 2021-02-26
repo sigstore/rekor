@@ -30,9 +30,9 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"github.com/SigStore/rekor/pkg/generated/models"
-	rekord_v001 "github.com/SigStore/rekor/pkg/types/rekord/v0.0.1"
-	rpm_v001 "github.com/SigStore/rekor/pkg/types/rpm/v0.0.1"
+	"github.com/sigstore/rekor/pkg/generated/models"
+	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
+	rpm_v001 "github.com/sigstore/rekor/pkg/types/rpm/v0.0.1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

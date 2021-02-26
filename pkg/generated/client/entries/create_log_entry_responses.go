@@ -30,7 +30,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 
-	"github.com/SigStore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 // CreateLogEntryReader is a Reader for the CreateLogEntry structure.

@@ -27,7 +27,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 
-	"github.com/SigStore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 // GetLogEntryProofOKCode is the HTTP code returned for type GetLogEntryProofOK

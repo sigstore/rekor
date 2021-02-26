@@ -25,10 +25,10 @@ import (
 
 	"github.com/google/trillian/merkle/logverifier"
 	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
-	"github.com/SigStore/rekor/cmd/cli/app/format"
-	"github.com/SigStore/rekor/pkg/generated/client/entries"
-	"github.com/SigStore/rekor/pkg/generated/models"
-	"github.com/SigStore/rekor/pkg/log"
+	"github.com/sigstore/rekor/cmd/cli/app/format"
+	"github.com/sigstore/rekor/pkg/generated/client/entries"
+	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/log"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

@@ -1,4 +1,4 @@
-module github.com/SigStore/rekor
+module github.com/sigstore/rekor
 
 go 1.14
 

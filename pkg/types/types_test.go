@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/SigStore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"go.uber.org/goleak"
 )
 
