@@ -82,7 +82,7 @@ func getRekorDir() (string, error) {
 	}
 	rekorDir := filepath.Join(home, ".rekor")
 	if _, err := os.Stat(rekorDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(rekorDir, 0755); err != nil {
+		if err := os.MkdirAll(rekorDir, 0750); err != nil {
 			return "", err
 		}
 	}
