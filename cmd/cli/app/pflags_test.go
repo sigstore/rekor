@@ -37,7 +37,6 @@ func TestArtifactPFlags(t *testing.T) {
 		artifact              string
 		signature             string
 		publicKey             string
-		sha                   string
 		uuid                  string
 		uuidRequired          bool
 		logIndex              string
@@ -148,24 +147,6 @@ func TestArtifactPFlags(t *testing.T) {
 			expectValidateSuccess: true,
 		},
 		{
-			caseDesc:              "valid local artifact with incorrect length hex SHA value",
-			artifact:              "../../../tests/test_file.txt",
-			sha:                   "12345abcde",
-			signature:             "../../../tests/test_file.sig",
-			publicKey:             "../../../tests/test_public_key.key",
-			expectParseSuccess:    false,
-			expectValidateSuccess: false,
-		},
-		{
-			caseDesc:              "valid rekord - remote artifact with incorrect length hex SHA value",
-			artifact:              testServer.URL + "/artifact",
-			sha:                   "12345abcde",
-			signature:             "../../../tests/test_file.sig",
-			publicKey:             "../../../tests/test_public_key.key",
-			expectParseSuccess:    false,
-			expectValidateSuccess: false,
-		},
-		{
 			caseDesc:              "nonexistant local artifact",
 			artifact:              "../../../tests/not_a_file",
 			signature:             "../../../tests/test_file.sig",
@@ -238,7 +219,6 @@ func TestArtifactPFlags(t *testing.T) {
 		{
 			caseDesc:              "valid rekord - remote artifact with required flags",
 			artifact:              testServer.URL + "/artifact",
-			sha:                   "45c7b11fcbf07dec1694adecd8c5b85770a12a6c8dfdcf2580a2db0c47c31779",
 			signature:             "../../../tests/test_file.sig",
 			publicKey:             "../../../tests/test_public_key.key",
 			expectParseSuccess:    true,
@@ -248,7 +228,6 @@ func TestArtifactPFlags(t *testing.T) {
 			caseDesc:              "valid rpm - remote artifact with required flags",
 			typeStr:               "rpm",
 			artifact:              testServer.URL + "/rpm",
-			sha:                   "c8b0bc59708d74f53aab0089ac587d5c348d6ead143dab9f6d9c4b48c973bfd8",
 			publicKey:             "../../../tests/test_rpm_public_key.key",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
@@ -256,24 +235,6 @@ func TestArtifactPFlags(t *testing.T) {
 		{
 			caseDesc:              "remote artifact with invalid URL",
 			artifact:              "hteeteep%**/test_file.txt",
-			sha:                   "45c7b11fcbf07dec1694adecd8c5b85770a12a6c8dfdcf2580a2db0c47c31779",
-			signature:             "../../../tests/test_file.sig",
-			publicKey:             "../../../tests/test_public_key.key",
-			expectParseSuccess:    false,
-			expectValidateSuccess: false,
-		},
-		{
-			caseDesc:              "remote artifact without required sha",
-			artifact:              testServer.URL + "/artifact",
-			signature:             "../../../tests/test_file.sig",
-			publicKey:             "../../../tests/test_public_key.key",
-			expectParseSuccess:    true,
-			expectValidateSuccess: false,
-		},
-		{
-			caseDesc:              "remote artifact with invalid sha",
-			artifact:              testServer.URL + "/artifact",
-			sha:                   "1345not%hash%",
 			signature:             "../../../tests/test_file.sig",
 			publicKey:             "../../../tests/test_public_key.key",
 			expectParseSuccess:    false,
@@ -376,9 +337,6 @@ func TestArtifactPFlags(t *testing.T) {
 		}
 		if tc.publicKey != "" {
 			args = append(args, "--public-key", tc.publicKey)
-		}
-		if tc.sha != "" {
-			args = append(args, "--sha", tc.sha)
 		}
 		if tc.uuid != "" {
 			args = append(args, "--uuid", tc.uuid)

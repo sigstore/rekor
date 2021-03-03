@@ -380,10 +380,6 @@ func (v V001Entry) Validate() error {
 	}
 
 	hash := pkg.Hash
-	if pkg.URL.String() != "" && hash == nil {
-		return errors.New("hash must be specified if 'url' is present for package")
-	}
-
 	if hash != nil {
 		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
 			return errors.New("invalid value for hash")

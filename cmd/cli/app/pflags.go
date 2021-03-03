@@ -44,7 +44,7 @@ func addSearchPFlags(cmd *cobra.Command) error {
 
 	cmd.Flags().Var(&fileOrURLFlag{}, "artifact", "path or URL to artifact file")
 
-	cmd.Flags().Var(&shaFlag{}, "sha", "the sha of the artifact")
+	cmd.Flags().Var(&uuidFlag{}, "sha", "the SHA256 sum of the artifact")
 	return nil
 }
 
@@ -76,14 +76,13 @@ func addArtifactPFlags(cmd *cobra.Command) error {
 
 	cmd.Flags().Var(&fileOrURLFlag{}, "entry", "path or URL to pre-formatted entry file")
 
-	cmd.Flags().Var(&shaFlag{}, "sha", "the sha of the artifact")
 	return nil
 }
 
 func validateArtifactPFlags(uuidValid, indexValid bool) error {
 	uuidGiven := false
 	if uuidValid {
-		uuid := shaFlag{}
+		uuid := uuidFlag{}
 		uuidStr := viper.GetString("uuid")
 
 		if uuidStr != "" {
@@ -105,7 +104,7 @@ func validateArtifactPFlags(uuidValid, indexValid bool) error {
 			indexGiven = true
 		}
 	}
-	// we will need artifact, public-key, signature, and potentially SHA
+	// we will need artifact, public-key, signature
 	typeStr := viper.GetString("type")
 	entry := viper.GetString("entry")
 
@@ -119,7 +118,6 @@ func validateArtifactPFlags(uuidValid, indexValid bool) error {
 
 	signature := viper.GetString("signature")
 	publicKey := viper.GetString("public-key")
-	sha := viper.GetString("sha")
 
 	if entry == "" && artifact.String() == "" {
 		if (uuidGiven && uuidValid) || (indexGiven && indexValid) {
@@ -129,9 +127,6 @@ func validateArtifactPFlags(uuidValid, indexValid bool) error {
 	}
 
 	if entry == "" {
-		if artifact.IsURL && sha == "" {
-			return errors.New("a valid SHA hash must be specified when specifying a URL for --artifact")
-		}
 		if signature == "" && typeStr == "rekord" {
 			return errors.New("--signature is required when --artifact is used")
 		}
@@ -173,7 +168,7 @@ func CreateRpmFromPFlags() (models.ProposedEntry, error) {
 			return nil, fmt.Errorf("error parsing rpm file: %w", err)
 		}
 	} else {
-		// we will need artifact, public-key, signature, and potentially SHA
+		// we will need artifact, public-key, signature
 		re.RPMModel = models.RpmV001Schema{}
 		re.RPMModel.Package = &models.RpmV001SchemaPackage{}
 
@@ -181,9 +176,6 @@ func CreateRpmFromPFlags() (models.ProposedEntry, error) {
 		dataURL, err := url.Parse(artifact)
 		if err == nil && dataURL.IsAbs() {
 			re.RPMModel.Package.URL = strfmt.URI(artifact)
-			re.RPMModel.Package.Hash = &models.RpmV001SchemaPackageHash{}
-			re.RPMModel.Package.Hash.Algorithm = swag.String(models.RpmV001SchemaPackageHashAlgorithmSha256)
-			re.RPMModel.Package.Hash.Value = swag.String(viper.GetString("sha"))
 		} else {
 			artifactBytes, err := ioutil.ReadFile(filepath.Clean(artifact))
 			if err != nil {
@@ -252,16 +244,13 @@ func CreateRekordFromPFlags() (models.ProposedEntry, error) {
 			return nil, fmt.Errorf("error parsing rekord file: %w", err)
 		}
 	} else {
-		// we will need artifact, public-key, signature, and potentially SHA
+		// we will need artifact, public-key, signature
 		re.RekordObj.Data = &models.RekordV001SchemaData{}
 
 		artifact := viper.GetString("artifact")
 		dataURL, err := url.Parse(artifact)
 		if err == nil && dataURL.IsAbs() {
 			re.RekordObj.Data.URL = strfmt.URI(artifact)
-			re.RekordObj.Data.Hash = &models.RekordV001SchemaDataHash{}
-			re.RekordObj.Data.Hash.Algorithm = swag.String("sha256")
-			re.RekordObj.Data.Hash.Value = swag.String(viper.GetString("sha"))
 		} else {
 			artifactBytes, err := ioutil.ReadFile(filepath.Clean(artifact))
 			if err != nil {
@@ -402,15 +391,15 @@ func (f *pkiFormatFlag) Set(s string) error {
 	return fmt.Errorf("value specified is invalid: [%s] supported values are: [pgp, minisign, x509, ssh]", s)
 }
 
-type shaFlag struct {
+type uuidFlag struct {
 	hash string
 }
 
-func (s *shaFlag) String() string {
-	return s.hash
+func (u *uuidFlag) String() string {
+	return u.hash
 }
 
-func (s *shaFlag) Set(v string) error {
+func (u *uuidFlag) Set(v string) error {
 	if v == "" {
 		return errors.New("flag must be specified")
 	}
@@ -420,16 +409,16 @@ func (s *shaFlag) Set(v string) error {
 		}
 		return fmt.Errorf("value specified is invalid: %w", err)
 	}
-	s.hash = v
+	u.hash = v
 	return nil
 }
 
-func (s *shaFlag) Type() string {
-	return "sha"
+func (u *uuidFlag) Type() string {
+	return "uuid"
 }
 
 func addUUIDPFlags(cmd *cobra.Command, required bool) error {
-	cmd.Flags().Var(&shaFlag{}, "uuid", "UUID of entry in transparency log (if known)")
+	cmd.Flags().Var(&uuidFlag{}, "uuid", "UUID of entry in transparency log (if known)")
 	if required {
 		if err := cmd.MarkFlagRequired("uuid"); err != nil {
 			return err

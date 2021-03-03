@@ -1200,7 +1200,6 @@ func init() {
       "oneOf": [
         {
           "required": [
-            "hash",
             "url"
           ]
         },
@@ -1369,7 +1368,6 @@ func init() {
       "oneOf": [
         {
           "required": [
-            "hash",
             "url"
           ]
         },
@@ -1608,7 +1606,6 @@ func init() {
           "oneOf": [
             {
               "required": [
-                "hash",
                 "url"
               ]
             },
@@ -1788,7 +1785,6 @@ func init() {
           "oneOf": [
             {
               "required": [
-                "hash",
                 "url"
               ]
             },

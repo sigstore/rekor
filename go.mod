@@ -23,6 +23,7 @@ require (
 	github.com/google/trillian v1.3.13
 	github.com/jedisct1/go-minisign v0.0.0-20210106175330-e54e81d562c7
 	github.com/magiconair/properties v1.8.4 // indirect
+	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mediocregopher/radix/v4 v4.0.0-beta.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.4.1
@@ -41,10 +42,10 @@ require (
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/mod v0.4.1 // indirect
-	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
+	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20210113181707-4bcb84eeeb78 // indirect
-	golang.org/x/tools v0.0.0-20210115202250-e0d201561e39 // indirect
+	golang.org/x/sys v0.0.0-20210301091718-77cc2087c03b // indirect
+	golang.org/x/tools v0.1.0 // indirect
 	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987
 	google.golang.org/grpc v1.36.0
 	gopkg.in/ini.v1 v1.62.0 // indirect
