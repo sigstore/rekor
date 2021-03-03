@@ -10,9 +10,17 @@ spec:
   tls:
   - hosts:
     - api.rekor.dev
+    - api.sigstore.dev
     secretName: rekor-ingress-tls
   rules:
   - host: api.rekor.dev
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: rekor-server
+          servicePort: 80
+  - host: api.sigstore.dev
     http:
       paths:
       - path: /
