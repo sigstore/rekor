@@ -131,8 +131,13 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 		}()
 	}
 
-	location := strfmt.URI(fmt.Sprintf("%v/%v", httpReq.URL, uuid))
-	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(location).WithETag(uuid)
+	locationURL := httpReq.URL
+	// remove API key from output
+	query := locationURL.Query()
+	query.Del("apiKey")
+	locationURL.RawQuery = query.Encode()
+	locationURL.Path = fmt.Sprintf("%v/%v", locationURL.Path, uuid)
+	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(strfmt.URI(locationURL.String())).WithETag(uuid)
 }
 
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
