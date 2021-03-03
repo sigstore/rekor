@@ -399,10 +399,6 @@ func (v V001Entry) Validate() error {
 	}
 
 	hash := data.Hash
-	if data.URL.String() != "" && hash == nil {
-		return errors.New("hash must be specified if 'url' is present for data")
-	}
-
 	if hash != nil {
 		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
 			return errors.New("invalid value for hash")

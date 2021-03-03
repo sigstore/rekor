@@ -134,8 +134,9 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			hasExtEntities:         true,
-			expectUnmarshalSuccess: false,
+			hasExtEntities:            true,
+			expectUnmarshalSuccess:    true,
+			expectCanonicalizeSuccess: true,
 		},
 		{
 			caseDesc: "public key with data & url and empty hash",

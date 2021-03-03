@@ -91,7 +91,7 @@
             },
             "oneOf": [
                 {
-                    "required": [ "hash", "url" ]
+                    "required": [ "url" ]
                 },
                 {
                     "required": [ "content" ]
