@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"io/ioutil"
 	"math/rand"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -30,6 +31,10 @@ func run(t *testing.T, stdin, cmd string, arg ...string) string {
 	if stdin != "" {
 		c.Stdin = strings.NewReader(stdin)
 	}
+	if os.Getenv("TMPDIR") != "" {
+		// ensure that we use a clean state.json file for each run
+		c.Env = append(c.Env, "HOME="+os.Getenv("TMPDIR"))
+	}
 	b, err := c.CombinedOutput()
 	if err != nil {
 		t.Log(string(b))
@@ -41,6 +46,10 @@ func run(t *testing.T, stdin, cmd string, arg ...string) string {
 func runCli(t *testing.T, arg ...string) string {
 	t.Helper()
 	arg = append(arg, "--rekor_server=http://localhost:3000")
+	// use a blank config file to ensure no collision
+	if os.Getenv("TMPDIR") != "" {
+		arg = append(arg, "--config="+os.Getenv("TMPDIR")+".rekor.yaml")
+	}
 	return run(t, "", cli, arg...)
 }
 

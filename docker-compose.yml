@@ -8,6 +8,12 @@ services:
       - MYSQL_USER=test
       - MYSQL_PASSWORD=zaphod
     restart: always # keep the MySQL server running
+    healthcheck:
+      test: ["CMD", "/etc/init.d/mysql", "status"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
   redis-server:
     image: docker.io/redis:5.0.10
     command: [
@@ -19,6 +25,12 @@ services:
     ports:
       - "6379:6379"
     restart: always # keep the redis server running
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
   trillian-log-server:
     image: gcr.io/trillian-opensource-ci/log_server
     command: [
@@ -72,3 +84,9 @@ services:
       - mysql
       - redis-server
       - trillian-log-server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
