@@ -262,3 +262,24 @@ func TestX509(t *testing.T) {
 	outputContains(t, out, "Entry already exists")
 
 }
+
+func TestUploadNoAPIKeyInOutput(t *testing.T) {
+	// Create a random artifact and sign it.
+	artifactPath := filepath.Join(t.TempDir(), "artifact")
+	sigPath := filepath.Join(t.TempDir(), "signature.asc")
+
+	createdPGPSignedArtifact(t, artifactPath, sigPath)
+
+	// Write the public key to a file
+	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
+	if err := ioutil.WriteFile(pubPath, []byte(publicKey), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// It should upload successfully.
+	out := runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath, "--api-key", "foobar")
+	outputContains(t, out, "Created entry at")
+	if strings.Contains(out, "foobar") {
+		t.Errorf("CLI output contained API key when it should have squelched it")
+	}
+}
