@@ -5,8 +5,9 @@ testdir=$(dirname "$0")
 echo "starting services"
 docker-compose up -d
 
-echo "building CLI"
+echo "building CLI and server"
 go build -o rekor-cli ./cmd/cli
+go build -o rekor-server ./cmd/server
 
 count=0
 

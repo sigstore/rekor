@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rekor-watcher
+  labels:
+    app: rekor-watcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rekor-watcher
+  template:
+    metadata:
+      labels:
+        app: rekor-watcher
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "2112"
+    spec:
+      containers:
+      - name: rekor-watcher
+        image: ko://github.com/sigstore/rekor/cmd/server
+        command: ["/ko-app/server"]
+        ports:
+        - containerPort: 3000
+        - containerPort: 2112 # metrics
+        args: [
+          "watch",
+          "--rekor_server.address=rekor-server",
+          "--rekor_server.port=80",
+          "--log_type=prod",
+        ]
+        env:
+        - name: REKOR_STH_BUCKET
+          value: "gs://rekor-sth"
+        resources:
+          requests:
+            memory: "1G"
+            cpu: ".5"

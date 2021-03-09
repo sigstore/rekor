@@ -15,6 +15,7 @@ import (
 
 const (
 	cli         = "../rekor-cli"
+	server      = "../rekor-server"
 	nodeDataDir = "node"
 )
 
