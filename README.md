@@ -7,11 +7,15 @@ Rekor's goals are to provide an immutable tamper resistant ledger of metadata ge
 The Rekor project provides a restful API based server for validation and a transparency log for storage. A CLI application is available to make and verify entries, query the transparency log for inclusion
 proof, integrity verification of the transparency log or retrieval of entries by either public key or artifact.
 
-For more details on setting up a server,  [visit the following link](https://sigstore.dev/get_started/server/)
+Rekor fulfils the signature transparency role of sigstore's software signing
+infrastructure. However, Rekor can be run on its own and is designed to be
+extensible to working with different manifest schemas and PKI tooling.
+
+For more details on set up a Rekor server,  [visit the following link](https://sigstore.dev/get_started/server/)
 
 For details on CLI usage, [visit the following link](https://sigstore.dev/get_started/client/)
 
-If you're interesting in integration with rekor, we have an [OpenAPI swagger editor](https://sigstore.dev/swagger/)
+If you're interesting in integration with Rekor, we have an [OpenAPI swagger editor](https://sigstore.dev/swagger/)
 
 A public instance of rekor can be found at [api.sigstore.dev](https://api.sigstore.dev/api/v1/log/)
 
@@ -19,5 +23,5 @@ Rekor allows customized manifests (which term them as types), [type customizatio
 
 ## Contributions
 
-Rekor is still in its early phase of development, so we welcome contributions
-from anyone.
+We welcome contributions from anyone and are especially interested to hear from
+users of Rekor.
