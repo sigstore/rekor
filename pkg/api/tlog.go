@@ -21,7 +21,6 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -107,7 +106,10 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 			proofHashes = append(proofHashes, hex.EncodeToString(hash))
 		}
 	} else {
-		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("grpc call succeeded but no proof returned"), trillianUnexpectedResult)
+		// The proof field may be empty if the requested tree_size was larger than that available at the server
+		// (e.g. because there is skew between server instances, and an earlier client request was processed by
+		// a more up-to-date instance). root.TreeSize is the maximum size currently observed
+		return handleRekorAPIError(params, http.StatusBadRequest, nil, fmt.Sprintf(lastSizeGreaterThanKnown, params.LastSize, root.TreeSize))
 	}
 
 	consistencyProof := models.ConsistencyProof{
