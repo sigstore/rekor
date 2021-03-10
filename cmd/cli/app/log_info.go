@@ -118,7 +118,7 @@ var logInfoCmd = &cobra.Command{
 			return nil, errors.New("tree size in signed tree head does not match value returned in API call")
 		}
 
-		if strings.ToLower(hex.EncodeToString(lr.RootHash)) != strings.ToLower(*logInfo.RootHash) {
+		if !strings.EqualFold(hex.EncodeToString(lr.RootHash), *logInfo.RootHash) {
 			return nil, errors.New("root hash in signed tree head does not match value returned in API call")
 		}
 
