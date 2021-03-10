@@ -24,6 +24,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/sigstore/rekor/cmd/cli/app/state"
 
@@ -68,10 +69,6 @@ var logInfoCmd = &cobra.Command{
 		}
 
 		logInfo := result.GetPayload()
-		cmdOutput := &logInfoCmdOutput{
-			TreeSize: *logInfo.TreeSize,
-			RootHash: *logInfo.RootHash,
-		}
 
 		keyHint, err := base64.StdEncoding.DecodeString(logInfo.SignedTreeHead.KeyHint.String())
 		if err != nil {
@@ -115,6 +112,19 @@ var logInfoCmd = &cobra.Command{
 		lr, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, &sth)
 		if err != nil {
 			return nil, err
+		}
+
+		if lr.TreeSize != uint64(*logInfo.TreeSize) {
+			return nil, errors.New("tree size in signed tree head does not match value returned in API call")
+		}
+
+		if strings.ToLower(hex.EncodeToString(lr.RootHash)) != strings.ToLower(*logInfo.RootHash) {
+			return nil, errors.New("root hash in signed tree head does not match value returned in API call")
+		}
+
+		cmdOutput := &logInfoCmdOutput{
+			TreeSize: int64(lr.TreeSize),
+			RootHash: hex.EncodeToString(lr.RootHash),
 		}
 
 		oldState := state.Load(serverURL)
