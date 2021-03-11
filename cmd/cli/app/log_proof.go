@@ -16,12 +16,12 @@ limitations under the License.
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/sigstore/rekor/cmd/cli/app/format"
 	"github.com/sigstore/rekor/pkg/generated/client/tlog"
-	"github.com/sigstore/rekor/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -50,23 +50,21 @@ var logProofCmd = &cobra.Command{
 	Use:   "logproof",
 	Short: "Rekor logproof command",
 	Long:  `Prints information required to compute the consistency proof of the transparency log`,
-	PreRun: func(cmd *cobra.Command, args []string) {
+	PreRunE: func(cmd *cobra.Command, args []string) error {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			log.Logger.Fatal("Error initializing cmd line args: ", err)
+			return fmt.Errorf("Error initializing cmd line args: %s", err)
 		}
 		if viper.GetUint64("first-size") > viper.GetUint64("last-size") {
-			log.Logger.Error("last-size must be >= to first-size")
-			os.Exit(1)
+			return errors.New("last-size must be >= to first-size")
 		}
 		if viper.GetUint64("first-size") == 0 {
-			log.Logger.Error("first-size must be > 0")
-			os.Exit(1)
+			return errors.New("first-size must be > 0")
 		}
 		if viper.GetUint64("last-size") == 0 {
-			log.Logger.Error("last-size must be > 0")
-			os.Exit(1)
+			return errors.New("last-size must be > 0")
 		}
+		return nil
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
