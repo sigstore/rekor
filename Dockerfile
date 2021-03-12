@@ -1,4 +1,4 @@
-FROM golang:1.16.0 AS builder
+FROM golang:1.16.2 AS builder
 ENV APP_ROOT=/opt/app-root
 ENV GOPATH=$APP_ROOT
 
@@ -13,7 +13,7 @@ RUN go build ./cmd/server
 RUN CGO_ENABLED=0 go build -gcflags "all=-N -l" -o server_debug ./cmd/server
 
 # Multi-Stage production build
-FROM golang:1.16.0 as deploy
+FROM golang:1.16.2 as deploy
 
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/server /usr/local/bin/rekor-server
