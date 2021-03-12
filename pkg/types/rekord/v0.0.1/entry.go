@@ -195,7 +195,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		defer hashW.Close()
 		defer sigW.Close()
 
-		dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.RekordObj.Data.URL.String(), v.RekordObj.Data.Content, true)
+		dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.RekordObj.Data.URL.String(), v.RekordObj.Data.Content, false)
 		if err != nil {
 			return closePipesOnError(err)
 		}
