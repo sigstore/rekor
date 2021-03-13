@@ -58,6 +58,10 @@ func (u UnmarshalTester) Unmarshal(pe models.ProposedEntry) error {
 	return nil
 }
 
+func (u UnmarshalTester) Validate() error {
+	return nil
+}
+
 type UnmarshalFailsTester struct {
 	UnmarshalTester
 }

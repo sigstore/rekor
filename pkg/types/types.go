@@ -36,6 +36,7 @@ type EntryImpl interface {
 	FetchExternalEntities(ctx context.Context) error
 	HasExternalEntities() bool
 	Unmarshal(e models.ProposedEntry) error
+	Validate() error
 }
 
 type TypeFactory func() TypeImpl

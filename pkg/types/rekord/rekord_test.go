@@ -34,6 +34,10 @@ func (u UnmarshalTester) NewEntry() types.EntryImpl {
 	return &UnmarshalTester{}
 }
 
+func (u UnmarshalTester) Validate() error {
+	return nil
+}
+
 func (u UnmarshalTester) APIVersion() string {
 	return "2.0.1"
 }

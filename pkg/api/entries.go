@@ -244,6 +244,9 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 				if err != nil {
 					return err
 				}
+				if err := entry.Validate(); err != nil {
+					return err
+				}
 
 				if entry.HasExternalEntities() {
 					if err := entry.FetchExternalEntities(httpReqCtx); err != nil {

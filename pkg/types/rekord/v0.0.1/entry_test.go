@@ -529,7 +529,18 @@ func TestCrossFieldValidation(t *testing.T) {
 			APIVersion: swag.String(tc.entry.APIVersion()),
 			Spec:       tc.entry.RekordObj,
 		}
-		if err := v.Unmarshal(&r); (err == nil) != tc.expectUnmarshalSuccess {
+
+		unmarshalAndValidate := func() error {
+			if err := v.Unmarshal(&r); err != nil {
+				return err
+			}
+			if err := v.Validate(); err != nil {
+				return err
+			}
+			return nil
+		}
+
+		if err := unmarshalAndValidate(); (err == nil) != tc.expectUnmarshalSuccess {
 			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
 		}
 
