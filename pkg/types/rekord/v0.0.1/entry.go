@@ -134,7 +134,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 	// cross field validation
-	return v.Validate()
+	return nil
 
 }
 

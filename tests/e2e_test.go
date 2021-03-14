@@ -130,9 +130,10 @@ func TestGet(t *testing.T) {
 	uuid := getUUIDFromUploadOutput(t, out)
 
 	out = runCli(t, "get", "--format=json", "--uuid", uuid)
+
 	// The output here should be in JSON with this structure:
 	g := struct {
-		Body           string
+		Body           interface{}
 		LogIndex       int
 		IntegratedTime int64
 	}{}
