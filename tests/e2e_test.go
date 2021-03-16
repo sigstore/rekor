@@ -245,14 +245,18 @@ func TestX509(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// If we do it twice, it should already exist
 	out := runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", certPath, "--pki-format", "x509")
 	outputContains(t, out, "Created entry at")
+	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
+		"--public-key", certPath, "--pki-format", "x509")
+	outputContains(t, out, "Entry already exists")
 
-	// Now upload with the public key rather than the cert. They should be deduped.
+	// Now upload with the public key rather than the cert. They should NOT be deduped.
 	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", pubKeyPath, "--pki-format", "x509")
-	outputContains(t, out, "Entry already exists")
+	outputContains(t, out, "Created entry at")
 
 	// Now let's go the other order to be sure. New artifact, key first then cert.
 	createdX509SignedArtifact(t, artifactPath, sigPath)
@@ -260,10 +264,13 @@ func TestX509(t *testing.T) {
 	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", pubKeyPath, "--pki-format", "x509")
 	outputContains(t, out, "Created entry at")
-	// This should already exist
+	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
+		"--public-key", pubKeyPath, "--pki-format", "x509")
+	outputContains(t, out, "Entry already exists")
+	// This should NOT already exist
 	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", certPath, "--pki-format", "x509")
-	outputContains(t, out, "Entry already exists")
+	outputContains(t, out, "Created entry at")
 
 }
 

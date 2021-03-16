@@ -69,7 +69,12 @@ func (s Signature) Verify(r io.Reader, k interface{}) error {
 		return fmt.Errorf("Invalid public key type for: %v", k)
 	}
 
-	switch pub := key.key.(type) {
+	p := key.key
+	if p == nil {
+		p = key.cert.c.PublicKey
+	}
+
+	switch pub := p.(type) {
 	case *rsa.PublicKey:
 		return rsa.VerifyPKCS1v15(pub, crypto.SHA256, hash, s.signature)
 	case ed25519.PublicKey:
@@ -89,7 +94,13 @@ func (s Signature) Verify(r io.Reader, k interface{}) error {
 
 // PublicKey Public Key that follows the x509 standard
 type PublicKey struct {
-	key interface{}
+	key  interface{}
+	cert *cert
+}
+
+type cert struct {
+	c *x509.Certificate
+	b []byte
 }
 
 // NewPublicKey implements the pki.PublicKey interface
@@ -112,29 +123,41 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 		}
 		return &PublicKey{key: key}, nil
 	case "CERTIFICATE":
-		cert, err := x509.ParseCertificate(block.Bytes)
+		c, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
 			return nil, err
 		}
-		return &PublicKey{key: cert.PublicKey}, nil
+		return &PublicKey{
+			cert: &cert{
+				c: c,
+				b: block.Bytes,
+			}}, nil
 	}
 	return nil, fmt.Errorf("invalid public key: %s", string(rawPub))
 }
 
 // CanonicalValue implements the pki.PublicKey interface
 func (k PublicKey) CanonicalValue() ([]byte, error) {
-	if k.key == nil {
+
+	var p pem.Block
+	switch {
+	case k.key != nil:
+		b, err := x509.MarshalPKIXPublicKey(k.key)
+		if err != nil {
+			return nil, err
+		}
+
+		p = pem.Block{
+			Type:  "PUBLIC KEY",
+			Bytes: b,
+		}
+	case k.cert != nil:
+		p = pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: k.cert.b,
+		}
+	default:
 		return nil, fmt.Errorf("x509 public key has not been initialized")
-	}
-
-	b, err := x509.MarshalPKIXPublicKey(k.key)
-	if err != nil {
-		return nil, err
-	}
-
-	p := pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: b,
 	}
 
 	var buf bytes.Buffer
