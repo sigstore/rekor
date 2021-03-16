@@ -29,8 +29,8 @@ import (
 	"github.com/sigstore/rekor/pkg/types/rpm"
 	rpm_v001 "github.com/sigstore/rekor/pkg/types/rpm/v0.0.1"
 
-	"github.com/sigstore/rekor/pkg/generated/restapi"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sigstore/rekor/pkg/generated/restapi"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
