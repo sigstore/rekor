@@ -126,6 +126,7 @@ func parseEntry(uuid string, e models.LogEntryAnon) (interface{}, error) {
 		Body:           eimpl,
 		UUID:           uuid,
 		IntegratedTime: e.IntegratedTime,
+		LogIndex:       int(*e.LogIndex),
 	}
 
 	return &obj, nil
