@@ -51,8 +51,8 @@ const rekorSthBucketEnv = "REKOR_STH_BUCKET"
 // watchCmd represents the serve command
 var watchCmd = &cobra.Command{
 	Use:   "watch",
-	Short: "start a process to watch and record STH's from Rekor",
-	Long:  `start a process to watch and record STH's from Rekor`,
+	Short: "Start a process to watch and record STH's from Rekor",
+	Long:  `Start a process to watch and record STH's from Rekor`,
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
