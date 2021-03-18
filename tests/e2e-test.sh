@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -ex
+set -e
 testdir=$(dirname "$0")
 
 echo "starting services"

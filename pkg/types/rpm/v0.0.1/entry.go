@@ -198,7 +198,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		defer sigW.Close()
 		defer rpmW.Close()
 
-		dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.RPMModel.Package.URL.String(), v.RPMModel.Package.Content, true)
+		dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.RPMModel.Package.URL.String(), v.RPMModel.Package.Content)
 		if err != nil {
 			return closePipesOnError(err)
 		}
@@ -236,7 +236,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 
 	g.Go(func() error {
 		keyReadCloser, err := util.FileOrURLReadCloser(ctx, v.RPMModel.PublicKey.URL.String(),
-			v.RPMModel.PublicKey.Content, false)
+			v.RPMModel.PublicKey.Content)
 		if err != nil {
 			return closePipesOnError(err)
 		}

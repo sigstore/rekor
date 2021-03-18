@@ -16,9 +16,7 @@ limitations under the License.
 package util
 
 import (
-	"bufio"
 	"bytes"
-	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -27,7 +25,7 @@ import (
 )
 
 // FileOrURLReadCloser Note: caller is responsible for closing ReadCloser returned from method!
-func FileOrURLReadCloser(ctx context.Context, url string, content []byte, checkGZIP bool) (io.ReadCloser, error) {
+func FileOrURLReadCloser(ctx context.Context, url string, content []byte) (io.ReadCloser, error) {
 	var dataReader io.ReadCloser
 	if url != "" {
 		//TODO: set timeout here, SSL settings?
@@ -44,22 +42,7 @@ func FileOrURLReadCloser(ctx context.Context, url string, content []byte, checkG
 			return nil, fmt.Errorf("error received while fetching artifact: %v", resp.Status)
 		}
 
-		if checkGZIP {
-			// read first 512 bytes to determine if content is gzip compressed
-			bufReader := bufio.NewReaderSize(resp.Body, 512)
-			ctBuf, err := bufReader.Peek(512)
-			if err != nil && err != bufio.ErrBufferFull && err != io.EOF {
-				return nil, err
-			}
-
-			if http.DetectContentType(ctBuf) == "application/x-gzip" {
-				dataReader, _ = gzip.NewReader(io.MultiReader(bufReader, resp.Body))
-			} else {
-				dataReader = ioutil.NopCloser(io.MultiReader(bufReader, resp.Body))
-			}
-		} else {
-			dataReader = resp.Body
-		}
+		dataReader = resp.Body
 	} else {
 		dataReader = ioutil.NopCloser(bytes.NewReader(content))
 	}

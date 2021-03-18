@@ -303,8 +303,10 @@ func TestWatch(t *testing.T) {
 	go func() {
 		b, err := cmd.CombinedOutput()
 		t.Log(string(b))
-		if err != nil {
-			t.Fatal(err)
+		if cmd.ProcessState.Exited() && cmd.ProcessState.ExitCode() != 0 {
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}()
 

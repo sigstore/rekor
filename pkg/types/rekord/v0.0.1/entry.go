@@ -195,7 +195,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		defer hashW.Close()
 		defer sigW.Close()
 
-		dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.RekordObj.Data.URL.String(), v.RekordObj.Data.Content, false)
+		dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.RekordObj.Data.URL.String(), v.RekordObj.Data.Content)
 		if err != nil {
 			return closePipesOnError(err)
 		}
@@ -237,7 +237,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		defer close(sigResult)
 
 		sigReadCloser, err := util.FileOrURLReadCloser(ctx, v.RekordObj.Signature.URL.String(),
-			v.RekordObj.Signature.Content, false)
+			v.RekordObj.Signature.Content)
 		if err != nil {
 			return closePipesOnError(err)
 		}
@@ -262,7 +262,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		defer close(keyResult)
 
 		keyReadCloser, err := util.FileOrURLReadCloser(ctx, v.RekordObj.Signature.PublicKey.URL.String(),
-			v.RekordObj.Signature.PublicKey.Content, false)
+			v.RekordObj.Signature.PublicKey.Content)
 		if err != nil {
 			return closePipesOnError(err)
 		}
