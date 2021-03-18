@@ -33,13 +33,10 @@ var logType string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "rekor-server",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Rekor signature transparency log server",
+	Long: `Rekor fulfills the signature transparency role of sigstore's software 
+	signing infrastructure. It can also be run on its own and is designed to be 
+	extensible to work with different manifest schemas and PKI tooling`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
