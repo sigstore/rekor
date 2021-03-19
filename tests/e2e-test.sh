@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -ex
+set -e
 testdir=$(dirname "$0")
 
 echo "starting services"
@@ -26,7 +26,7 @@ done
 
 echo
 echo "running tests"
-TMPDIR="$(mktemp -d -t rekor_test)"
+TMPDIR="$(mktemp -d -t rekor_test.XXXXXX)"
 touch $TMPDIR.rekor.yaml
 trap "rm -rf $TMPDIR" EXIT
 TMPDIR=$TMPDIR go test -tags=e2e ./tests/

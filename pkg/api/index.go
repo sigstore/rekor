@@ -53,7 +53,7 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 	}
 	if params.Query.PublicKey != nil {
 		af := pki.NewArtifactFactory(swag.StringValue(params.Query.PublicKey.Format))
-		keyReader, err := util.FileOrURLReadCloser(httpReqCtx, params.Query.PublicKey.URL.String(), params.Query.PublicKey.Content, true)
+		keyReader, err := util.FileOrURLReadCloser(httpReqCtx, params.Query.PublicKey.URL.String(), params.Query.PublicKey.Content)
 		if err != nil {
 			return handleRekorAPIError(params, http.StatusBadRequest, err, malformedPublicKey)
 		}
