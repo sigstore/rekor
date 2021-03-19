@@ -432,6 +432,10 @@ responses:
     description: The request conflicts with the current state of the transparency log
     schema:
       $ref: "#/definitions/Error"
+    headers:
+      Location:
+        type: string
+        format: uri
   NotFound:
     description: The content requested could not be found
   InternalServerError:

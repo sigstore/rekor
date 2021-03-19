@@ -21,6 +21,7 @@ import (
 	"regexp"
 
 	"github.com/go-openapi/runtime/middleware"
+	"github.com/go-openapi/strfmt"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
@@ -33,7 +34,7 @@ const (
 	trillianCommunicationError     = "Unexpected error communicating with transparency log"
 	trillianUnexpectedResult       = "Unexpected result from transparency log"
 	failedToGenerateCanonicalEntry = "Error generating canonicalized entry"
-	entryAlreadyExists             = "An equivalent entry already exists in the transparency log"
+	entryAlreadyExists             = "An equivalent entry already exists in the transparency log with UUID %v"
 	firstSizeLessThanLastSize      = "firstSize(%d) must be less than lastSize(%d)"
 	malformedUUID                  = "UUID must be a 64-character hexadecimal string"
 	malformedHash                  = "Hash must be a 64-character hexadecimal string created from SHA256 algorithm"
@@ -98,7 +99,19 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		case http.StatusBadRequest:
 			return entries.NewCreateLogEntryBadRequest().WithPayload(errorMsg(message, code))
 		case http.StatusConflict:
-			return entries.NewCreateLogEntryConflict().WithPayload(errorMsg(message, code))
+			resp := entries.NewCreateLogEntryConflict().WithPayload(errorMsg(message, code))
+			locationFound := false
+			for _, field := range fields {
+				if locationFound {
+					existingURL := field.(strfmt.URI)
+					resp.SetLocation(existingURL)
+					break
+				} else if field.(string) == "entryURL" {
+					locationFound = true
+					continue
+				}
+			}
+			return resp
 		default:
 			return entries.NewCreateLogEntryDefault(code).WithPayload(errorMsg(message, code))
 		}

@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/google/trillian"
 	"github.com/spf13/viper"
@@ -102,7 +103,8 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 		switch insertionStatus.Code {
 		case int32(code.Code_OK):
 		case int32(code.Code_ALREADY_EXISTS), int32(code.Code_FAILED_PRECONDITION):
-			return handleRekorAPIError(params, http.StatusConflict, fmt.Errorf("grpc error: %v", insertionStatus.String()), entryAlreadyExists)
+			existingUUID := hex.EncodeToString(rfc6962.DefaultHasher.HashLeaf(leaf))
+			return handleRekorAPIError(params, http.StatusConflict, fmt.Errorf("grpc error: %v", insertionStatus.String()), fmt.Sprintf(entryAlreadyExists, existingUUID), "entryURL", getEntryURL(*httpReq.URL, existingUUID))
 		default:
 			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %v", insertionStatus.String()), trillianUnexpectedResult)
 		}
@@ -131,13 +133,17 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 		}()
 	}
 
-	locationURL := httpReq.URL
+	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(getEntryURL(*httpReq.URL, uuid)).WithETag(uuid)
+}
+
+func getEntryURL(locationURL url.URL, uuid string) strfmt.URI {
 	// remove API key from output
 	query := locationURL.Query()
 	query.Del("apiKey")
 	locationURL.RawQuery = query.Encode()
 	locationURL.Path = fmt.Sprintf("%v/%v", locationURL.Path, uuid)
-	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(strfmt.URI(locationURL.String())).WithETag(uuid)
+	return strfmt.URI(locationURL.String())
+
 }
 
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {

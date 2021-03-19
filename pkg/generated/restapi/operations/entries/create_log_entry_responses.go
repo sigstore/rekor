@@ -174,6 +174,10 @@ const CreateLogEntryConflictCode int = 409
 swagger:response createLogEntryConflict
 */
 type CreateLogEntryConflict struct {
+	/*
+
+	 */
+	Location strfmt.URI `json:"Location"`
 
 	/*
 	  In: Body
@@ -185,6 +189,17 @@ type CreateLogEntryConflict struct {
 func NewCreateLogEntryConflict() *CreateLogEntryConflict {
 
 	return &CreateLogEntryConflict{}
+}
+
+// WithLocation adds the location to the create log entry conflict response
+func (o *CreateLogEntryConflict) WithLocation(location strfmt.URI) *CreateLogEntryConflict {
+	o.Location = location
+	return o
+}
+
+// SetLocation sets the location to the create log entry conflict response
+func (o *CreateLogEntryConflict) SetLocation(location strfmt.URI) {
+	o.Location = location
 }
 
 // WithPayload adds the payload to the create log entry conflict response
@@ -200,6 +215,13 @@ func (o *CreateLogEntryConflict) SetPayload(payload *models.Error) {
 
 // WriteResponse to the client
 func (o *CreateLogEntryConflict) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+
+	// response header Location
+
+	location := o.Location.String()
+	if location != "" {
+		rw.Header().Set("Location", location)
+	}
 
 	rw.WriteHeader(409)
 	if o.Payload != nil {
