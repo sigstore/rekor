@@ -1,7 +1,7 @@
 version: '3.4'
 services:
   mysql:
-    image: gcr.io/trillian-opensource-ci/db_server:3c8193ebb2d7fedb44d18e9c810d0d2e4dbb7e4d
+    image: gcr.io/trillian-opensource-ci/db_server:v1.3.13
     environment:
       - MYSQL_ROOT_PASSWORD=zaphod
       - MYSQL_DATABASE=test
@@ -32,7 +32,7 @@ services:
       retries: 3
       start_period: 5s
   trillian-log-server:
-    image: gcr.io/trillian-opensource-ci/log_server
+    image: gcr.io/trillian-opensource-ci/log_server:v1.3.13
     command: [
       "--storage_system=mysql",
       "--mysql_uri=test:zaphod@tcp(mysql:3306)/test",
@@ -47,7 +47,7 @@ services:
     depends_on:
       - mysql
   trillian-log-signer:
-    image: gcr.io/trillian-opensource-ci/log_signer
+    image: gcr.io/trillian-opensource-ci/log_signer:v1.3.13
     command: [
       "--storage_system=mysql",
       "--mysql_uri=test:zaphod@tcp(mysql:3306)/test",
