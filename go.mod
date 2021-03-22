@@ -11,7 +11,7 @@ require (
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-openapi/errors v0.20.0
 	github.com/go-openapi/loads v0.20.2
-	github.com/go-openapi/runtime v0.19.26
+	github.com/go-openapi/runtime v0.19.27
 	github.com/go-openapi/spec v0.20.3
 	github.com/go-openapi/strfmt v0.20.0
 	github.com/go-openapi/swag v0.19.14
