@@ -633,6 +633,12 @@ func init() {
       "description": "The request conflicts with the current state of the transparency log",
       "schema": {
         "$ref": "#/definitions/Error"
+      },
+      "headers": {
+        "Location": {
+          "type": "string",
+          "format": "uri"
+        }
       }
     },
     "InternalServerError": {
@@ -814,6 +820,12 @@ func init() {
             "description": "The request conflicts with the current state of the transparency log",
             "schema": {
               "$ref": "#/definitions/Error"
+            },
+            "headers": {
+              "Location": {
+                "type": "string",
+                "format": "uri"
+              }
             }
           },
           "default": {
@@ -1879,6 +1891,12 @@ func init() {
       "description": "The request conflicts with the current state of the transparency log",
       "schema": {
         "$ref": "#/definitions/Error"
+      },
+      "headers": {
+        "Location": {
+          "type": "string",
+          "format": "uri"
+        }
       }
     },
     "InternalServerError": {

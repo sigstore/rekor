@@ -163,6 +163,8 @@ func NewCreateLogEntryConflict() *CreateLogEntryConflict {
 The request conflicts with the current state of the transparency log
 */
 type CreateLogEntryConflict struct {
+	Location strfmt.URI
+
 	Payload *models.Error
 }
 
@@ -175,6 +177,14 @@ func (o *CreateLogEntryConflict) GetPayload() *models.Error {
 }
 
 func (o *CreateLogEntryConflict) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	// response header Location
+
+	location, err := formats.Parse("uri", response.GetHeader("Location"))
+	if err != nil {
+		return errors.InvalidType("Location", "header", "strfmt.URI", response.GetHeader("Location"))
+	}
+	o.Location = *(location.(*strfmt.URI))
 
 	o.Payload = new(models.Error)
 

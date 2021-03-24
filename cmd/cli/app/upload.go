@@ -30,15 +30,16 @@ import (
 )
 
 type uploadCmdOutput struct {
-	Location string
-	Index    int64
+	AlreadyExists bool
+	Location      string
+	Index         int64
 }
 
 func (u *uploadCmdOutput) String() string {
-	if u.Location != "" {
-		return fmt.Sprintf("Created entry at index %d, available at: %v%v\n", u.Index, viper.GetString("rekor_server"), u.Location)
+	if u.AlreadyExists {
+		return fmt.Sprintf("Entry already exists; available at: %v%v\n", viper.GetString("rekor_server"), u.Location)
 	}
-	return "Entry already exists.\n"
+	return fmt.Sprintf("Created entry at index %d, available at: %v%v\n", u.Index, viper.GetString("rekor_server"), u.Location)
 }
 
 // uploadCmd represents the upload command
@@ -84,9 +85,12 @@ var uploadCmd = &cobra.Command{
 
 		resp, err := rekorClient.Entries.CreateLogEntry(params)
 		if err != nil {
-			switch err.(type) {
+			switch e := err.(type) {
 			case *entries.CreateLogEntryConflict:
-				return &uploadCmdOutput{Location: ""}, nil
+				return &uploadCmdOutput{
+					Location:      e.Location.String(),
+					AlreadyExists: true,
+				}, nil
 			default:
 				return nil, err
 			}
