@@ -49,5 +49,3 @@ require (
 	google.golang.org/grpc v1.36.1
 	gopkg.in/ini.v1 v1.62.0 // indirect
 )
-
-replace google.golang.org/grpc => google.golang.org/grpc v1.29.1
