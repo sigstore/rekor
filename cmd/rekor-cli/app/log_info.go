@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sigstore/rekor/cmd/cli/app/state"
+	"github.com/sigstore/rekor/cmd/rekor-cli/app/state"
 
 	"github.com/google/trillian"
 	tclient "github.com/google/trillian/client"
@@ -35,7 +35,7 @@ import (
 	"github.com/google/trillian/merkle/logverifier"
 	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
 
-	"github.com/sigstore/rekor/cmd/cli/app/format"
+	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
 	"github.com/sigstore/rekor/pkg/generated/client/tlog"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/spf13/cobra"
