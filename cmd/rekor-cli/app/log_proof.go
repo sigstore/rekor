@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sigstore/rekor/cmd/cli/app/format"
+	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
 	"github.com/sigstore/rekor/pkg/generated/client/tlog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

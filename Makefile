@@ -21,10 +21,10 @@ gosec:
 	$(GOBIN)/gosec ./...
 
 cli: $(SRCS)
-	go build ./cmd/cli
+	go build ./cmd/rekor-cli
 
 server: $(SRCS)
-	go build ./cmd/server
+	go build ./cmd/rekor-server
 
 test:
 	go test ./...

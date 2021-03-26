@@ -35,7 +35,7 @@ import (
 	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/google/trillian/types"
 
-	"github.com/sigstore/rekor/cmd/cli/app"
+	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/log"
 

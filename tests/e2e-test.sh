@@ -6,8 +6,8 @@ echo "starting services"
 docker-compose up -d
 
 echo "building CLI and server"
-go build -o rekor-cli ./cmd/cli
-go build -o rekor-server ./cmd/server
+go build -o rekor-cli ./cmd/rekor-cli
+go build -o rekor-server ./cmd/rekor-server
 
 count=0
 

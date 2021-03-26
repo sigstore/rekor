@@ -2,7 +2,8 @@
 .vscode/*
 /cli
 logid
-rekor-cli
-rekor-server
+/rekor-cli
+/rekor-server
+/tests/rekor-server
 /server
 swagger
