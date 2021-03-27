@@ -25,6 +25,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -81,12 +82,12 @@ func (s Signature) Verify(r io.Reader, k interface{}) error {
 		if ed25519.Verify(pub, message, s.signature) {
 			return nil
 		}
-		return fmt.Errorf("signature mismatch for %s", string(s.signature))
+		return errors.New("supplied signature does not match key")
 	case *ecdsa.PublicKey:
 		if ecdsa.VerifyASN1(pub, hash, s.signature) {
 			return nil
 		}
-		return fmt.Errorf("signature mismatch for %s", string(s.signature))
+		return errors.New("supplied signature does not match key")
 	default:
 		return fmt.Errorf("invalid public key type: %T", pub)
 	}
