@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
       - name: rekor-watcher
-        image: ko://github.com/sigstore/rekor/cmd/server
-        command: ["/ko-app/server"]
+        image: ko://github.com/sigstore/rekor/cmd/rekor-server
+        command: ["/ko-app/rekor-server"]
         ports:
         - containerPort: 3000
         - containerPort: 2112 # metrics
