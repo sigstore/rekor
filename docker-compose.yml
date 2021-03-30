@@ -22,8 +22,6 @@ services:
       "--appendonly",
       "yes"
     ]
-    ports:
-      - "6379:6379"
     restart: always # keep the redis server running
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
