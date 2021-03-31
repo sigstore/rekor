@@ -94,7 +94,7 @@ var logProofCmd = &cobra.Command{
 
 func init() {
 	logProofCmd.Flags().Uint64("first-size", 1, "the size of the log where the proof should begin")
-	logProofCmd.Flags().Uint64("last-size", 1, "the size of the log where the proof should end")
+	logProofCmd.Flags().Uint64("last-size", 0, "the size of the log where the proof should end")
 	if err := logProofCmd.MarkFlagRequired("last-size"); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
