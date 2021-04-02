@@ -47,7 +47,7 @@ type GetLogEntryByUUIDParams struct {
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 
-	/*the UUID of the entry to be retrieved from the log. The UUID is also the merkle tree hash of the entry.
+	/*the UUID of the entry for which the inclusion proof information should be returned
 	  Required: true
 	  Pattern: ^[0-9a-fA-F]{64}$
 	  In: path

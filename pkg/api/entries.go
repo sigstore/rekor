@@ -17,8 +17,6 @@ package api
 
 import (
 	"context"
-	"crypto"
-	"crypto/x509"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -41,16 +39,47 @@ import (
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
-	tclient "github.com/google/trillian/client"
 	tcrypto "github.com/google/trillian/crypto"
 	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 )
 
+//logEntryFromLeaf creates LogEntry struct from trillian structs
+func logEntryFromLeaf(tc TrillianClient, leaf *trillian.LogLeaf, signedLogRoot *trillian.SignedLogRoot, proof *trillian.Proof) (models.LogEntry, error) {
+	root, err := tcrypto.VerifySignedLogRoot(tc.verifier.PubKey, tc.verifier.SigHash, signedLogRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	hashes := []string{}
+	for _, hash := range proof.Hashes {
+		hashes = append(hashes, hex.EncodeToString(hash))
+	}
+
+	inclusionProof := models.InclusionProof{
+		TreeSize: swag.Int64(int64(root.TreeSize)),
+		RootHash: swag.String(hex.EncodeToString(root.RootHash)),
+		LogIndex: swag.Int64(proof.GetLeafIndex()),
+		Hashes:   hashes,
+	}
+
+	logEntry := models.LogEntry{
+		hex.EncodeToString(leaf.MerkleLeafHash): models.LogEntryAnon{
+			LogIndex:       &leaf.LeafIndex,
+			Body:           leaf.LeafValue,
+			IntegratedTime: leaf.IntegrateTimestamp.AsTime().Unix(),
+			InclusionProof: &inclusionProof,
+		},
+	}
+
+	return logEntry, nil
+}
+
+//GetLogEntryAndProofByIndexHandler returns the entry and inclusion proof for a specified log index
 func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middleware.Responder {
 	tc := NewTrillianClient(params.HTTPRequest.Context())
 
-	resp := tc.getLeafByIndex(params.LogIndex)
+	resp := tc.getLeafAndProofByIndex(params.LogIndex)
 	switch resp.status {
 	case codes.OK:
 	case codes.NotFound, codes.OutOfRange:
@@ -59,24 +88,21 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc err: %w", resp.err), trillianCommunicationError)
 	}
 
-	leaves := resp.getLeafByRangeResult.GetLeaves()
-	if len(leaves) > 1 {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("len(leaves): %v", len(leaves)), trillianUnexpectedResult)
-	} else if len(leaves) == 0 {
+	result := resp.getLeafAndProofResult
+	leaf := result.Leaf
+	if leaf == nil {
 		return handleRekorAPIError(params, http.StatusNotFound, errors.New("grpc returned 0 leaves with success code"), "")
 	}
-	leaf := leaves[0]
 
-	logEntry := models.LogEntry{
-		hex.EncodeToString(leaf.MerkleLeafHash): models.LogEntryAnon{
-			LogIndex:       &leaf.LeafIndex,
-			Body:           leaf.LeafValue,
-			IntegratedTime: leaf.IntegrateTimestamp.AsTime().Unix(),
-		},
+	logEntry, err := logEntryFromLeaf(tc, leaf, result.SignedLogRoot, result.Proof)
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
 	}
+
 	return entries.NewGetLogEntryByIndexOK().WithPayload(logEntry)
 }
 
+//CreateLogEntryHandler creates new entry into log
 func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Responder {
 	httpReq := params.HTTPRequest
 	entry, err := types.NewEntry(params.ProposedEntry)
@@ -118,8 +144,9 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 
 	logEntry := models.LogEntry{
 		uuid: models.LogEntryAnon{
-			LogIndex: swag.Int64(queuedLeaf.LeafIndex),
-			Body:     queuedLeaf.GetLeafValue(),
+			LogIndex:       swag.Int64(queuedLeaf.LeafIndex),
+			Body:           queuedLeaf.GetLeafValue(),
+			IntegratedTime: queuedLeaf.IntegrateTimestamp.AsTime().Unix(),
 		},
 	}
 
@@ -136,6 +163,7 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(getEntryURL(*httpReq.URL, uuid)).WithETag(uuid)
 }
 
+//getEntryURL returns the absolute path to the log entry in a RESTful style
 func getEntryURL(locationURL url.URL, uuid string) strfmt.URI {
 	// remove API key from output
 	query := locationURL.Query()
@@ -146,13 +174,12 @@ func getEntryURL(locationURL url.URL, uuid string) strfmt.URI {
 
 }
 
+//GetLogEntryByUUIDHandler gets log entry and inclusion proof for specified UUID aka merkle leaf hash
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
 	hashValue, _ := hex.DecodeString(params.EntryUUID)
-	hashes := [][]byte{hashValue}
-
 	tc := NewTrillianClient(params.HTTPRequest.Context())
 
-	resp := tc.getLeafByHash(hashes) // TODO: if this API is deprecated, we need to ask for inclusion proof and then use index in proof result to get leaf
+	resp := tc.getLeafAndProofByHash(hashValue)
 	switch resp.status {
 	case codes.OK:
 	case codes.NotFound:
@@ -161,70 +188,21 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
 	}
 
-	leaves := resp.getLeafResult.GetLeaves()
-	if len(leaves) > 1 {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("len(leaves): %v", len(leaves)), trillianUnexpectedResult)
-	} else if len(leaves) == 0 {
+	result := resp.getLeafAndProofResult
+	leaf := result.Leaf
+	if leaf == nil {
 		return handleRekorAPIError(params, http.StatusNotFound, errors.New("grpc returned 0 leaves with success code"), "")
 	}
-	leaf := leaves[0]
 
-	uuid := hex.EncodeToString(leaf.GetMerkleLeafHash())
-
-	logEntry := models.LogEntry{
-		uuid: models.LogEntryAnon{
-			LogIndex:       swag.Int64(leaf.GetLeafIndex()),
-			Body:           leaf.LeafValue,
-			IntegratedTime: leaf.IntegrateTimestamp.AsTime().Unix(),
-		},
-	}
-	return entries.NewGetLogEntryByUUIDOK().WithPayload(logEntry)
-}
-
-func GetLogEntryProofHandler(params entries.GetLogEntryProofParams) middleware.Responder {
-	hashValue, _ := hex.DecodeString(params.EntryUUID)
-	tc := NewTrillianClient(params.HTTPRequest.Context())
-
-	resp := tc.getProofByHash(hashValue)
-	switch resp.status {
-	case codes.OK:
-	case codes.NotFound:
-		return handleRekorAPIError(params, http.StatusNotFound, fmt.Errorf("grpc error: %w", resp.err), "")
-	default:
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
-	}
-	result := resp.getProofResult
-
-	// validate result is signed with the key we're aware of
-	pub, err := x509.ParsePKIXPublicKey(tc.pubkey.Der)
+	logEntry, err := logEntryFromLeaf(tc, leaf, result.SignedLogRoot, result.Proof)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
 	}
-	verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
-	root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, result.SignedLogRoot)
-	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
-	}
 
-	if len(result.Proof) != 1 {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("len(result.Proof) = %v", len(result.Proof)), trillianUnexpectedResult)
-	}
-	proof := result.Proof[0]
-
-	hashes := []string{}
-	for _, hash := range proof.Hashes {
-		hashes = append(hashes, hex.EncodeToString(hash))
-	}
-
-	inclusionProof := models.InclusionProof{
-		TreeSize: swag.Int64(int64(root.TreeSize)),
-		RootHash: swag.String(hex.EncodeToString(root.RootHash)),
-		LogIndex: swag.Int64(proof.GetLeafIndex()),
-		Hashes:   hashes,
-	}
-	return entries.NewGetLogEntryProofOK().WithPayload(&inclusionProof)
+	return entries.NewGetLogEntryByUUIDOK().WithPayload(logEntry)
 }
 
+//SearchLogQueryHandler searches log by index, UUID, or proposed entry and returns array of entries found with inclusion proofs
 func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Responder {
 	httpReqCtx := params.HTTPRequest.Context()
 	resultPayload := []models.LogEntry{}
@@ -276,20 +254,35 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 			return handleRekorAPIError(params, code, err, err.Error())
 		}
 
-		resp := tc.getLeafByHash(searchHashes) // TODO: if this API is deprecated, we need to ask for inclusion proof and then use index in proof result to get leaf
-		switch resp.status {
-		case codes.OK, codes.NotFound:
-		default:
-			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
+		searchByHashResults := make([]*trillian.GetEntryAndProofResponse, len(searchHashes))
+		g, _ = errgroup.WithContext(httpReqCtx)
+		for i, hash := range searchHashes {
+			i, hash := i, hash // https://golang.org/doc/faq#closures_and_goroutines
+			g.Go(func() error {
+				resp := tc.getLeafAndProofByHash(hash)
+				switch resp.status {
+				case codes.OK, codes.NotFound:
+				default:
+					return resp.err
+				}
+				leafResult := resp.getLeafAndProofResult
+				if leafResult != nil && leafResult.Leaf != nil {
+					searchByHashResults[i] = leafResult
+				}
+				return nil
+			})
 		}
 
-		for _, leaf := range resp.getLeafResult.Leaves {
-			logEntry := models.LogEntry{
-				hex.EncodeToString(leaf.MerkleLeafHash): models.LogEntryAnon{
-					LogIndex: &leaf.LeafIndex,
-					Body:     leaf.LeafValue,
-				},
+		if err := g.Wait(); err != nil {
+			return handleRekorAPIError(params, code, err, err.Error())
+		}
+
+		for _, leafResp := range searchByHashResults {
+			logEntry, err := logEntryFromLeaf(tc, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof)
+			if err != nil {
+				return handleRekorAPIError(params, code, err, err.Error())
 			}
+
 			resultPayload = append(resultPayload, logEntry)
 		}
 	}
@@ -297,39 +290,33 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	if len(params.Entry.LogIndexes) > 0 {
 		g, _ := errgroup.WithContext(httpReqCtx)
 
-		leaves := make([]*trillian.LogLeaf, len(params.Entry.LogIndexes))
+		leafResults := make([]*trillian.GetEntryAndProofResponse, len(params.Entry.LogIndexes))
 		for i, logIndex := range params.Entry.LogIndexes {
 			i, logIndex := i, logIndex // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
-				resp := tc.getLeafByIndex(swag.Int64Value(logIndex))
+				resp := tc.getLeafAndProofByIndex(swag.Int64Value(logIndex))
 				switch resp.status {
 				case codes.OK, codes.NotFound:
 				default:
 					return resp.err
 				}
-				if resp.getLeafByRangeResult != nil {
-					numLeaves := len(resp.getLeafByRangeResult.Leaves)
-					if numLeaves == 0 {
-						return nil
-					} else if numLeaves != 1 {
-						return errors.New("more than one leaf returned from getLeafByIndex call")
-					}
-					leaves[i] = resp.getLeafByRangeResult.Leaves[0]
+				leafResult := resp.getLeafAndProofResult
+				if leafResult != nil && leafResult.Leaf != nil {
+					leafResults[i] = leafResult
 				}
 				return nil
 			})
-			if err := g.Wait(); err != nil {
-				return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", err), trillianUnexpectedResult)
-			}
 		}
 
-		for _, leaf := range leaves {
-			if leaf != nil {
-				logEntry := models.LogEntry{
-					hex.EncodeToString(leaf.MerkleLeafHash): models.LogEntryAnon{
-						LogIndex: &leaf.LeafIndex,
-						Body:     leaf.LeafValue,
-					},
+		if err := g.Wait(); err != nil {
+			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", err), trillianUnexpectedResult)
+		}
+
+		for _, result := range leafResults {
+			if result != nil {
+				logEntry, err := logEntryFromLeaf(tc, result.Leaf, result.SignedLogRoot, result.Proof)
+				if err != nil {
+					return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 				}
 				resultPayload = append(resultPayload, logEntry)
 			}

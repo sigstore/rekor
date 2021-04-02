@@ -66,12 +66,16 @@ type LogEntryAnon struct {
 	// Required: true
 	Body interface{} `json:"body"`
 
+	// inclusion proof
+	InclusionProof *InclusionProof `json:"inclusionProof,omitempty"`
+
 	// integrated time
 	IntegratedTime int64 `json:"integratedTime,omitempty"`
 
 	// log index
+	// Required: true
 	// Minimum: 0
-	LogIndex *int64 `json:"logIndex,omitempty"`
+	LogIndex *int64 `json:"logIndex"`
 }
 
 // Validate validates this log entry anon
@@ -79,6 +83,10 @@ func (m *LogEntryAnon) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateBody(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateInclusionProof(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -97,10 +105,28 @@ func (m *LogEntryAnon) validateBody(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *LogEntryAnon) validateInclusionProof(formats strfmt.Registry) error {
+
+	if swag.IsZero(m.InclusionProof) { // not required
+		return nil
+	}
+
+	if m.InclusionProof != nil {
+		if err := m.InclusionProof.Validate(formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("inclusionProof")
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (m *LogEntryAnon) validateLogIndex(formats strfmt.Registry) error {
 
-	if swag.IsZero(m.LogIndex) { // not required
-		return nil
+	if err := validate.Required("logIndex", "body", m.LogIndex); err != nil {
+		return err
 	}
 
 	if err := validate.MinimumInt("logIndex", "body", int64(*m.LogIndex), 0, false); err != nil {

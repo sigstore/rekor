@@ -79,9 +79,6 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 		EntriesGetLogEntryByUUIDHandler: entries.GetLogEntryByUUIDHandlerFunc(func(params entries.GetLogEntryByUUIDParams) middleware.Responder {
 			return middleware.NotImplemented("operation entries.GetLogEntryByUUID has not yet been implemented")
 		}),
-		EntriesGetLogEntryProofHandler: entries.GetLogEntryProofHandlerFunc(func(params entries.GetLogEntryProofParams) middleware.Responder {
-			return middleware.NotImplemented("operation entries.GetLogEntryProof has not yet been implemented")
-		}),
 		TlogGetLogInfoHandler: tlog.GetLogInfoHandlerFunc(func(params tlog.GetLogInfoParams) middleware.Responder {
 			return middleware.NotImplemented("operation tlog.GetLogInfo has not yet been implemented")
 		}),
@@ -146,8 +143,6 @@ type RekorServerAPI struct {
 	EntriesGetLogEntryByIndexHandler entries.GetLogEntryByIndexHandler
 	// EntriesGetLogEntryByUUIDHandler sets the operation handler for the get log entry by UUID operation
 	EntriesGetLogEntryByUUIDHandler entries.GetLogEntryByUUIDHandler
-	// EntriesGetLogEntryProofHandler sets the operation handler for the get log entry proof operation
-	EntriesGetLogEntryProofHandler entries.GetLogEntryProofHandler
 	// TlogGetLogInfoHandler sets the operation handler for the get log info operation
 	TlogGetLogInfoHandler tlog.GetLogInfoHandler
 	// TlogGetLogProofHandler sets the operation handler for the get log proof operation
@@ -251,9 +246,6 @@ func (o *RekorServerAPI) Validate() error {
 	}
 	if o.EntriesGetLogEntryByUUIDHandler == nil {
 		unregistered = append(unregistered, "entries.GetLogEntryByUUIDHandler")
-	}
-	if o.EntriesGetLogEntryProofHandler == nil {
-		unregistered = append(unregistered, "entries.GetLogEntryProofHandler")
 	}
 	if o.TlogGetLogInfoHandler == nil {
 		unregistered = append(unregistered, "tlog.GetLogInfoHandler")
@@ -376,10 +368,6 @@ func (o *RekorServerAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/api/v1/log/entries/{entryUUID}"] = entries.NewGetLogEntryByUUID(o.context, o.EntriesGetLogEntryByUUIDHandler)
-	if o.handlers["GET"] == nil {
-		o.handlers["GET"] = make(map[string]http.Handler)
-	}
-	o.handlers["GET"]["/api/v1/log/entries/{entryUUID}/proof"] = entries.NewGetLogEntryProof(o.context, o.EntriesGetLogEntryProofHandler)
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}

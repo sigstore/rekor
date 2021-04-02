@@ -118,7 +118,7 @@ func init() {
         "tags": [
           "entries"
         ],
-        "summary": "Retrieves an entry from the transparency log (if it exists) by index",
+        "summary": "Retrieves an entry and inclusion proof from the transparency log (if it exists) by index",
         "operationId": "getLogEntryByIndex",
         "parameters": [
           {
@@ -131,7 +131,7 @@ func init() {
         ],
         "responses": {
           "200": {
-            "description": "the entry in the transparency log requested",
+            "description": "the entry in the transparency log requested along with an inclusion proof",
             "schema": {
               "$ref": "#/definitions/LogEntry"
             }
@@ -229,45 +229,12 @@ func init() {
     },
     "/api/v1/log/entries/{entryUUID}": {
       "get": {
+        "description": "Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log",
         "tags": [
           "entries"
         ],
-        "summary": "Retrieves an entry from the transparency log (if it exists) by UUID",
+        "summary": "Get log entry and information required to generate an inclusion proof for the entry in the transparency log",
         "operationId": "getLogEntryByUUID",
-        "parameters": [
-          {
-            "pattern": "^[0-9a-fA-F]{64}$",
-            "type": "string",
-            "description": "the UUID of the entry to be retrieved from the log. The UUID is also the merkle tree hash of the entry.",
-            "name": "entryUUID",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "the entry in the transparency log requested",
-            "schema": {
-              "$ref": "#/definitions/LogEntry"
-            }
-          },
-          "404": {
-            "$ref": "#/responses/NotFound"
-          },
-          "default": {
-            "$ref": "#/responses/InternalServerError"
-          }
-        }
-      }
-    },
-    "/api/v1/log/entries/{entryUUID}/proof": {
-      "get": {
-        "description": "Returns root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log",
-        "tags": [
-          "entries"
-        ],
-        "summary": "Get information required to generate an inclusion proof for a specified entry in the transparency log",
-        "operationId": "getLogEntryProof",
         "parameters": [
           {
             "pattern": "^[0-9a-fA-F]{64}$",
@@ -282,7 +249,7 @@ func init() {
           "200": {
             "description": "Information needed for a client to compute the inclusion proof",
             "schema": {
-              "$ref": "#/definitions/InclusionProof"
+              "$ref": "#/definitions/LogEntry"
             }
           },
           "404": {
@@ -434,12 +401,16 @@ func init() {
       "additionalProperties": {
         "type": "object",
         "required": [
+          "logIndex",
           "body"
         ],
         "properties": {
           "body": {
             "type": "object",
             "additionalProperties": true
+          },
+          "inclusionProof": {
+            "$ref": "#/definitions/InclusionProof"
           },
           "integratedTime": {
             "type": "integer"
@@ -745,7 +716,7 @@ func init() {
         "tags": [
           "entries"
         ],
-        "summary": "Retrieves an entry from the transparency log (if it exists) by index",
+        "summary": "Retrieves an entry and inclusion proof from the transparency log (if it exists) by index",
         "operationId": "getLogEntryByIndex",
         "parameters": [
           {
@@ -759,7 +730,7 @@ func init() {
         ],
         "responses": {
           "200": {
-            "description": "the entry in the transparency log requested",
+            "description": "the entry in the transparency log requested along with an inclusion proof",
             "schema": {
               "$ref": "#/definitions/LogEntry"
             }
@@ -881,48 +852,12 @@ func init() {
     },
     "/api/v1/log/entries/{entryUUID}": {
       "get": {
+        "description": "Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log",
         "tags": [
           "entries"
         ],
-        "summary": "Retrieves an entry from the transparency log (if it exists) by UUID",
+        "summary": "Get log entry and information required to generate an inclusion proof for the entry in the transparency log",
         "operationId": "getLogEntryByUUID",
-        "parameters": [
-          {
-            "pattern": "^[0-9a-fA-F]{64}$",
-            "type": "string",
-            "description": "the UUID of the entry to be retrieved from the log. The UUID is also the merkle tree hash of the entry.",
-            "name": "entryUUID",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "the entry in the transparency log requested",
-            "schema": {
-              "$ref": "#/definitions/LogEntry"
-            }
-          },
-          "404": {
-            "description": "The content requested could not be found"
-          },
-          "default": {
-            "description": "There was an internal error in the server while processing the request",
-            "schema": {
-              "$ref": "#/definitions/Error"
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/log/entries/{entryUUID}/proof": {
-      "get": {
-        "description": "Returns root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log",
-        "tags": [
-          "entries"
-        ],
-        "summary": "Get information required to generate an inclusion proof for a specified entry in the transparency log",
-        "operationId": "getLogEntryProof",
         "parameters": [
           {
             "pattern": "^[0-9a-fA-F]{64}$",
@@ -937,7 +872,7 @@ func init() {
           "200": {
             "description": "Information needed for a client to compute the inclusion proof",
             "schema": {
-              "$ref": "#/definitions/InclusionProof"
+              "$ref": "#/definitions/LogEntry"
             }
           },
           "404": {
@@ -1106,12 +1041,16 @@ func init() {
     "LogEntryAnon": {
       "type": "object",
       "required": [
+        "logIndex",
         "body"
       ],
       "properties": {
         "body": {
           "type": "object",
           "additionalProperties": true
+        },
+        "inclusionProof": {
+          "$ref": "#/definitions/InclusionProof"
         },
         "integratedTime": {
           "type": "integer"

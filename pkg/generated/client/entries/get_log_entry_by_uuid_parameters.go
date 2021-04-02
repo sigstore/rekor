@@ -78,7 +78,7 @@ for the get log entry by UUID operation typically these are written to a http.Re
 type GetLogEntryByUUIDParams struct {
 
 	/*EntryUUID
-	  the UUID of the entry to be retrieved from the log. The UUID is also the merkle tree hash of the entry.
+	  the UUID of the entry for which the inclusion proof information should be returned
 
 	*/
 	EntryUUID string
