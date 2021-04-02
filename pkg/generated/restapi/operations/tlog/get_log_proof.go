@@ -46,7 +46,7 @@ func NewGetLogProof(ctx *middleware.Context, handler GetLogProofHandler) *GetLog
 	return &GetLogProof{Context: ctx, Handler: handler}
 }
 
-/*GetLogProof swagger:route GET /api/v1/log/proof tlog getLogProof
+/* GetLogProof swagger:route GET /api/v1/log/proof tlog getLogProof
 
 Get information required to generate a consistency proof for the transparency log
 
@@ -61,17 +61,15 @@ type GetLogProof struct {
 func (o *GetLogProof) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	route, rCtx, _ := o.Context.RouteInfo(r)
 	if rCtx != nil {
-		r = rCtx
+		*r = *rCtx
 	}
 	var Params = NewGetLogProofParams()
-
 	if err := o.Context.BindValidRequest(r, route, &Params); err != nil { // bind params
 		o.Context.Respond(rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(Params) // actually handle the request
-
 	o.Context.Respond(rw, r, route.Produces, route, res)
 
 }

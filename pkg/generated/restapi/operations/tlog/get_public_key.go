@@ -46,7 +46,7 @@ func NewGetPublicKey(ctx *middleware.Context, handler GetPublicKeyHandler) *GetP
 	return &GetPublicKey{Context: ctx, Handler: handler}
 }
 
-/*GetPublicKey swagger:route GET /api/v1/log/publicKey tlog getPublicKey
+/* GetPublicKey swagger:route GET /api/v1/log/publicKey tlog getPublicKey
 
 Retrieve the public key that can be used to validate the signed tree head
 
@@ -61,17 +61,15 @@ type GetPublicKey struct {
 func (o *GetPublicKey) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	route, rCtx, _ := o.Context.RouteInfo(r)
 	if rCtx != nil {
-		r = rCtx
+		*r = *rCtx
 	}
 	var Params = NewGetPublicKeyParams()
-
 	if err := o.Context.BindValidRequest(r, route, &Params); err != nil { // bind params
 		o.Context.Respond(rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(Params) // actually handle the request
-
 	o.Context.Respond(rw, r, route.Produces, route, res)
 
 }

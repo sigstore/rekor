@@ -35,56 +35,70 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
-// NewSearchIndexParams creates a new SearchIndexParams object
-// with the default values initialized.
+// NewSearchIndexParams creates a new SearchIndexParams object,
+// with the default timeout for this client.
+//
+// Default values are not hydrated, since defaults are normally applied by the API server side.
+//
+// To enforce default values in parameter, use SetDefaults or WithDefaults.
 func NewSearchIndexParams() *SearchIndexParams {
-	var ()
 	return &SearchIndexParams{
-
 		timeout: cr.DefaultTimeout,
 	}
 }
 
 // NewSearchIndexParamsWithTimeout creates a new SearchIndexParams object
-// with the default values initialized, and the ability to set a timeout on a request
+// with the ability to set a timeout on a request.
 func NewSearchIndexParamsWithTimeout(timeout time.Duration) *SearchIndexParams {
-	var ()
 	return &SearchIndexParams{
-
 		timeout: timeout,
 	}
 }
 
 // NewSearchIndexParamsWithContext creates a new SearchIndexParams object
-// with the default values initialized, and the ability to set a context for a request
+// with the ability to set a context for a request.
 func NewSearchIndexParamsWithContext(ctx context.Context) *SearchIndexParams {
-	var ()
 	return &SearchIndexParams{
-
 		Context: ctx,
 	}
 }
 
 // NewSearchIndexParamsWithHTTPClient creates a new SearchIndexParams object
-// with the default values initialized, and the ability to set a custom HTTPClient for a request
+// with the ability to set a custom HTTPClient for a request.
 func NewSearchIndexParamsWithHTTPClient(client *http.Client) *SearchIndexParams {
-	var ()
 	return &SearchIndexParams{
 		HTTPClient: client,
 	}
 }
 
-/*SearchIndexParams contains all the parameters to send to the API endpoint
-for the search index operation typically these are written to a http.Request
+/* SearchIndexParams contains all the parameters to send to the API endpoint
+   for the search index operation.
+
+   Typically these are written to a http.Request.
 */
 type SearchIndexParams struct {
 
-	/*Query*/
+	// Query.
 	Query *models.SearchIndex
 
 	timeout    time.Duration
 	Context    context.Context
 	HTTPClient *http.Client
+}
+
+// WithDefaults hydrates default values in the search index params (not the query body).
+//
+// All values with no default are reset to their zero value.
+func (o *SearchIndexParams) WithDefaults() *SearchIndexParams {
+	o.SetDefaults()
+	return o
+}
+
+// SetDefaults hydrates default values in the search index params (not the query body).
+//
+// All values with no default are reset to their zero value.
+func (o *SearchIndexParams) SetDefaults() {
+	// no default values defined for this parameter
 }
 
 // WithTimeout adds the timeout to the search index params
@@ -138,7 +152,6 @@ func (o *SearchIndexParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 		return err
 	}
 	var res []error
-
 	if o.Query != nil {
 		if err := r.SetBodyParam(o.Query); err != nil {
 			return err

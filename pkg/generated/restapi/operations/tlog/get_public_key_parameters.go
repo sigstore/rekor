@@ -30,7 +30,8 @@ import (
 )
 
 // NewGetPublicKeyParams creates a new GetPublicKeyParams object
-// no default values defined in spec.
+//
+// There are no default values defined in the spec.
 func NewGetPublicKeyParams() GetPublicKeyParams {
 
 	return GetPublicKeyParams{}

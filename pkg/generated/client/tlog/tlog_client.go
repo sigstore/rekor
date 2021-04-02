@@ -40,13 +40,16 @@ type Client struct {
 	formats   strfmt.Registry
 }
 
+// ClientOption is the option for Client methods
+type ClientOption func(*runtime.ClientOperation)
+
 // ClientService is the interface for Client methods
 type ClientService interface {
-	GetLogInfo(params *GetLogInfoParams) (*GetLogInfoOK, error)
+	GetLogInfo(params *GetLogInfoParams, opts ...ClientOption) (*GetLogInfoOK, error)
 
-	GetLogProof(params *GetLogProofParams) (*GetLogProofOK, error)
+	GetLogProof(params *GetLogProofParams, opts ...ClientOption) (*GetLogProofOK, error)
 
-	GetPublicKey(params *GetPublicKeyParams) (*GetPublicKeyOK, error)
+	GetPublicKey(params *GetPublicKeyParams, opts ...ClientOption) (*GetPublicKeyOK, error)
 
 	SetTransport(transport runtime.ClientTransport)
 }
@@ -56,13 +59,12 @@ type ClientService interface {
 
   Returns the current root hash and size of the merkle tree used to store the log entries.
 */
-func (a *Client) GetLogInfo(params *GetLogInfoParams) (*GetLogInfoOK, error) {
+func (a *Client) GetLogInfo(params *GetLogInfoParams, opts ...ClientOption) (*GetLogInfoOK, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewGetLogInfoParams()
 	}
-
-	result, err := a.transport.Submit(&runtime.ClientOperation{
+	op := &runtime.ClientOperation{
 		ID:                 "getLogInfo",
 		Method:             "GET",
 		PathPattern:        "/api/v1/log",
@@ -73,7 +75,12 @@ func (a *Client) GetLogInfo(params *GetLogInfoParams) (*GetLogInfoOK, error) {
 		Reader:             &GetLogInfoReader{formats: a.formats},
 		Context:            params.Context,
 		Client:             params.HTTPClient,
-	})
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+
+	result, err := a.transport.Submit(op)
 	if err != nil {
 		return nil, err
 	}
@@ -91,13 +98,12 @@ func (a *Client) GetLogInfo(params *GetLogInfoParams) (*GetLogInfoOK, error) {
 
   Returns a list of hashes for specified tree sizes that can be used to confirm the consistency of the transparency log
 */
-func (a *Client) GetLogProof(params *GetLogProofParams) (*GetLogProofOK, error) {
+func (a *Client) GetLogProof(params *GetLogProofParams, opts ...ClientOption) (*GetLogProofOK, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewGetLogProofParams()
 	}
-
-	result, err := a.transport.Submit(&runtime.ClientOperation{
+	op := &runtime.ClientOperation{
 		ID:                 "getLogProof",
 		Method:             "GET",
 		PathPattern:        "/api/v1/log/proof",
@@ -108,7 +114,12 @@ func (a *Client) GetLogProof(params *GetLogProofParams) (*GetLogProofOK, error) 
 		Reader:             &GetLogProofReader{formats: a.formats},
 		Context:            params.Context,
 		Client:             params.HTTPClient,
-	})
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+
+	result, err := a.transport.Submit(op)
 	if err != nil {
 		return nil, err
 	}
@@ -126,13 +137,12 @@ func (a *Client) GetLogProof(params *GetLogProofParams) (*GetLogProofOK, error) 
 
   Returns the public key that can be used to validate the signed tree head
 */
-func (a *Client) GetPublicKey(params *GetPublicKeyParams) (*GetPublicKeyOK, error) {
+func (a *Client) GetPublicKey(params *GetPublicKeyParams, opts ...ClientOption) (*GetPublicKeyOK, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewGetPublicKeyParams()
 	}
-
-	result, err := a.transport.Submit(&runtime.ClientOperation{
+	op := &runtime.ClientOperation{
 		ID:                 "getPublicKey",
 		Method:             "GET",
 		PathPattern:        "/api/v1/log/publicKey",
@@ -143,7 +153,12 @@ func (a *Client) GetPublicKey(params *GetPublicKeyParams) (*GetPublicKeyOK, erro
 		Reader:             &GetPublicKeyReader{formats: a.formats},
 		Context:            params.Context,
 		Client:             params.HTTPClient,
-	})
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+
+	result, err := a.transport.Submit(op)
 	if err != nil {
 		return nil, err
 	}
