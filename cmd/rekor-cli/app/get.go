@@ -18,12 +18,12 @@ package app
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-openapi/runtime"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
@@ -47,7 +47,11 @@ func (g *getCmdOutput) String() string {
 	dt := time.Unix(g.IntegratedTime, 0).UTC().Format(time.RFC3339)
 	s += fmt.Sprintf("IntegratedTime: %s\n", dt)
 	s += fmt.Sprintf("UUID: %s\n", g.UUID)
-	s += fmt.Sprintf("Body: %s\n", spew.Sdump(g.Body))
+	var b bytes.Buffer
+	e := json.NewEncoder(&b)
+	e.SetIndent("", "  ")
+	e.Encode(g.Body)
+	s += fmt.Sprintf("Body: %s\n", b.Bytes())
 	return s
 }
 
