@@ -2,7 +2,7 @@
 
 name: CI
 env:
-  GOVERSION: 1.15.6
+  GOVERSION: 1.16.2
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the main branch
@@ -50,7 +50,7 @@ jobs:
         with:
           args: ./...
       - name: Ensure no files were modified as a result of the build
-        run: git update-index --refresh && git diff-index --quiet HEAD -- || git diff
+        run: git update-index --refresh && git diff-index --quiet HEAD -- || git diff --exit-code
   e2e:
     # The type of runner that the job will run on
     runs-on: ubuntu-20.04 
