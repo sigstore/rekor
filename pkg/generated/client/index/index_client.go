@@ -40,9 +40,12 @@ type Client struct {
 	formats   strfmt.Registry
 }
 
+// ClientOption is the option for Client methods
+type ClientOption func(*runtime.ClientOperation)
+
 // ClientService is the interface for Client methods
 type ClientService interface {
-	SearchIndex(params *SearchIndexParams) (*SearchIndexOK, error)
+	SearchIndex(params *SearchIndexParams, opts ...ClientOption) (*SearchIndexOK, error)
 
 	SetTransport(transport runtime.ClientTransport)
 }
@@ -50,13 +53,12 @@ type ClientService interface {
 /*
   SearchIndex searches index by entry metadata
 */
-func (a *Client) SearchIndex(params *SearchIndexParams) (*SearchIndexOK, error) {
+func (a *Client) SearchIndex(params *SearchIndexParams, opts ...ClientOption) (*SearchIndexOK, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewSearchIndexParams()
 	}
-
-	result, err := a.transport.Submit(&runtime.ClientOperation{
+	op := &runtime.ClientOperation{
 		ID:                 "searchIndex",
 		Method:             "POST",
 		PathPattern:        "/api/v1/index/retrieve",
@@ -67,7 +69,12 @@ func (a *Client) SearchIndex(params *SearchIndexParams) (*SearchIndexOK, error) 
 		Reader:             &SearchIndexReader{formats: a.formats},
 		Context:            params.Context,
 		Client:             params.HTTPClient,
-	})
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+
+	result, err := a.transport.Submit(op)
 	if err != nil {
 		return nil, err
 	}

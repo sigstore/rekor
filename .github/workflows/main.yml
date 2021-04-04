@@ -1,16 +1,14 @@
 # This is a basic workflow to help you get started with Actions
 
 name: CI
-env:
-  GOVERSION: 1.16.2
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the main branch
 on:
   push:
-    branches: [ main, openapi ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, openapi ]
+    branches: [ main ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -22,13 +20,16 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+      # Extract version of Go to use
+      - name: Extract version of Go to use
+        run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | sed -r 's/^.*://g'| uniq)" >> $GITHUB_ENV
       # Setup Go
       - uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GOVERSION }}
       # Download go-swagger
       - name: download go-swagger
-        run : go install github.com/go-swagger/go-swagger/cmd/swagger@v0.25.0
+        run : go install github.com/go-swagger/go-swagger/cmd/swagger@v0.27.0
       - name: Validate OpenAPI with Swagger
         run: swagger validate openapi.yaml
       # Make it

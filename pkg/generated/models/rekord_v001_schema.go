@@ -23,6 +23,7 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/go-openapi/errors"
@@ -104,6 +105,52 @@ func (m *RekordV001Schema) validateSignature(formats strfmt.Registry) error {
 	return nil
 }
 
+// ContextValidate validate this rekord v001 schema based on the context it is used
+func (m *RekordV001Schema) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.contextValidateData(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateSignature(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *RekordV001Schema) contextValidateData(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Data != nil {
+		if err := m.Data.ContextValidate(ctx, formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("data")
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *RekordV001Schema) contextValidateSignature(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Signature != nil {
+		if err := m.Signature.ContextValidate(ctx, formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("signature")
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
 // MarshalBinary interface implementation
 func (m *RekordV001Schema) MarshalBinary() ([]byte, error) {
 	if m == nil {
@@ -158,7 +205,6 @@ func (m *RekordV001SchemaData) Validate(formats strfmt.Registry) error {
 }
 
 func (m *RekordV001SchemaData) validateHash(formats strfmt.Registry) error {
-
 	if swag.IsZero(m.Hash) { // not required
 		return nil
 	}
@@ -176,13 +222,40 @@ func (m *RekordV001SchemaData) validateHash(formats strfmt.Registry) error {
 }
 
 func (m *RekordV001SchemaData) validateURL(formats strfmt.Registry) error {
-
 	if swag.IsZero(m.URL) { // not required
 		return nil
 	}
 
 	if err := validate.FormatOf("data"+"."+"url", "body", "uri", m.URL.String(), formats); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// ContextValidate validate this rekord v001 schema data based on the context it is used
+func (m *RekordV001SchemaData) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.contextValidateHash(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *RekordV001SchemaData) contextValidateHash(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Hash != nil {
+		if err := m.Hash.ContextValidate(ctx, formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("data" + "." + "hash")
+			}
+			return err
+		}
 	}
 
 	return nil
@@ -288,6 +361,11 @@ func (m *RekordV001SchemaDataHash) validateValue(formats strfmt.Registry) error 
 	return nil
 }
 
+// ContextValidate validates this rekord v001 schema data hash based on context it is used
+func (m *RekordV001SchemaDataHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	return nil
+}
+
 // MarshalBinary interface implementation
 func (m *RekordV001SchemaDataHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
@@ -385,7 +463,6 @@ func (m *RekordV001SchemaSignature) validateFormatEnum(path, location string, va
 }
 
 func (m *RekordV001SchemaSignature) validateFormat(formats strfmt.Registry) error {
-
 	if swag.IsZero(m.Format) { // not required
 		return nil
 	}
@@ -399,7 +476,6 @@ func (m *RekordV001SchemaSignature) validateFormat(formats strfmt.Registry) erro
 }
 
 func (m *RekordV001SchemaSignature) validatePublicKey(formats strfmt.Registry) error {
-
 	if swag.IsZero(m.PublicKey) { // not required
 		return nil
 	}
@@ -417,13 +493,40 @@ func (m *RekordV001SchemaSignature) validatePublicKey(formats strfmt.Registry) e
 }
 
 func (m *RekordV001SchemaSignature) validateURL(formats strfmt.Registry) error {
-
 	if swag.IsZero(m.URL) { // not required
 		return nil
 	}
 
 	if err := validate.FormatOf("signature"+"."+"url", "body", "uri", m.URL.String(), formats); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// ContextValidate validate this rekord v001 schema signature based on the context it is used
+func (m *RekordV001SchemaSignature) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.contextValidatePublicKey(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *RekordV001SchemaSignature) contextValidatePublicKey(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.PublicKey != nil {
+		if err := m.PublicKey.ContextValidate(ctx, formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("signature" + "." + "publicKey")
+			}
+			return err
+		}
 	}
 
 	return nil
@@ -476,7 +579,6 @@ func (m *RekordV001SchemaSignaturePublicKey) Validate(formats strfmt.Registry) e
 }
 
 func (m *RekordV001SchemaSignaturePublicKey) validateURL(formats strfmt.Registry) error {
-
 	if swag.IsZero(m.URL) { // not required
 		return nil
 	}
@@ -485,6 +587,11 @@ func (m *RekordV001SchemaSignaturePublicKey) validateURL(formats strfmt.Registry
 		return err
 	}
 
+	return nil
+}
+
+// ContextValidate validates this rekord v001 schema signature public key based on context it is used
+func (m *RekordV001SchemaSignaturePublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 

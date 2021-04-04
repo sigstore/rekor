@@ -33,59 +33,73 @@ import (
 	"github.com/go-openapi/strfmt"
 )
 
-// NewGetLogEntryProofParams creates a new GetLogEntryProofParams object
-// with the default values initialized.
+// NewGetLogEntryProofParams creates a new GetLogEntryProofParams object,
+// with the default timeout for this client.
+//
+// Default values are not hydrated, since defaults are normally applied by the API server side.
+//
+// To enforce default values in parameter, use SetDefaults or WithDefaults.
 func NewGetLogEntryProofParams() *GetLogEntryProofParams {
-	var ()
 	return &GetLogEntryProofParams{
-
 		timeout: cr.DefaultTimeout,
 	}
 }
 
 // NewGetLogEntryProofParamsWithTimeout creates a new GetLogEntryProofParams object
-// with the default values initialized, and the ability to set a timeout on a request
+// with the ability to set a timeout on a request.
 func NewGetLogEntryProofParamsWithTimeout(timeout time.Duration) *GetLogEntryProofParams {
-	var ()
 	return &GetLogEntryProofParams{
-
 		timeout: timeout,
 	}
 }
 
 // NewGetLogEntryProofParamsWithContext creates a new GetLogEntryProofParams object
-// with the default values initialized, and the ability to set a context for a request
+// with the ability to set a context for a request.
 func NewGetLogEntryProofParamsWithContext(ctx context.Context) *GetLogEntryProofParams {
-	var ()
 	return &GetLogEntryProofParams{
-
 		Context: ctx,
 	}
 }
 
 // NewGetLogEntryProofParamsWithHTTPClient creates a new GetLogEntryProofParams object
-// with the default values initialized, and the ability to set a custom HTTPClient for a request
+// with the ability to set a custom HTTPClient for a request.
 func NewGetLogEntryProofParamsWithHTTPClient(client *http.Client) *GetLogEntryProofParams {
-	var ()
 	return &GetLogEntryProofParams{
 		HTTPClient: client,
 	}
 }
 
-/*GetLogEntryProofParams contains all the parameters to send to the API endpoint
-for the get log entry proof operation typically these are written to a http.Request
+/* GetLogEntryProofParams contains all the parameters to send to the API endpoint
+   for the get log entry proof operation.
+
+   Typically these are written to a http.Request.
 */
 type GetLogEntryProofParams struct {
 
-	/*EntryUUID
-	  the UUID of the entry for which the inclusion proof information should be returned
+	/* EntryUUID.
 
+	   the UUID of the entry for which the inclusion proof information should be returned
 	*/
 	EntryUUID string
 
 	timeout    time.Duration
 	Context    context.Context
 	HTTPClient *http.Client
+}
+
+// WithDefaults hydrates default values in the get log entry proof params (not the query body).
+//
+// All values with no default are reset to their zero value.
+func (o *GetLogEntryProofParams) WithDefaults() *GetLogEntryProofParams {
+	o.SetDefaults()
+	return o
+}
+
+// SetDefaults hydrates default values in the get log entry proof params (not the query body).
+//
+// All values with no default are reset to their zero value.
+func (o *GetLogEntryProofParams) SetDefaults() {
+	// no default values defined for this parameter
 }
 
 // WithTimeout adds the timeout to the get log entry proof params

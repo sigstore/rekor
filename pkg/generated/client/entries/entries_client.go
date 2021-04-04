@@ -40,17 +40,20 @@ type Client struct {
 	formats   strfmt.Registry
 }
 
+// ClientOption is the option for Client methods
+type ClientOption func(*runtime.ClientOperation)
+
 // ClientService is the interface for Client methods
 type ClientService interface {
-	CreateLogEntry(params *CreateLogEntryParams) (*CreateLogEntryCreated, error)
+	CreateLogEntry(params *CreateLogEntryParams, opts ...ClientOption) (*CreateLogEntryCreated, error)
 
-	GetLogEntryByIndex(params *GetLogEntryByIndexParams) (*GetLogEntryByIndexOK, error)
+	GetLogEntryByIndex(params *GetLogEntryByIndexParams, opts ...ClientOption) (*GetLogEntryByIndexOK, error)
 
-	GetLogEntryByUUID(params *GetLogEntryByUUIDParams) (*GetLogEntryByUUIDOK, error)
+	GetLogEntryByUUID(params *GetLogEntryByUUIDParams, opts ...ClientOption) (*GetLogEntryByUUIDOK, error)
 
-	GetLogEntryProof(params *GetLogEntryProofParams) (*GetLogEntryProofOK, error)
+	GetLogEntryProof(params *GetLogEntryProofParams, opts ...ClientOption) (*GetLogEntryProofOK, error)
 
-	SearchLogQuery(params *SearchLogQueryParams) (*SearchLogQueryOK, error)
+	SearchLogQuery(params *SearchLogQueryParams, opts ...ClientOption) (*SearchLogQueryOK, error)
 
 	SetTransport(transport runtime.ClientTransport)
 }
@@ -61,13 +64,12 @@ type ClientService interface {
   Creates an entry in the transparency log for a detached signature, public key, and content. Items can be included in the request or fetched by the server when URLs are specified.
 
 */
-func (a *Client) CreateLogEntry(params *CreateLogEntryParams) (*CreateLogEntryCreated, error) {
+func (a *Client) CreateLogEntry(params *CreateLogEntryParams, opts ...ClientOption) (*CreateLogEntryCreated, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewCreateLogEntryParams()
 	}
-
-	result, err := a.transport.Submit(&runtime.ClientOperation{
+	op := &runtime.ClientOperation{
 		ID:                 "createLogEntry",
 		Method:             "POST",
 		PathPattern:        "/api/v1/log/entries",
@@ -78,7 +80,12 @@ func (a *Client) CreateLogEntry(params *CreateLogEntryParams) (*CreateLogEntryCr
 		Reader:             &CreateLogEntryReader{formats: a.formats},
 		Context:            params.Context,
 		Client:             params.HTTPClient,
-	})
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+
+	result, err := a.transport.Submit(op)
 	if err != nil {
 		return nil, err
 	}
@@ -94,13 +101,12 @@ func (a *Client) CreateLogEntry(params *CreateLogEntryParams) (*CreateLogEntryCr
 /*
   GetLogEntryByIndex retrieves an entry from the transparency log if it exists by index
 */
-func (a *Client) GetLogEntryByIndex(params *GetLogEntryByIndexParams) (*GetLogEntryByIndexOK, error) {
+func (a *Client) GetLogEntryByIndex(params *GetLogEntryByIndexParams, opts ...ClientOption) (*GetLogEntryByIndexOK, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewGetLogEntryByIndexParams()
 	}
-
-	result, err := a.transport.Submit(&runtime.ClientOperation{
+	op := &runtime.ClientOperation{
 		ID:                 "getLogEntryByIndex",
 		Method:             "GET",
 		PathPattern:        "/api/v1/log/entries",
@@ -111,7 +117,12 @@ func (a *Client) GetLogEntryByIndex(params *GetLogEntryByIndexParams) (*GetLogEn
 		Reader:             &GetLogEntryByIndexReader{formats: a.formats},
 		Context:            params.Context,
 		Client:             params.HTTPClient,
-	})
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+
+	result, err := a.transport.Submit(op)
 	if err != nil {
 		return nil, err
 	}
@@ -127,13 +138,12 @@ func (a *Client) GetLogEntryByIndex(params *GetLogEntryByIndexParams) (*GetLogEn
 /*
   GetLogEntryByUUID retrieves an entry from the transparency log if it exists by UUID
 */
-func (a *Client) GetLogEntryByUUID(params *GetLogEntryByUUIDParams) (*GetLogEntryByUUIDOK, error) {
+func (a *Client) GetLogEntryByUUID(params *GetLogEntryByUUIDParams, opts ...ClientOption) (*GetLogEntryByUUIDOK, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewGetLogEntryByUUIDParams()
 	}
-
-	result, err := a.transport.Submit(&runtime.ClientOperation{
+	op := &runtime.ClientOperation{
 		ID:                 "getLogEntryByUUID",
 		Method:             "GET",
 		PathPattern:        "/api/v1/log/entries/{entryUUID}",
@@ -144,7 +154,12 @@ func (a *Client) GetLogEntryByUUID(params *GetLogEntryByUUIDParams) (*GetLogEntr
 		Reader:             &GetLogEntryByUUIDReader{formats: a.formats},
 		Context:            params.Context,
 		Client:             params.HTTPClient,
-	})
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+
+	result, err := a.transport.Submit(op)
 	if err != nil {
 		return nil, err
 	}
@@ -162,13 +177,12 @@ func (a *Client) GetLogEntryByUUID(params *GetLogEntryByUUIDParams) (*GetLogEntr
 
   Returns root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log
 */
-func (a *Client) GetLogEntryProof(params *GetLogEntryProofParams) (*GetLogEntryProofOK, error) {
+func (a *Client) GetLogEntryProof(params *GetLogEntryProofParams, opts ...ClientOption) (*GetLogEntryProofOK, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewGetLogEntryProofParams()
 	}
-
-	result, err := a.transport.Submit(&runtime.ClientOperation{
+	op := &runtime.ClientOperation{
 		ID:                 "getLogEntryProof",
 		Method:             "GET",
 		PathPattern:        "/api/v1/log/entries/{entryUUID}/proof",
@@ -179,7 +193,12 @@ func (a *Client) GetLogEntryProof(params *GetLogEntryProofParams) (*GetLogEntryP
 		Reader:             &GetLogEntryProofReader{formats: a.formats},
 		Context:            params.Context,
 		Client:             params.HTTPClient,
-	})
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+
+	result, err := a.transport.Submit(op)
 	if err != nil {
 		return nil, err
 	}
@@ -195,13 +214,12 @@ func (a *Client) GetLogEntryProof(params *GetLogEntryProofParams) (*GetLogEntryP
 /*
   SearchLogQuery searches transparency log for one or more log entries
 */
-func (a *Client) SearchLogQuery(params *SearchLogQueryParams) (*SearchLogQueryOK, error) {
+func (a *Client) SearchLogQuery(params *SearchLogQueryParams, opts ...ClientOption) (*SearchLogQueryOK, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewSearchLogQueryParams()
 	}
-
-	result, err := a.transport.Submit(&runtime.ClientOperation{
+	op := &runtime.ClientOperation{
 		ID:                 "searchLogQuery",
 		Method:             "POST",
 		PathPattern:        "/api/v1/log/entries/retrieve",
@@ -212,7 +230,12 @@ func (a *Client) SearchLogQuery(params *SearchLogQueryParams) (*SearchLogQueryOK
 		Reader:             &SearchLogQueryReader{formats: a.formats},
 		Context:            params.Context,
 		Client:             params.HTTPClient,
-	})
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+
+	result, err := a.transport.Submit(op)
 	if err != nil {
 		return nil, err
 	}

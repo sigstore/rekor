@@ -46,7 +46,7 @@ func NewSearchIndex(ctx *middleware.Context, handler SearchIndexHandler) *Search
 	return &SearchIndex{Context: ctx, Handler: handler}
 }
 
-/*SearchIndex swagger:route POST /api/v1/index/retrieve index searchIndex
+/* SearchIndex swagger:route POST /api/v1/index/retrieve index searchIndex
 
 Searches index by entry metadata
 
@@ -59,17 +59,15 @@ type SearchIndex struct {
 func (o *SearchIndex) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	route, rCtx, _ := o.Context.RouteInfo(r)
 	if rCtx != nil {
-		r = rCtx
+		*r = *rCtx
 	}
 	var Params = NewSearchIndexParams()
-
 	if err := o.Context.BindValidRequest(r, route, &Params); err != nil { // bind params
 		o.Context.Respond(rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(Params) // actually handle the request
-
 	o.Context.Respond(rw, r, route.Produces, route, res)
 
 }
