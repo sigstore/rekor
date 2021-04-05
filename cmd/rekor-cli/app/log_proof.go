@@ -55,14 +55,17 @@ var logProofCmd = &cobra.Command{
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			return fmt.Errorf("Error initializing cmd line args: %s", err)
 		}
-		if viper.GetUint64("first-size") > viper.GetUint64("last-size") {
-			return errors.New("last-size must be >= to first-size")
-		}
 		if viper.GetUint64("first-size") == 0 {
 			return errors.New("first-size must be > 0")
 		}
+		if !viper.IsSet("last-size") {
+			return errors.New("last-size must be specified")
+		}
 		if viper.GetUint64("last-size") == 0 {
 			return errors.New("last-size must be > 0")
+		}
+		if viper.GetUint64("first-size") > viper.GetUint64("last-size") {
+			return errors.New("last-size must be >= to first-size")
 		}
 		return nil
 	},
@@ -94,7 +97,7 @@ var logProofCmd = &cobra.Command{
 
 func init() {
 	logProofCmd.Flags().Uint64("first-size", 1, "the size of the log where the proof should begin")
-	logProofCmd.Flags().Uint64("last-size", 1, "the size of the log where the proof should end")
+	logProofCmd.Flags().Uint64("last-size", 0, "the size of the log where the proof should end")
 	if err := logProofCmd.MarkFlagRequired("last-size"); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
