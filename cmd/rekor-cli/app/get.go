@@ -50,7 +50,7 @@ func (g *getCmdOutput) String() string {
 	var b bytes.Buffer
 	e := json.NewEncoder(&b)
 	e.SetIndent("", "  ")
-	e.Encode(g.Body)
+	_ = e.Encode(g.Body)
 	s += fmt.Sprintf("Body: %s\n", b.Bytes())
 	return s
 }
