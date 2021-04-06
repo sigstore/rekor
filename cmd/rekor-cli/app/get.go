@@ -18,6 +18,7 @@ package app
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -46,7 +47,11 @@ func (g *getCmdOutput) String() string {
 	dt := time.Unix(g.IntegratedTime, 0).UTC().Format(time.RFC3339)
 	s += fmt.Sprintf("IntegratedTime: %s\n", dt)
 	s += fmt.Sprintf("UUID: %s\n", g.UUID)
-	s += fmt.Sprintf("Body: %s\n", g.Body)
+	var b bytes.Buffer
+	e := json.NewEncoder(&b)
+	e.SetIndent("", "  ")
+	_ = e.Encode(g.Body)
+	s += fmt.Sprintf("Body: %s\n", b.Bytes())
 	return s
 }
 
