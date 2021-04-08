@@ -119,7 +119,7 @@ func (o *CreateLogEntryCreated) readResponse(response runtime.ClientResponse, co
 		if err != nil {
 			return errors.InvalidType("Location", "header", "strfmt.URI", hdrLocation)
 		}
-		o.Location = vallocation.(strfmt.URI)
+		o.Location = *(vallocation.(*strfmt.URI))
 	}
 
 	// response payload
@@ -194,7 +194,7 @@ func (o *CreateLogEntryConflict) readResponse(response runtime.ClientResponse, c
 		if err != nil {
 			return errors.InvalidType("Location", "header", "strfmt.URI", hdrLocation)
 		}
-		o.Location = vallocation.(strfmt.URI)
+		o.Location = *(vallocation.(*strfmt.URI))
 	}
 
 	o.Payload = new(models.Error)
