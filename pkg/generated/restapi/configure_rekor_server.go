@@ -80,6 +80,7 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.TlogGetLogInfoHandler = tlog.GetLogInfoHandlerFunc(pkgapi.GetLogInfoHandler)
 	api.TlogGetLogProofHandler = tlog.GetLogProofHandlerFunc(pkgapi.GetLogProofHandler)
 	api.TlogGetPublicKeyHandler = tlog.GetPublicKeyHandlerFunc(pkgapi.GetPublicKeyHandler)
+	api.TlogGetPublicKeyCertHandler = tlog.GetPublicKeyCertHandlerFunc(pkgapi.GetPublicKeyCertHandler)
 
 	if viper.GetBool("enable_retrieve_api") {
 		api.IndexSearchIndexHandler = index.SearchIndexHandlerFunc(pkgapi.SearchIndexHandler)

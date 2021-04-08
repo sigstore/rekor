@@ -134,3 +134,25 @@ func GetPublicKeyHandler(params tlog.GetPublicKeyParams) middleware.Responder {
 
 	return tlog.NewGetPublicKeyOK().WithPayload(keyBuf.String())
 }
+
+// this cert was signed by fulcio and has a lifetime of 6 months (expires 2021-09-23)
+func GetPublicKeyCertHandler(params tlog.GetPublicKeyCertParams) middleware.Responder {
+	const publicKeyCert = `-----BEGIN CERTIFICATE-----
+MIICeTCCAf6gAwIBAgITEw8UMoC/eWzqZAZfDYlyMLQ78TAKBggqhkjOPQQDAzAq
+MRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxETAPBgNVBAMTCHNpZ3N0b3JlMB4XDTIx
+MDQwODE3MTQwMFoXDTIxMDkyMzE3MTQwMFowADBZMBMGByqGSM49AgEGCCqGSM49
+AwEHA0IABHnnNr9nnc3pXkjL+BdIk6TYNBHaRmI8XSxPJynp+NWswk/UDO2rvtU4
+p/64B5e28DY586fDaIauj8i7cYKe+1SjggErMIIBJzAOBgNVHQ8BAf8EBAMCB4Aw
+EwYDVR0lBAwwCgYIKwYBBQUHAwMwDAYDVR0TAQH/BAIwADAdBgNVHQ4EFgQU9Zcx
+rBsK1bew6Ul4SbxD7YRPK/4wHwYDVR0jBBgwFoAUyMUdAEGaJCkyUSTrDa5K7UoG
+0+wwgY0GCCsGAQUFBwEBBIGAMH4wfAYIKwYBBQUHMAKGcGh0dHA6Ly9wcml2YXRl
+Y2EtY29udGVudC02MDNmZTdlNy0wMDAwLTIyMjctYmY3NS1mNGY1ZTgwZDI5NTQu
+c3RvcmFnZS5nb29nbGVhcGlzLmNvbS9jYTM2YTFlOTYyNDJiOWZjYjE0Ni9jYS5j
+cnQwIgYDVR0RAQH/BBgwFoYUaHR0cHM6Ly9zaWdzdG9yZS5kZXYwCgYIKoZIzj0E
+AwMDaQAwZgIxAL2hAtwvijd5gXeMUsB0F8pUQPaM4v0CIdMe9cGRKMktG1Wve/XC
+mON2q63kpY0FeQIxAJjiE/AMnclx6u1+T11IfcjvHNdx4FYtNH2629JwRZL0QtlZ
+r5fKE/Ye92p/CMB0ww==
+-----END CERTIFICATE-----`
+
+	return tlog.NewGetPublicKeyCertOK().WithPayload(publicKeyCert)
+}
