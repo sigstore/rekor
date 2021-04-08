@@ -51,6 +51,8 @@ type ClientService interface {
 
 	GetPublicKey(params *GetPublicKeyParams, opts ...ClientOption) (*GetPublicKeyOK, error)
 
+	GetPublicKeyCert(params *GetPublicKeyCertParams, opts ...ClientOption) (*GetPublicKeyCertOK, error)
+
 	SetTransport(transport runtime.ClientTransport)
 }
 
@@ -168,6 +170,45 @@ func (a *Client) GetPublicKey(params *GetPublicKeyParams, opts ...ClientOption) 
 	}
 	// unexpected success response
 	unexpectedSuccess := result.(*GetPublicKeyDefault)
+	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
+}
+
+/*
+  GetPublicKeyCert retrieves the fulcio signed cert that contains the rekor public key
+
+  Returns the Fulcio signed cert that contains the rekor public key
+*/
+func (a *Client) GetPublicKeyCert(params *GetPublicKeyCertParams, opts ...ClientOption) (*GetPublicKeyCertOK, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewGetPublicKeyCertParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "getPublicKeyCert",
+		Method:             "GET",
+		PathPattern:        "/api/v1/log/publicKeyCert",
+		ProducesMediaTypes: []string{"application/x-pem-file"},
+		ConsumesMediaTypes: []string{"application/json", "application/yaml"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &GetPublicKeyCertReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+	success, ok := result.(*GetPublicKeyCertOK)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	unexpectedSuccess := result.(*GetPublicKeyCertDefault)
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 

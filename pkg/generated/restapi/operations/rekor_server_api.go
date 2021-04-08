@@ -91,6 +91,9 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 		TlogGetPublicKeyHandler: tlog.GetPublicKeyHandlerFunc(func(params tlog.GetPublicKeyParams) middleware.Responder {
 			return middleware.NotImplemented("operation tlog.GetPublicKey has not yet been implemented")
 		}),
+		TlogGetPublicKeyCertHandler: tlog.GetPublicKeyCertHandlerFunc(func(params tlog.GetPublicKeyCertParams) middleware.Responder {
+			return middleware.NotImplemented("operation tlog.GetPublicKeyCert has not yet been implemented")
+		}),
 		IndexSearchIndexHandler: index.SearchIndexHandlerFunc(func(params index.SearchIndexParams) middleware.Responder {
 			return middleware.NotImplemented("operation index.SearchIndex has not yet been implemented")
 		}),
@@ -156,6 +159,8 @@ type RekorServerAPI struct {
 	TlogGetLogProofHandler tlog.GetLogProofHandler
 	// TlogGetPublicKeyHandler sets the operation handler for the get public key operation
 	TlogGetPublicKeyHandler tlog.GetPublicKeyHandler
+	// TlogGetPublicKeyCertHandler sets the operation handler for the get public key cert operation
+	TlogGetPublicKeyCertHandler tlog.GetPublicKeyCertHandler
 	// IndexSearchIndexHandler sets the operation handler for the search index operation
 	IndexSearchIndexHandler index.SearchIndexHandler
 	// EntriesSearchLogQueryHandler sets the operation handler for the search log query operation
@@ -266,6 +271,9 @@ func (o *RekorServerAPI) Validate() error {
 	}
 	if o.TlogGetPublicKeyHandler == nil {
 		unregistered = append(unregistered, "tlog.GetPublicKeyHandler")
+	}
+	if o.TlogGetPublicKeyCertHandler == nil {
+		unregistered = append(unregistered, "tlog.GetPublicKeyCertHandler")
 	}
 	if o.IndexSearchIndexHandler == nil {
 		unregistered = append(unregistered, "index.SearchIndexHandler")
@@ -395,6 +403,10 @@ func (o *RekorServerAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/api/v1/log/publicKey"] = tlog.NewGetPublicKey(o.context, o.TlogGetPublicKeyHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/api/v1/log/publicKeyCert"] = tlog.NewGetPublicKeyCert(o.context, o.TlogGetPublicKeyCertHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}

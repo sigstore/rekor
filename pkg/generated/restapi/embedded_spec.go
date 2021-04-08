@@ -359,6 +359,30 @@ func init() {
           }
         }
       }
+    },
+    "/api/v1/log/publicKeyCert": {
+      "get": {
+        "description": "Returns the Fulcio signed cert that contains the rekor public key",
+        "produces": [
+          "application/x-pem-file"
+        ],
+        "tags": [
+          "tlog"
+        ],
+        "summary": "Retrieve the Fulcio signed cert that contains the rekor public key",
+        "operationId": "getPublicKeyCert",
+        "responses": {
+          "200": {
+            "description": "The public key cert",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "default": {
+            "$ref": "#/responses/InternalServerError"
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -1014,6 +1038,33 @@ func init() {
         "responses": {
           "200": {
             "description": "The public key",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "default": {
+            "description": "There was an internal error in the server while processing the request",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/log/publicKeyCert": {
+      "get": {
+        "description": "Returns the Fulcio signed cert that contains the rekor public key",
+        "produces": [
+          "application/x-pem-file"
+        ],
+        "tags": [
+          "tlog"
+        ],
+        "summary": "Retrieve the Fulcio signed cert that contains the rekor public key",
+        "operationId": "getPublicKeyCert",
+        "responses": {
+          "200": {
+            "description": "The public key cert",
             "schema": {
               "type": "string"
             }

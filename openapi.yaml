@@ -72,7 +72,22 @@ paths:
             type: string
         default:
           $ref: '#/responses/InternalServerError'
-
+  /api/v1/log/publicKeyCert:
+    get:
+      summary: Retrieve the Fulcio signed cert that contains the rekor public key
+      description: Returns the Fulcio signed cert that contains the rekor public key
+      operationId: getPublicKeyCert
+      tags:
+        - tlog
+      produces:
+        - application/x-pem-file
+      responses:
+        200:
+          description: The public key cert
+          schema:
+            type: string
+        default:
+          $ref: '#/responses/InternalServerError'
   /api/v1/log/proof:
     get:
       summary: Get information required to generate a consistency proof for the transparency log
