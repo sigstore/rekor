@@ -53,7 +53,7 @@ type InclusionProof struct {
 
 	// signed tree head
 	// Required: true
-	SignedTreeHead *InclusionProofSignedTreeHead `json:"signedTreeHead"`
+	SignedTreeHead *SignedTreeHead `json:"signedTreeHead"`
 
 	// The size of the merkle tree at the time the inclusion proof was generated
 	// Required: true
@@ -204,99 +204,6 @@ func (m *InclusionProof) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary interface implementation
 func (m *InclusionProof) UnmarshalBinary(b []byte) error {
 	var res InclusionProof
-	if err := swag.ReadJSON(b, &res); err != nil {
-		return err
-	}
-	*m = res
-	return nil
-}
-
-// InclusionProofSignedTreeHead The current signed tree head
-//
-// swagger:model InclusionProofSignedTreeHead
-type InclusionProofSignedTreeHead struct {
-
-	// Key hint
-	// Required: true
-	// Format: byte
-	KeyHint *strfmt.Base64 `json:"keyHint"`
-
-	// Log root
-	// Required: true
-	// Format: byte
-	LogRoot *strfmt.Base64 `json:"logRoot"`
-
-	// Signature for log root
-	// Required: true
-	// Format: byte
-	Signature *strfmt.Base64 `json:"signature"`
-}
-
-// Validate validates this inclusion proof signed tree head
-func (m *InclusionProofSignedTreeHead) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateKeyHint(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateLogRoot(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateSignature(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *InclusionProofSignedTreeHead) validateKeyHint(formats strfmt.Registry) error {
-
-	if err := validate.Required("signedTreeHead"+"."+"keyHint", "body", m.KeyHint); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *InclusionProofSignedTreeHead) validateLogRoot(formats strfmt.Registry) error {
-
-	if err := validate.Required("signedTreeHead"+"."+"logRoot", "body", m.LogRoot); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *InclusionProofSignedTreeHead) validateSignature(formats strfmt.Registry) error {
-
-	if err := validate.Required("signedTreeHead"+"."+"signature", "body", m.Signature); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// ContextValidate validates this inclusion proof signed tree head based on context it is used
-func (m *InclusionProofSignedTreeHead) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	return nil
-}
-
-// MarshalBinary interface implementation
-func (m *InclusionProofSignedTreeHead) MarshalBinary() ([]byte, error) {
-	if m == nil {
-		return nil, nil
-	}
-	return swag.WriteJSON(m)
-}
-
-// UnmarshalBinary interface implementation
-func (m *InclusionProofSignedTreeHead) UnmarshalBinary(b []byte) error {
-	var res InclusionProofSignedTreeHead
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

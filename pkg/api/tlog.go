@@ -53,7 +53,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	logRoot := strfmt.Base64(result.SignedLogRoot.GetLogRoot())
 	signature := strfmt.Base64(result.SignedLogRoot.GetLogRootSignature())
 
-	sth := models.LogInfoSignedTreeHead{
+	sth := models.SignedTreeHead{
 		KeyHint:   &keyHint,
 		LogRoot:   &logRoot,
 		Signature: &signature,

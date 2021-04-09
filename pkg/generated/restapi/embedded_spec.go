@@ -391,30 +391,7 @@ func init() {
           "pattern": "^[0-9a-fA-F]{64}$"
         },
         "signedTreeHead": {
-          "description": "The current signed tree head",
-          "type": "object",
-          "required": [
-            "keyHint",
-            "logRoot",
-            "signature"
-          ],
-          "properties": {
-            "keyHint": {
-              "description": "Key hint",
-              "type": "string",
-              "format": "byte"
-            },
-            "logRoot": {
-              "description": "Log root",
-              "type": "string",
-              "format": "byte"
-            },
-            "signature": {
-              "description": "Signature for log root",
-              "type": "string",
-              "format": "byte"
-            }
-          }
+          "$ref": "#/definitions/SignedTreeHead"
         },
         "treeSize": {
           "description": "The size of the merkle tree at the time the inclusion proof was generated",
@@ -462,30 +439,7 @@ func init() {
           "pattern": "^[0-9a-fA-F]{64}$"
         },
         "signedTreeHead": {
-          "description": "The current signed tree head",
-          "type": "object",
-          "required": [
-            "keyHint",
-            "logRoot",
-            "signature"
-          ],
-          "properties": {
-            "keyHint": {
-              "description": "Key hint",
-              "type": "string",
-              "format": "byte"
-            },
-            "logRoot": {
-              "description": "Log root",
-              "type": "string",
-              "format": "byte"
-            },
-            "signature": {
-              "description": "Signature for log root",
-              "type": "string",
-              "format": "byte"
-            }
-          }
+          "$ref": "#/definitions/SignedTreeHead"
         },
         "treeSize": {
           "description": "The current number of nodes in the merkle tree",
@@ -564,6 +518,32 @@ func init() {
           "items": {
             "type": "integer"
           }
+        }
+      }
+    },
+    "SignedTreeHead": {
+      "description": "The current signed tree head",
+      "type": "object",
+      "required": [
+        "keyHint",
+        "logRoot",
+        "signature"
+      ],
+      "properties": {
+        "keyHint": {
+          "description": "Key hint",
+          "type": "string",
+          "format": "byte"
+        },
+        "logRoot": {
+          "description": "Log root",
+          "type": "string",
+          "format": "byte"
+        },
+        "signature": {
+          "description": "Signature for log root",
+          "type": "string",
+          "format": "byte"
         }
       }
     },
@@ -1054,61 +1034,12 @@ func init() {
           "pattern": "^[0-9a-fA-F]{64}$"
         },
         "signedTreeHead": {
-          "description": "The current signed tree head",
-          "type": "object",
-          "required": [
-            "keyHint",
-            "logRoot",
-            "signature"
-          ],
-          "properties": {
-            "keyHint": {
-              "description": "Key hint",
-              "type": "string",
-              "format": "byte"
-            },
-            "logRoot": {
-              "description": "Log root",
-              "type": "string",
-              "format": "byte"
-            },
-            "signature": {
-              "description": "Signature for log root",
-              "type": "string",
-              "format": "byte"
-            }
-          }
+          "$ref": "#/definitions/SignedTreeHead"
         },
         "treeSize": {
           "description": "The size of the merkle tree at the time the inclusion proof was generated",
           "type": "integer",
           "minimum": 1
-        }
-      }
-    },
-    "InclusionProofSignedTreeHead": {
-      "description": "The current signed tree head",
-      "type": "object",
-      "required": [
-        "keyHint",
-        "logRoot",
-        "signature"
-      ],
-      "properties": {
-        "keyHint": {
-          "description": "Key hint",
-          "type": "string",
-          "format": "byte"
-        },
-        "logRoot": {
-          "description": "Log root",
-          "type": "string",
-          "format": "byte"
-        },
-        "signature": {
-          "description": "Signature for log root",
-          "type": "string",
-          "format": "byte"
         }
       }
     },
@@ -1155,61 +1086,12 @@ func init() {
           "pattern": "^[0-9a-fA-F]{64}$"
         },
         "signedTreeHead": {
-          "description": "The current signed tree head",
-          "type": "object",
-          "required": [
-            "keyHint",
-            "logRoot",
-            "signature"
-          ],
-          "properties": {
-            "keyHint": {
-              "description": "Key hint",
-              "type": "string",
-              "format": "byte"
-            },
-            "logRoot": {
-              "description": "Log root",
-              "type": "string",
-              "format": "byte"
-            },
-            "signature": {
-              "description": "Signature for log root",
-              "type": "string",
-              "format": "byte"
-            }
-          }
+          "$ref": "#/definitions/SignedTreeHead"
         },
         "treeSize": {
           "description": "The current number of nodes in the merkle tree",
           "type": "integer",
           "minimum": 1
-        }
-      }
-    },
-    "LogInfoSignedTreeHead": {
-      "description": "The current signed tree head",
-      "type": "object",
-      "required": [
-        "keyHint",
-        "logRoot",
-        "signature"
-      ],
-      "properties": {
-        "keyHint": {
-          "description": "Key hint",
-          "type": "string",
-          "format": "byte"
-        },
-        "logRoot": {
-          "description": "Log root",
-          "type": "string",
-          "format": "byte"
-        },
-        "signature": {
-          "description": "Signature for log root",
-          "type": "string",
-          "format": "byte"
         }
       }
     },
@@ -1580,6 +1462,32 @@ func init() {
             "type": "integer",
             "minimum": 0
           }
+        }
+      }
+    },
+    "SignedTreeHead": {
+      "description": "The current signed tree head",
+      "type": "object",
+      "required": [
+        "keyHint",
+        "logRoot",
+        "signature"
+      ],
+      "properties": {
+        "keyHint": {
+          "description": "Key hint",
+          "type": "string",
+          "format": "byte"
+        },
+        "logRoot": {
+          "description": "Log root",
+          "type": "string",
+          "format": "byte"
+        },
+        "signature": {
+          "description": "Signature for log root",
+          "type": "string",
+          "format": "byte"
         }
       }
     },

@@ -60,7 +60,7 @@ func logEntryFromLeaf(tc TrillianClient, leaf *trillian.LogLeaf, signedLogRoot *
 	logRoot := strfmt.Base64(signedLogRoot.GetLogRoot())
 	signature := strfmt.Base64(signedLogRoot.GetLogRootSignature())
 
-	signedTreeHead := models.InclusionProofSignedTreeHead{
+	signedTreeHead := models.SignedTreeHead{
 		KeyHint:   &keyHint,
 		LogRoot:   &logRoot,
 		Signature: &signature,
