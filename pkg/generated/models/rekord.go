@@ -24,6 +24,7 @@ package models
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 
 	"github.com/go-openapi/errors"
@@ -165,7 +166,7 @@ func (m *Rekord) validateAPIVersion(formats strfmt.Registry) error {
 		return err
 	}
 
-	if err := validate.Pattern("apiVersion", "body", string(*m.APIVersion), `^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`); err != nil {
+	if err := validate.Pattern("apiVersion", "body", *m.APIVersion, `^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`); err != nil {
 		return err
 	}
 
@@ -174,10 +175,20 @@ func (m *Rekord) validateAPIVersion(formats strfmt.Registry) error {
 
 func (m *Rekord) validateSpec(formats strfmt.Registry) error {
 
-	if err := validate.Required("spec", "body", m.Spec); err != nil {
-		return err
+	if m.Spec == nil {
+		return errors.Required("spec", "body", nil)
 	}
 
+	return nil
+}
+
+// ContextValidate validate this rekord based on the context it is used
+func (m *Rekord) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
 	return nil
 }
 

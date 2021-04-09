@@ -23,6 +23,7 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/go-openapi/errors"
@@ -104,6 +105,52 @@ func (m *RpmV001Schema) validatePublicKey(formats strfmt.Registry) error {
 	return nil
 }
 
+// ContextValidate validate this rpm v001 schema based on the context it is used
+func (m *RpmV001Schema) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.contextValidatePackage(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidatePublicKey(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *RpmV001Schema) contextValidatePackage(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Package != nil {
+		if err := m.Package.ContextValidate(ctx, formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("package")
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *RpmV001Schema) contextValidatePublicKey(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.PublicKey != nil {
+		if err := m.PublicKey.ContextValidate(ctx, formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("publicKey")
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
 // MarshalBinary interface implementation
 func (m *RpmV001Schema) MarshalBinary() ([]byte, error) {
 	if m == nil {
@@ -161,7 +208,6 @@ func (m *RpmV001SchemaPackage) Validate(formats strfmt.Registry) error {
 }
 
 func (m *RpmV001SchemaPackage) validateHash(formats strfmt.Registry) error {
-
 	if swag.IsZero(m.Hash) { // not required
 		return nil
 	}
@@ -179,13 +225,40 @@ func (m *RpmV001SchemaPackage) validateHash(formats strfmt.Registry) error {
 }
 
 func (m *RpmV001SchemaPackage) validateURL(formats strfmt.Registry) error {
-
 	if swag.IsZero(m.URL) { // not required
 		return nil
 	}
 
 	if err := validate.FormatOf("package"+"."+"url", "body", "uri", m.URL.String(), formats); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// ContextValidate validate this rpm v001 schema package based on the context it is used
+func (m *RpmV001SchemaPackage) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.contextValidateHash(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *RpmV001SchemaPackage) contextValidateHash(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Hash != nil {
+		if err := m.Hash.ContextValidate(ctx, formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("package" + "." + "hash")
+			}
+			return err
+		}
 	}
 
 	return nil
@@ -291,6 +364,11 @@ func (m *RpmV001SchemaPackageHash) validateValue(formats strfmt.Registry) error 
 	return nil
 }
 
+// ContextValidate validates this rpm v001 schema package hash based on context it is used
+func (m *RpmV001SchemaPackageHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	return nil
+}
+
 // MarshalBinary interface implementation
 func (m *RpmV001SchemaPackageHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
@@ -338,7 +416,6 @@ func (m *RpmV001SchemaPublicKey) Validate(formats strfmt.Registry) error {
 }
 
 func (m *RpmV001SchemaPublicKey) validateURL(formats strfmt.Registry) error {
-
 	if swag.IsZero(m.URL) { // not required
 		return nil
 	}
@@ -347,6 +424,11 @@ func (m *RpmV001SchemaPublicKey) validateURL(formats strfmt.Registry) error {
 		return err
 	}
 
+	return nil
+}
+
+// ContextValidate validates this rpm v001 schema public key based on context it is used
+func (m *RpmV001SchemaPublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 

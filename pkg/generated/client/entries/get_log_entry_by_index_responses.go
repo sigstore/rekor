@@ -69,7 +69,7 @@ func NewGetLogEntryByIndexOK() *GetLogEntryByIndexOK {
 	return &GetLogEntryByIndexOK{}
 }
 
-/*GetLogEntryByIndexOK handles this case with default header values.
+/* GetLogEntryByIndexOK describes a response with status code 200, with default header values.
 
 the entry in the transparency log requested along with an inclusion proof
 */
@@ -80,7 +80,6 @@ type GetLogEntryByIndexOK struct {
 func (o *GetLogEntryByIndexOK) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log/entries][%d] getLogEntryByIndexOK  %+v", 200, o.Payload)
 }
-
 func (o *GetLogEntryByIndexOK) GetPayload() models.LogEntry {
 	return o.Payload
 }
@@ -100,7 +99,7 @@ func NewGetLogEntryByIndexNotFound() *GetLogEntryByIndexNotFound {
 	return &GetLogEntryByIndexNotFound{}
 }
 
-/*GetLogEntryByIndexNotFound handles this case with default header values.
+/* GetLogEntryByIndexNotFound describes a response with status code 404, with default header values.
 
 The content requested could not be found
 */
@@ -123,7 +122,7 @@ func NewGetLogEntryByIndexDefault(code int) *GetLogEntryByIndexDefault {
 	}
 }
 
-/*GetLogEntryByIndexDefault handles this case with default header values.
+/* GetLogEntryByIndexDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */
@@ -141,7 +140,6 @@ func (o *GetLogEntryByIndexDefault) Code() int {
 func (o *GetLogEntryByIndexDefault) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log/entries][%d] getLogEntryByIndex default  %+v", o._statusCode, o.Payload)
 }
-
 func (o *GetLogEntryByIndexDefault) GetPayload() *models.Error {
 	return o.Payload
 }

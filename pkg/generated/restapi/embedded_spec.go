@@ -1483,7 +1483,6 @@ func init() {
         "entries": {
           "type": "array",
           "items": {
-            "minItems": 1,
             "$ref": "#/definitions/ProposedEntry"
           }
         },
@@ -1491,8 +1490,7 @@ func init() {
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^[0-9a-fA-F]{64}$",
-            "minItems": 1
+            "pattern": "^[0-9a-fA-F]{64}$"
           }
         },
         "logIndexes": {

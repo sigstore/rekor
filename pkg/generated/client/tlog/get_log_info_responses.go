@@ -63,7 +63,7 @@ func NewGetLogInfoOK() *GetLogInfoOK {
 	return &GetLogInfoOK{}
 }
 
-/*GetLogInfoOK handles this case with default header values.
+/* GetLogInfoOK describes a response with status code 200, with default header values.
 
 A JSON object with the root hash and tree size as properties
 */
@@ -74,7 +74,6 @@ type GetLogInfoOK struct {
 func (o *GetLogInfoOK) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log][%d] getLogInfoOK  %+v", 200, o.Payload)
 }
-
 func (o *GetLogInfoOK) GetPayload() *models.LogInfo {
 	return o.Payload
 }
@@ -98,7 +97,7 @@ func NewGetLogInfoDefault(code int) *GetLogInfoDefault {
 	}
 }
 
-/*GetLogInfoDefault handles this case with default header values.
+/* GetLogInfoDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */
@@ -116,7 +115,6 @@ func (o *GetLogInfoDefault) Code() int {
 func (o *GetLogInfoDefault) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log][%d] getLogInfo default  %+v", o._statusCode, o.Payload)
 }
-
 func (o *GetLogInfoDefault) GetPayload() *models.Error {
 	return o.Payload
 }

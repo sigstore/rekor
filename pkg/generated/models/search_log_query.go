@@ -24,6 +24,7 @@ package models
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"strconv"
@@ -154,7 +155,6 @@ func (m *SearchLogQuery) Validate(formats strfmt.Registry) error {
 }
 
 func (m *SearchLogQuery) validateEntries(formats strfmt.Registry) error {
-
 	if swag.IsZero(m.Entries()) { // not required
 		return nil
 	}
@@ -174,14 +174,13 @@ func (m *SearchLogQuery) validateEntries(formats strfmt.Registry) error {
 }
 
 func (m *SearchLogQuery) validateEntryUUIDs(formats strfmt.Registry) error {
-
 	if swag.IsZero(m.EntryUUIDs) { // not required
 		return nil
 	}
 
 	for i := 0; i < len(m.EntryUUIDs); i++ {
 
-		if err := validate.Pattern("entryUUIDs"+"."+strconv.Itoa(i), "body", string(m.EntryUUIDs[i]), `^[0-9a-fA-F]{64}$`); err != nil {
+		if err := validate.Pattern("entryUUIDs"+"."+strconv.Itoa(i), "body", m.EntryUUIDs[i], `^[0-9a-fA-F]{64}$`); err != nil {
 			return err
 		}
 
@@ -191,7 +190,6 @@ func (m *SearchLogQuery) validateEntryUUIDs(formats strfmt.Registry) error {
 }
 
 func (m *SearchLogQuery) validateLogIndexes(formats strfmt.Registry) error {
-
 	if swag.IsZero(m.LogIndexes) { // not required
 		return nil
 	}
@@ -207,7 +205,37 @@ func (m *SearchLogQuery) validateLogIndexes(formats strfmt.Registry) error {
 			continue
 		}
 
-		if err := validate.MinimumInt("logIndexes"+"."+strconv.Itoa(i), "body", int64(*m.LogIndexes[i]), 0, false); err != nil {
+		if err := validate.MinimumInt("logIndexes"+"."+strconv.Itoa(i), "body", *m.LogIndexes[i], 0, false); err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+// ContextValidate validate this search log query based on the context it is used
+func (m *SearchLogQuery) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.contextValidateEntries(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *SearchLogQuery) contextValidateEntries(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.Entries()); i++ {
+
+		if err := m.entriesField[i].ContextValidate(ctx, formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("entries" + "." + strconv.Itoa(i))
+			}
 			return err
 		}
 
