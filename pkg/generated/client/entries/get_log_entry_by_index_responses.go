@@ -71,7 +71,7 @@ func NewGetLogEntryByIndexOK() *GetLogEntryByIndexOK {
 
 /* GetLogEntryByIndexOK describes a response with status code 200, with default header values.
 
-the entry in the transparency log requested
+the entry in the transparency log requested along with an inclusion proof
 */
 type GetLogEntryByIndexOK struct {
 	Payload models.LogEntry

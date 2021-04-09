@@ -160,11 +160,11 @@ var logInfoCmd = &cobra.Command{
 				log.CliLogger.Infof("Consistency proof valid!")
 			} else if persistedSize == lr.TreeSize {
 				if !bytes.Equal(oldState.RootHash, lr.RootHash) {
-					return nil, errors.New("Root hash returned from server does not match previously persisted state")
+					return nil, errors.New("root hash returned from server does not match previously persisted state")
 				}
 				log.CliLogger.Infof("Persisted log state matches the current state of the log")
 			} else if persistedSize > lr.TreeSize {
-				return nil, fmt.Errorf("Current size of tree reported from server %d is less than previously persisted state %d", lr.TreeSize, persistedSize)
+				return nil, fmt.Errorf("current size of tree reported from server %d is less than previously persisted state %d", lr.TreeSize, persistedSize)
 			}
 		} else {
 			log.CliLogger.Infof("No previous log state stored, unable to prove consistency")

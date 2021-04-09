@@ -33,7 +33,7 @@ import (
 // GetLogEntryByUUIDOKCode is the HTTP code returned for type GetLogEntryByUUIDOK
 const GetLogEntryByUUIDOKCode int = 200
 
-/*GetLogEntryByUUIDOK the entry in the transparency log requested
+/*GetLogEntryByUUIDOK Information needed for a client to compute the inclusion proof
 
 swagger:response getLogEntryByUuidOK
 */

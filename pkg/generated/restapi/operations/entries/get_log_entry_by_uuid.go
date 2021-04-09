@@ -48,7 +48,9 @@ func NewGetLogEntryByUUID(ctx *middleware.Context, handler GetLogEntryByUUIDHand
 
 /* GetLogEntryByUUID swagger:route GET /api/v1/log/entries/{entryUUID} entries getLogEntryByUuid
 
-Retrieves an entry from the transparency log (if it exists) by UUID
+Get log entry and information required to generate an inclusion proof for the entry in the transparency log
+
+Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log
 
 */
 type GetLogEntryByUUID struct {

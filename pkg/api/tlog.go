@@ -17,8 +17,6 @@ package api
 
 import (
 	"bytes"
-	"crypto"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
@@ -29,12 +27,11 @@ import (
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
-	tclient "github.com/google/trillian/client"
 	tcrypto "github.com/google/trillian/crypto"
-	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 )
 
+//GetLogInfoHandler returns the current size of the tree and the STH
 func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	tc := NewTrillianClient(params.HTTPRequest.Context())
 
@@ -45,12 +42,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	result := resp.getLatestResult
 
 	// validate result is signed with the key we're aware of
-	pub, err := x509.ParsePKIXPublicKey(tc.pubkey.Der)
-	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
-	}
-	verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
-	root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, result.SignedLogRoot)
+	root, err := tcrypto.VerifySignedLogRoot(tc.verifier.PubKey, tc.verifier.SigHash, result.SignedLogRoot)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 	}
@@ -75,6 +67,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	return tlog.NewGetLogInfoOK().WithPayload(&logInfo)
 }
 
+//GetLogProofHandler returns information required to compute a consistency proof between two snapshots of log
 func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	if *params.FirstSize > params.LastSize {
 		return handleRekorAPIError(params, http.StatusBadRequest, nil, fmt.Sprintf(firstSizeLessThanLastSize, *params.FirstSize, params.LastSize))
@@ -88,12 +81,7 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	result := resp.getConsistencyProofResult
 
 	// validate result is signed with the key we're aware of
-	pub, err := x509.ParsePKIXPublicKey(tc.pubkey.Der)
-	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
-	}
-	verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
-	root, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, result.SignedLogRoot)
+	root, err := tcrypto.VerifySignedLogRoot(tc.verifier.PubKey, tc.verifier.SigHash, result.SignedLogRoot)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 	}
@@ -119,6 +107,7 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	return tlog.NewGetLogProofOK().WithPayload(&consistencyProof)
 }
 
+//GetPublicKeyHandler returns the public key used to verify the signature on the signed tree head
 func GetPublicKeyHandler(params tlog.GetPublicKeyParams) middleware.Responder {
 	tc := NewTrillianClient(params.HTTPRequest.Context())
 

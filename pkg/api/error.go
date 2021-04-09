@@ -85,14 +85,6 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		default:
 			return entries.NewGetLogEntryByUUIDDefault(code).WithPayload(errorMsg(message, code))
 		}
-	case entries.GetLogEntryProofParams:
-		logMsg(params.HTTPRequest)
-		switch code {
-		case http.StatusNotFound:
-			return entries.NewGetLogEntryProofNotFound()
-		default:
-			return entries.NewGetLogEntryProofDefault(code).WithPayload(errorMsg(message, code))
-		}
 	case entries.CreateLogEntryParams:
 		logMsg(params.HTTPRequest)
 		switch code {

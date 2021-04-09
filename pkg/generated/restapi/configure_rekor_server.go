@@ -30,7 +30,6 @@ import (
 	"github.com/rs/cors"
 	"github.com/spf13/viper"
 
-	"github.com/sigstore/rekor/pkg/api"
 	pkgapi "github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
@@ -74,7 +73,6 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.EntriesCreateLogEntryHandler = entries.CreateLogEntryHandlerFunc(pkgapi.CreateLogEntryHandler)
 	api.EntriesGetLogEntryByIndexHandler = entries.GetLogEntryByIndexHandlerFunc(pkgapi.GetLogEntryByIndexHandler)
 	api.EntriesGetLogEntryByUUIDHandler = entries.GetLogEntryByUUIDHandlerFunc(pkgapi.GetLogEntryByUUIDHandler)
-	api.EntriesGetLogEntryProofHandler = entries.GetLogEntryProofHandlerFunc(pkgapi.GetLogEntryProofHandler)
 	api.EntriesSearchLogQueryHandler = entries.SearchLogQueryHandlerFunc(pkgapi.SearchLogQueryHandler)
 
 	api.TlogGetLogInfoHandler = tlog.GetLogInfoHandlerFunc(pkgapi.GetLogInfoHandler)
@@ -94,12 +92,11 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	//not cacheable
 	api.AddMiddlewareFor("GET", "/api/v1/log", middleware.NoCache)
 	api.AddMiddlewareFor("GET", "/api/v1/log/proof", middleware.NoCache)
-	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}/proof", middleware.NoCache)
+	api.AddMiddlewareFor("GET", "/api/v1/log/entries", middleware.NoCache)
+	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}", middleware.NoCache)
 
 	//cache forever
 	api.AddMiddlewareFor("GET", "/api/v1/log/publicKey", cacheForever)
-	api.AddMiddlewareFor("GET", "/api/v1/log/entries", cacheForever)
-	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}", cacheForever)
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
 }
@@ -161,7 +158,7 @@ func wrapMetrics(handler http.Handler) http.Handler {
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		defer func() {
 			// This logs latency broken down by URL path and response code
-			api.MetricLatency.With(map[string]string{
+			pkgapi.MetricLatency.With(map[string]string{
 				"path": r.URL.Path,
 				"code": strconv.Itoa(ww.Status()),
 			}).Observe(float64(time.Since(start)))

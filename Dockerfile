@@ -7,7 +7,8 @@ ADD go.mod go.sum $APP_ROOT/src/
 RUN go mod download
 
 # Add source code
-ADD ./ $APP_ROOT/src/
+ADD ./cmd/ $APP_ROOT/src/cmd/
+ADD ./pkg/ $APP_ROOT/src/pkg/
 
 RUN go build ./cmd/rekor-server
 RUN CGO_ENABLED=0 go build -gcflags "all=-N -l" -o rekor-server_debug ./cmd/rekor-server

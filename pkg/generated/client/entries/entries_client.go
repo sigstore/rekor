@@ -51,8 +51,6 @@ type ClientService interface {
 
 	GetLogEntryByUUID(params *GetLogEntryByUUIDParams, opts ...ClientOption) (*GetLogEntryByUUIDOK, error)
 
-	GetLogEntryProof(params *GetLogEntryProofParams, opts ...ClientOption) (*GetLogEntryProofOK, error)
-
 	SearchLogQuery(params *SearchLogQueryParams, opts ...ClientOption) (*SearchLogQueryOK, error)
 
 	SetTransport(transport runtime.ClientTransport)
@@ -99,7 +97,7 @@ func (a *Client) CreateLogEntry(params *CreateLogEntryParams, opts ...ClientOpti
 }
 
 /*
-  GetLogEntryByIndex retrieves an entry from the transparency log if it exists by index
+  GetLogEntryByIndex retrieves an entry and inclusion proof from the transparency log if it exists by index
 */
 func (a *Client) GetLogEntryByIndex(params *GetLogEntryByIndexParams, opts ...ClientOption) (*GetLogEntryByIndexOK, error) {
 	// TODO: Validate the params before sending
@@ -136,7 +134,9 @@ func (a *Client) GetLogEntryByIndex(params *GetLogEntryByIndexParams, opts ...Cl
 }
 
 /*
-  GetLogEntryByUUID retrieves an entry from the transparency log if it exists by UUID
+  GetLogEntryByUUID gets log entry and information required to generate an inclusion proof for the entry in the transparency log
+
+  Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log
 */
 func (a *Client) GetLogEntryByUUID(params *GetLogEntryByUUIDParams, opts ...ClientOption) (*GetLogEntryByUUIDOK, error) {
 	// TODO: Validate the params before sending
@@ -169,45 +169,6 @@ func (a *Client) GetLogEntryByUUID(params *GetLogEntryByUUIDParams, opts ...Clie
 	}
 	// unexpected success response
 	unexpectedSuccess := result.(*GetLogEntryByUUIDDefault)
-	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
-}
-
-/*
-  GetLogEntryProof gets information required to generate an inclusion proof for a specified entry in the transparency log
-
-  Returns root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log
-*/
-func (a *Client) GetLogEntryProof(params *GetLogEntryProofParams, opts ...ClientOption) (*GetLogEntryProofOK, error) {
-	// TODO: Validate the params before sending
-	if params == nil {
-		params = NewGetLogEntryProofParams()
-	}
-	op := &runtime.ClientOperation{
-		ID:                 "getLogEntryProof",
-		Method:             "GET",
-		PathPattern:        "/api/v1/log/entries/{entryUUID}/proof",
-		ProducesMediaTypes: []string{"application/json;q=1", "application/yaml"},
-		ConsumesMediaTypes: []string{"application/json", "application/yaml"},
-		Schemes:            []string{"http"},
-		Params:             params,
-		Reader:             &GetLogEntryProofReader{formats: a.formats},
-		Context:            params.Context,
-		Client:             params.HTTPClient,
-	}
-	for _, opt := range opts {
-		opt(op)
-	}
-
-	result, err := a.transport.Submit(op)
-	if err != nil {
-		return nil, err
-	}
-	success, ok := result.(*GetLogEntryProofOK)
-	if ok {
-		return success, nil
-	}
-	// unexpected success response
-	unexpectedSuccess := result.(*GetLogEntryProofDefault)
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 
