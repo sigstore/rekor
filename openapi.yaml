@@ -165,7 +165,7 @@ paths:
   /api/v1/log/entries/{entryUUID}:
     get:
       summary: Get log entry and information required to generate an inclusion proof for the entry in the transparency log
-      description: Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log
+      description: Returns the entry, root hash, tree size, a list of hashes, and a signed tree head that can be used to calculate and verify proof of an entry being included in the transparency log
       operationId: getLogEntryByUUID
       tags:
         - entries
@@ -178,7 +178,7 @@ paths:
           description: the UUID of the entry for which the inclusion proof information should be returned
       responses:
         200:
-          description: Information needed for a client to compute the inclusion proof
+          description: Information needed for a client to compute and verify the inclusion proof
           schema:
             $ref: '#/definitions/LogEntry'
         404:
@@ -390,11 +390,32 @@ definitions:
           type: string
           description: SHA256 hash value expressed in hexadecimal format
           pattern: '^[0-9a-fA-F]{64}$'
+      signedTreeHead:
+        type: object
+        description: The current signed tree head
+        properties: 
+          keyHint:
+            type: string
+            description: Key hint
+            format: byte
+          logRoot:
+            type: string
+            description: Log root
+            format: byte
+          signature:
+            type: string
+            description: Signature for log root
+            format: byte
+        required:
+          - keyHint
+          - logRoot
+          - signature
     required:
       - logIndex
       - rootHash
       - treeSize
       - hashes
+      - signedTreeHead
 
   Error:
     type: object

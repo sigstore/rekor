@@ -136,7 +136,7 @@ func (a *Client) GetLogEntryByIndex(params *GetLogEntryByIndexParams, opts ...Cl
 /*
   GetLogEntryByUUID gets log entry and information required to generate an inclusion proof for the entry in the transparency log
 
-  Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log
+  Returns the entry, root hash, tree size, a list of hashes, and a signed tree head that can be used to calculate and verify proof of an entry being included in the transparency log
 */
 func (a *Client) GetLogEntryByUUID(params *GetLogEntryByUUIDParams, opts ...ClientOption) (*GetLogEntryByUUIDOK, error) {
 	// TODO: Validate the params before sending

@@ -71,7 +71,7 @@ func NewGetLogEntryByUUIDOK() *GetLogEntryByUUIDOK {
 
 /* GetLogEntryByUUIDOK describes a response with status code 200, with default header values.
 
-Information needed for a client to compute the inclusion proof
+Information needed for a client to compute and verify the inclusion proof
 */
 type GetLogEntryByUUIDOK struct {
 	Payload models.LogEntry

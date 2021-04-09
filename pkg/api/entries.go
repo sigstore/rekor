@@ -56,11 +56,22 @@ func logEntryFromLeaf(tc TrillianClient, leaf *trillian.LogLeaf, signedLogRoot *
 		hashes = append(hashes, hex.EncodeToString(hash))
 	}
 
+	keyHint := strfmt.Base64(signedLogRoot.GetKeyHint())
+	logRoot := strfmt.Base64(signedLogRoot.GetLogRoot())
+	signature := strfmt.Base64(signedLogRoot.GetLogRootSignature())
+
+	signedTreeHead := models.InclusionProofSignedTreeHead{
+		KeyHint:   &keyHint,
+		LogRoot:   &logRoot,
+		Signature: &signature,
+	}
+
 	inclusionProof := models.InclusionProof{
-		TreeSize: swag.Int64(int64(root.TreeSize)),
-		RootHash: swag.String(hex.EncodeToString(root.RootHash)),
-		LogIndex: swag.Int64(proof.GetLeafIndex()),
-		Hashes:   hashes,
+		TreeSize:       swag.Int64(int64(root.TreeSize)),
+		RootHash:       swag.String(hex.EncodeToString(root.RootHash)),
+		LogIndex:       swag.Int64(proof.GetLeafIndex()),
+		Hashes:         hashes,
+		SignedTreeHead: &signedTreeHead,
 	}
 
 	logEntry := models.LogEntry{

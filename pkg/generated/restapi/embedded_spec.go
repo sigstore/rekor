@@ -229,7 +229,7 @@ func init() {
     },
     "/api/v1/log/entries/{entryUUID}": {
       "get": {
-        "description": "Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log",
+        "description": "Returns the entry, root hash, tree size, a list of hashes, and a signed tree head that can be used to calculate and verify proof of an entry being included in the transparency log",
         "tags": [
           "entries"
         ],
@@ -247,7 +247,7 @@ func init() {
         ],
         "responses": {
           "200": {
-            "description": "Information needed for a client to compute the inclusion proof",
+            "description": "Information needed for a client to compute and verify the inclusion proof",
             "schema": {
               "$ref": "#/definitions/LogEntry"
             }
@@ -368,7 +368,8 @@ func init() {
         "logIndex",
         "rootHash",
         "treeSize",
-        "hashes"
+        "hashes",
+        "signedTreeHead"
       ],
       "properties": {
         "hashes": {
@@ -388,6 +389,32 @@ func init() {
           "description": "The hash value stored at the root of the merkle tree at the time the proof was generated",
           "type": "string",
           "pattern": "^[0-9a-fA-F]{64}$"
+        },
+        "signedTreeHead": {
+          "description": "The current signed tree head",
+          "type": "object",
+          "required": [
+            "keyHint",
+            "logRoot",
+            "signature"
+          ],
+          "properties": {
+            "keyHint": {
+              "description": "Key hint",
+              "type": "string",
+              "format": "byte"
+            },
+            "logRoot": {
+              "description": "Log root",
+              "type": "string",
+              "format": "byte"
+            },
+            "signature": {
+              "description": "Signature for log root",
+              "type": "string",
+              "format": "byte"
+            }
+          }
         },
         "treeSize": {
           "description": "The size of the merkle tree at the time the inclusion proof was generated",
@@ -852,7 +879,7 @@ func init() {
     },
     "/api/v1/log/entries/{entryUUID}": {
       "get": {
-        "description": "Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log",
+        "description": "Returns the entry, root hash, tree size, a list of hashes, and a signed tree head that can be used to calculate and verify proof of an entry being included in the transparency log",
         "tags": [
           "entries"
         ],
@@ -870,7 +897,7 @@ func init() {
         ],
         "responses": {
           "200": {
-            "description": "Information needed for a client to compute the inclusion proof",
+            "description": "Information needed for a client to compute and verify the inclusion proof",
             "schema": {
               "$ref": "#/definitions/LogEntry"
             }
@@ -1003,7 +1030,8 @@ func init() {
         "logIndex",
         "rootHash",
         "treeSize",
-        "hashes"
+        "hashes",
+        "signedTreeHead"
       ],
       "properties": {
         "hashes": {
@@ -1025,10 +1053,62 @@ func init() {
           "type": "string",
           "pattern": "^[0-9a-fA-F]{64}$"
         },
+        "signedTreeHead": {
+          "description": "The current signed tree head",
+          "type": "object",
+          "required": [
+            "keyHint",
+            "logRoot",
+            "signature"
+          ],
+          "properties": {
+            "keyHint": {
+              "description": "Key hint",
+              "type": "string",
+              "format": "byte"
+            },
+            "logRoot": {
+              "description": "Log root",
+              "type": "string",
+              "format": "byte"
+            },
+            "signature": {
+              "description": "Signature for log root",
+              "type": "string",
+              "format": "byte"
+            }
+          }
+        },
         "treeSize": {
           "description": "The size of the merkle tree at the time the inclusion proof was generated",
           "type": "integer",
           "minimum": 1
+        }
+      }
+    },
+    "InclusionProofSignedTreeHead": {
+      "description": "The current signed tree head",
+      "type": "object",
+      "required": [
+        "keyHint",
+        "logRoot",
+        "signature"
+      ],
+      "properties": {
+        "keyHint": {
+          "description": "Key hint",
+          "type": "string",
+          "format": "byte"
+        },
+        "logRoot": {
+          "description": "Log root",
+          "type": "string",
+          "format": "byte"
+        },
+        "signature": {
+          "description": "Signature for log root",
+          "type": "string",
+          "format": "byte"
         }
       }
     },
