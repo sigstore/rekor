@@ -5,6 +5,9 @@ all: rekor-cli rekor-server
 GENSRC = pkg/generated/client/%.go pkg/generated/models/%.go pkg/generated/restapi/%.go
 OPENAPIDEPS = openapi.yaml $(shell find pkg/types -iname "*.json")
 SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go"|grep -v pkg/generated) pkg/generated/restapi/configure_rekor_server.go $(GENSRC)
+VERSION ?= $(shell git rev-parse --abbrev-ref HEAD)
+GIT_COMMIT = $(shell git log -n 1 --format=%h)
+GIT_DIRTY = $(shell test -z '$(shell git status --porcelain)' || echo '-dirty')
 
 $(GENSRC): $(OPENAPIDEPS)
 	swagger generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --default-consumes application/json\;q=1
@@ -21,10 +24,10 @@ gosec:
 	$(GOBIN)/gosec ./...
 
 rekor-cli: $(SRCS)
-	go build ./cmd/rekor-cli
+	go build -ldflags="-s -w -X github.com/sigstore/rekor/internal/version.version=$(VERSION) -X github.com/sigstore/rekor/internal/version.commit=$(GIT_COMMIT)$(GIT_DIRTY)" ./cmd/rekor-cli
 
 rekor-server: $(SRCS)
-	go build ./cmd/rekor-server
+	go build -ldflags="-s -w -X github.com/sigstore/rekor/internal/version.version=$(VERSION) -X github.com/sigstore/rekor/internal/version.commit=$(GIT_COMMIT)$(GIT_DIRTY)" ./cmd/rekor-server
 
 test:
 	go test ./...
