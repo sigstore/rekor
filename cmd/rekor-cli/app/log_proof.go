@@ -53,7 +53,7 @@ var logProofCmd = &cobra.Command{
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			return fmt.Errorf("Error initializing cmd line args: %s", err)
+			return fmt.Errorf("error initializing cmd line args: %s", err)
 		}
 		if viper.GetUint64("first-size") == 0 {
 			return errors.New("first-size must be > 0")

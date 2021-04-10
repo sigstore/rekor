@@ -75,7 +75,7 @@ var verifyCmd = &cobra.Command{
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			return fmt.Errorf("Error initializing cmd line args: %s", err)
+			return fmt.Errorf("error initializing cmd line args: %s", err)
 		}
 		if err := validateArtifactPFlags(true, true); err != nil {
 			_ = cmd.Help()
@@ -89,86 +89,76 @@ var verifyCmd = &cobra.Command{
 			return nil, err
 		}
 
-		params := entries.NewGetLogEntryProofParams()
-		params.EntryUUID = viper.GetString("uuid")
-		if params.EntryUUID == "" {
-			// without the UUID, we need to search for it
-			searchParams := entries.NewSearchLogQueryParams()
-			searchLogQuery := models.SearchLogQuery{}
+		searchParams := entries.NewSearchLogQueryParams()
+		searchLogQuery := models.SearchLogQuery{}
 
-			logIndex := viper.GetString("log-index")
-			if logIndex != "" {
-				logIndexInt, err := strconv.ParseInt(logIndex, 10, 0)
-				if err != nil {
-					return nil, fmt.Errorf("error parsing --log-index: %w", err)
-				}
-				searchLogQuery.LogIndexes = []*int64{&logIndexInt}
-			} else {
-				var entry models.ProposedEntry
-				switch viper.GetString("type") {
-				case "rekord":
-					entry, err = CreateRekordFromPFlags()
-					if err != nil {
-						return nil, err
-					}
-				case "rpm":
-					entry, err = CreateRpmFromPFlags()
-					if err != nil {
-						return nil, err
-					}
-				default:
-					return nil, errors.New("invalid type specified")
-				}
+		uuid := viper.GetString("uuid")
+		logIndex := viper.GetString("log-index")
 
-				entries := []models.ProposedEntry{entry}
-				searchLogQuery.SetEntries(entries)
-			}
-			searchParams.SetEntry(&searchLogQuery)
-
-			resp, err := rekorClient.Entries.SearchLogQuery(searchParams)
+		if uuid != "" {
+			searchLogQuery.EntryUUIDs = append(searchLogQuery.EntryUUIDs, uuid)
+		} else if logIndex != "" {
+			logIndexInt, err := strconv.ParseInt(logIndex, 10, 0)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("error parsing --log-index: %w", err)
+			}
+			searchLogQuery.LogIndexes = []*int64{&logIndexInt}
+		} else {
+			var entry models.ProposedEntry
+			switch viper.GetString("type") {
+			case "rekord":
+				entry, err = CreateRekordFromPFlags()
+				if err != nil {
+					return nil, err
+				}
+			case "rpm":
+				entry, err = CreateRpmFromPFlags()
+				if err != nil {
+					return nil, err
+				}
+			default:
+				return nil, errors.New("invalid type specified")
 			}
 
-			if len(resp.Payload) == 0 {
-				return nil, fmt.Errorf("entry in log cannot be located")
-			} else if len(resp.Payload) > 1 {
-				return nil, fmt.Errorf("multiple entries returned; this should not happen")
-			}
-			logEntry := resp.Payload[0]
-			if len(logEntry) != 1 {
-				return nil, errors.New("UUID value can not be extracted")
-			}
-			for k := range logEntry {
-				params.EntryUUID = k
-			}
+			entries := []models.ProposedEntry{entry}
+			searchLogQuery.SetEntries(entries)
 		}
+		searchParams.SetEntry(&searchLogQuery)
 
-		resp, err := rekorClient.Entries.GetLogEntryProof(params)
+		resp, err := rekorClient.Entries.SearchLogQuery(searchParams)
 		if err != nil {
 			return nil, err
 		}
 
-		o := &verifyCmdOutput{
-			RootHash:  *resp.Payload.RootHash,
-			EntryUUID: params.EntryUUID,
-			Index:     *resp.Payload.LogIndex,
-			Size:      *resp.Payload.TreeSize,
-			Hashes:    resp.Payload.Hashes,
+		if len(resp.Payload) == 0 {
+			return nil, fmt.Errorf("entry in log cannot be located")
+		} else if len(resp.Payload) > 1 {
+			return nil, fmt.Errorf("multiple entries returned; this should not happen")
+		}
+		logEntry := resp.Payload[0]
+
+		var o *verifyCmdOutput
+		for k, v := range logEntry {
+			o = &verifyCmdOutput{
+				RootHash:  *v.InclusionProof.RootHash,
+				EntryUUID: k,
+				Index:     *v.LogIndex,
+				Size:      *v.InclusionProof.TreeSize,
+				Hashes:    v.InclusionProof.Hashes,
+			}
 		}
 
 		hashes := [][]byte{}
-		for _, h := range resp.Payload.Hashes {
+		for _, h := range o.Hashes {
 			hb, _ := hex.DecodeString(h)
 			hashes = append(hashes, hb)
 		}
 
-		rootHash, _ := hex.DecodeString(*resp.Payload.RootHash)
-		leafHash, _ := hex.DecodeString(params.EntryUUID)
+		rootHash, _ := hex.DecodeString(o.RootHash)
+		leafHash, _ := hex.DecodeString(o.EntryUUID)
 
 		v := logverifier.New(rfc6962.DefaultHasher)
-		if err := v.VerifyInclusionProof(*resp.Payload.LogIndex, *resp.Payload.TreeSize,
-			hashes, rootHash, leafHash); err != nil {
+		if err := v.VerifyInclusionProof(o.Index, o.Size, hashes, rootHash, leafHash); err != nil {
 			return nil, err
 		}
 		return o, err

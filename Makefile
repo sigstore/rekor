@@ -1,6 +1,6 @@
-.PHONY: all test clean lint gosec
+.PHONY: all test clean clean-gen lint gosec
 
-all: cli server
+all: rekor-cli rekor-server
 
 GENSRC = pkg/generated/client/%.go pkg/generated/models/%.go pkg/generated/restapi/%.go
 OPENAPIDEPS = openapi.yaml $(shell find pkg/types -iname "*.json")
@@ -20,17 +20,20 @@ lint:
 gosec:
 	$(GOBIN)/gosec ./...
 
-cli: $(SRCS)
+rekor-cli: $(SRCS)
 	go build ./cmd/rekor-cli
 
-server: $(SRCS)
+rekor-server: $(SRCS)
 	go build ./cmd/rekor-server
 
 test:
 	go test ./...
 
 clean:
-	rm -rf cli server
+	rm -rf rekor-cli rekor-server
+
+clean-gen: clean
+	rm -rf $(shell find pkg/generated -iname "*.go"|grep -v pkg/generated/restapi/configure_rekor_server.go)
 
 up:
 	docker-compose -f docker-compose.yml build

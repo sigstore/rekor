@@ -33,7 +33,7 @@ import (
 // GetLogEntryByIndexOKCode is the HTTP code returned for type GetLogEntryByIndexOK
 const GetLogEntryByIndexOKCode int = 200
 
-/*GetLogEntryByIndexOK the entry in the transparency log requested
+/*GetLogEntryByIndexOK the entry in the transparency log requested along with an inclusion proof
 
 swagger:response getLogEntryByIndexOK
 */
