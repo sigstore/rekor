@@ -31,7 +31,6 @@ import (
 
 	"github.com/google/trillian"
 	tclient "github.com/google/trillian/client"
-	tcrypto "github.com/google/trillian/crypto"
 	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/google/trillian/types"
 
@@ -158,8 +157,9 @@ func doCheck(c *client.Rekor, v *tclient.LogVerifier) (*SignedAndUnsignedLogRoot
 		LogRoot:          logRoot,
 		LogRootSignature: signature,
 	}
-	lr, err := tcrypto.VerifySignedLogRoot(v.PubKey, v.SigHash, &sth)
-	if err != nil {
+
+	lr := &types.LogRootV1{}
+	if err := lr.UnmarshalBinary(sth.LogRoot); err != nil {
 		return nil, err
 	}
 	return &SignedAndUnsignedLogRoot{

@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"net/url"
 
+	ttypes "github.com/google/trillian/types"
+
 	"github.com/google/trillian"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
@@ -39,18 +41,17 @@ import (
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
-	tcrypto "github.com/google/trillian/crypto"
 	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 )
 
 //logEntryFromLeaf creates LogEntry struct from trillian structs
 func logEntryFromLeaf(tc TrillianClient, leaf *trillian.LogLeaf, signedLogRoot *trillian.SignedLogRoot, proof *trillian.Proof) (models.LogEntry, error) {
-	root, err := tcrypto.VerifySignedLogRoot(tc.verifier.PubKey, tc.verifier.SigHash, signedLogRoot)
-	if err != nil {
+
+	root := &ttypes.LogRootV1{}
+	if err := root.UnmarshalBinary(signedLogRoot.LogRoot); err != nil {
 		return nil, err
 	}
-
 	hashes := []string{}
 	for _, hash := range proof.Hashes {
 		hashes = append(hashes, hex.EncodeToString(hash))
