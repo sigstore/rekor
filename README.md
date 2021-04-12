@@ -72,9 +72,14 @@ These entries contain the tree length, tree root hash as well as the timestamp.
 The (signed) timestamp and index of a (signed) tree hash may be used as an attestation that any entries in the log
 prior to this index were witnessed by Rekor before this time.
 
-## Extensibility 
+## Extensibility
 
 Rekor allows customized manifests (which term them as types), [type customization is outlined here](https://github.com/sigstore/rekor/tree/main/pkg/types).
+
+## Security
+
+Should you discover any security issues, please refer to sigstores [security
+process](https://github.com/sigstore/community/blob/main/SECURITY.md)
 
 ## Contributions
 

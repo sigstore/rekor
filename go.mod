@@ -46,6 +46,6 @@ require (
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 	golang.org/x/tools v0.1.0 // indirect
 	google.golang.org/genproto v0.0.0-20201203001206-6486ece9c497
-	google.golang.org/grpc v1.36.1
+	google.golang.org/grpc v1.37.0
 	gopkg.in/ini.v1 v1.62.0 // indirect
 )
