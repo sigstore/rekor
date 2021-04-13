@@ -14,31 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package sign
+package signer
 
 import (
 	"context"
 	"crypto"
+	"fmt"
+	"strings"
 
-	"github.com/smallstep/certificates/cas/apiv1"
+	"github.com/sigstore/cosign/pkg/cosign/kms/gcp"
 )
 
-// Smallstep covers a variety of KMS providers, including GCP and Amazon
-// A list can be found here: https://github.com/smallstep/certificates/tree/master/kms
-type Smallstep struct {
-	opts apiv1.Options
+type Signer interface {
+	// Sign is responsible for signing the payload and returning a signature
+	Sign(ctx context.Context, payload []byte) (signature []byte, err error)
+	// PublicKey returns the public key for the signer
+	PublicKey(ctx context.Context) (crypto.PublicKey, error)
 }
 
-func NewSmallstep(opts apiv1.Options) *Smallstep {
-	return &Smallstep{opts}
-}
-
-func (s *Smallstep) Sign(ctx context.Context, payload []byte) (signature []byte, err error) {
-
-	return nil, nil
-}
-
-func (s *Smallstep) PublicKey(ctx context.Context) (crypto.PublicKey, error) {
-
-	return nil, nil
+func New(ctx context.Context, signer string) (Signer, error) {
+	switch {
+	case strings.HasPrefix(signer, gcp.ReferenceScheme):
+		return newGCPKMS(ctx, signer)
+	default:
+		return nil, fmt.Errorf("please provide a valid signer")
+	}
 }

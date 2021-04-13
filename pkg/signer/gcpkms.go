@@ -14,26 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package sign
+package signer
 
 import (
 	"context"
 	"crypto"
-	"fmt"
+	"strings"
 
-	"github.com/smallstep/certificates/cas/apiv1"
+	"github.com/sigstore/cosign/pkg/cosign/kms/gcp"
 )
 
-type Signer interface {
-	// Sign is responsible for signing the payload and returning a signature
-	Sign(ctx context.Context, payload []byte) (signature []byte, err error)
-	// PublicKey returns the public key for the signer
-	PublicKey(ctx context.Context) (crypto.PublicKey, error)
+type gcpkms struct {
+	*gcp.KMS
 }
 
-func New(opts apiv1.Options) (Signer, error) {
-	if ss := NewSmallstep(opts); ss != nil {
-		return ss, nil
-	}
-	return nil, fmt.Errorf("please specify a valid signer")
+func newGCPKMS(ctx context.Context, signer string) (*gcpkms, error) {
+	keyResourceID := strings.TrimPrefix(signer, gcp.ReferenceScheme)
+	kms, err := gcp.NewGCP(ctx, keyResourceID)
+	return &gcpkms{kms}, err
+}
+
+func (g *gcpkms) Sign(ctx context.Context, payload []byte) (signature []byte, err error) {
+	return g.KMS.Sign(ctx, payload)
+}
+
+func (g *gcpkms) PublicKey(ctx context.Context) (crypto.PublicKey, error) {
+	return g.KMS.PublicKey(ctx)
 }

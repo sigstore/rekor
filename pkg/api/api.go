@@ -18,15 +18,15 @@ package api
 
 import (
 	"context"
-	"crypto"
 	"fmt"
 	"time"
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
 	radix "github.com/mediocregopher/radix/v4"
+	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/log"
-	"github.com/sigstore/rekor/pkg/sign"
+	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 )
@@ -46,8 +46,7 @@ func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
 type API struct {
 	logClient trillian.TrillianLogClient
 	logID     int64
-	pubkey    crypto.PublicKey
-	signer    sign.Signer
+	signer    signer.Signer
 	verifier  *client.LogVerifier
 }
 
@@ -78,6 +77,12 @@ func NewAPI() (*API, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	signer, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
+	if err != nil {
+		return nil, errors.Wrap(err, "getting new signer")
+	}
+
 	verifier, err := client.NewLogVerifierFromTree(t)
 	if err != nil {
 		return nil, err
@@ -86,7 +91,7 @@ func NewAPI() (*API, error) {
 	return &API{
 		logClient: logClient,
 		logID:     tLogID,
-		pubkey:    t.PublicKey,
+		signer:    signer,
 		verifier:  verifier,
 	}, nil
 }
