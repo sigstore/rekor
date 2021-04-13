@@ -1,0 +1,63 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.dev/types/tuf/tuf.json",
+    "title": "tuf v0.0.1 Schema",
+    "description": "Schema for tuf metadata entries",
+    "type": "object",
+    "properties": {
+        "publicKey" : {
+            "description": "The PGP public key that can verify the RPM signature",
+            "type": "object",
+            "properties": {
+                "url": {
+                    "description": "Specifies the location of the public key",
+                    "type": "string",
+                    "format": "uri"
+                },
+                "content": {
+                    "description": "Specifies the content of the public key inline within the document",
+                    "type": "string",
+                    "format": "byte"
+                }
+            },
+            "oneOf": [
+                {
+                    "required": [ "url" ]
+                },
+                {
+                    "required": [ "content" ]
+                }
+            ]
+        },
+        "metablock": {
+            "description": "tuf information about a repository",
+            "type": "object",
+            "properties": {
+                "signed": {
+                    "description": "The signed payload",
+                    "type": "object",
+                    "oneOf": [
+                        { "$ref": "tuf_targets_v0_0_1_schema.json" },
+                        { "$ref": "tuf_snapshot_v0_0_1_schema.json" },
+                        { "$ref": "tuf_timestamp_v0_0_1_schema.json" },
+                        { "$ref": "tuf_root_v0_0_1_schema.json" }
+                    ]
+                },
+                "signatures": {
+                    "description": "The signature(s) over the metadata",
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "$ref": "tuf_signature_v0_0_1_schema.json"
+                    }
+                }
+            }
+        },
+        "extraData": {
+            "description": "Arbitrary content to be included in the verifiable entry in the transparency log", 
+            "type": "object",
+            "additionalProperties": true
+        }
+    },
+    "required": [ "publicKey", "metablock" ]
+}

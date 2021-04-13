@@ -28,6 +28,8 @@ import (
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/rpm"
 	rpm_v001 "github.com/sigstore/rekor/pkg/types/rpm/v0.0.1"
+	"github.com/sigstore/rekor/pkg/types/tuf"
+	tuf_v001 "github.com/sigstore/rekor/pkg/types/tuf/v0.0.1"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sigstore/rekor/pkg/generated/restapi"
@@ -64,6 +66,7 @@ var serveCmd = &cobra.Command{
 		pluggableTypeMap := map[string]string{
 			rekord.KIND: rekord_v001.APIVERSION,
 			rpm.KIND:    rpm_v001.APIVERSION,
+			tuf.KIND:    tuf_v001.APIVERSION,
 		}
 
 		for k, v := range pluggableTypeMap {

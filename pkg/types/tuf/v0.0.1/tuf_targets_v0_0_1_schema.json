@@ -1,0 +1,55 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.dev/types/tuf/tuf.json",
+    "title": "tuf targets payload v0.0.1 Schema",
+    "description": "Schema for tuf targets payload",
+    "type": "object",
+    "properties": {
+        "_type": {
+            "description": "Type identifier",
+            "type": "string",
+            "enum": ["targets"]
+        },
+        "specVersion": {
+            "description": "TUF Specification version",
+            "type": "string",
+            "enum": ["1.0.0"]
+        },
+        "version": {
+            "description": "File version",
+            "type": "integer"
+        },
+        "expires": {
+            "description": "Expiration date",
+            "type": "string"
+        },
+        "targets": {
+            "type": "object",
+            "properties": {
+                "URI": {
+                    "description": "The identifier of this artifact",
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "object",
+                    "properties": {
+                        "algorithm": {
+                            "description": "The hashing function used to compute the hash value",
+                            "type": "string",
+                            "enum": [ "sha256" ]
+                        },
+                        "value": {
+                            "description": "The hash value for the package",
+                            "type": "string"
+                        }
+                    },
+                    "required": [ "algorithm", "value" ]
+                },
+                "length": {
+                    "type": "integer"
+                }
+            }
+        }
+    },
+    "required": [ "_type", "specVersion", "version", "targets"]
+}

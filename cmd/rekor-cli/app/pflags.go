@@ -33,6 +33,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	rpm_v001 "github.com/sigstore/rekor/pkg/types/rpm/v0.0.1"
+	tuf_v001 "github.com/sigstore/rekor/pkg/types/tuf/v0.0.1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -136,6 +137,37 @@ func validateArtifactPFlags(uuidValid, indexValid bool) error {
 	}
 
 	return nil
+}
+
+func CreateTUFFromPFlags() (models.ProposedEntry, error) {
+	returnVal := models.Tuf{}
+	re := new(tuf_v001.V001Entry)
+
+	tufFile := viper.GetString("entry")
+	tufFileBytes, err := ioutil.ReadFile(filepath.Clean(tufFile))
+	if err != nil {
+		return nil, fmt.Errorf("error processing 'tuf' file: %v", err)
+	}
+    err = json.Unmarshal(tufFileBytes, &re.TufModel.Metablock);
+    if err != nil {
+		return nil, fmt.Errorf("error parsing 'tuf' file: %v", err)
+    }
+    re.TufModel.PublicKey = &models.TufV001SchemaPublicKey{}
+    publicKey := viper.GetString("public-key")
+    keyURL, err := url.Parse(publicKey)
+    if err == nil && keyURL.IsAbs() {
+        re.TufModel.PublicKey.URL = strfmt.URI(publicKey)
+    } else {
+        keyBytes, err := ioutil.ReadFile(filepath.Clean(publicKey))
+        if err != nil {
+            return nil, fmt.Errorf("error reading public key file: %w", err)
+        }
+        re.TufModel.PublicKey.Content = strfmt.Base64(keyBytes)
+    }
+
+	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.Spec = re.TufModel
+	return &returnVal, nil
 }
 
 func CreateRpmFromPFlags() (models.ProposedEntry, error) {
@@ -357,12 +389,13 @@ func (t *typeFlag) Set(s string) error {
 	set := map[string]struct{}{
 		"rekord": {},
 		"rpm":    {},
+		"tuf":  {},
 	}
 	if _, ok := set[s]; ok {
 		t.value = s
 		return nil
 	}
-	return fmt.Errorf("value specified is invalid: [%s] supported values are: [rekord, rpm]", s)
+	return fmt.Errorf("value specified is invalid: [%s] supported values are: [rekord, rpm, tuf]", s)
 }
 
 type pkiFormatFlag struct {

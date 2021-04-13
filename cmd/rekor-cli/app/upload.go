@@ -77,6 +77,11 @@ var uploadCmd = &cobra.Command{
 			if err != nil {
 				return nil, err
 			}
+		case "tuf":
+			entry, err = CreateTUFFromPFlags()
+			if err != nil {
+				return nil, err
+			}
 		default:
 			return nil, errors.New("unknown type specified")
 		}
