@@ -19,6 +19,7 @@ services:
       "--redis_server.address=redis-server",
       "--redis_server.port=6379",
       "--rekor_server.address=0.0.0.0",
+      "--rekor_server.signer=gcpkms://projects/rekor/locations/global/keyRings/rekor/cryptoKeys/rekor",
       ]
     restart: always # keep the server running
     ports:

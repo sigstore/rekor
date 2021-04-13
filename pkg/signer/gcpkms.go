@@ -19,7 +19,6 @@ package signer
 import (
 	"context"
 	"crypto"
-	"strings"
 
 	"github.com/sigstore/cosign/pkg/cosign/kms/gcp"
 )
@@ -29,8 +28,7 @@ type gcpkms struct {
 }
 
 func newGCPKMS(ctx context.Context, signer string) (*gcpkms, error) {
-	keyResourceID := strings.TrimPrefix(signer, gcp.ReferenceScheme)
-	kms, err := gcp.NewGCP(ctx, keyResourceID)
+	kms, err := gcp.NewGCP(ctx, signer)
 	return &gcpkms{kms}, err
 }
 
