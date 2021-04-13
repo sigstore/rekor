@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
@@ -326,7 +326,7 @@ func createAndInitTree(ctx context.Context, adminClient trillian.TrillianAdminCl
 			HashAlgorithm:      sigpb.DigitallySigned_SHA256,
 			SignatureAlgorithm: sigpb.DigitallySigned_ECDSA,
 			TreeState:          trillian.TreeState_ACTIVE,
-			MaxRootDuration:    ptypes.DurationProto(time.Hour),
+			MaxRootDuration:    durationpb.New(time.Hour),
 		},
 		KeySpec: &keyspb.Specification{
 			Params: &keyspb.Specification_EcdsaParams{

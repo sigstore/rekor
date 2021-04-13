@@ -57,5 +57,5 @@ func TestAPIKey(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, _ = client.Tlog.GetPublicKey(nil)
+	_, _ = client.Pubkey.GetPublicKey(nil)
 }
