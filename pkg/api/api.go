@@ -18,14 +18,15 @@ package api
 
 import (
 	"context"
+	"crypto"
 	"fmt"
 	"time"
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
-	"github.com/google/trillian/crypto/keyspb"
 	radix "github.com/mediocregopher/radix/v4"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/sign"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 )
@@ -45,7 +46,8 @@ func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
 type API struct {
 	logClient trillian.TrillianLogClient
 	logID     int64
-	pubkey    *keyspb.PublicKey
+	pubkey    crypto.PublicKey
+	signer    sign.Signer
 	verifier  *client.LogVerifier
 }
 

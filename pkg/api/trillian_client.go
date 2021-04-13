@@ -38,7 +38,6 @@ type TrillianClient struct {
 	client   trillian.TrillianLogClient
 	logID    int64
 	context  context.Context
-	pubkey   *keyspb.PublicKey
 	verifier *client.LogVerifier
 }
 
@@ -47,7 +46,6 @@ func NewTrillianClient(ctx context.Context) TrillianClient {
 		client:   api.logClient,
 		logID:    api.logID,
 		context:  ctx,
-		pubkey:   api.pubkey,
 		verifier: api.verifier,
 	}
 }

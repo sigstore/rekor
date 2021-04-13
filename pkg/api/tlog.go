@@ -16,9 +16,7 @@ limitations under the License.
 package api
 
 import (
-	"bytes"
 	"encoding/hex"
-	"encoding/pem"
 	"fmt"
 	"net/http"
 
@@ -107,17 +105,8 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 
 //GetPublicKeyHandler returns the public key used to verify the signature on the signed tree head
 func GetPublicKeyHandler(params tlog.GetPublicKeyParams) middleware.Responder {
-	tc := NewTrillianClient(params.HTTPRequest.Context())
+	// TODO: priyawadhwa@
+	// this is where we return the public key from kms yay
 
-	keyBuf := bytes.Buffer{}
-	block := &pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: tc.pubkey.Der,
-	}
-
-	if err := pem.Encode(&keyBuf, block); err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
-	}
-
-	return tlog.NewGetPublicKeyOK().WithPayload(keyBuf.String())
+	return tlog.NewGetPublicKeyOK().WithPayload("TODOOOOO")
 }
