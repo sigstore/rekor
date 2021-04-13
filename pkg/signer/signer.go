@@ -18,24 +18,17 @@ package signer
 
 import (
 	"context"
-	"crypto"
 	"fmt"
 	"strings"
 
 	"github.com/sigstore/cosign/pkg/cosign/kms/gcp"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-type Signer interface {
-	// Sign is responsible for signing the payload and returning a signature
-	Sign(ctx context.Context, payload []byte) (signature []byte, signed []byte, err error)
-	// PublicKey returns the public key for the signer
-	PublicKey(ctx context.Context) (crypto.PublicKey, error)
-}
-
-func New(ctx context.Context, signer string) (Signer, error) {
+func New(ctx context.Context, signer string) (signature.Signer, error) {
 	switch {
 	case strings.HasPrefix(signer, gcp.ReferenceScheme):
-		return newGCPKMS(ctx, signer)
+		return gcp.NewGCP(ctx, signer)
 	default:
 		return nil, fmt.Errorf("please provide a valid signer")
 	}

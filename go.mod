@@ -26,6 +26,7 @@ require (
 	github.com/prometheus/client_golang v1.10.0
 	github.com/rs/cors v1.7.0
 	github.com/sigstore/cosign v0.2.1-0.20210413000829-ec8980c88433
+	github.com/sigstore/sigstore v0.0.0-20210409160750-62a1903c8074
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.1

@@ -499,6 +499,7 @@ github.com/google/go-cmp v0.5.3/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
 github.com/google/go-cmp v0.5.4/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.5 h1:Khx7svrCpmxxtHBq5j2mp/xVjsi8hQMfNLvJFAlrGgU=
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
+github.com/google/go-containerregistry v0.4.1 h1:Lrcj2AOoZ7WKawsoKAh2O0dH0tBqMW2lTEmozmK4Z3k=
 github.com/google/go-containerregistry v0.4.1/go.mod h1:Ct15B4yir3PLOP5jsy0GNeYVaIZs/MK/Jz5any1wFW0=
 github.com/google/go-replayers/grpcreplay v1.0.0 h1:B5kVOzJ1hBgnevTgIWhSTatQ3608yu/2NnU0Ta1d0kY=
 github.com/google/go-replayers/grpcreplay v1.0.0/go.mod h1:8Ig2Idjpr6gifRd6pNVggX6TC1Zw6Jx74AKp7QNH2QE=
@@ -873,6 +874,7 @@ github.com/sigstore/cosign v0.2.1-0.20210413000829-ec8980c88433/go.mod h1:RTnsSO
 github.com/sigstore/fulcio v0.0.0-20210405115948-e7630f533fca/go.mod h1:l16xJtuil/zC7RaacVfLf8EwmkFEMWI0hYxKkkahL2I=
 github.com/sigstore/rekor v0.1.1/go.mod h1:b+T8TvGKWgaFbtPRQgF/gXjbj/R9HdJ5lA93cnGT3Sc=
 github.com/sigstore/rekor v0.1.2-0.20210410002954-cce6cabf1a88/go.mod h1:4vPst+j1qes+LBMabwDPw7I/Wjmg/tSJv0Neq+0KBBo=
+github.com/sigstore/sigstore v0.0.0-20210409160750-62a1903c8074 h1:HUEWEpBoKQy9AIB2Q+6X73cAc+720DvWO+VqACa7wxI=
 github.com/sigstore/sigstore v0.0.0-20210409160750-62a1903c8074/go.mod h1:sgfbsomHSkH3315v572HAbiWoA8n58MBqRB4YgJI7X0=
 github.com/sirupsen/logrus v1.0.5/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=

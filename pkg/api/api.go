@@ -28,6 +28,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/signer"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 )
@@ -48,7 +49,7 @@ type API struct {
 	logClient trillian.TrillianLogClient
 	logID     int64
 	pubkey    crypto.PublicKey
-	signer    signer.Signer
+	signer    signature.Signer
 	verifier  *client.LogVerifier
 }
 
