@@ -27,7 +27,7 @@ import (
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
-	tcrypto "github.com/google/trillian/crypto"
+	"github.com/google/trillian/types"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 )
 
@@ -41,9 +41,8 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	}
 	result := resp.getLatestResult
 
-	// validate result is signed with the key we're aware of
-	root, err := tcrypto.VerifySignedLogRoot(tc.verifier.PubKey, tc.verifier.SigHash, result.SignedLogRoot)
-	if err != nil {
+	root := &types.LogRootV1{}
+	if err := root.UnmarshalBinary(result.SignedLogRoot.LogRoot); err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 	}
 
@@ -80,9 +79,8 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	}
 	result := resp.getConsistencyProofResult
 
-	// validate result is signed with the key we're aware of
-	root, err := tcrypto.VerifySignedLogRoot(tc.verifier.PubKey, tc.verifier.SigHash, result.SignedLogRoot)
-	if err != nil {
+	var root types.LogRootV1
+	if err := root.UnmarshalBinary(result.SignedLogRoot.LogRoot); err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 	}
 
