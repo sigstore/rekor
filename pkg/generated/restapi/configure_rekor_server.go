@@ -34,6 +34,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
@@ -75,9 +76,10 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.EntriesGetLogEntryByUUIDHandler = entries.GetLogEntryByUUIDHandlerFunc(pkgapi.GetLogEntryByUUIDHandler)
 	api.EntriesSearchLogQueryHandler = entries.SearchLogQueryHandlerFunc(pkgapi.SearchLogQueryHandler)
 
+	api.PubkeyGetPublicKeyHandler = pubkey.GetPublicKeyHandlerFunc(pkgapi.GetPublicKeyHandler)
+
 	api.TlogGetLogInfoHandler = tlog.GetLogInfoHandlerFunc(pkgapi.GetLogInfoHandler)
 	api.TlogGetLogProofHandler = tlog.GetLogProofHandlerFunc(pkgapi.GetLogProofHandler)
-	api.TlogGetPublicKeyHandler = tlog.GetPublicKeyHandlerFunc(pkgapi.GetPublicKeyHandler)
 
 	if viper.GetBool("enable_retrieve_api") {
 		api.IndexSearchIndexHandler = index.SearchIndexHandlerFunc(pkgapi.SearchIndexHandler)

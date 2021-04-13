@@ -310,7 +310,7 @@ func init() {
           "application/x-pem-file"
         ],
         "tags": [
-          "tlog"
+          "pubkey"
         ],
         "summary": "Retrieve the public key that can be used to validate the signed tree head",
         "operationId": "getPublicKey",
@@ -942,7 +942,7 @@ func init() {
           "application/x-pem-file"
         ],
         "tags": [
-          "tlog"
+          "pubkey"
         ],
         "summary": "Retrieve the public key that can be used to validate the signed tree head",
         "operationId": "getPublicKey",

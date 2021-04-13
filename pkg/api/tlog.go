@@ -102,11 +102,3 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	}
 	return tlog.NewGetLogProofOK().WithPayload(&consistencyProof)
 }
-
-//GetPublicKeyHandler returns the public key used to verify the signature on the signed tree head
-func GetPublicKeyHandler(params tlog.GetPublicKeyParams) middleware.Responder {
-	// TODO: priyawadhwa@
-	// this is where we return the public key from kms yay
-
-	return tlog.NewGetPublicKeyOK().WithPayload("TODOOOOO")
-}

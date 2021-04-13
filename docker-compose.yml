@@ -71,6 +71,7 @@ services:
       "--redis_server.address=redis-server",
       "--redis_server.port=6379",
       "--rekor_server.address=0.0.0.0",
+      "--rekor_server.signer=gcpkms://projects/rekor/locations/global/keyRings/rekor/cryptoKeys/rekor",
       # Uncomment this for production logging
       # "--log_type=prod",
       ]
