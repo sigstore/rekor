@@ -32,7 +32,7 @@ func newGCPKMS(ctx context.Context, signer string) (*gcpkms, error) {
 	return &gcpkms{kms}, err
 }
 
-func (g *gcpkms) Sign(ctx context.Context, payload []byte) (signature []byte, err error) {
+func (g *gcpkms) Sign(ctx context.Context, payload []byte) ([]byte, []byte, error) {
 	return g.KMS.Sign(ctx, payload)
 }
 

@@ -27,7 +27,7 @@ import (
 
 type Signer interface {
 	// Sign is responsible for signing the payload and returning a signature
-	Sign(ctx context.Context, payload []byte) (signature []byte, err error)
+	Sign(ctx context.Context, payload []byte) (signature []byte, signed []byte, err error)
 	// PublicKey returns the public key for the signer
 	PublicKey(ctx context.Context) (crypto.PublicKey, error)
 }
