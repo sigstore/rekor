@@ -175,6 +175,7 @@ func (m *RekordV001Schema) UnmarshalBinary(b []byte) error {
 type RekordV001SchemaData struct {
 
 	// Specifies the content inline within the document
+	// Max Length: 32000000
 	// Format: byte
 	Content strfmt.Base64 `json:"content,omitempty"`
 
@@ -190,6 +191,10 @@ type RekordV001SchemaData struct {
 func (m *RekordV001SchemaData) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateContent(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateHash(formats); err != nil {
 		res = append(res, err)
 	}
@@ -201,6 +206,18 @@ func (m *RekordV001SchemaData) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *RekordV001SchemaData) validateContent(formats strfmt.Registry) error {
+	if swag.IsZero(m.Content) { // not required
+		return nil
+	}
+
+	if err := validate.MaxLength("data"+"."+"content", "body", m.Content.String(), 32000000); err != nil {
+		return err
+	}
+
 	return nil
 }
 
