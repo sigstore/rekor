@@ -151,12 +151,12 @@ func CreateJarFromPFlags() (models.ProposedEntry, error) {
 		jarURL, err := url.Parse(jar)
 		if err == nil && jarURL.IsAbs() {
 			/* #nosec G107 */
-			rpmResp, err := http.Get(jar)
+			jarResp, err := http.Get(jar)
 			if err != nil {
 				return nil, fmt.Errorf("error fetching 'jar': %w", err)
 			}
-			defer rpmResp.Body.Close()
-			jarBytes, err = ioutil.ReadAll(rpmResp.Body)
+			defer jarResp.Body.Close()
+			jarBytes, err = ioutil.ReadAll(jarResp.Body)
 			if err != nil {
 				return nil, fmt.Errorf("error fetching 'jar': %w", err)
 			}
