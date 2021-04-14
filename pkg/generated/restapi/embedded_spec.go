@@ -1164,8 +1164,7 @@ func init() {
         "content": {
           "description": "Specifies the content inline within the document",
           "type": "string",
-          "format": "byte",
-          "maxLength": 32000000
+          "format": "byte"
         },
         "hash": {
           "description": "Specifies the hash algorithm and value for the content",
@@ -1333,8 +1332,7 @@ func init() {
         "content": {
           "description": "Specifies the package inline within the document",
           "type": "string",
-          "format": "byte",
-          "maxLength": 32000000
+          "format": "byte"
         },
         "hash": {
           "description": "Specifies the hash algorithm and value for the package",
@@ -1570,8 +1568,7 @@ func init() {
             "content": {
               "description": "Specifies the content inline within the document",
               "type": "string",
-              "format": "byte",
-              "maxLength": 32000000
+              "format": "byte"
             },
             "hash": {
               "description": "Specifies the hash algorithm and value for the content",
@@ -1750,8 +1747,7 @@ func init() {
             "content": {
               "description": "Specifies the package inline within the document",
               "type": "string",
-              "format": "byte",
-              "maxLength": 32000000
+              "format": "byte"
             },
             "hash": {
               "description": "Specifies the hash algorithm and value for the package",

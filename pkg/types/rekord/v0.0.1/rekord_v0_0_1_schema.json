@@ -86,8 +86,7 @@
                 "content": {
                     "description": "Specifies the content inline within the document",
                     "type": "string",
-                    "format": "byte",
-                    "maxLength" : 32000000
+                    "format": "byte"
                 }
             },
             "oneOf": [
