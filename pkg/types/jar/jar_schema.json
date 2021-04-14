@@ -1,0 +1,12 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.sigstore.dev/types/jar/jar_schema.json",
+    "title": "JAR Schema",
+    "description": "Schema for JAR objects",
+    "type": "object",
+    "oneOf": [
+        {
+            "$ref": "v0.0.1/jar_v0_0_1_schema.json"
+        }
+    ]
+}
