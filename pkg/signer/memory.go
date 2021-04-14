@@ -17,7 +17,6 @@ limitations under the License.
 package signer
 
 import (
-	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -43,12 +42,4 @@ func NewMemory() (*memory, error) {
 	return &memory{
 		ECDSASignerVerifier: signature.NewECDSASignerVerifier(privKey, crypto.SHA256),
 	}, nil
-}
-
-func (m *memory) Sign(ctx context.Context, rawPayload []byte) ([]byte, []byte, error) {
-	return m.ECDSASignerVerifier.Sign(ctx, rawPayload)
-}
-
-func (m *memory) PublicKey(ctx context.Context) (crypto.PublicKey, error) {
-	return m.ECDSASignerVerifier.PublicKey(ctx)
 }
