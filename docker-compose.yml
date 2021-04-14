@@ -89,5 +89,4 @@ services:
       timeout: 3s
       retries: 3
       start_period: 5s
-    volumes:
-      - ~/.config/gcloud:/root/.config/gcloud/
+
