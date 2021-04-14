@@ -17,23 +17,10 @@ limitations under the License.
 package api
 
 import (
-	"crypto/x509"
-	"encoding/pem"
-	"fmt"
-	"net/http"
-
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/pubkey"
 )
 
 func GetPublicKeyHandler(params pubkey.GetPublicKeyParams) middleware.Responder {
-	b, err := x509.MarshalPKIXPublicKey(api.pubkey)
-	if err != nil {
-		handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("marshal public key err: %w", err), marshalPublicKeyError)
-	}
-	key := pem.EncodeToMemory(&pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: b,
-	})
-	return pubkey.NewGetPublicKeyOK().WithPayload(string(key))
+	return pubkey.NewGetPublicKeyOK().WithPayload(api.pubkey)
 }

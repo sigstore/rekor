@@ -29,7 +29,9 @@ func New(ctx context.Context, signer string) (signature.Signer, error) {
 	switch {
 	case strings.HasPrefix(signer, gcp.ReferenceScheme):
 		return gcp.NewGCP(ctx, signer)
+	case signer == MemoryScheme:
+		return NewMemory()
 	default:
-		return nil, fmt.Errorf("please provide a valid signer")
+		return nil, fmt.Errorf("please provide a valid signer, %v is not valid", signer)
 	}
 }

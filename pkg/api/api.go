@@ -18,7 +18,8 @@ package api
 
 import (
 	"context"
-	"crypto"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"time"
 
@@ -48,9 +49,10 @@ func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
 type API struct {
 	logClient trillian.TrillianLogClient
 	logID     int64
-	pubkey    crypto.PublicKey
-	signer    signature.Signer
-	verifier  *client.LogVerifier
+	// PEM encoded public key
+	pubkey   string
+	signer   signature.Signer
+	verifier *client.LogVerifier
 }
 
 func NewAPI() (*API, error) {
@@ -85,10 +87,18 @@ func NewAPI() (*API, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "getting new signer")
 	}
-	pubkey, err := signer.PublicKey(ctx)
+	pk, err := signer.PublicKey(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting public key")
 	}
+	b, err := x509.MarshalPKIXPublicKey(pk)
+	if err != nil {
+		return nil, errors.Wrap(err, "marshalling public key")
+	}
+	pubkey := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: b,
+	})
 
 	verifier, err := client.NewLogVerifierFromTree(t)
 	if err != nil {
@@ -98,7 +108,7 @@ func NewAPI() (*API, error) {
 	return &API{
 		logClient: logClient,
 		logID:     tLogID,
-		pubkey:    pubkey,
+		pubkey:    string(pubkey),
 		signer:    signer,
 		verifier:  verifier,
 	}, nil

@@ -42,7 +42,6 @@ const (
 	failedToGenerateCanonicalKey   = "Error generating canonicalized public key"
 	redisUnexpectedResult          = "Unexpected result from searching index"
 	lastSizeGreaterThanKnown       = "The tree size requested(%d) was greater than what is currently observable(%d)"
-	marshalPublicKeyError          = "Unable to marshal public key"
 )
 
 func errorMsg(message string, code int) *models.Error {
