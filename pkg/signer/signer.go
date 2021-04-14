@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sigstore/cosign/pkg/cosign/kms/gcp"
+	"github.com/sigstore/sigstore/pkg/kms/gcp"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 

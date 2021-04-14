@@ -15,7 +15,6 @@ require (
 	github.com/go-openapi/strfmt v0.20.1
 	github.com/go-openapi/swag v0.19.15
 	github.com/go-openapi/validate v0.20.2
-	github.com/golang/protobuf v1.5.1
 	github.com/google/rpmpack v0.0.0-20210107155803-d6befbf05148
 	github.com/google/trillian v1.3.13
 	github.com/jedisct1/go-minisign v0.0.0-20210106175330-e54e81d562c7
@@ -25,8 +24,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.10.0
 	github.com/rs/cors v1.7.0
-	github.com/sigstore/cosign v0.2.1-0.20210413000829-ec8980c88433
-	github.com/sigstore/sigstore v0.0.0-20210409160750-62a1903c8074
+	github.com/sigstore/sigstore v0.0.0-20210414183523-383d6554c35c
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.1
@@ -37,8 +35,9 @@ require (
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20210324051636-2c4c8ecb7826
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf // indirect
 	google.golang.org/genproto v0.0.0-20210402141018-6c239bbf2bb1
 	google.golang.org/grpc v1.37.0
-	google.golang.org/protobuf v1.26.0 // indirect
+	google.golang.org/protobuf v1.26.0
 	honnef.co/go/tools v0.0.1-2020.1.6 // indirect
 )
