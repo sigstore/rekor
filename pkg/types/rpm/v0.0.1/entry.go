@@ -31,7 +31,6 @@ import (
 	rpmutils "github.com/cavaliercoder/go-rpm"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"github.com/mitchellh/mapstructure"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/generated/models"

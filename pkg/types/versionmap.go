@@ -60,7 +60,7 @@ func (s *SemVerEntryFactoryMap) GetEntryFactory(version string) (EntryFactory, e
 		return nil, err
 	}
 
-	//will return first function that matches
+	// will return first function that matches
 	for k, v := range s.factoryMap {
 		semverRange, err := semver.ParseRange(k)
 		if err != nil {
