@@ -48,7 +48,14 @@ spec:
           "--redis_server.port=6379",
           "--trillian_log_server.tlog_id=3904496407287907110",
           "--log_type=prod",
+          "--rekor_server.signer=$(KMS)",
         ]
+        env:
+        - name: KMS
+          valueFrom:
+            configMapKeyRef:
+              name: rekor-config
+              key: kms
         resources:
           requests:
             memory: "1G"
