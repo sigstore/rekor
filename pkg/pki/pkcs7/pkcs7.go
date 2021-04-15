@@ -41,7 +41,7 @@ func NewSignature(r io.Reader) (*Signature, error) {
 	if err != nil {
 		return nil, err
 	}
-	//try PEM decoding first
+	// try PEM decoding first
 	var pkcsBytes *[]byte
 	block, _ := pem.Decode(b)
 	if block != nil {
@@ -141,7 +141,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 		return nil, err
 	}
 
-	//try PEM decoding first
+	// try PEM decoding first
 	var pkcsBytes *[]byte
 	block, _ := pem.Decode(rawPub)
 	if block != nil {

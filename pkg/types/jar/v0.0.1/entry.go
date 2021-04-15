@@ -195,14 +195,13 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	jarObj, err := jarutils.Verify(zipReader, false)
 	if err != nil {
 		return err
-	} else {
-		switch len(jarObj) {
-		case 0:
-			return errors.New("no signatures detected in JAR archive")
-		case 1:
-		default:
-			return errors.New("multiple signatures detected in JAR; unable to process")
-		}
+	}
+	switch len(jarObj) {
+	case 0:
+		return errors.New("no signatures detected in JAR archive")
+	case 1:
+	default:
+		return errors.New("multiple signatures detected in JAR; unable to process")
 	}
 	v.jarObj = jarObj[0]
 
@@ -288,7 +287,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	return bytes, nil
 }
 
-//Validate performs cross-field validation for fields in object
+// Validate performs cross-field validation for fields in object
 func (v V001Entry) Validate() error {
 	archive := v.JARModel.Archive
 	if archive == nil {
@@ -311,7 +310,7 @@ func (v V001Entry) Validate() error {
 	return nil
 }
 
-//extractPKCS7SignatureFromJAR extracts the first signature file from the JAR and returns it
+// extractPKCS7SignatureFromJAR extracts the first signature file from the JAR and returns it
 func extractPKCS7SignatureFromJAR(inz *zip.Reader) ([]byte, error) {
 	for _, f := range inz.File {
 		dir, name := path.Split(strings.ToUpper(f.Name))
