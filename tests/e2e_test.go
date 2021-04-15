@@ -243,6 +243,20 @@ func TestSSH(t *testing.T) {
 	outputContains(t, out, uuid)
 }
 
+func TestJAR(t *testing.T) {
+	td := t.TempDir()
+	artifactPath := filepath.Join(td, "artifact.jar")
+
+	createSignedJar(t, artifactPath)
+
+	// If we do it twice, it should already exist
+	out := runCli(t, "upload", "--artifact", artifactPath, "--type", "jar")
+	outputContains(t, out, "Created entry at")
+	out = runCli(t, "upload", "--artifact", artifactPath, "--type", "jar")
+	outputContains(t, out, "Entry already exists")
+
+}
+
 func TestX509(t *testing.T) {
 	td := t.TempDir()
 	artifactPath := filepath.Join(td, "artifact")
