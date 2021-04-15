@@ -27,7 +27,7 @@ $(GENSRC): $(OPENAPIDEPS)
 
 # this exists to override pattern match rule above since this file is in the generated directory but should not be treated as generated code
 pkg/generated/restapi/configure_rekor_server.go: $(OPENAPIDEPS)
-
+	
 
 lint:
 	$(GOBIN)/golangci-lint run -v ./...

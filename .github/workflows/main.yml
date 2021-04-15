@@ -40,14 +40,9 @@ jobs:
         run: make -C $GITHUB_WORKSPACE all
       - name: Test
         run: go test -v ./...
-      - name: Run Gosec Security Scanner
-        uses: securego/gosec@v2.7.0
-        env:
-          GOROOT: ""
-        with:
-          args: ./...
       - name: Ensure no files were modified as a result of the build
         run: git update-index --refresh && git diff-index --quiet HEAD -- || git diff --exit-code
+
   e2e:
     runs-on: ubuntu-20.04
     needs: build
