@@ -1,18 +1,18 @@
-/*
-Copyright © 2021 Bob Callaway <bcallawa@redhat.com>
+//
+// Copyright 2021 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 package rpm
 
 import (
@@ -29,23 +29,20 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/asaskevich/govalidator"
+	rpmutils "github.com/cavaliercoder/go-rpm"
+	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
+	"github.com/mitchellh/mapstructure"
+	"golang.org/x/sync/errgroup"
+
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pgp"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/rpm"
 	"github.com/sigstore/rekor/pkg/util"
-
-	"github.com/asaskevich/govalidator"
-
-	"github.com/go-openapi/strfmt"
-
-	"github.com/sigstore/rekor/pkg/pki"
-
-	rpmutils "github.com/cavaliercoder/go-rpm"
-	"github.com/go-openapi/swag"
-	"github.com/mitchellh/mapstructure"
-	"github.com/sigstore/rekor/pkg/generated/models"
-	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -271,7 +268,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		if err != nil {
 			return closePipesOnError(err)
 		}
-		//ReadPackageFile does not drain the entire reader so we need to discard the rest
+		// ReadPackageFile does not drain the entire reader so we need to discard the rest
 		if _, err = io.Copy(ioutil.Discard, rpmR); err != nil {
 			return closePipesOnError(err)
 		}
@@ -359,7 +356,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	return bytes, nil
 }
 
-//Validate performs cross-field validation for fields in object
+// Validate performs cross-field validation for fields in object
 func (v V001Entry) Validate() error {
 	key := v.RPMModel.PublicKey
 	if key == nil {

@@ -1,18 +1,18 @@
-/*
-Copyright © 2020 Bob Callaway <bcallawa@redhat.com>
+//
+// Copyright 2021 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 package rekord
 
 import (
@@ -27,21 +27,18 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/sigstore/rekor/pkg/log"
-	"github.com/sigstore/rekor/pkg/types"
-	"github.com/sigstore/rekor/pkg/util"
-
 	"github.com/asaskevich/govalidator"
-
 	"github.com/go-openapi/strfmt"
-
-	"github.com/sigstore/rekor/pkg/pki"
-	"github.com/sigstore/rekor/pkg/types/rekord"
-
 	"github.com/go-openapi/swag"
 	"github.com/mitchellh/mapstructure"
-	"github.com/sigstore/rekor/pkg/generated/models"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pki"
+	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/types/rekord"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
 const (
@@ -370,7 +367,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	return bytes, nil
 }
 
-//Validate performs cross-field validation for fields in object
+// Validate performs cross-field validation for fields in object
 func (v V001Entry) Validate() error {
 
 	sig := v.RekordObj.Signature

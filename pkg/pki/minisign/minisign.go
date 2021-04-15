@@ -1,18 +1,17 @@
-/*
-Copyright © 2021 Bob Callaway <bcallawa@redhat.com>
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+//
+// Copyright 2021 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package minisign
 
@@ -45,7 +44,7 @@ func NewSignature(r io.Reader) (*Signature, error) {
 	inputString := inputBuffer.String()
 	signature, err := minisign.DecodeSignature(inputString)
 	if err != nil {
-		//try to parse as signify
+		// try to parse as signify
 		lines := strings.Split(strings.TrimRight(inputString, "\n"), "\n")
 		if len(lines) != 2 {
 			return nil, fmt.Errorf("invalid signature provided: %v lines detected", len(lines))
@@ -61,6 +60,7 @@ func NewSignature(r io.Reader) (*Signature, error) {
 		copy(signature.KeyId[:], sigBytes[2:10])
 		copy(signature.Signature[:], sigBytes[10:])
 	}
+
 	s.signature = &signature
 	return &s, nil
 }
@@ -128,12 +128,13 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	inputString := inputBuffer.String()
 	key, err := minisign.DecodePublicKey(inputString)
 	if err != nil {
-		//try as a standalone base64 string
+		// try as a standalone base64 string
 		key, err = minisign.NewPublicKey(inputString)
 		if err != nil {
 			return nil, fmt.Errorf("unable to read minisign public key: %w", err)
 		}
 	}
+
 	k.key = &key
 	return &k, nil
 }
