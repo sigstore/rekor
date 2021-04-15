@@ -78,7 +78,7 @@ paths:
       description: Returns the public key that can be used to validate the signed tree head
       operationId: getPublicKey
       tags:
-        - tlog
+        - pubkey
       produces:
         - application/x-pem-file
       responses:

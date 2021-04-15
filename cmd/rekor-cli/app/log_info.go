@@ -97,7 +97,7 @@ var logInfoCmd = &cobra.Command{
 		publicKey := viper.GetString("rekor_server_public_key")
 		if publicKey == "" {
 			// fetch key from server
-			keyResp, err := rekorClient.Tlog.GetPublicKey(nil)
+			keyResp, err := rekorClient.Pubkey.GetPublicKey(nil)
 			if err != nil {
 				return nil, err
 			}

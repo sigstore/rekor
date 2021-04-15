@@ -48,8 +48,6 @@ type ClientService interface {
 
 	GetLogProof(params *GetLogProofParams, opts ...ClientOption) (*GetLogProofOK, error)
 
-	GetPublicKey(params *GetPublicKeyParams, opts ...ClientOption) (*GetPublicKeyOK, error)
-
 	SetTransport(transport runtime.ClientTransport)
 }
 
@@ -128,45 +126,6 @@ func (a *Client) GetLogProof(params *GetLogProofParams, opts ...ClientOption) (*
 	}
 	// unexpected success response
 	unexpectedSuccess := result.(*GetLogProofDefault)
-	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
-}
-
-/*
-  GetPublicKey retrieves the public key that can be used to validate the signed tree head
-
-  Returns the public key that can be used to validate the signed tree head
-*/
-func (a *Client) GetPublicKey(params *GetPublicKeyParams, opts ...ClientOption) (*GetPublicKeyOK, error) {
-	// TODO: Validate the params before sending
-	if params == nil {
-		params = NewGetPublicKeyParams()
-	}
-	op := &runtime.ClientOperation{
-		ID:                 "getPublicKey",
-		Method:             "GET",
-		PathPattern:        "/api/v1/log/publicKey",
-		ProducesMediaTypes: []string{"application/x-pem-file"},
-		ConsumesMediaTypes: []string{"application/json", "application/yaml"},
-		Schemes:            []string{"http"},
-		Params:             params,
-		Reader:             &GetPublicKeyReader{formats: a.formats},
-		Context:            params.Context,
-		Client:             params.HTTPClient,
-	}
-	for _, opt := range opts {
-		opt(op)
-	}
-
-	result, err := a.transport.Submit(op)
-	if err != nil {
-		return nil, err
-	}
-	success, ok := result.(*GetPublicKeyOK)
-	if ok {
-		return success, nil
-	}
-	// unexpected success response
-	unexpectedSuccess := result.(*GetPublicKeyDefault)
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 

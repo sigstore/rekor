@@ -39,6 +39,7 @@ import (
 
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 )
 
@@ -84,8 +85,8 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 		TlogGetLogProofHandler: tlog.GetLogProofHandlerFunc(func(params tlog.GetLogProofParams) middleware.Responder {
 			return middleware.NotImplemented("operation tlog.GetLogProof has not yet been implemented")
 		}),
-		TlogGetPublicKeyHandler: tlog.GetPublicKeyHandlerFunc(func(params tlog.GetPublicKeyParams) middleware.Responder {
-			return middleware.NotImplemented("operation tlog.GetPublicKey has not yet been implemented")
+		PubkeyGetPublicKeyHandler: pubkey.GetPublicKeyHandlerFunc(func(params pubkey.GetPublicKeyParams) middleware.Responder {
+			return middleware.NotImplemented("operation pubkey.GetPublicKey has not yet been implemented")
 		}),
 		IndexSearchIndexHandler: index.SearchIndexHandlerFunc(func(params index.SearchIndexParams) middleware.Responder {
 			return middleware.NotImplemented("operation index.SearchIndex has not yet been implemented")
@@ -148,8 +149,8 @@ type RekorServerAPI struct {
 	TlogGetLogInfoHandler tlog.GetLogInfoHandler
 	// TlogGetLogProofHandler sets the operation handler for the get log proof operation
 	TlogGetLogProofHandler tlog.GetLogProofHandler
-	// TlogGetPublicKeyHandler sets the operation handler for the get public key operation
-	TlogGetPublicKeyHandler tlog.GetPublicKeyHandler
+	// PubkeyGetPublicKeyHandler sets the operation handler for the get public key operation
+	PubkeyGetPublicKeyHandler pubkey.GetPublicKeyHandler
 	// IndexSearchIndexHandler sets the operation handler for the search index operation
 	IndexSearchIndexHandler index.SearchIndexHandler
 	// EntriesSearchLogQueryHandler sets the operation handler for the search log query operation
@@ -255,8 +256,8 @@ func (o *RekorServerAPI) Validate() error {
 	if o.TlogGetLogProofHandler == nil {
 		unregistered = append(unregistered, "tlog.GetLogProofHandler")
 	}
-	if o.TlogGetPublicKeyHandler == nil {
-		unregistered = append(unregistered, "tlog.GetPublicKeyHandler")
+	if o.PubkeyGetPublicKeyHandler == nil {
+		unregistered = append(unregistered, "pubkey.GetPublicKeyHandler")
 	}
 	if o.IndexSearchIndexHandler == nil {
 		unregistered = append(unregistered, "index.SearchIndexHandler")
@@ -381,7 +382,7 @@ func (o *RekorServerAPI) initHandlerCache() {
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
-	o.handlers["GET"]["/api/v1/log/publicKey"] = tlog.NewGetPublicKey(o.context, o.TlogGetPublicKeyHandler)
+	o.handlers["GET"]["/api/v1/log/publicKey"] = pubkey.NewGetPublicKey(o.context, o.PubkeyGetPublicKeyHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}

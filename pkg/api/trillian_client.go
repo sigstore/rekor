@@ -23,9 +23,9 @@ import (
 
 	_ "github.com/google/trillian/merkle/rfc6962" // register hasher
 
-	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
@@ -38,7 +38,6 @@ type TrillianClient struct {
 	client   trillian.TrillianLogClient
 	logID    int64
 	context  context.Context
-	pubkey   *keyspb.PublicKey
 	verifier *client.LogVerifier
 }
 
@@ -47,7 +46,6 @@ func NewTrillianClient(ctx context.Context) TrillianClient {
 		client:   api.logClient,
 		logID:    api.logID,
 		context:  ctx,
-		pubkey:   api.pubkey,
 		verifier: api.verifier,
 	}
 }
@@ -328,7 +326,7 @@ func createAndInitTree(ctx context.Context, adminClient trillian.TrillianAdminCl
 			HashAlgorithm:      sigpb.DigitallySigned_SHA256,
 			SignatureAlgorithm: sigpb.DigitallySigned_ECDSA,
 			TreeState:          trillian.TreeState_ACTIVE,
-			MaxRootDuration:    ptypes.DurationProto(time.Hour),
+			MaxRootDuration:    durationpb.New(time.Hour),
 		},
 		KeySpec: &keyspb.Specification{
 			Params: &keyspb.Specification_EcdsaParams{

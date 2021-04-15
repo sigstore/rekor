@@ -86,6 +86,7 @@ services:
       "--redis_server.address=redis-server",
       "--redis_server.port=6379",
       "--rekor_server.address=0.0.0.0",
+      "--rekor_server.signer=memory",
       # Uncomment this for production logging
       # "--log_type=prod",
       ]
@@ -103,3 +104,4 @@ services:
       timeout: 3s
       retries: 3
       start_period: 5s
+

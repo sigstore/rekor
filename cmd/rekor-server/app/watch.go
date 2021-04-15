@@ -75,7 +75,7 @@ var watchCmd = &cobra.Command{
 			return err
 		}
 
-		keyResp, err := c.Tlog.GetPublicKey(nil)
+		keyResp, err := c.Pubkey.GetPublicKey(nil)
 		if err != nil {
 			return err
 		}
