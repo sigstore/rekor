@@ -16,62 +16,47 @@
 package types
 
 import (
-	"context"
+	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
+// TypeMap stores mapping between type strings and entry constructors
+// entries are written once at process initialization and read for each transaction, so we use
+// sync.Map which is optimized for this case
+var TypeMap sync.Map
+
+// RekorType is the base struct that is embedded in all type implementations
+type RekorType struct {
+	Kind       string                 // this is the unique string that identifies the type
+	VersionMap VersionEntryFactoryMap // this maps the supported versions to implementation
+}
+
+// TypeImpl is implemented by all types to support the polymorphic conversion of abstract
+// proposed entry to a working implementation for the versioned type requested, if supported
 type TypeImpl interface {
-	Kind() string
 	UnmarshalEntry(pe models.ProposedEntry) (EntryImpl, error)
 }
 
-type EntryImpl interface {
-	APIVersion() string
-	IndexKeys() []string
-	Canonicalize(ctx context.Context) ([]byte, error)
-	FetchExternalEntities(ctx context.Context) error
-	HasExternalEntities() bool
-	Unmarshal(e models.ProposedEntry) error
-	Validate() error
-}
-
-type TypeFactory func() TypeImpl
-
-type typeMap struct {
-	typeImpls map[string]TypeFactory
-
-	sync.RWMutex
-}
-
-func (tm *typeMap) Get(kind string) (TypeFactory, bool) {
-	tm.RLock()
-	defer tm.RUnlock()
-	t, ok := tm.typeImpls[kind]
-	return t, ok
-}
-
-func (tm *typeMap) Set(kind string, t TypeFactory) {
-	tm.Lock()
-	defer tm.Unlock()
-	tm.typeImpls[kind] = t
-}
-
-var TypeMap = &typeMap{typeImpls: make(map[string]TypeFactory)}
-
-func NewEntry(pe models.ProposedEntry) (EntryImpl, error) {
-	if typeFactory, found := TypeMap.Get(pe.Kind()); found {
-		t := typeFactory()
-		if t == nil {
-			return nil, fmt.Errorf("error generating object for kind '%v'", pe.Kind())
-		}
-		et, err := t.UnmarshalEntry(pe)
-		if err != nil {
-			return nil, err
-		}
-		return et, nil
+// VersionedUnmarshal extracts the correct implementing factory function from the type's version map,
+// creates an entry of that versioned type and then calls that versioned type's unmarshal method
+func (rt *RekorType) VersionedUnmarshal(pe models.ProposedEntry, version string) (EntryImpl, error) {
+	if pe == nil {
+		return nil, errors.New("proposed entry cannot be nil")
 	}
-	return nil, fmt.Errorf("could not create entry for kind '%v'", pe.Kind())
+
+	ef, err := rt.VersionMap.GetEntryFactory(version)
+	if err != nil {
+		return nil, fmt.Errorf("%s implementation for version '%v' not found: %w", pe.Kind(), version, err)
+	}
+	entry := ef()
+	if entry == nil {
+		return nil, errors.New("failure generating object")
+	}
+	if err := entry.Unmarshal(pe); err != nil {
+		return nil, err
+	}
+	return entry, nil
 }
