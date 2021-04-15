@@ -44,12 +44,12 @@ func TestVerify(t *testing.T) {
 	}
 
 	// verify should work with correct signature
-	if err := Verify(pubKey, crypto.SHA256, msg, signature); err != nil {
+	if err := verify(pubKey, crypto.SHA256, msg, signature); err != nil {
 		t.Fatalf("error verifying: %v", err)
 	}
 
 	// and fail with an incorrect signature
-	if err := Verify(pubKey, crypto.SHA256, msg, []byte("nope")); err == nil {
+	if err := verify(pubKey, crypto.SHA256, msg, []byte("nope")); err == nil {
 		t.Fatalf("expected failure with incorrect signature")
 	}
 }

@@ -29,7 +29,7 @@ import (
 
 // SignedLogRoot verifies the signed log root and returns its contents
 func SignedLogRoot(pub crypto.PublicKey, hash crypto.Hash, logRoot, logRootSignature []byte) (*types.LogRootV1, error) {
-	if err := Verify(pub, hash, logRoot, logRootSignature); err != nil {
+	if err := verify(pub, hash, logRoot, logRootSignature); err != nil {
 		return nil, err
 	}
 
@@ -40,8 +40,8 @@ func SignedLogRoot(pub crypto.PublicKey, hash crypto.Hash, logRoot, logRootSigna
 	return &lr, nil
 }
 
-// Verify cryptographically verifies the output of Signer.
-func Verify(pub crypto.PublicKey, hasher crypto.Hash, data, sig []byte) error {
+// verify cryptographically verifies the output of Signer.
+func verify(pub crypto.PublicKey, hasher crypto.Hash, data, sig []byte) error {
 	if sig == nil {
 		return errors.New("signature is nil")
 	}
