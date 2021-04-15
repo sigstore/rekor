@@ -29,17 +29,17 @@ import (
 const MemoryScheme = "memory"
 
 // returns an in-memory signer and verify, used for spinning up local instances
-type memory struct {
+type Memory struct {
 	signature.ECDSASignerVerifier
 }
 
-func NewMemory() (*memory, error) {
+func NewMemory() (*Memory, error) {
 	// generate a keypair
 	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, errors.Wrap(err, "generating private key")
 	}
-	return &memory{
+	return &Memory{
 		ECDSASignerVerifier: signature.NewECDSASignerVerifier(privKey, crypto.SHA256),
 	}, nil
 }

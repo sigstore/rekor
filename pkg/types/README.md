@@ -2,12 +2,12 @@
 
 ## Description
 
-Rekor supports pluggable types (aka different schemas) for entries stored in the transparency log. 
+Rekor supports pluggable types (aka different schemas) for entries stored in the transparency log.
 
 ### Currently supported types
 
 - Rekord (default type) [schema](rekord/rekord_schema.json)
-  - Versions: 0.0.1 
+  - Versions: 0.0.1
 
 
 ## Base Schema

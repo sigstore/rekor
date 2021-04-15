@@ -1,3 +1,18 @@
+//
+// Copyright 2021 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package ssh
 
 import (
@@ -53,7 +68,7 @@ gAATvvPoylyYUAAAAOdGVzdEByZWtvci5kZXYBAgMEBQ==
 	sshPublicKey = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDXofkiahE7uavjWvxnwkUF27qMgz7pdTwzSv0XzVG6EtirOv3PDWct4YKoXE9c0EqbxnIfYEKwEextdvB7zkgwczdJSHxf/18jQumLn/FuoCmugVSk1H5Qli/qzwBpaTnOk3WuakGuoYUl8ZAokKKgOKLA0aZJ1WRQ2ZCZggA3EkwNZiY17y9Q6HqdgQcH6XN8aAMADNVJdMAJb33hSRJjjsAPTmzBTishP8lYDoGRSsSE7/8XRBCEV5E4I8mI9GElcZwV/1KJx98mpH8QvMzXM1idFcwPRtt1NTAOshwgUU0Fu1x8lU5RQIa6ZKW36qNQLvLxy/BscC7B/mdLptoDs/ot9NimUXZcgCR1a2Q3o7Wi6jIgcgJcyV10Nba81ol4RdN4qPHnVZIzuo+dBkqwG3CMtB4Rj84+Qi+7zyU01hIPreoxQDXaayiGPBUUIiAlW9gsiuRWJzNnu3cvuWDLVfQIkjh7Wug58z+v2NOJ7IMdyERillhzDcvVHaq14+U= test@rekor.dev
 `
 	// Generated with "ssh-keygen -C other-test@rekor.dev -f id_rsa"
-	otherSshPrivateKey = `-----BEGIN OPENSSH PRIVATE KEY-----
+	otherSSHPrivateKey = `-----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
 NhAAAAAwEAAQAAAYEAw/WCSWC9TEvCQOwO+T68EvNa3OSIv1Y0+sT8uSvyjPyEO0+p0t8C
 g/zy67vOxiQpU5jN6MItjXAjMmeCm8GKMt6gk+cDoaAev/ZfjuzSL7RayExpmhBleh2X3G
@@ -92,7 +107,7 @@ VxSZNdKrYfM/v9o6sRaDRqSfH1dG8BvkUxPznTAF+JDxBENcKXYECcq9f6dcl1w5IEnNTD
 Wry/EKQvgvOUjbAAAAFG90aGVyLXRlc3RAcmVrb3IuZGV2AQIDBAUG
 -----END OPENSSH PRIVATE KEY-----
 `
-	otherSshPublicKey = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDD9YJJYL1MS8JA7A75PrwS81rc5Ii/VjT6xPy5K/KM/IQ7T6nS3wKD/PLru87GJClTmM3owi2NcCMyZ4KbwYoy3qCT5wOhoB6/9l+O7NIvtFrITGmaEGV6HZfcYouSRcX0AEU1yGVOpIs5mISMOg2lsW/XopPWwToKpbwOPFdCRCT0krrmEsf4HF5Yw0IQlVoKZrhfThomYLvMkCLnIZ55PRIpWoyiFq8X3Q7peJgUJAe7Bc8/Id+hyqC52ZeejPP7oPprEkpkzBCw2ndYq6Y6OXNafEEIIHWXaM3pFqDxonbbvuIwVdHCNMv/yNoSxbgqTKwN/QaNXb+KpuvSrlvRqsNhu/sKsYFH64fTAbP9miDXHmJkA05uFlQukOstUmJ0QxzbsdcFvs8yw0PLsEZhEHXJzR3TLzenyZSq86VZICvGfVacBk7TikCBOtyWuESHhlc6SfZKfzZ67cOlDyKeSiVjgh+eEh9s4h56ahQ2rW05Sq6GjD0YtEzog2J4csE= other-test@rekor.dev
+	otherSSHPublicKey = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDD9YJJYL1MS8JA7A75PrwS81rc5Ii/VjT6xPy5K/KM/IQ7T6nS3wKD/PLru87GJClTmM3owi2NcCMyZ4KbwYoy3qCT5wOhoB6/9l+O7NIvtFrITGmaEGV6HZfcYouSRcX0AEU1yGVOpIs5mISMOg2lsW/XopPWwToKpbwOPFdCRCT0krrmEsf4HF5Yw0IQlVoKZrhfThomYLvMkCLnIZ55PRIpWoyiFq8X3Q7peJgUJAe7Bc8/Id+hyqC52ZeejPP7oPprEkpkzBCw2ndYq6Y6OXNafEEIIHWXaM3pFqDxonbbvuIwVdHCNMv/yNoSxbgqTKwN/QaNXb+KpuvSrlvRqsNhu/sKsYFH64fTAbP9miDXHmJkA05uFlQukOstUmJ0QxzbsdcFvs8yw0PLsEZhEHXJzR3TLzenyZSq86VZICvGfVacBk7TikCBOtyWuESHhlc6SfZKfzZ67cOlDyKeSiVjgh+eEh9s4h56ahQ2rW05Sq6GjD0YtEzog2J4csE= other-test@rekor.dev
 `
 
 	// Generated with ssh-keygen -C test@rekor.dev -t ed25519 -f id_ed25519
@@ -149,7 +164,7 @@ func TestFromOpenSSH(t *testing.T) {
 			}
 
 			// It should not verify if we check against another public key
-			if err := Verify(bytes.NewReader(data), sigBytes, []byte(otherSshPublicKey)); err == nil {
+			if err := Verify(bytes.NewReader(data), sigBytes, []byte(otherSSHPublicKey)); err == nil {
 				t.Error("expected error with incorrect key")
 			}
 
@@ -195,7 +210,7 @@ func TestToOpenSSH(t *testing.T) {
 
 			// Create an allowed_signers file with two keys to check against.
 			allowedSigner := "test@rekor.dev " + tt.pub + "\n"
-			allowedSigner += "othertest@rekor.dev " + otherSshPublicKey + "\n"
+			allowedSigner += "othertest@rekor.dev " + otherSSHPublicKey + "\n"
 			allowedSigners := write(t, []byte(allowedSigner), td, "allowed_signer")
 
 			// We use the correct principal here so it should work.
@@ -217,7 +232,7 @@ func TestRoundTrip(t *testing.T) {
 	data := []byte("my good data to be signed!")
 
 	// Create one extra signature for all the tests.
-	otherSig, err := Sign(otherSshPrivateKey, bytes.NewReader(data))
+	otherSig, err := Sign(otherSSHPrivateKey, bytes.NewReader(data))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,7 +271,7 @@ func TestRoundTrip(t *testing.T) {
 			}
 
 			// Now check it against the wrong key.
-			if err := Verify(bytes.NewReader(data), sig, []byte(otherSshPublicKey)); err == nil {
+			if err := Verify(bytes.NewReader(data), sig, []byte(otherSSHPublicKey)); err == nil {
 				t.Error("expected error!")
 			}
 
@@ -270,7 +285,7 @@ func TestRoundTrip(t *testing.T) {
 				t.Error("expected error!")
 			}
 			// It should work against the correct public key.
-			if err := Verify(bytes.NewReader(data), otherSig, []byte(otherSshPublicKey)); err != nil {
+			if err := Verify(bytes.NewReader(data), otherSig, []byte(otherSSHPublicKey)); err != nil {
 				t.Error(err)
 			}
 		})
