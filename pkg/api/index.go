@@ -39,7 +39,7 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 
 	var result []string
 	if params.Query.Hash != "" {
-		//validate this is only a valid sha256 hash
+		// validate this is only a valid sha256 hash
 		if !govalidator.IsSHA256(params.Query.Hash) {
 			return handleRekorAPIError(params, http.StatusBadRequest, errors.New("invalid hash value specified"), malformedHash)
 		}

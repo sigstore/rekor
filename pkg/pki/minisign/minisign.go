@@ -44,7 +44,7 @@ func NewSignature(r io.Reader) (*Signature, error) {
 	inputString := inputBuffer.String()
 	signature, err := minisign.DecodeSignature(inputString)
 	if err != nil {
-		//try to parse as signify
+		// try to parse as signify
 		lines := strings.Split(strings.TrimRight(inputString, "\n"), "\n")
 		if len(lines) != 2 {
 			return nil, fmt.Errorf("invalid signature provided: %v lines detected", len(lines))
@@ -60,6 +60,7 @@ func NewSignature(r io.Reader) (*Signature, error) {
 		copy(signature.KeyId[:], sigBytes[2:10])
 		copy(signature.Signature[:], sigBytes[10:])
 	}
+
 	s.signature = &signature
 	return &s, nil
 }
@@ -127,12 +128,13 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	inputString := inputBuffer.String()
 	key, err := minisign.DecodePublicKey(inputString)
 	if err != nil {
-		//try as a standalone base64 string
+		// try as a standalone base64 string
 		key, err = minisign.NewPublicKey(inputString)
 		if err != nil {
 			return nil, fmt.Errorf("unable to read minisign public key: %w", err)
 		}
 	}
+
 	k.key = &key
 	return &k, nil
 }

@@ -24,11 +24,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-type cobraCmd func(cmd *cobra.Command, args []string)
+type CobraCmd func(cmd *cobra.Command, args []string)
 
 type formatCmd func(args []string) (interface{}, error)
 
-func WrapCmd(f formatCmd) cobraCmd {
+func WrapCmd(f formatCmd) CobraCmd {
 	return func(cmd *cobra.Command, args []string) {
 		obj, err := f(args)
 		if err != nil {
@@ -42,15 +42,15 @@ func WrapCmd(f formatCmd) cobraCmd {
 			if s, ok := obj.(fmt.Stringer); ok {
 				fmt.Print(s.String())
 			} else {
-				fmt.Println(toJson(s))
+				fmt.Println(toJSON(s))
 			}
 		case "json":
-			fmt.Println(toJson(obj))
+			fmt.Println(toJSON(obj))
 		}
 	}
 }
 
-func toJson(i interface{}) string {
+func toJSON(i interface{}) string {
 	b, err := json.Marshal(i)
 	if err != nil {
 		log.Fatal(err)

@@ -268,7 +268,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		if err != nil {
 			return closePipesOnError(err)
 		}
-		//ReadPackageFile does not drain the entire reader so we need to discard the rest
+		// ReadPackageFile does not drain the entire reader so we need to discard the rest
 		if _, err = io.Copy(ioutil.Discard, rpmR); err != nil {
 			return closePipesOnError(err)
 		}
@@ -356,7 +356,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	return bytes, nil
 }
 
-//Validate performs cross-field validation for fields in object
+// Validate performs cross-field validation for fields in object
 func (v V001Entry) Validate() error {
 	key := v.RPMModel.PublicKey
 	if key == nil {

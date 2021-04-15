@@ -367,7 +367,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	return bytes, nil
 }
 
-//Validate performs cross-field validation for fields in object
+// Validate performs cross-field validation for fields in object
 func (v V001Entry) Validate() error {
 
 	sig := v.RekordObj.Signature

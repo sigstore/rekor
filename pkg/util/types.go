@@ -42,7 +42,7 @@ func (vfm *VersionFactoryMap) Get(version string) (VersionFactory, bool) {
 		return nil, false
 	}
 
-	//will return first function that matches
+	// will return first function that matches
 	for k, v := range vfm.VersionFactories {
 		semverRange, err := semver.ParseRange(k)
 		if err != nil {

@@ -118,13 +118,13 @@ func TestArtifactPFlags(t *testing.T) {
 			expectValidateSuccess: false,
 		},
 		{
-			caseDesc:              "non-existant rekord file",
+			caseDesc:              "non-existent rekord file",
 			entry:                 "../../../tests/not_there.json",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
 		{
-			caseDesc:              "non-existant rekord url",
+			caseDesc:              "non-existent rekord url",
 			entry:                 testServer.URL + "/not_found",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,

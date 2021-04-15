@@ -189,7 +189,7 @@ func TestSignature_VerifyFail(t *testing.T) {
 			// Make some fake data, and tamper with the signature
 			data := []byte("hey! this is my test data")
 			sigBytes := signData(t, data, tt.priv)
-			sigBytes[0] = sigBytes[0] - 1
+			sigBytes[0]--
 			s, err := NewSignature(bytes.NewReader(sigBytes))
 			if err != nil {
 				t.Fatal(err)

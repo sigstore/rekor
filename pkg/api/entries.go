@@ -40,7 +40,7 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 )
 
-//logEntryFromLeaf creates LogEntry struct from trillian structs
+// logEntryFromLeaf creates LogEntry struct from trillian structs
 func logEntryFromLeaf(tc TrillianClient, leaf *trillian.LogLeaf, signedLogRoot *trillian.SignedLogRoot, proof *trillian.Proof) (models.LogEntry, error) {
 
 	root := &ttypes.LogRootV1{}
@@ -71,7 +71,7 @@ func logEntryFromLeaf(tc TrillianClient, leaf *trillian.LogLeaf, signedLogRoot *
 	return logEntry, nil
 }
 
-//GetLogEntryAndProofByIndexHandler returns the entry and inclusion proof for a specified log index
+// GetLogEntryAndProofByIndexHandler returns the entry and inclusion proof for a specified log index
 func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middleware.Responder {
 	tc := NewTrillianClient(params.HTTPRequest.Context())
 
@@ -98,7 +98,7 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 	return entries.NewGetLogEntryByIndexOK().WithPayload(logEntry)
 }
 
-//CreateLogEntryHandler creates new entry into log
+// CreateLogEntryHandler creates new entry into log
 func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Responder {
 	httpReq := params.HTTPRequest
 	entry, err := types.NewEntry(params.ProposedEntry)
@@ -114,12 +114,12 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 	tc := NewTrillianClient(httpReq.Context())
 
 	resp := tc.addLeaf(leaf)
-	//this represents overall GRPC response state (not the results of insertion into the log)
+	// this represents overall GRPC response state (not the results of insertion into the log)
 	if resp.status != codes.OK {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
 	}
 
-	//this represents the results of inserting the proposed leaf into the log; status is nil in success path
+	// this represents the results of inserting the proposed leaf into the log; status is nil in success path
 	insertionStatus := resp.getAddResult.QueuedLeaf.Status
 	if insertionStatus != nil {
 		switch insertionStatus.Code {
@@ -159,7 +159,7 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(getEntryURL(*httpReq.URL, uuid)).WithETag(uuid)
 }
 
-//getEntryURL returns the absolute path to the log entry in a RESTful style
+// getEntryURL returns the absolute path to the log entry in a RESTful style
 func getEntryURL(locationURL url.URL, uuid string) strfmt.URI {
 	// remove API key from output
 	query := locationURL.Query()
@@ -170,7 +170,7 @@ func getEntryURL(locationURL url.URL, uuid string) strfmt.URI {
 
 }
 
-//GetLogEntryByUUIDHandler gets log entry and inclusion proof for specified UUID aka merkle leaf hash
+// GetLogEntryByUUIDHandler gets log entry and inclusion proof for specified UUID aka merkle leaf hash
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
 	hashValue, _ := hex.DecodeString(params.EntryUUID)
 	tc := NewTrillianClient(params.HTTPRequest.Context())
@@ -198,7 +198,7 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 	return entries.NewGetLogEntryByUUIDOK().WithPayload(logEntry)
 }
 
-//SearchLogQueryHandler searches log by index, UUID, or proposed entry and returns array of entries found with inclusion proofs
+// SearchLogQueryHandler searches log by index, UUID, or proposed entry and returns array of entries found with inclusion proofs
 func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Responder {
 	httpReqCtx := params.HTTPRequest.Context()
 	resultPayload := []models.LogEntry{}

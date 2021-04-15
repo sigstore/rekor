@@ -25,7 +25,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// Set the default logger to development mode
+// Logger set the default logger to development mode
 var Logger *zap.SugaredLogger
 
 func init() {

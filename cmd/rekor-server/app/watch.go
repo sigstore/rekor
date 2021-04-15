@@ -28,7 +28,7 @@ import (
 	"os"
 	"time"
 
-	_ "gocloud.dev/blob/fileblob"
+	_ "gocloud.dev/blob/fileblob" // fileblob
 	_ "gocloud.dev/blob/gcsblob"
 
 	"github.com/google/trillian"

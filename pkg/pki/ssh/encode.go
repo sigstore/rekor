@@ -36,7 +36,8 @@ func Armor(s *ssh.Signature, p ssh.PublicKey) []byte {
 		HashAlgorithm: defaultHashAlgorithm,
 		Signature:     string(ssh.Marshal(s)),
 	}
-	copy(sig.MagicHeader[:], []byte(magicHeader))
+
+	copy(sig.MagicHeader[:], magicHeader)
 
 	enc := pem.EncodeToMemory(&pem.Block{
 		Type:  pemType,

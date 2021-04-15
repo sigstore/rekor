@@ -89,13 +89,13 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 
 	api.ServerShutdown = func() {}
 
-	//not cacheable
+	// not cacheable
 	api.AddMiddlewareFor("GET", "/api/v1/log", middleware.NoCache)
 	api.AddMiddlewareFor("GET", "/api/v1/log/proof", middleware.NoCache)
 	api.AddMiddlewareFor("GET", "/api/v1/log/entries", middleware.NoCache)
 	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}", middleware.NoCache)
 
-	//cache forever
+	// cache forever
 	api.AddMiddlewareFor("GET", "/api/v1/log/publicKey", cacheForever)
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))

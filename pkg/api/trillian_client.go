@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"time"
 
+	_ "github.com/google/trillian/merkle/rfc6962" // register hasher
+
 	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -29,7 +31,6 @@ import (
 	"github.com/google/trillian/client"
 	"github.com/google/trillian/crypto/keyspb"
 	"github.com/google/trillian/crypto/sigpb"
-	_ "github.com/google/trillian/merkle/rfc6962" //register hasher
 	"github.com/google/trillian/types"
 )
 
@@ -165,7 +166,7 @@ func (t *TrillianClient) addLeaf(byteValue []byte) *Response {
 		}
 	}
 
-	//overwrite queued leaf that doesn't have index set
+	// overwrite queued leaf that doesn't have index set
 	resp.QueuedLeaf.Leaf = leafResp.getLeafAndProofResult.Leaf
 
 	return &Response{

@@ -31,7 +31,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 )
 
-//GetLogInfoHandler returns the current size of the tree and the STH
+// GetLogInfoHandler returns the current size of the tree and the STH
 func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	tc := NewTrillianClient(params.HTTPRequest.Context())
 
@@ -66,7 +66,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	return tlog.NewGetLogInfoOK().WithPayload(&logInfo)
 }
 
-//GetLogProofHandler returns information required to compute a consistency proof between two snapshots of log
+// GetLogProofHandler returns information required to compute a consistency proof between two snapshots of log
 func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	if *params.FirstSize > params.LastSize {
 		return handleRekorAPIError(params, http.StatusBadRequest, nil, fmt.Sprintf(firstSizeLessThanLastSize, *params.FirstSize, params.LastSize))
@@ -102,10 +102,11 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 		RootHash: &hashString,
 		Hashes:   proofHashes,
 	}
+
 	return tlog.NewGetLogProofOK().WithPayload(&consistencyProof)
 }
 
-//GetPublicKeyHandler returns the public key used to verify the signature on the signed tree head
+// GetPublicKeyHandler returns the public key used to verify the signature on the signed tree head
 func GetPublicKeyHandler(params tlog.GetPublicKeyParams) middleware.Responder {
 	tc := NewTrillianClient(params.HTTPRequest.Context())
 
