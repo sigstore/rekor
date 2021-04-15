@@ -18,16 +18,14 @@ package verify
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"errors"
 	"fmt"
 
 	"github.com/google/trillian/types"
+	"github.com/pkg/errors"
 )
 
 // this verification copied from https://github.com/google/trillian/blob/v1.3.13/crypto/verifier.go
 // which has since been deleted
-
-var errVerify = errors.New("signature verification failed")
 
 // SignedLogRoot verifies the signed log root and returns its contents
 func SignedLogRoot(pub crypto.PublicKey, hash crypto.Hash, logRoot, logRootSignature []byte) (*types.LogRootV1, error) {
@@ -49,7 +47,9 @@ func Verify(pub crypto.PublicKey, hasher crypto.Hash, data, sig []byte) error {
 	}
 
 	h := hasher.New()
-	h.Write(data)
+	if _, err := h.Write(data); err != nil {
+		return errors.Wrap(err, "write")
+	}
 	digest := h.Sum(nil)
 
 	switch pub := pub.(type) {
