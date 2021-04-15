@@ -539,6 +539,32 @@ func init() {
         }
       }
     },
+    "jar": {
+      "description": "Java Archive (JAR)",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "type": "object",
+              "$ref": "pkg/types/jar/jar_schema.json"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "rekord": {
       "description": "Rekord object",
       "type": "object",
@@ -1031,6 +1057,119 @@ func init() {
         }
       }
     },
+    "JarV001SchemaArchive": {
+      "description": "Information about the archive associated with the entry",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "content"
+          ]
+        }
+      ],
+      "properties": {
+        "content": {
+          "description": "Specifies the archive inline within the document",
+          "type": "string",
+          "format": "byte"
+        },
+        "hash": {
+          "description": "Specifies the hash algorithm and value encompassing the entire signed archive",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value": {
+              "description": "The hash value for the archive",
+              "type": "string"
+            }
+          }
+        },
+        "url": {
+          "description": "Specifies the location of the archive; if this is specified, a hash value must also be provided",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "JarV001SchemaArchiveHash": {
+      "description": "Specifies the hash algorithm and value encompassing the entire signed archive",
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "The hashing function used to compute the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value": {
+          "description": "The hash value for the archive",
+          "type": "string"
+        }
+      }
+    },
+    "JarV001SchemaSignature": {
+      "description": "Information about the included signature in the JAR file",
+      "type": "object",
+      "required": [
+        "publicKey",
+        "content"
+      ],
+      "properties": {
+        "content": {
+          "description": "Specifies the PKCS7 signature embedded within the JAR file ",
+          "type": "string",
+          "format": "byte"
+        },
+        "publicKey": {
+          "description": "The X509 certificate containing the public key JAR which verifies the signature of the JAR",
+          "type": "object",
+          "required": [
+            "content"
+          ],
+          "properties": {
+            "content": {
+              "description": "Specifies the content of the X509 certificate containing the public key used to verify the signature",
+              "type": "string",
+              "format": "byte"
+            }
+          }
+        }
+      }
+    },
+    "JarV001SchemaSignaturePublicKey": {
+      "description": "The X509 certificate containing the public key JAR which verifies the signature of the JAR",
+      "type": "object",
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "content": {
+          "description": "Specifies the content of the X509 certificate containing the public key used to verify the signature",
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
     "LogEntry": {
       "type": "object",
       "additionalProperties": {
@@ -1501,6 +1640,138 @@ func init() {
           }
         }
       }
+    },
+    "jar": {
+      "description": "Java Archive (JAR)",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "$ref": "#/definitions/jarSchema"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "jarSchema": {
+      "description": "Schema for JAR objects",
+      "type": "object",
+      "title": "JAR Schema",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/jarV001Schema"
+        }
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/jar/jar_schema.json"
+    },
+    "jarV001Schema": {
+      "description": "Schema for JAR entries",
+      "type": "object",
+      "title": "JAR v0.0.1 Schema",
+      "required": [
+        "archive"
+      ],
+      "properties": {
+        "archive": {
+          "description": "Information about the archive associated with the entry",
+          "type": "object",
+          "oneOf": [
+            {
+              "required": [
+                "url"
+              ]
+            },
+            {
+              "required": [
+                "content"
+              ]
+            }
+          ],
+          "properties": {
+            "content": {
+              "description": "Specifies the archive inline within the document",
+              "type": "string",
+              "format": "byte"
+            },
+            "hash": {
+              "description": "Specifies the hash algorithm and value encompassing the entire signed archive",
+              "type": "object",
+              "required": [
+                "algorithm",
+                "value"
+              ],
+              "properties": {
+                "algorithm": {
+                  "description": "The hashing function used to compute the hash value",
+                  "type": "string",
+                  "enum": [
+                    "sha256"
+                  ]
+                },
+                "value": {
+                  "description": "The hash value for the archive",
+                  "type": "string"
+                }
+              }
+            },
+            "url": {
+              "description": "Specifies the location of the archive; if this is specified, a hash value must also be provided",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "extraData": {
+          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
+          "type": "object",
+          "additionalProperties": true
+        },
+        "signature": {
+          "description": "Information about the included signature in the JAR file",
+          "type": "object",
+          "required": [
+            "publicKey",
+            "content"
+          ],
+          "properties": {
+            "content": {
+              "description": "Specifies the PKCS7 signature embedded within the JAR file ",
+              "type": "string",
+              "format": "byte"
+            },
+            "publicKey": {
+              "description": "The X509 certificate containing the public key JAR which verifies the signature of the JAR",
+              "type": "object",
+              "required": [
+                "content"
+              ],
+              "properties": {
+                "content": {
+                  "description": "Specifies the content of the X509 certificate containing the public key used to verify the signature",
+                  "type": "string",
+                  "format": "byte"
+                }
+              }
+            }
+          }
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/jar/jar_v0_0_1_schema.json"
     },
     "rekord": {
       "description": "Rekord object",

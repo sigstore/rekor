@@ -34,6 +34,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
+	jar_v001 "github.com/sigstore/rekor/pkg/types/jar/v0.0.1"
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	rpm_v001 "github.com/sigstore/rekor/pkg/types/rpm/v0.0.1"
 )
@@ -131,12 +132,77 @@ func validateArtifactPFlags(uuidValid, indexValid bool) error {
 		if signature == "" && typeStr == "rekord" {
 			return errors.New("--signature is required when --artifact is used")
 		}
-		if publicKey == "" {
+		if publicKey == "" && typeStr != "jar" {
 			return errors.New("--public-key is required when --artifact is used")
 		}
 	}
 
 	return nil
+}
+
+func CreateJarFromPFlags() (models.ProposedEntry, error) {
+	//TODO: how to select version of item to create
+	returnVal := models.Jar{}
+	re := new(jar_v001.V001Entry)
+
+	jar := viper.GetString("entry")
+	if jar != "" {
+		var jarBytes []byte
+		jarURL, err := url.Parse(jar)
+		if err == nil && jarURL.IsAbs() {
+			/* #nosec G107 */
+			jarResp, err := http.Get(jar)
+			if err != nil {
+				return nil, fmt.Errorf("error fetching 'jar': %w", err)
+			}
+			defer jarResp.Body.Close()
+			jarBytes, err = ioutil.ReadAll(jarResp.Body)
+			if err != nil {
+				return nil, fmt.Errorf("error fetching 'jar': %w", err)
+			}
+		} else {
+			jarBytes, err = ioutil.ReadFile(filepath.Clean(jar))
+			if err != nil {
+				return nil, fmt.Errorf("error processing 'jar' file: %w", err)
+			}
+		}
+		if err := json.Unmarshal(jarBytes, &returnVal); err != nil {
+			return nil, fmt.Errorf("error parsing jar file: %w", err)
+		}
+	} else {
+		// we will need only the artifact; public-key & signature are embedded in JAR
+		re.JARModel = models.JarV001Schema{}
+		re.JARModel.Archive = &models.JarV001SchemaArchive{}
+
+		artifact := viper.GetString("artifact")
+		dataURL, err := url.Parse(artifact)
+		if err == nil && dataURL.IsAbs() {
+			re.JARModel.Archive.URL = strfmt.URI(artifact)
+		} else {
+			artifactBytes, err := ioutil.ReadFile(filepath.Clean(artifact))
+			if err != nil {
+				return nil, fmt.Errorf("error reading artifact file: %w", err)
+			}
+
+			//TODO: ensure this is a valid JAR file; look for META-INF/MANIFEST.MF?
+			re.JARModel.Archive.Content = strfmt.Base64(artifactBytes)
+		}
+
+		if err := re.Validate(); err != nil {
+			return nil, err
+		}
+
+		if re.HasExternalEntities() {
+			if err := re.FetchExternalEntities(context.Background()); err != nil {
+				return nil, fmt.Errorf("error retrieving external entities: %v", err)
+			}
+		}
+
+		returnVal.APIVersion = swag.String(re.APIVersion())
+		returnVal.Spec = re.JARModel
+	}
+
+	return &returnVal, nil
 }
 
 func CreateRpmFromPFlags() (models.ProposedEntry, error) {
@@ -358,6 +424,7 @@ func (t *typeFlag) Set(s string) error {
 	set := map[string]struct{}{
 		"rekord": {},
 		"rpm":    {},
+		"jar":    {},
 	}
 	if _, ok := set[s]; ok {
 		t.value = s

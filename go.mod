@@ -17,6 +17,7 @@ require (
 	github.com/go-openapi/validate v0.20.2
 	github.com/google/rpmpack v0.0.0-20210107155803-d6befbf05148
 	github.com/google/trillian v1.3.13
+	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c // indirect
 	github.com/jedisct1/go-minisign v0.0.0-20210106175330-e54e81d562c7
 	github.com/mediocregopher/radix/v4 v4.0.0-beta.1
 	github.com/mitchellh/go-homedir v1.1.0
@@ -24,11 +25,14 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.10.0
 	github.com/rs/cors v1.7.0
-	github.com/sigstore/sigstore v0.0.0-20210414183523-383d6554c35c
+	github.com/sassoftware/relic v7.2.1+incompatible
+	github.com/sigstore/sigstore v0.0.0-20210415112811-cb2061113e4a
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.1
+	github.com/ulikunitz/xz v0.5.9 // indirect
 	github.com/urfave/negroni v1.0.0
+	github.com/zalando/go-keyring v0.1.1 // indirect
 	go.uber.org/goleak v1.1.10
 	go.uber.org/zap v1.16.0
 	gocloud.dev v0.22.0

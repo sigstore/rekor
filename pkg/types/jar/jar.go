@@ -1,0 +1,66 @@
+/*
+Copyright © 2021 The Rekor Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+package jar
+
+import (
+	"errors"
+	"fmt"
+
+	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/util"
+
+	"github.com/go-openapi/swag"
+	"github.com/sigstore/rekor/pkg/generated/models"
+)
+
+const (
+	KIND = "jar"
+)
+
+type BaseJARType struct{}
+
+func (jt BaseJARType) Kind() string {
+	return KIND
+}
+
+func init() {
+	types.TypeMap.Set(KIND, New)
+}
+
+func New() types.TypeImpl {
+	return &BaseJARType{}
+}
+
+var SemVerToFacFnMap = &util.VersionFactoryMap{VersionFactories: make(map[string]util.VersionFactory)}
+
+func (jt BaseJARType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
+	jar, ok := pe.(*models.Jar)
+	if !ok {
+		return nil, errors.New("cannot unmarshal non-JAR types")
+	}
+
+	if genFn, found := SemVerToFacFnMap.Get(swag.StringValue(jar.APIVersion)); found {
+		entry := genFn()
+		if entry == nil {
+			return nil, fmt.Errorf("failure generating JAR object for version '%v'", jar.APIVersion)
+		}
+		if err := entry.Unmarshal(jar); err != nil {
+			return nil, err
+		}
+		return entry, nil
+	}
+	return nil, fmt.Errorf("JARType implementation for version '%v' not found", swag.StringValue(jar.APIVersion))
+}

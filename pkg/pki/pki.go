@@ -22,6 +22,7 @@ import (
 
 	"github.com/sigstore/rekor/pkg/pki/minisign"
 	"github.com/sigstore/rekor/pkg/pki/pgp"
+	"github.com/sigstore/rekor/pkg/pki/pkcs7"
 	"github.com/sigstore/rekor/pkg/pki/ssh"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 )
@@ -57,6 +58,8 @@ func (a ArtifactFactory) NewPublicKey(r io.Reader) (PublicKey, error) {
 		return x509.NewPublicKey(r)
 	case "ssh":
 		return ssh.NewPublicKey(r)
+	case "pkcs7":
+		return pkcs7.NewPublicKey(r)
 	}
 	return nil, fmt.Errorf("unknown key format '%v'", a.format)
 }
@@ -71,6 +74,8 @@ func (a ArtifactFactory) NewSignature(r io.Reader) (Signature, error) {
 		return x509.NewSignature(r)
 	case "ssh":
 		return ssh.NewSignature(r)
+	case "pkcs7":
+		return pkcs7.NewSignature(r)
 	}
 	return nil, fmt.Errorf("unknown key format '%v'", a.format)
 }
