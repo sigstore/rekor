@@ -1808,7 +1808,7 @@ func init() {
         }
       ],
       "$schema": "http://json-schema.org/draft-07/schema",
-      "$id": "http://rekor.dev/types/rekord/rekord_schema.json"
+      "$id": "http://rekor.sigstore.dev/types/rekord/rekord_schema.json"
     },
     "rekordV001Schema": {
       "description": "Schema for Rekord object",
@@ -1945,7 +1945,7 @@ func init() {
         }
       },
       "$schema": "http://json-schema.org/draft-07/schema",
-      "$id": "http://rekor.dev/types/rekord/rekord_v0_0_1_schema.json"
+      "$id": "http://rekor.sigstore.dev/types/rekord/rekord_v0_0_1_schema.json"
     },
     "rpm": {
       "description": "RPM object",
@@ -1982,7 +1982,7 @@ func init() {
         }
       ],
       "$schema": "http://json-schema.org/draft-07/schema",
-      "$id": "http://rekor.dev/types/rpm/rpm_schema.json"
+      "$id": "http://rekor.sigstore.dev/types/rpm/rpm_schema.json"
     },
     "rpmV001Schema": {
       "description": "Schema for RPM entries",
@@ -2084,7 +2084,7 @@ func init() {
         }
       },
       "$schema": "http://json-schema.org/draft-07/schema",
-      "$id": "http://rekor.dev/types/rpm/rpm_v0_0_1_schema.json"
+      "$id": "http://rekor.sigstore.dev/types/rpm/rpm_v0_0_1_schema.json"
     }
   },
   "responses": {
