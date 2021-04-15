@@ -48,7 +48,14 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	treeSize := int64(root.TreeSize)
 	keyHint := strfmt.Base64(result.SignedLogRoot.GetKeyHint())
 	logRoot := strfmt.Base64(result.SignedLogRoot.GetLogRoot())
-	signature := strfmt.Base64(result.SignedLogRoot.GetLogRootSignature())
+
+	// sign the log root ourselves to get the log root signature
+	sig, _, err := api.signer.Sign(params.HTTPRequest.Context(), result.SignedLogRoot.GetLogRoot())
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %w", err), trillianCommunicationError)
+	}
+
+	signature := strfmt.Base64(sig)
 
 	sth := models.LogInfoSignedTreeHead{
 		KeyHint:   &keyHint,

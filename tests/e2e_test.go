@@ -110,7 +110,6 @@ func TestUploadVerifyRpm(t *testing.T) {
 }
 
 func TestLogInfo(t *testing.T) {
-	t.Skip("TODO (priyawadhwa@): skipping for now, turn on once rekor signs the log root itself")
 	// TODO: figure out some way to check the length, add something, and make sure the length increments!
 	out := runCli(t, "loginfo")
 	outputContains(t, out, "Verification Successful!")
