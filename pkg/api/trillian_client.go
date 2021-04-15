@@ -21,7 +21,8 @@ import (
 	"fmt"
 	"time"
 
-	_ "github.com/google/trillian/merkle/rfc6962" // register hasher
+	"github.com/google/trillian/merkle/logverifier"
+	"github.com/google/trillian/merkle/rfc6962/hasher"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -216,7 +217,9 @@ func (t *TrillianClient) getLeafAndProofByIndex(index int64) *Response {
 		})
 
 	if resp != nil && resp.Proof != nil {
-		if err := t.verifier.VerifyInclusionAtIndex(&root, resp.Leaf.LeafValue, index, resp.Proof.Hashes); err != nil {
+		leaf := t.verifier.BuildLeaf(resp.Leaf.LeafValue)
+		logVerifier := logverifier.New(hasher.DefaultHasher)
+		if err := logVerifier.VerifyInclusionProof(index, int64(root.TreeSize), resp.Proof.Hashes, root.RootHash, leaf.MerkleLeafHash); err != nil {
 			return &Response{
 				status: status.Code(err),
 				err:    err,
@@ -322,7 +325,6 @@ func createAndInitTree(ctx context.Context, adminClient trillian.TrillianAdminCl
 	t, err := adminClient.CreateTree(ctx, &trillian.CreateTreeRequest{
 		Tree: &trillian.Tree{
 			TreeType:           trillian.TreeType_LOG,
-			HashStrategy:       trillian.HashStrategy_RFC6962_SHA256,
 			HashAlgorithm:      sigpb.DigitallySigned_SHA256,
 			SignatureAlgorithm: sigpb.DigitallySigned_ECDSA,
 			TreeState:          trillian.TreeState_ACTIVE,

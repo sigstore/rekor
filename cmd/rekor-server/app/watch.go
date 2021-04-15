@@ -22,7 +22,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -31,17 +30,17 @@ import (
 	_ "gocloud.dev/blob/fileblob" // fileblob
 	_ "gocloud.dev/blob/gcsblob"
 
-	"github.com/google/trillian"
-	tclient "github.com/google/trillian/client"
-	"github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/google/trillian/types"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gocloud.dev/blob"
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/verify"
 )
 
 const rekorSthBucketEnv = "REKOR_STH_BUCKET"
@@ -90,7 +89,6 @@ var watchCmd = &cobra.Command{
 			return err
 		}
 
-		verifier := tclient.NewLogVerifier(hasher.DefaultHasher, pub, crypto.SHA256)
 		ctx := context.Background()
 		bucketURL := os.Getenv(rekorSthBucketEnv)
 		if bucketURL == "" {
@@ -107,7 +105,7 @@ var watchCmd = &cobra.Command{
 		for {
 			<-tick.C
 			log.Logger.Info("performing check")
-			lr, err := doCheck(c, verifier)
+			lr, err := doCheck(c, pub)
 			if err != nil {
 				log.Logger.Warnf("error verifiying tree: %s", err)
 				continue
@@ -134,36 +132,28 @@ func init() {
 	rootCmd.AddCommand(watchCmd)
 }
 
-func doCheck(c *client.Rekor, v *tclient.LogVerifier) (*SignedAndUnsignedLogRoot, error) {
+func doCheck(c *client.Rekor, pub crypto.PublicKey) (*SignedAndUnsignedLogRoot, error) {
 	li, err := c.Tlog.GetLogInfo(nil)
 	if err != nil {
-		return nil, err
-	}
-	keyHint, err := base64.StdEncoding.DecodeString(li.Payload.SignedTreeHead.KeyHint.String())
-	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "getting log info")
 	}
 	logRoot, err := base64.StdEncoding.DecodeString(li.Payload.SignedTreeHead.LogRoot.String())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "decoding log root")
 	}
-	signature, err := base64.StdEncoding.DecodeString(li.Payload.SignedTreeHead.Signature.String())
+	logRootSignature, err := base64.StdEncoding.DecodeString(li.Payload.SignedTreeHead.Signature.String())
 	if err != nil {
-		return nil, err
-	}
-	sth := trillian.SignedLogRoot{
-		KeyHint:          keyHint,
-		LogRoot:          logRoot,
-		LogRootSignature: signature,
+		return nil, errors.Wrap(err, "decoding signature")
 	}
 
-	lr := &types.LogRootV1{}
-	if err := lr.UnmarshalBinary(sth.LogRoot); err != nil {
-		return nil, err
+	verifiedLogRoot, err := verify.SignedLogRoot(pub, crypto.SHA256, logRoot, logRootSignature)
+	if err != nil {
+		return nil, errors.Wrap(err, "signing log root")
 	}
+
 	return &SignedAndUnsignedLogRoot{
-		SignedLogRoot:   &sth,
-		VerifiedLogRoot: lr,
+		SignedLogRoot:   li.GetPayload().SignedTreeHead,
+		VerifiedLogRoot: verifiedLogRoot,
 	}, nil
 }
 
@@ -187,6 +177,6 @@ func uploadToBlobStorage(ctx context.Context, bucket *blob.Bucket, lr *SignedAnd
 
 // For JSON marshalling
 type SignedAndUnsignedLogRoot struct {
-	SignedLogRoot   *trillian.SignedLogRoot
+	SignedLogRoot   *models.LogInfoSignedTreeHead
 	VerifiedLogRoot *types.LogRootV1
 }

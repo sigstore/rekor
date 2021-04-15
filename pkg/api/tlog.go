@@ -46,7 +46,6 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 
 	hashString := hex.EncodeToString(root.RootHash)
 	treeSize := int64(root.TreeSize)
-	keyHint := strfmt.Base64(result.SignedLogRoot.GetKeyHint())
 	logRoot := strfmt.Base64(result.SignedLogRoot.GetLogRoot())
 
 	// sign the log root ourselves to get the log root signature
@@ -58,7 +57,6 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	signature := strfmt.Base64(sig)
 
 	sth := models.LogInfoSignedTreeHead{
-		KeyHint:   &keyHint,
 		LogRoot:   &logRoot,
 		Signature: &signature,
 	}

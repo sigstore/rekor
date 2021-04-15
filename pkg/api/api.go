@@ -76,13 +76,6 @@ func NewAPI() (*API, error) {
 		tLogID = t.TreeId
 	}
 
-	t, err := logAdminClient.GetTree(ctx, &trillian.GetTreeRequest{
-		TreeId: tLogID,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	signer, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
 	if err != nil {
 		return nil, errors.Wrap(err, "getting new signer")
@@ -100,17 +93,11 @@ func NewAPI() (*API, error) {
 		Bytes: b,
 	})
 
-	verifier, err := client.NewLogVerifierFromTree(t)
-	if err != nil {
-		return nil, err
-	}
-
 	return &API{
 		logClient: logClient,
 		logID:     tLogID,
 		pubkey:    string(pubkey),
 		signer:    signer,
-		verifier:  verifier,
 	}, nil
 }
 
