@@ -481,6 +481,10 @@ func init() {
     "SearchIndex": {
       "type": "object",
       "properties": {
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
         "hash": {
           "type": "string",
           "pattern": "^[0-9a-fA-F]{64}$"
@@ -1559,6 +1563,10 @@ func init() {
     "SearchIndex": {
       "type": "object",
       "properties": {
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
         "hash": {
           "type": "string",
           "pattern": "^[0-9a-fA-F]{64}$"

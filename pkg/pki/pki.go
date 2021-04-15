@@ -30,6 +30,7 @@ import (
 // PublicKey Generic object representing a public key (regardless of format & algorithm)
 type PublicKey interface {
 	CanonicalValue() ([]byte, error)
+	EmailAddresses() []string
 }
 
 // Signature Generic object representing a signature (regardless of format & algorithm)

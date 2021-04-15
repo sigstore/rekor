@@ -15,6 +15,7 @@ require (
 	github.com/go-openapi/strfmt v0.20.1
 	github.com/go-openapi/swag v0.19.15
 	github.com/go-openapi/validate v0.20.2
+	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/google/rpmpack v0.0.0-20210107155803-d6befbf05148
 	github.com/google/trillian v1.3.14-0.20210413093047-5e12fb368c8f
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c // indirect

@@ -148,3 +148,8 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 	b64Key := base64.StdEncoding.EncodeToString(k.key.PublicKey[:])
 	return []byte(b64Key), nil
 }
+
+// EmailAddresses implements the pki.PublicKey interface
+func (k PublicKey) EmailAddresses() []string {
+	return nil
+}

@@ -33,6 +33,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/go-playground/validator"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	jar_v001 "github.com/sigstore/rekor/pkg/types/jar/v0.0.1"
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
@@ -47,6 +48,8 @@ func addSearchPFlags(cmd *cobra.Command) error {
 	cmd.Flags().Var(&fileOrURLFlag{}, "artifact", "path or URL to artifact file")
 
 	cmd.Flags().Var(&uuidFlag{}, "sha", "the SHA256 sum of the artifact")
+
+	cmd.Flags().Var(&emailFlag{}, "email", "email associated with the public key's subject")
 	return nil
 }
 
@@ -55,9 +58,10 @@ func validateSearchPFlags() error {
 
 	publicKey := viper.GetString("public-key")
 	sha := viper.GetString("sha")
+	email := viper.GetString("email")
 
-	if artifactStr == "" && publicKey == "" && sha == "" {
-		return errors.New("either 'sha' or 'artifact' or 'public-key' must be specified")
+	if artifactStr == "" && publicKey == "" && sha == "" && email == "" {
+		return errors.New("either 'sha' or 'artifact' or 'public-key' or 'email' must be specified")
 	}
 	if publicKey != "" {
 		if viper.GetString("pki-format") == "" {
@@ -529,4 +533,30 @@ func addLogIndexFlag(cmd *cobra.Command, required bool) error {
 		}
 	}
 	return nil
+}
+
+type emailFlag struct {
+	Email string `validate:"email"`
+}
+
+func (e *emailFlag) String() string {
+	return e.Email
+}
+
+func (e *emailFlag) Set(v string) error {
+	if v == "" {
+		return errors.New("flag must be specified")
+	}
+
+	e.Email = v
+	validate := validator.New()
+	if err := validate.Struct(e); err != nil {
+		return fmt.Errorf("error parsing --email: %s", err)
+	}
+
+	return nil
+}
+
+func (e *emailFlag) Type() string {
+	return "email"
 }

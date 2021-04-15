@@ -23,12 +23,17 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 )
+
+// EmailAddressOID defined by https://oidref.com/1.2.840.113549.1.9.1
+var EmailAddressOID asn1.ObjectIdentifier = []int{1, 2, 840, 113549, 1, 9, 1}
 
 type Signature struct {
 	signature []byte
@@ -165,4 +170,17 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// EmailAddresses implements the pki.PublicKey interface
+func (k PublicKey) EmailAddresses() []string {
+	var names []string
+	if k.cert != nil {
+		for _, name := range k.cert.c.Subject.Names {
+			if name.Type.Equal(EmailAddressOID) {
+				names = append(names, strings.ToLower(name.Value.(string)))
+			}
+		}
+	}
+	return names
 }

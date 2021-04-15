@@ -24,6 +24,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
+	"sort"
 	"testing"
 
 	"go.uber.org/goleak"
@@ -338,6 +340,54 @@ func TestCanonicalValuePublicKey(t *testing.T) {
 		if bytes.Equal(cvInput, cvOutput) != tc.match {
 			t.Errorf("%v: %v equality of canonical values of %v and %v was expected but not generated", tc.caseDesc, tc.match, tc.input, tc.output)
 		}
+	}
+}
+
+func TestEmailAddresses(t *testing.T) {
+	type test struct {
+		caseDesc  string
+		inputFile string
+		emails    []string
+	}
+
+	var k PublicKey
+	if len(k.EmailAddresses()) != 0 {
+		t.Errorf("EmailAddresses for unitialized key should give empty slice")
+	}
+	tests := []test{
+		{caseDesc: "Valid armored public key", inputFile: "testdata/valid_armored_public.pgp", emails: []string{}},
+		{caseDesc: "Valid armored public key with multiple subentries", inputFile: "testdata/valid_armored_complex_public.pgp", emails: []string{"linux-packages-keymaster@google.com", "linux-packages-keymaster@google.com"}},
+		{caseDesc: "Valid binary public key", inputFile: "testdata/valid_binary_public.pgp", emails: []string{}},
+		{caseDesc: "Valid binary public key with multiple subentries", inputFile: "testdata/valid_binary_complex_public.pgp", emails: []string{"linux-packages-keymaster@google.com", "linux-packages-keymaster@google.com"}},
+	}
+
+	for _, tc := range tests {
+		var input io.Reader
+		var err error
+		input, err = os.Open(tc.inputFile)
+		if err != nil {
+			t.Errorf("%v: cannot open %v", tc.caseDesc, tc.inputFile)
+		}
+
+		inputKey, err := NewPublicKey(input)
+		if err != nil {
+			t.Errorf("%v: Error reading input for TestEmailAddresses: %v", tc.caseDesc, err)
+		}
+
+		emails := inputKey.EmailAddresses()
+
+		if len(emails) == len(tc.emails) {
+			if len(emails) > 0 {
+				sort.Strings(emails)
+				sort.Strings(tc.emails)
+				if !reflect.DeepEqual(emails, tc.emails) {
+					t.Errorf("%v: Error getting email addresses from keys, got %v, expected %v", tc.caseDesc, emails, tc.emails)
+				}
+			}
+		} else {
+			t.Errorf("%v: Error getting email addresses from keys length, got %v, expected %v", tc.caseDesc, len(emails), len(tc.emails))
+		}
+
 	}
 }
 

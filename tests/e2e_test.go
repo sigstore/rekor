@@ -300,6 +300,11 @@ func TestX509(t *testing.T) {
 	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", certPath, "--pki-format", "x509")
 	outputContains(t, out, "Created entry at")
+	uuid := getUUIDFromUploadOutput(t, out)
+
+	// Search via email
+	out = runCli(t, "search", "--email", "test@rekor.dev")
+	outputContains(t, out, uuid)
 
 }
 

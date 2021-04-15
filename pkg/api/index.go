@@ -19,11 +19,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"net/http"
 	"strings"
 
-	"github.com/asaskevich/govalidator"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/swag"
 	radix "github.com/mediocregopher/radix/v4"
@@ -39,10 +37,7 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 
 	var result []string
 	if params.Query.Hash != "" {
-		// validate this is only a valid sha256 hash
-		if !govalidator.IsSHA256(params.Query.Hash) {
-			return handleRekorAPIError(params, http.StatusBadRequest, errors.New("invalid hash value specified"), malformedHash)
-		}
+		// This must be a valid sha256 hash
 		var resultUUIDs []string
 		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(params.Query.Hash), "0", "-1")); err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, err, redisUnexpectedResult)
@@ -73,6 +68,13 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 		keyHash := hasher.Sum(nil)
 		var resultUUIDs []string
 		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(hex.EncodeToString(keyHash)), "0", "-1")); err != nil {
+			return handleRekorAPIError(params, http.StatusInternalServerError, err, redisUnexpectedResult)
+		}
+		result = append(result, resultUUIDs...)
+	}
+	if params.Query.Email != "" {
+		var resultUUIDs []string
+		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(params.Query.Email.String()), "0", "-1")); err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, err, redisUnexpectedResult)
 		}
 		result = append(result, resultUUIDs...)

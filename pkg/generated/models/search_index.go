@@ -36,6 +36,10 @@ import (
 // swagger:model SearchIndex
 type SearchIndex struct {
 
+	// email
+	// Format: email
+	Email strfmt.Email `json:"email,omitempty"`
+
 	// hash
 	// Pattern: ^[0-9a-fA-F]{64}$
 	Hash string `json:"hash,omitempty"`
@@ -48,6 +52,10 @@ type SearchIndex struct {
 func (m *SearchIndex) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateEmail(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateHash(formats); err != nil {
 		res = append(res, err)
 	}
@@ -59,6 +67,18 @@ func (m *SearchIndex) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *SearchIndex) validateEmail(formats strfmt.Registry) error {
+	if swag.IsZero(m.Email) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("email", "body", "email", m.Email.String(), formats); err != nil {
+		return err
+	}
+
 	return nil
 }
 
