@@ -17,9 +17,7 @@ package app
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
 	"errors"
@@ -27,9 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/trillian"
-	tclient "github.com/google/trillian/client"
-	tcrypto "github.com/google/trillian/crypto"
 	"github.com/google/trillian/merkle/logverifier"
 	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/spf13/cobra"
@@ -39,6 +34,7 @@ import (
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/state"
 	"github.com/sigstore/rekor/pkg/generated/client/tlog"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/verify"
 )
 
 type logInfoCmdOutput struct {
@@ -76,24 +72,14 @@ var logInfoCmd = &cobra.Command{
 
 		logInfo := result.GetPayload()
 
-		keyHint, err := base64.StdEncoding.DecodeString(logInfo.SignedTreeHead.KeyHint.String())
-		if err != nil {
-			return nil, err
+		logRoot := *logInfo.SignedTreeHead.LogRoot
+		if logRoot == nil {
+			return nil, errors.New("logroot should not be nil")
 		}
-		logRoot, err := base64.StdEncoding.DecodeString(logInfo.SignedTreeHead.LogRoot.String())
-		if err != nil {
-			return nil, err
+		signature := *logInfo.SignedTreeHead.Signature
+		if signature == nil {
+			return nil, errors.New("signature should not be nil")
 		}
-		signature, err := base64.StdEncoding.DecodeString(logInfo.SignedTreeHead.Signature.String())
-		if err != nil {
-			return nil, err
-		}
-		sth := trillian.SignedLogRoot{
-			KeyHint:          keyHint,
-			LogRoot:          logRoot,
-			LogRootSignature: signature,
-		}
-
 		publicKey := viper.GetString("rekor_server_public_key")
 		if publicKey == "" {
 			// fetch key from server
@@ -114,8 +100,7 @@ var logInfoCmd = &cobra.Command{
 			return nil, err
 		}
 
-		verifier := tclient.NewLogVerifier(rfc6962.DefaultHasher, pub, crypto.SHA256)
-		lr, err := tcrypto.VerifySignedLogRoot(verifier.PubKey, verifier.SigHash, &sth)
+		lr, err := verify.SignedLogRoot(pub, logRoot, signature)
 		if err != nil {
 			return nil, err
 		}
