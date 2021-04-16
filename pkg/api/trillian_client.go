@@ -217,9 +217,8 @@ func (t *TrillianClient) getLeafAndProofByIndex(index int64) *Response {
 		})
 
 	if resp != nil && resp.Proof != nil {
-		leaf := t.verifier.BuildLeaf(resp.Leaf.LeafValue)
 		logVerifier := logverifier.New(hasher.DefaultHasher)
-		if err := logVerifier.VerifyInclusionProof(index, int64(root.TreeSize), resp.Proof.Hashes, root.RootHash, leaf.MerkleLeafHash); err != nil {
+		if err := logVerifier.VerifyInclusionProof(index, int64(root.TreeSize), resp.Proof.Hashes, root.RootHash, resp.GetLeaf().MerkleLeafHash); err != nil {
 			return &Response{
 				status: status.Code(err),
 				err:    err,

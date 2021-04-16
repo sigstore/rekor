@@ -17,9 +17,7 @@ package app
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
 	"errors"
@@ -74,13 +72,13 @@ var logInfoCmd = &cobra.Command{
 
 		logInfo := result.GetPayload()
 
-		logRoot, err := base64.StdEncoding.DecodeString(logInfo.SignedTreeHead.LogRoot.String())
-		if err != nil {
-			return nil, err
+		logRoot := *logInfo.SignedTreeHead.LogRoot
+		if logRoot == nil {
+			return nil, errors.New("logroot should not be nil")
 		}
-		signature, err := base64.StdEncoding.DecodeString(logInfo.SignedTreeHead.Signature.String())
-		if err != nil {
-			return nil, err
+		signature := *logInfo.SignedTreeHead.Signature
+		if signature == nil {
+			return nil, errors.New("signature should not be nil")
 		}
 		publicKey := viper.GetString("rekor_server_public_key")
 		if publicKey == "" {
@@ -102,7 +100,7 @@ var logInfoCmd = &cobra.Command{
 			return nil, err
 		}
 
-		lr, err := verify.SignedLogRoot(pub, crypto.SHA256, logRoot, signature)
+		lr, err := verify.SignedLogRoot(pub, logRoot, signature)
 		if err != nil {
 			return nil, err
 		}

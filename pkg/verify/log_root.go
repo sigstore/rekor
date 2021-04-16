@@ -28,7 +28,8 @@ import (
 // which has since been deleted
 
 // SignedLogRoot verifies the signed log root and returns its contents
-func SignedLogRoot(pub crypto.PublicKey, hash crypto.Hash, logRoot, logRootSignature []byte) (*types.LogRootV1, error) {
+func SignedLogRoot(pub crypto.PublicKey, logRoot, logRootSignature []byte) (*types.LogRootV1, error) {
+	hash := crypto.SHA256
 	if err := verify(pub, hash, logRoot, logRootSignature); err != nil {
 		return nil, err
 	}

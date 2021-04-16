@@ -19,7 +19,6 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"flag"
@@ -137,16 +136,16 @@ func doCheck(c *client.Rekor, pub crypto.PublicKey) (*SignedAndUnsignedLogRoot, 
 	if err != nil {
 		return nil, errors.Wrap(err, "getting log info")
 	}
-	logRoot, err := base64.StdEncoding.DecodeString(li.Payload.SignedTreeHead.LogRoot.String())
-	if err != nil {
-		return nil, errors.Wrap(err, "decoding log root")
+	logRoot := *li.Payload.SignedTreeHead.LogRoot
+	if logRoot == nil {
+		return nil, errors.New("logroot should not be nil")
 	}
-	logRootSignature, err := base64.StdEncoding.DecodeString(li.Payload.SignedTreeHead.Signature.String())
-	if err != nil {
-		return nil, errors.Wrap(err, "decoding signature")
+	signature := *li.Payload.SignedTreeHead.Signature
+	if signature == nil {
+		return nil, errors.New("signature should not be nil")
 	}
 
-	verifiedLogRoot, err := verify.SignedLogRoot(pub, crypto.SHA256, logRoot, logRootSignature)
+	verifiedLogRoot, err := verify.SignedLogRoot(pub, logRoot, signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "signing log root")
 	}
