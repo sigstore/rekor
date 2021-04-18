@@ -18,14 +18,12 @@ package rpm
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -33,7 +31,6 @@ import (
 	rpmutils "github.com/cavaliercoder/go-rpm"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"github.com/mitchellh/mapstructure"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -50,7 +47,9 @@ const (
 )
 
 func init() {
-	rpm.SemVerToFacFnMap.Set(APIVERSION, NewEntry)
+	if err := rpm.VersionMap.SetEntryFactory(APIVERSION, NewEntry); err != nil {
+		log.Logger.Panic(err)
+	}
 }
 
 type V001Entry struct {
@@ -66,20 +65,6 @@ func (v V001Entry) APIVersion() string {
 
 func NewEntry() types.EntryImpl {
 	return &V001Entry{}
-}
-
-func Base64StringtoByteArray() mapstructure.DecodeHookFunc {
-	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
-		if f.Kind() != reflect.String || t.Kind() != reflect.Slice {
-			return data, nil
-		}
-
-		bytes, err := base64.StdEncoding.DecodeString(data.(string))
-		if err != nil {
-			return []byte{}, fmt.Errorf("failed parsing base64 data: %v", err)
-		}
-		return bytes, nil
-	}
 }
 
 func (v V001Entry) IndexKeys() []string {
@@ -117,19 +102,10 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non RPM v0.0.1 type")
 	}
 
-	cfg := mapstructure.DecoderConfig{
-		DecodeHook: Base64StringtoByteArray(),
-		Result:     &v.RPMModel,
-	}
-
-	dec, err := mapstructure.NewDecoder(&cfg)
-	if err != nil {
-		return fmt.Errorf("error initializing decoder: %w", err)
-	}
-
-	if err := dec.Decode(rpm.Spec); err != nil {
+	if err := types.DecodeEntry(rpm.Spec, &v.RPMModel); err != nil {
 		return err
 	}
+
 	// field validation
 	if err := v.RPMModel.Validate(strfmt.Default); err != nil {
 		return err

@@ -17,50 +17,41 @@ package rpm
 
 import (
 	"errors"
-	"fmt"
-
-	"github.com/go-openapi/swag"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
-	"github.com/sigstore/rekor/pkg/util"
 )
 
 const (
 	KIND = "rpm"
 )
 
-type BaseRPMType struct{}
-
-func (rt BaseRPMType) Kind() string {
-	return KIND
+type BaseRPMType struct {
+	types.RekorType
 }
 
 func init() {
-	types.TypeMap.Set(KIND, New)
+	types.TypeMap.Store(KIND, New)
 }
 
 func New() types.TypeImpl {
-	return &BaseRPMType{}
+	brt := BaseRPMType{}
+	brt.Kind = KIND
+	brt.VersionMap = VersionMap
+	return &brt
 }
 
-var SemVerToFacFnMap = &util.VersionFactoryMap{VersionFactories: make(map[string]util.VersionFactory)}
+var VersionMap = types.NewSemVerEntryFactoryMap()
 
-func (rt BaseRPMType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
+func (brt *BaseRPMType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
+	if pe == nil {
+		return nil, errors.New("proposed entry cannot be nil")
+	}
+
 	rpm, ok := pe.(*models.Rpm)
 	if !ok {
 		return nil, errors.New("cannot unmarshal non-RPM types")
 	}
 
-	if genFn, found := SemVerToFacFnMap.Get(swag.StringValue(rpm.APIVersion)); found {
-		entry := genFn()
-		if entry == nil {
-			return nil, fmt.Errorf("failure generating RPM object for version '%v'", rpm.APIVersion)
-		}
-		if err := entry.Unmarshal(rpm); err != nil {
-			return nil, err
-		}
-		return entry, nil
-	}
-	return nil, fmt.Errorf("RPMType implementation for version '%v' not found", swag.StringValue(rpm.APIVersion))
+	return brt.VersionedUnmarshal(rpm, *rpm.APIVersion)
 }

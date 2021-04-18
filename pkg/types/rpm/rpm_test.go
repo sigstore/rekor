@@ -76,26 +76,26 @@ func (u UnmarshalFailsTester) Unmarshal(pe models.ProposedEntry) error {
 
 func TestRPMType(t *testing.T) {
 	// empty to start
-	if len(SemVerToFacFnMap.VersionFactories) != 0 {
+	if VersionMap.Count() != 0 {
 		t.Error("semver range was not blank at start of test")
 	}
 
 	u := UnmarshalTester{}
 	// ensure semver range parser is working
 	invalidSemVerRange := "not a valid semver range"
-	SemVerToFacFnMap.Set(invalidSemVerRange, u.NewEntry)
-	if len(SemVerToFacFnMap.VersionFactories) > 0 {
+	err := VersionMap.SetEntryFactory(invalidSemVerRange, u.NewEntry)
+	if err == nil || VersionMap.Count() > 0 {
 		t.Error("invalid semver range was incorrectly added to SemVerToFacFnMap")
 	}
 
 	// valid semver range can be parsed
-	SemVerToFacFnMap.Set(">= 1.2.3", u.NewEntry)
-	if len(SemVerToFacFnMap.VersionFactories) != 1 {
+	err = VersionMap.SetEntryFactory(">= 1.2.3", u.NewEntry)
+	if err != nil || VersionMap.Count() != 1 {
 		t.Error("valid semver range was not added to SemVerToFacFnMap")
 	}
 
 	u.Rpm.APIVersion = swag.String("2.0.1")
-	brt := BaseRPMType{}
+	brt := New()
 
 	// version requested matches implementation in map
 	if _, err := brt.UnmarshalEntry(&u.Rpm); err != nil {
@@ -111,7 +111,7 @@ func TestRPMType(t *testing.T) {
 	// error in Unmarshal call is raised appropriately
 	u.Rpm.APIVersion = swag.String("2.2.0")
 	u2 := UnmarshalFailsTester{}
-	SemVerToFacFnMap.Set(">= 1.2.3", u2.NewEntry)
+	_ = VersionMap.SetEntryFactory(">= 1.2.3", u2.NewEntry)
 	if _, err := brt.UnmarshalEntry(&u.Rpm); err == nil {
 		t.Error("unexpected success in Unmarshal when error is thrown")
 	}

@@ -17,50 +17,41 @@ package rekord
 
 import (
 	"errors"
-	"fmt"
-
-	"github.com/go-openapi/swag"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
-	"github.com/sigstore/rekor/pkg/util"
 )
 
 const (
 	KIND = "rekord"
 )
 
-type BaseRekordType struct{}
-
-func (rt BaseRekordType) Kind() string {
-	return KIND
+type BaseRekordType struct {
+	types.RekorType
 }
 
 func init() {
-	types.TypeMap.Set(KIND, New)
+	types.TypeMap.Store(KIND, New)
 }
 
 func New() types.TypeImpl {
-	return &BaseRekordType{}
+	brt := BaseRekordType{}
+	brt.Kind = KIND
+	brt.VersionMap = VersionMap
+	return &brt
 }
 
-var SemVerToFacFnMap = &util.VersionFactoryMap{VersionFactories: make(map[string]util.VersionFactory)}
+var VersionMap = types.NewSemVerEntryFactoryMap()
 
 func (rt BaseRekordType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
+	if pe == nil {
+		return nil, errors.New("proposed entry cannot be nil")
+	}
+
 	rekord, ok := pe.(*models.Rekord)
 	if !ok {
 		return nil, errors.New("cannot unmarshal non-Rekord types")
 	}
 
-	if genFn, found := SemVerToFacFnMap.Get(swag.StringValue(rekord.APIVersion)); found {
-		entry := genFn()
-		if entry == nil {
-			return nil, fmt.Errorf("failure generating Rekord object for version '%v'", rekord.APIVersion)
-		}
-		if err := entry.Unmarshal(rekord); err != nil {
-			return nil, err
-		}
-		return entry, nil
-	}
-	return nil, fmt.Errorf("RekordType implementation for version '%v' not found", swag.StringValue(rekord.APIVersion))
+	return rt.VersionedUnmarshal(rekord, *rekord.APIVersion)
 }
