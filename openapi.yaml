@@ -308,6 +308,9 @@ definitions:
   SearchIndex:
     type: object
     properties:
+      email:
+        type: string
+        format: email
       publicKey:
         type: object
         properties:

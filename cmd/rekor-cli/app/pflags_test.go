@@ -420,6 +420,7 @@ func TestSearchPFlags(t *testing.T) {
 		artifact              string
 		publicKey             string
 		sha                   string
+		email                 string
 		pkiFormat             string
 		expectParseSuccess    bool
 		expectValidateSuccess bool
@@ -516,7 +517,19 @@ func TestSearchPFlags(t *testing.T) {
 			expectValidateSuccess: false,
 		},
 		{
-			caseDesc:              "no flags when either artifact, sha, or public key are needed",
+			caseDesc:              "valid email",
+			email:                 "cat@foo.com",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "invalid email",
+			email:                 "SignaMeseCat",
+			expectParseSuccess:    false,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "no flags when either artifact, sha, public key, or email are needed",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
@@ -541,6 +554,9 @@ func TestSearchPFlags(t *testing.T) {
 		}
 		if tc.sha != "" {
 			args = append(args, "--sha", tc.sha)
+		}
+		if tc.email != "" {
+			args = append(args, "--email", tc.email)
 		}
 
 		if err := blankCmd.ParseFlags(args); (err == nil) != tc.expectParseSuccess {

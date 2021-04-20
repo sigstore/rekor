@@ -20,14 +20,19 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 
 	"github.com/sassoftware/relic/lib/pkcs7"
 )
+
+// EmailAddressOID defined by https://oidref.com/1.2.840.113549.1.9.1
+var EmailAddressOID asn1.ObjectIdentifier = []int{1, 2, 840, 113549, 1, 9, 1}
 
 type Signature struct {
 	signedData pkcs7.SignedData
@@ -183,4 +188,23 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// EmailAddresses implements the pki.PublicKey interface
+func (k PublicKey) EmailAddresses() []string {
+	var names []string
+	// Get email address from Subject name in raw cert.
+	cert, err := x509.ParseCertificate(k.rawCert)
+	if err != nil {
+		// This should not happen from a valid PublicKey, but fail gracefully.
+		return names
+	}
+
+	for _, name := range cert.Subject.Names {
+		if name.Type.Equal(EmailAddressOID) {
+			names = append(names, strings.ToLower(name.Value.(string)))
+		}
+	}
+
+	return names
 }

@@ -24,6 +24,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/go-playground/validator"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/openpgp/packet"
@@ -276,4 +277,20 @@ func (k PublicKey) KeyRing() (openpgp.KeyRing, error) {
 	}
 
 	return k.key, nil
+}
+
+// EmailAddresses implements the pki.PublicKey interface
+func (k PublicKey) EmailAddresses() []string {
+	var names []string
+	// Extract from cert
+	for _, entity := range k.key {
+		for _, identity := range entity.Identities {
+			validate := validator.New()
+			errs := validate.Var(identity.UserId.Email, "required,email")
+			if errs == nil {
+				names = append(names, identity.UserId.Email)
+			}
+		}
+	}
+	return names
 }

@@ -19,6 +19,8 @@ package pkcs7
 import (
 	"bytes"
 	"encoding/base64"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -172,6 +174,26 @@ Cg0KTmFtZTogc2lnc3RvcmUvcGx1Z2luL0hlbHBNb2pvLmNsYXNzDQpTSEEtMjU2
 LURpZ2VzdDogU3ZPNkhibVlBSzBMVEhyVCtYbmRBOExJdUptZU5ub1dyYmVHS3dv
 TE9Pdz0NCg0K`
 
+const pkcsPEMEmail = `-----BEGIN PKCS7-----
+MIIDCgYJKoZIhvcNAQcCoIIC+zCCAvcCAQExADALBgkqhkiG9w0BBwGgggLdMIIC
+2TCCAjqgAwIBAgIUAL0Gw2SJvPW8PbXw+42XwmW8//owCgYIKoZIzj0EAwIwfTEL
+MAkGA1UEBhMCVVMxCzAJBgNVBAgMAk1BMQ8wDQYDVQQHDAZCb3N0b24xITAfBgNV
+BAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEOMAwGA1UEAwwFUmVrb3IxHTAb
+BgkqhkiG9w0BCQEWDnRlc3RAcmVrb3IuZGV2MCAXDTIxMDQxOTE0MTMyMFoYDzQ0
+ODUwNTMxMTQxMzIwWjB9MQswCQYDVQQGEwJVUzELMAkGA1UECAwCTUExDzANBgNV
+BAcMBkJvc3RvbjEhMB8GA1UECgwYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkMQ4w
+DAYDVQQDDAVSZWtvcjEdMBsGCSqGSIb3DQEJARYOdGVzdEByZWtvci5kZXYwgZsw
+EAYHKoZIzj0CAQYFK4EEACMDgYYABABN0k2SaX5iK6Ahw8m+wXbQml4E8GEL0qLA
+lA0Gu8thlhvAcOLdPzNxPl2tsM7bBzTrD2H4iLM4myvpT4x2NgbjyAClvhXfJTOY
+m7oTFcKq0kNf8LEV2fjBpfdrw9yiS1DV6YWHwCzc3TUrZIChGhMYnfZPVu997wzy
+euVBSUMeO5Lmp6NTMFEwHQYDVR0OBBYEFJPLiMMFN5Cm6/rjOTPR2HWbbO5PMB8G
+A1UdIwQYMBaAFJPLiMMFN5Cm6/rjOTPR2HWbbO5PMA8GA1UdEwEB/wQFMAMBAf8w
+CgYIKoZIzj0EAwIDgYwAMIGIAkIBmRqxw8sStWknjeOgdyKkd+vFehNuVaiHAKGs
+z+6KG3jPG5xN5+/Ws+OMTAp7Hv6HH5ChDO3LJ6t/sCun1otdWmICQgCUqg1ke+Rj
+nVqVlz1rUR7CTL2SlG9Xg1kAkYH4vMn/otEuAhnKf+GWLNB1l/dTFNEyysvIA6yd
+FG8HXGWcnVVIVaEAMQA=
+-----END PKCS7-----`
+
 func TestSignature_Verify(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -244,4 +266,47 @@ func TestSignature_VerifyFail(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEmailAddresses(t *testing.T) {
+	tests := []struct {
+		name   string
+		pkcs7  string
+		emails []string
+	}{
+		{
+			name:   "ec",
+			pkcs7:  pkcsECDSAPEM,
+			emails: []string{},
+		},
+		{
+			name:   "email",
+			pkcs7:  pkcsPEMEmail,
+			emails: []string{"test@rekor.dev"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pub, err := NewPublicKey(strings.NewReader(tt.pkcs7))
+			if err != nil {
+				t.Fatal(err)
+			}
+			emails := pub.EmailAddresses()
+
+			if len(emails) == len(tt.emails) {
+				if len(emails) > 0 {
+					sort.Strings(emails)
+					sort.Strings(tt.emails)
+					if !reflect.DeepEqual(emails, tt.emails) {
+						t.Errorf("%v: Error getting email addresses from keys, got %v, expected %v", tt.name, emails, tt.emails)
+					}
+				}
+			} else {
+				t.Errorf("%v: Error getting email addresses from keys, got %v, expected %v", tt.name, emails, tt.emails)
+			}
+
+		})
+	}
+
 }

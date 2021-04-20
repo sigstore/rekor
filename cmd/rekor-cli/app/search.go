@@ -56,7 +56,7 @@ func (s *searchCmdOutput) String() string {
 var searchCmd = &cobra.Command{
 	Use:   "search",
 	Short: "Rekor search command",
-	Long:  `Searches the Rekor index to find entries by artifact or public key`,
+	Long:  `Searches the Rekor index to find entries by sha, artifact,  public key, or e-mail`,
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
@@ -150,6 +150,10 @@ var searchCmd = &cobra.Command{
 			}
 		}
 
+		emailStr := viper.GetString("email")
+		if emailStr != "" {
+			params.Query.Email = strfmt.Email(emailStr)
+		}
 		resp, err := rekorClient.Index.SearchIndex(params)
 		if err != nil {
 			switch t := err.(type) {

@@ -96,3 +96,8 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 	}
 	return ssh.MarshalAuthorizedKey(k.key), nil
 }
+
+// EmailAddresses implements the pki.PublicKey interface
+func (k PublicKey) EmailAddresses() []string {
+	return nil
+}
