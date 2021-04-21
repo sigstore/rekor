@@ -79,6 +79,7 @@ func addArtifactPFlags(cmd *cobra.Command) error {
 	cmd.Flags().Var(&fileOrURLFlag{}, "public-key", "path or URL to public key file")
 
 	cmd.Flags().Var(&fileOrURLFlag{}, "artifact", "path or URL to artifact file")
+	cmd.Flags().Var(&uuidFlag{}, "artifact-hash", "hex encoded SHA256 hash of artifact (when using URL)")
 
 	cmd.Flags().Var(&fileOrURLFlag{}, "entry", "path or URL to pre-formatted entry file")
 
@@ -182,6 +183,10 @@ func CreateJarFromPFlags() (models.ProposedEntry, error) {
 		dataURL, err := url.Parse(artifact)
 		if err == nil && dataURL.IsAbs() {
 			re.JARModel.Archive.URL = strfmt.URI(artifact)
+			re.JARModel.Archive.Hash = &models.JarV001SchemaArchiveHash{
+				Algorithm: swag.String(models.JarV001SchemaArchiveHashAlgorithmSha256),
+				Value:     swag.String(viper.GetString("artifact-hash")),
+			}
 		} else {
 			artifactBytes, err := ioutil.ReadFile(filepath.Clean(artifact))
 			if err != nil {

@@ -254,7 +254,11 @@ func TestJAR(t *testing.T) {
 	outputContains(t, out, "Created entry at")
 	out = runCli(t, "upload", "--artifact", artifactPath, "--type", "jar")
 	outputContains(t, out, "Entry already exists")
+}
 
+func TestJARURL(t *testing.T) {
+	out := runCli(t, "upload", "--artifact", "https://get.jenkins.io/war-stable/2.277.3/jenkins.war", "--type", "jar", "--artifact-hash=3e22c7e8cd7c8ee1e92cbaa8d0d303a7b53e07bc2a152ddc66f8ce55caea91ab")
+	outputContains(t, out, "Created entry at")
 }
 
 func TestX509(t *testing.T) {
