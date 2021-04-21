@@ -30,6 +30,8 @@ import (
 	"io"
 	"io/ioutil"
 	"strings"
+
+	"github.com/go-playground/validator"
 )
 
 // EmailAddressOID defined by https://oidref.com/1.2.840.113549.1.9.1
@@ -176,9 +178,11 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 func (k PublicKey) EmailAddresses() []string {
 	var names []string
 	if k.cert != nil {
-		for _, name := range k.cert.c.Subject.Names {
-			if name.Type.Equal(EmailAddressOID) {
-				names = append(names, strings.ToLower(name.Value.(string)))
+		for _, name := range k.cert.c.EmailAddresses {
+			validate := validator.New()
+			errs := validate.Var(name, "required,email")
+			if errs == nil {
+				names = append(names, strings.ToLower(name))
 			}
 		}
 	}
