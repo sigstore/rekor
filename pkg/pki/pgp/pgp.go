@@ -24,10 +24,10 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/go-playground/validator"
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/armor"
-	"golang.org/x/crypto/openpgp/packet"
 )
 
 // Signature Signature that follows the PGP standard; supports both armored & binary detached signatures
@@ -70,9 +70,7 @@ func NewSignature(r io.Reader) (*Signature, error) {
 	}
 
 	if _, ok := sigPkt.(*packet.Signature); !ok {
-		if _, ok := sigPkt.(*packet.SignatureV3); !ok {
-			return nil, fmt.Errorf("valid PGP signature was not detected")
-		}
+		return nil, fmt.Errorf("valid PGP signature was not detected")
 	}
 
 	s.signature = inputBuffer.Bytes()
@@ -148,7 +146,7 @@ func (s Signature) Verify(r io.Reader, k interface{}) error {
 		verifyFn = openpgp.CheckArmoredDetachedSignature
 	}
 
-	if _, err := verifyFn(key.key, r, bytes.NewReader(s.signature)); err != nil {
+	if _, err := verifyFn(key.key, r, bytes.NewReader(s.signature), nil); err != nil {
 		return err
 	}
 

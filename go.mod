@@ -3,6 +3,7 @@ module github.com/sigstore/rekor
 go 1.16
 
 require (
+	github.com/ProtonMail/go-crypto v0.0.0-20210329181949-3900d675f39b
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cavaliercoder/go-rpm v0.0.0-20200122174316-8cb9fd9c31a8
@@ -44,5 +45,6 @@ require (
 	google.golang.org/genproto v0.0.0-20210402141018-6c239bbf2bb1
 	google.golang.org/grpc v1.37.0
 	google.golang.org/protobuf v1.26.0
+	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.6 // indirect
 )
