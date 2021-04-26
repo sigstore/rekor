@@ -296,12 +296,14 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		}
 
 		for _, leafResp := range searchByHashResults {
-			logEntry, err := logEntryFromLeaf(tc, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof)
-			if err != nil {
-				return handleRekorAPIError(params, code, err, err.Error())
-			}
+			if leafResp != nil {
+				logEntry, err := logEntryFromLeaf(tc, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof)
+				if err != nil {
+					return handleRekorAPIError(params, code, err, err.Error())
+				}
 
-			resultPayload = append(resultPayload, logEntry)
+				resultPayload = append(resultPayload, logEntry)
+			}
 		}
 	}
 

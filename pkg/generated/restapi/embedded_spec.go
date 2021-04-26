@@ -497,7 +497,7 @@ func init() {
         },
         "hash": {
           "type": "string",
-          "pattern": "^[0-9a-fA-F]{64}$"
+          "pattern": "^(sha256:)?[0-9a-fA-F]{64}$"
         },
         "publicKey": {
           "type": "object",
@@ -1602,7 +1602,7 @@ func init() {
         },
         "hash": {
           "type": "string",
-          "pattern": "^[0-9a-fA-F]{64}$"
+          "pattern": "^(sha256:)?[0-9a-fA-F]{64}$"
         },
         "publicKey": {
           "type": "object",

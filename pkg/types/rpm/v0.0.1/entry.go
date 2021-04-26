@@ -92,7 +92,8 @@ func (v V001Entry) IndexKeys() []string {
 	result = append(result, v.keyObj.EmailAddresses()...)
 
 	if v.RPMModel.Package.Hash != nil {
-		result = append(result, strings.ToLower(swag.StringValue(v.RPMModel.Package.Hash.Value)))
+		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.RPMModel.Package.Hash.Algorithm, *v.RPMModel.Package.Hash.Value))
+		result = append(result, hashKey)
 	}
 
 	return result

@@ -93,7 +93,8 @@ func (v V001Entry) IndexKeys() []string {
 	}
 
 	if v.JARModel.Archive.Hash != nil {
-		result = append(result, strings.ToLower(swag.StringValue(v.JARModel.Archive.Hash.Value)))
+		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.JARModel.Archive.Hash.Algorithm, *v.JARModel.Archive.Hash.Value))
+		result = append(result, hashKey)
 	}
 
 	return result

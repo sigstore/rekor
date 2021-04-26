@@ -88,7 +88,8 @@ func (v V001Entry) IndexKeys() []string {
 	result = append(result, v.keyObj.EmailAddresses()...)
 
 	if v.RekordObj.Data.Hash != nil {
-		result = append(result, strings.ToLower(swag.StringValue(v.RekordObj.Data.Hash.Value)))
+		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.RekordObj.Data.Hash.Algorithm, *v.RekordObj.Data.Hash.Value))
+		result = append(result, hashKey)
 	}
 
 	return result
