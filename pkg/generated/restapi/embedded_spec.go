@@ -416,6 +416,11 @@ func init() {
           },
           "logIndex": {
             "type": "integer"
+          },
+          "signature": {
+            "description": "signature over the log entry (acts as an inclusion promise if inclusion proof is not included)",
+            "type": "string",
+            "format": "byte"
           }
         }
       }
@@ -1200,6 +1205,11 @@ func init() {
         "logIndex": {
           "type": "integer",
           "minimum": 0
+        },
+        "signature": {
+          "description": "signature over the log entry (acts as an inclusion promise if inclusion proof is not included)",
+          "type": "string",
+          "format": "byte"
         }
       }
     },

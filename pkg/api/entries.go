@@ -100,6 +100,7 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 
 // CreateLogEntryHandler creates new entry into log
 func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Responder {
+	ctx := params.HTTPRequest.Context()
 	httpReq := params.HTTPRequest
 	entry, err := types.NewEntry(params.ProposedEntry)
 	if err != nil {
@@ -138,12 +139,10 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
 	uuid := hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
 
-	logEntry := models.LogEntry{
-		uuid: models.LogEntryAnon{
-			LogIndex:       swag.Int64(queuedLeaf.LeafIndex),
-			Body:           queuedLeaf.GetLeafValue(),
-			IntegratedTime: queuedLeaf.IntegrateTimestamp.AsTime().Unix(),
-		},
+	logEntryAnon := models.LogEntryAnon{
+		LogIndex:       swag.Int64(queuedLeaf.LeafIndex),
+		Body:           queuedLeaf.GetLeafValue(),
+		IntegratedTime: queuedLeaf.IntegrateTimestamp.AsTime().Unix(),
 	}
 
 	if viper.GetBool("enable_retrieve_api") {
@@ -154,6 +153,21 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 				}
 			}
 		}()
+	}
+
+	payload, err := logEntryAnon.MarshalBinary()
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %v", err), signingError)
+	}
+	signature, _, err := api.signer.Sign(ctx, payload)
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %v", err), signingError)
+	}
+
+	logEntryAnon.Signature = strfmt.Base64(signature)
+
+	logEntry := models.LogEntry{
+		uuid: logEntryAnon,
 	}
 
 	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(getEntryURL(*httpReq.URL, uuid)).WithETag(uuid)

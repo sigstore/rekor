@@ -97,6 +97,10 @@ type LogEntryAnon struct {
 	// Required: true
 	// Minimum: 0
 	LogIndex *int64 `json:"logIndex"`
+
+	// signature over the log entry (acts as an inclusion promise if inclusion proof is not included)
+	// Format: byte
+	Signature strfmt.Base64 `json:"signature,omitempty"`
 }
 
 // Validate validates this log entry anon
