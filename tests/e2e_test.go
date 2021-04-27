@@ -376,7 +376,7 @@ func TestWatch(t *testing.T) {
 	fmt.Println(fi[0].Name())
 }
 
-func TestCreateLogEntrySignature(t *testing.T) {
+func TestSignedEntryTimestamp(t *testing.T) {
 	// Create a random payload and sign it
 	ctx := context.Background()
 	payload := []byte("payload")
@@ -433,15 +433,7 @@ func TestCreateLogEntrySignature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// unmarshal the response
-	le := resp.GetPayload()
-	if len(le) != 1 {
-		t.Fatal("expected length to be 1, is actually", len(le))
-	}
-	var logEntry models.LogEntryAnon
-	for _, v := range le {
-		logEntry = v
-	}
+	logEntry := extractLogEntry(t, resp.GetPayload())
 
 	// verify the signature against the log entry (without the signature)
 	sig := logEntry.Verification.SignedEntryTimestamp
