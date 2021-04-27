@@ -421,7 +421,7 @@ func init() {
                 "$ref": "#/definitions/InclusionProof"
               },
               "signedEntryTimestamp": {
-                "description": "signature over the logIndex, body and integratedTime",
+                "description": "Signature over the logIndex, body and integratedTime.",
                 "type": "string",
                 "format": "byte"
               }
@@ -1215,7 +1215,7 @@ func init() {
               "$ref": "#/definitions/InclusionProof"
             },
             "signedEntryTimestamp": {
-              "description": "signature over the logIndex, body and integratedTime",
+              "description": "Signature over the logIndex, body and integratedTime.",
               "type": "string",
               "format": "byte"
             }
@@ -1230,7 +1230,7 @@ func init() {
           "$ref": "#/definitions/InclusionProof"
         },
         "signedEntryTimestamp": {
-          "description": "signature over the logIndex, body and integratedTime",
+          "description": "Signature over the logIndex, body and integratedTime.",
           "type": "string",
           "format": "byte"
         }

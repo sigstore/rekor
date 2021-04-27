@@ -124,7 +124,6 @@ func ConfigureAPI() {
 	var err error
 	api, err = NewAPI()
 	if err != nil {
-		fmt.Println(err)
 		log.Logger.Panic(err)
 	}
 	if viper.GetBool("enable_retrieve_api") {

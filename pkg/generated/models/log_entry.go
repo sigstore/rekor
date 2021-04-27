@@ -214,7 +214,7 @@ type LogEntryAnonVerification struct {
 	// inclusion proof
 	InclusionProof *InclusionProof `json:"inclusionProof,omitempty"`
 
-	// signature over the logIndex, body and integratedTime
+	// Signature over the logIndex, body and integratedTime.
 	// Format: byte
 	SignedEntryTimestamp strfmt.Base64 `json:"signedEntryTimestamp,omitempty"`
 }
