@@ -308,10 +308,9 @@ definitions:
               type: string
               format: byte
               # To verify the signedEntryTimestamp:
-                # 1. Set LogEntry.Verification = nil
-                # 2. Get the payload by running LogEntry.MarshalBinary()
-                # 3. Canonicalize the payload by running jsoncanonicalizer.Transform(payload)
-                # 4. Verify the canonicalized payload and signedEntryTimestamp against rekor's public key
+                # 1. Remove the Verification object from the JSON Document
+                # 2. Canonicalize the remaining JSON document by following RFC 8785 rules
+                # 3. Verify the canonicalized payload and signedEntryTimestamp against rekor's public key
               description: Signature over the logIndex, body and integratedTime. 
       required:
         - "logIndex"
