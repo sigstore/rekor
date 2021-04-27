@@ -16,6 +16,7 @@
 package rpm
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -23,7 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strconv"
 	"strings"
 
@@ -36,7 +36,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
-	"github.com/sigstore/rekor/pkg/pki/pgp"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/rpm"
 	"github.com/sigstore/rekor/pkg/util"
@@ -56,6 +55,7 @@ type V001Entry struct {
 	RPMModel                models.RpmV001Schema
 	fetchedExternalEntities bool
 	keyObj                  pki.PublicKey
+	sigObj                  pki.Signature
 	rpmObj                  *rpmutils.PackageFile
 }
 
@@ -170,7 +170,6 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 
 	g.Go(func() error {
 		defer hashW.Close()
-		defer sigW.Close()
 		defer rpmW.Close()
 
 		dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.RPMModel.Package.URL.String(), v.RPMModel.Package.Content)
@@ -180,7 +179,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		defer dataReadCloser.Close()
 
 		/* #nosec G110 */
-		if _, err := io.Copy(io.MultiWriter(hashW, sigW, rpmW), dataReadCloser); err != nil {
+		if _, err := io.Copy(io.MultiWriter(hashW, rpmW), dataReadCloser); err != nil {
 			return closePipesOnError(err)
 		}
 		return nil
@@ -209,7 +208,11 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		}
 	})
 
+	keyResult := make(chan pki.PublicKey)
+
 	g.Go(func() error {
+		defer close(keyResult)
+
 		keyReadCloser, err := util.FileOrURLReadCloser(ctx, v.RPMModel.PublicKey.URL.String(),
 			v.RPMModel.PublicKey.Content)
 		if err != nil {
@@ -217,37 +220,47 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		}
 		defer keyReadCloser.Close()
 
-		v.keyObj, err = artifactFactory.NewPublicKey(keyReadCloser)
+		key, err := artifactFactory.NewPublicKey(keyReadCloser)
 		if err != nil {
-			return closePipesOnError(err)
-		}
-
-		keyring, err := v.keyObj.(*pgp.PublicKey).KeyRing()
-		if err != nil {
-			return closePipesOnError(err)
-		}
-
-		if _, err := rpmutils.GPGCheck(sigR, keyring); err != nil {
 			return closePipesOnError(err)
 		}
 
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		default:
+		case keyResult <- key:
 			return nil
 		}
 	})
 
 	g.Go(func() error {
+		defer sigW.Close()
 
+		var buf bytes.Buffer
+
+		tee := io.TeeReader(rpmR, &buf)
 		var err error
-		v.rpmObj, err = rpmutils.ReadPackageFile(rpmR)
+		v.rpmObj, err = rpmutils.ReadPackageFile(tee)
 		if err != nil {
 			return closePipesOnError(err)
 		}
-		// ReadPackageFile does not drain the entire reader so we need to discard the rest
-		if _, err = io.Copy(ioutil.Discard, rpmR); err != nil {
+		v.sigObj, err = artifactFactory.NewSignature(bytes.NewReader(v.rpmObj.GPGSignature()))
+		if err != nil {
+			return closePipesOnError(err)
+		}
+
+		// ReadPackageFile reads past the second header section which we need to include in
+		// signature verification; it is a length of KVP and headers
+		goBack := v.rpmObj.Headers[1].Length + (v.rpmObj.Headers[1].IndexCount+1)*16
+		// seek from front of RPM to the right spot to start verifying the signature from
+		_ = buf.Next(buf.Len() - goBack)
+
+		v.keyObj = <-keyResult
+		if v.keyObj == nil || v.sigObj == nil {
+			return closePipesOnError(errors.New("failed to read signature or public key"))
+		}
+
+		if err = v.sigObj.Verify(io.MultiReader(&buf, rpmR), v.keyObj); err != nil {
 			return closePipesOnError(err)
 		}
 
