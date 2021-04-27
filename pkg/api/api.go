@@ -62,7 +62,7 @@ func NewAPI() (*API, error) {
 	ctx := context.Background()
 	tConn, err := dial(ctx, logRPCServer)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "dial")
 	}
 	logAdminClient := trillian.NewTrillianAdminClient(tConn)
 	logClient := trillian.NewTrillianLogClient(tConn)
@@ -71,7 +71,7 @@ func NewAPI() (*API, error) {
 	if tLogID == 0 {
 		t, err := createAndInitTree(ctx, logAdminClient, logClient)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "create and init tree")
 		}
 		tLogID = t.TreeId
 	}
@@ -80,7 +80,7 @@ func NewAPI() (*API, error) {
 		TreeId: tLogID,
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "get tree")
 	}
 
 	signer, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
@@ -102,7 +102,7 @@ func NewAPI() (*API, error) {
 
 	verifier, err := client.NewLogVerifierFromTree(t)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "new verifier")
 	}
 
 	return &API{
@@ -124,6 +124,7 @@ func ConfigureAPI() {
 	var err error
 	api, err = NewAPI()
 	if err != nil {
+		fmt.Println(err)
 		log.Logger.Panic(err)
 	}
 	if viper.GetBool("enable_retrieve_api") {

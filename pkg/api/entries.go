@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -64,7 +65,9 @@ func logEntryFromLeaf(tc TrillianClient, leaf *trillian.LogLeaf, signedLogRoot *
 			LogIndex:       &leaf.LeafIndex,
 			Body:           leaf.LeafValue,
 			IntegratedTime: leaf.IntegrateTimestamp.AsTime().Unix(),
-			InclusionProof: &inclusionProof,
+			Verification: &models.LogEntryAnonVerification{
+				InclusionProof: &inclusionProof,
+			},
 		},
 	}
 
@@ -159,12 +162,17 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %v", err), signingError)
 	}
-	signature, _, err := api.signer.Sign(ctx, payload)
+	canonicalized, err := jsoncanonicalizer.Transform(payload)
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("canonicalizing error: %v", err), signingError)
+	}
+	signature, _, err := api.signer.Sign(ctx, canonicalized)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %v", err), signingError)
 	}
-
-	logEntryAnon.Signature = strfmt.Base64(signature)
+	logEntryAnon.Verification = &models.LogEntryAnonVerification{
+		SignedEntryTimestamp: strfmt.Base64(signature),
+	}
 
 	logEntry := models.LogEntry{
 		uuid: logEntryAnon,

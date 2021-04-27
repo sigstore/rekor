@@ -299,12 +299,15 @@ definitions:
           additionalProperties: true
         integratedTime:
           type: integer
-        inclusionProof:
-          $ref: '#/definitions/InclusionProof'
-        signature:
-          type: string
-          format: byte
-          description: signature over the log entry (acts as an inclusion promise if inclusion proof is not included)
+        verification:
+          type: object
+          properties:
+            inclusionProof:
+              $ref: '#/definitions/InclusionProof'
+            signedEntryTimestamp:
+              type: string
+              format: byte
+              description: signature over the logIndex, body and integratedTime
       required:
         - "logIndex"
         - "body"

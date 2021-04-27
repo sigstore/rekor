@@ -408,19 +408,24 @@ func init() {
             "type": "object",
             "additionalProperties": true
           },
-          "inclusionProof": {
-            "$ref": "#/definitions/InclusionProof"
-          },
           "integratedTime": {
             "type": "integer"
           },
           "logIndex": {
             "type": "integer"
           },
-          "signature": {
-            "description": "signature over the log entry (acts as an inclusion promise if inclusion proof is not included)",
-            "type": "string",
-            "format": "byte"
+          "verification": {
+            "type": "object",
+            "properties": {
+              "inclusionProof": {
+                "$ref": "#/definitions/InclusionProof"
+              },
+              "signedEntryTimestamp": {
+                "description": "signature over the logIndex, body and integratedTime",
+                "type": "string",
+                "format": "byte"
+              }
+            }
           }
         }
       }
@@ -1196,9 +1201,6 @@ func init() {
           "type": "object",
           "additionalProperties": true
         },
-        "inclusionProof": {
-          "$ref": "#/definitions/InclusionProof"
-        },
         "integratedTime": {
           "type": "integer"
         },
@@ -1206,8 +1208,29 @@ func init() {
           "type": "integer",
           "minimum": 0
         },
-        "signature": {
-          "description": "signature over the log entry (acts as an inclusion promise if inclusion proof is not included)",
+        "verification": {
+          "type": "object",
+          "properties": {
+            "inclusionProof": {
+              "$ref": "#/definitions/InclusionProof"
+            },
+            "signedEntryTimestamp": {
+              "description": "signature over the logIndex, body and integratedTime",
+              "type": "string",
+              "format": "byte"
+            }
+          }
+        }
+      }
+    },
+    "LogEntryAnonVerification": {
+      "type": "object",
+      "properties": {
+        "inclusionProof": {
+          "$ref": "#/definitions/InclusionProof"
+        },
+        "signedEntryTimestamp": {
+          "description": "signature over the logIndex, body and integratedTime",
           "type": "string",
           "format": "byte"
         }

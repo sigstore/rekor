@@ -34,6 +34,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
@@ -443,19 +444,22 @@ func TestCreateLogEntrySignature(t *testing.T) {
 	}
 
 	// verify the signature against the log entry (without the signature)
-	sig := logEntry.Signature
-	logEntry.Signature = nil
+	sig := logEntry.Verification.SignedEntryTimestamp
+	logEntry.Verification = nil
 	payload, err = logEntry.MarshalBinary()
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	canonicalized, err := jsoncanonicalizer.Transform(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// get rekor's public key
 	rekorPubKey := rekorPublicKey(t, ctx, rekorClient)
 
 	// verify the signature against the public key
 	h := crypto.SHA256.New()
-	if _, err := h.Write(payload); err != nil {
+	if _, err := h.Write(canonicalized); err != nil {
 		t.Fatal(err)
 	}
 	sum := h.Sum(nil)
