@@ -408,14 +408,24 @@ func init() {
             "type": "object",
             "additionalProperties": true
           },
-          "inclusionProof": {
-            "$ref": "#/definitions/InclusionProof"
-          },
           "integratedTime": {
             "type": "integer"
           },
           "logIndex": {
             "type": "integer"
+          },
+          "verification": {
+            "type": "object",
+            "properties": {
+              "inclusionProof": {
+                "$ref": "#/definitions/InclusionProof"
+              },
+              "signedEntryTimestamp": {
+                "description": "Signature over the logIndex, body and integratedTime.",
+                "type": "string",
+                "format": "byte"
+              }
+            }
           }
         }
       }
@@ -1191,15 +1201,38 @@ func init() {
           "type": "object",
           "additionalProperties": true
         },
-        "inclusionProof": {
-          "$ref": "#/definitions/InclusionProof"
-        },
         "integratedTime": {
           "type": "integer"
         },
         "logIndex": {
           "type": "integer",
           "minimum": 0
+        },
+        "verification": {
+          "type": "object",
+          "properties": {
+            "inclusionProof": {
+              "$ref": "#/definitions/InclusionProof"
+            },
+            "signedEntryTimestamp": {
+              "description": "Signature over the logIndex, body and integratedTime.",
+              "type": "string",
+              "format": "byte"
+            }
+          }
+        }
+      }
+    },
+    "LogEntryAnonVerification": {
+      "type": "object",
+      "properties": {
+        "inclusionProof": {
+          "$ref": "#/definitions/InclusionProof"
+        },
+        "signedEntryTimestamp": {
+          "description": "Signature over the logIndex, body and integratedTime.",
+          "type": "string",
+          "format": "byte"
         }
       }
     },

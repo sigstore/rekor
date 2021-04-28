@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/trillian/merkle/logverifier"
 	"github.com/google/trillian/merkle/rfc6962/hasher"
+	"github.com/pkg/errors"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -311,7 +312,7 @@ func createAndInitTree(ctx context.Context, adminClient trillian.TrillianAdminCl
 	// First look for and use an existing tree
 	trees, err := adminClient.ListTrees(ctx, &trillian.ListTreesRequest{})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "list trees")
 	}
 
 	for _, t := range trees.Tree {
@@ -336,11 +337,11 @@ func createAndInitTree(ctx context.Context, adminClient trillian.TrillianAdminCl
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "create tree")
 	}
 
 	if err := client.InitLog(ctx, t, logClient); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "init log")
 	}
 	return t, nil
 }

@@ -18,7 +18,12 @@
 package e2e
 
 import (
+	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -28,6 +33,17 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
+	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
+	"github.com/sigstore/rekor/cmd/rekor-cli/app"
+	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/generated/client/entries"
+	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
+	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/signer"
+	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 )
 
 func getUUIDFromUploadOutput(t *testing.T, out string) string {
@@ -358,4 +374,113 @@ func TestWatch(t *testing.T) {
 		t.Error("expected files")
 	}
 	fmt.Println(fi[0].Name())
+}
+
+func TestSignedEntryTimestamp(t *testing.T) {
+	// Create a random payload and sign it
+	ctx := context.Background()
+	payload := []byte("payload")
+	s, err := signer.NewMemory()
+	if err != nil {
+		t.Fatal(err)
+	}
+	signature, _, err := s.Sign(ctx, payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubkey, err := s.PublicKey(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := x509.MarshalPKIXPublicKey(pubkey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pemBytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: b,
+	})
+
+	// submit our newly signed payload to rekor
+	rekorClient, err := app.GetRekorClient("http://localhost:3000")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	re := rekord.V001Entry{
+		RekordObj: models.RekordV001Schema{
+			Data: &models.RekordV001SchemaData{
+				Content: strfmt.Base64(payload),
+			},
+			Signature: &models.RekordV001SchemaSignature{
+				Content: strfmt.Base64(signature),
+				Format:  models.RekordV001SchemaSignatureFormatX509,
+				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+					Content: strfmt.Base64(pemBytes),
+				},
+			},
+		},
+	}
+
+	returnVal := models.Rekord{
+		APIVersion: swag.String(re.APIVersion()),
+		Spec:       re.RekordObj,
+	}
+	params := entries.NewCreateLogEntryParams()
+	params.SetProposedEntry(&returnVal)
+	resp, err := rekorClient.Entries.CreateLogEntry(params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logEntry := extractLogEntry(t, resp.GetPayload())
+
+	// verify the signature against the log entry (without the signature)
+	sig := logEntry.Verification.SignedEntryTimestamp
+	logEntry.Verification = nil
+	payload, err = logEntry.MarshalBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// get rekor's public key
+	rekorPubKey := rekorPublicKey(t, ctx, rekorClient)
+
+	// verify the signature against the public key
+	h := crypto.SHA256.New()
+	if _, err := h.Write(canonicalized); err != nil {
+		t.Fatal(err)
+	}
+	sum := h.Sum(nil)
+
+	if !ecdsa.VerifyASN1(rekorPubKey, sum, []byte(sig)) {
+		t.Fatal("unable to verify")
+	}
+}
+
+func rekorPublicKey(t *testing.T, ctx context.Context, c *client.Rekor) *ecdsa.PublicKey {
+	resp, err := c.Pubkey.GetPublicKey(&pubkey.GetPublicKeyParams{Context: ctx})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey := resp.GetPayload()
+
+	// marshal the pubkey
+	p, _ := pem.Decode([]byte(pubKey))
+	if p == nil {
+		t.Fatal("shouldn't be nil")
+	}
+
+	decoded, err := x509.ParsePKIXPublicKey(p.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ed, ok := decoded.(*ecdsa.PublicKey)
+	if !ok {
+		t.Fatal("not ecdsa public key")
+	}
+	return ed
 }

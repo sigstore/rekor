@@ -299,8 +299,19 @@ definitions:
           additionalProperties: true
         integratedTime:
           type: integer
-        inclusionProof:
-          $ref: '#/definitions/InclusionProof'
+        verification:
+          type: object
+          properties:
+            inclusionProof:
+              $ref: '#/definitions/InclusionProof'
+            signedEntryTimestamp:
+              type: string
+              format: byte
+              # To verify the signedEntryTimestamp:
+                # 1. Remove the Verification object from the JSON Document
+                # 2. Canonicalize the remaining JSON document by following RFC 8785 rules
+                # 3. Verify the canonicalized payload and signedEntryTimestamp against rekor's public key
+              description: Signature over the logIndex, body and integratedTime. 
       required:
         - "logIndex"
         - "body"

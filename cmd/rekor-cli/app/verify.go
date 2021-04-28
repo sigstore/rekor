@@ -140,11 +140,11 @@ var verifyCmd = &cobra.Command{
 		var o *verifyCmdOutput
 		for k, v := range logEntry {
 			o = &verifyCmdOutput{
-				RootHash:  *v.InclusionProof.RootHash,
+				RootHash:  *v.Verification.InclusionProof.RootHash,
 				EntryUUID: k,
 				Index:     *v.LogIndex,
-				Size:      *v.InclusionProof.TreeSize,
-				Hashes:    v.InclusionProof.Hashes,
+				Size:      *v.Verification.InclusionProof.TreeSize,
+				Hashes:    v.Verification.InclusionProof.Hashes,
 			}
 		}
 

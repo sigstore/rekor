@@ -26,6 +26,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 const (
@@ -110,4 +112,17 @@ func createArtifact(t *testing.T, artifactPath string) string {
 		t.Fatal(err)
 	}
 	return artifact
+}
+
+func extractLogEntry(t *testing.T, le models.LogEntry) models.LogEntryAnon {
+	t.Helper()
+
+	if len(le) != 1 {
+		t.Fatal("expected length to be 1, is actually", len(le))
+	}
+	for _, v := range le {
+		return v
+	}
+	// this should never happen
+	return models.LogEntryAnon{}
 }

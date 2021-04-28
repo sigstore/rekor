@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -64,7 +65,9 @@ func logEntryFromLeaf(tc TrillianClient, leaf *trillian.LogLeaf, signedLogRoot *
 			LogIndex:       &leaf.LeafIndex,
 			Body:           leaf.LeafValue,
 			IntegratedTime: leaf.IntegrateTimestamp.AsTime().Unix(),
-			InclusionProof: &inclusionProof,
+			Verification: &models.LogEntryAnonVerification{
+				InclusionProof: &inclusionProof,
+			},
 		},
 	}
 
@@ -100,6 +103,7 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 
 // CreateLogEntryHandler creates new entry into log
 func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Responder {
+	ctx := params.HTTPRequest.Context()
 	httpReq := params.HTTPRequest
 	entry, err := types.NewEntry(params.ProposedEntry)
 	if err != nil {
@@ -138,12 +142,10 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
 	uuid := hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
 
-	logEntry := models.LogEntry{
-		uuid: models.LogEntryAnon{
-			LogIndex:       swag.Int64(queuedLeaf.LeafIndex),
-			Body:           queuedLeaf.GetLeafValue(),
-			IntegratedTime: queuedLeaf.IntegrateTimestamp.AsTime().Unix(),
-		},
+	logEntryAnon := models.LogEntryAnon{
+		LogIndex:       swag.Int64(queuedLeaf.LeafIndex),
+		Body:           queuedLeaf.GetLeafValue(),
+		IntegratedTime: queuedLeaf.IntegrateTimestamp.AsTime().Unix(),
 	}
 
 	if viper.GetBool("enable_retrieve_api") {
@@ -154,6 +156,26 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 				}
 			}
 		}()
+	}
+
+	payload, err := logEntryAnon.MarshalBinary()
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %v", err), signingError)
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(payload)
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("canonicalizing error: %v", err), signingError)
+	}
+	signature, _, err := api.signer.Sign(ctx, canonicalized)
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %v", err), signingError)
+	}
+	logEntryAnon.Verification = &models.LogEntryAnonVerification{
+		SignedEntryTimestamp: strfmt.Base64(signature),
+	}
+
+	logEntry := models.LogEntry{
+		uuid: logEntryAnon,
 	}
 
 	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(getEntryURL(*httpReq.URL, uuid)).WithETag(uuid)

@@ -87,9 +87,6 @@ type LogEntryAnon struct {
 	// Required: true
 	Body interface{} `json:"body"`
 
-	// inclusion proof
-	InclusionProof *InclusionProof `json:"inclusionProof,omitempty"`
-
 	// integrated time
 	IntegratedTime int64 `json:"integratedTime,omitempty"`
 
@@ -97,6 +94,9 @@ type LogEntryAnon struct {
 	// Required: true
 	// Minimum: 0
 	LogIndex *int64 `json:"logIndex"`
+
+	// verification
+	Verification *LogEntryAnonVerification `json:"verification,omitempty"`
 }
 
 // Validate validates this log entry anon
@@ -107,11 +107,11 @@ func (m *LogEntryAnon) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
-	if err := m.validateInclusionProof(formats); err != nil {
+	if err := m.validateLogIndex(formats); err != nil {
 		res = append(res, err)
 	}
 
-	if err := m.validateLogIndex(formats); err != nil {
+	if err := m.validateVerification(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -130,23 +130,6 @@ func (m *LogEntryAnon) validateBody(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *LogEntryAnon) validateInclusionProof(formats strfmt.Registry) error {
-	if swag.IsZero(m.InclusionProof) { // not required
-		return nil
-	}
-
-	if m.InclusionProof != nil {
-		if err := m.InclusionProof.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("inclusionProof")
-			}
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (m *LogEntryAnon) validateLogIndex(formats strfmt.Registry) error {
 
 	if err := validate.Required("logIndex", "body", m.LogIndex); err != nil {
@@ -160,11 +143,28 @@ func (m *LogEntryAnon) validateLogIndex(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *LogEntryAnon) validateVerification(formats strfmt.Registry) error {
+	if swag.IsZero(m.Verification) { // not required
+		return nil
+	}
+
+	if m.Verification != nil {
+		if err := m.Verification.Validate(formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("verification")
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
 // ContextValidate validate this log entry anon based on the context it is used
 func (m *LogEntryAnon) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.contextValidateInclusionProof(ctx, formats); err != nil {
+	if err := m.contextValidateVerification(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -174,12 +174,12 @@ func (m *LogEntryAnon) ContextValidate(ctx context.Context, formats strfmt.Regis
 	return nil
 }
 
-func (m *LogEntryAnon) contextValidateInclusionProof(ctx context.Context, formats strfmt.Registry) error {
+func (m *LogEntryAnon) contextValidateVerification(ctx context.Context, formats strfmt.Registry) error {
 
-	if m.InclusionProof != nil {
-		if err := m.InclusionProof.ContextValidate(ctx, formats); err != nil {
+	if m.Verification != nil {
+		if err := m.Verification.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("inclusionProof")
+				return ve.ValidateName("verification")
 			}
 			return err
 		}
@@ -199,6 +199,96 @@ func (m *LogEntryAnon) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary interface implementation
 func (m *LogEntryAnon) UnmarshalBinary(b []byte) error {
 	var res LogEntryAnon
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// LogEntryAnonVerification log entry anon verification
+//
+// swagger:model LogEntryAnonVerification
+type LogEntryAnonVerification struct {
+
+	// inclusion proof
+	InclusionProof *InclusionProof `json:"inclusionProof,omitempty"`
+
+	// Signature over the logIndex, body and integratedTime.
+	// Format: byte
+	SignedEntryTimestamp strfmt.Base64 `json:"signedEntryTimestamp,omitempty"`
+}
+
+// Validate validates this log entry anon verification
+func (m *LogEntryAnonVerification) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateInclusionProof(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *LogEntryAnonVerification) validateInclusionProof(formats strfmt.Registry) error {
+	if swag.IsZero(m.InclusionProof) { // not required
+		return nil
+	}
+
+	if m.InclusionProof != nil {
+		if err := m.InclusionProof.Validate(formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("verification" + "." + "inclusionProof")
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ContextValidate validate this log entry anon verification based on the context it is used
+func (m *LogEntryAnonVerification) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.contextValidateInclusionProof(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *LogEntryAnonVerification) contextValidateInclusionProof(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.InclusionProof != nil {
+		if err := m.InclusionProof.ContextValidate(ctx, formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("verification" + "." + "inclusionProof")
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *LogEntryAnonVerification) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *LogEntryAnonVerification) UnmarshalBinary(b []byte) error {
+	var res LogEntryAnonVerification
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}
