@@ -21,7 +21,9 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -186,6 +188,17 @@ func TestGet(t *testing.T) {
 	outputContains(t, out, uuid)
 
 	out = runCli(t, "search", "--public-key", pubPath)
+	outputContains(t, out, uuid)
+
+	hash := sha256.New()
+	artifactBytes, err := ioutil.ReadFile(artifactPath)
+	if err != nil {
+		t.Error(err)
+	}
+	hash.Write(artifactBytes)
+	sha := hash.Sum(nil)
+
+	out = runCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha)))
 	outputContains(t, out, uuid)
 }
 

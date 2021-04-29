@@ -338,7 +338,7 @@ definitions:
           - "format"
       hash:
         type: string
-        pattern: '^[0-9a-fA-F]{64}$'
+        pattern: '^(sha256:)?[0-9a-fA-F]{64}$'
 
   SearchLogQuery:
     type: object
