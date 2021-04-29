@@ -45,4 +45,9 @@ TMPDIR="$(mktemp -d -t rekor_test.XXXXXX)"
 touch $TMPDIR.rekor.yaml
 trap "rm -rf $TMPDIR" EXIT
 TMPDIR=$TMPDIR go test -tags=e2e ./tests/
-docker-compose logs --no-color | grep -q "panic: runtime error:" && echo "Failing due to panics detected in logs" && docker-compose logs --no-color && exit 1
+if docker-compose logs --no-color | grep -q "panic: runtime error:" ; then
+   # if we're here, we found a panic
+   echo "Failing due to panics detected in logs"
+   docker-compose logs --no-color
+   exit 1
+fi
