@@ -224,6 +224,34 @@ paths:
           $ref: '#/responses/BadContent'
         default:
           $ref: '#/responses/InternalServerError'
+  
+  /api/v1/tsr:
+    post:
+      summary: Returns a timestamp response from a specified URL
+      operationId: getTimestampResponse
+      tags:
+        - timestamp
+      consumes:
+        #- application/timestamp-query
+        - application/json
+      produces:
+       # - application/timestamp-reply
+        - application/json
+      parameters:
+        - in: body
+          name: query
+          required: true
+          schema:
+            $ref: '#/definitions/TimestampRequest'
+      responses:
+        200:
+          description: Returns a timestamp response 
+          schema:
+            $ref:  '#/definitions/TimestampResponse'
+        400:
+          $ref: '#/responses/BadContent'
+        default:
+          $ref: '#/responses/InternalServerError'
 
 definitions:
   ProposedEntry:
@@ -441,6 +469,26 @@ definitions:
       - rootHash
       - treeSize
       - hashes
+
+  TimestampRequest:
+    type: object
+    properties:
+      rfcRequest:
+        description: RFC 3161 formatted timestamp request
+        type: string
+        format: byte
+      url:
+        description: URL of a Timestamp Authority
+        type: string
+        format: uri
+
+  TimestampResponse:
+    type: object
+    properties:
+      rfcResponse:
+        type: string
+        description: RFC 3161 formatted timestamp response
+        format: byte
 
   Error:
     type: object

@@ -325,6 +325,45 @@ func init() {
           }
         }
       }
+    },
+    "/api/v1/tsr": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "timestamp"
+        ],
+        "summary": "Returns a timestamp response from a specified URL",
+        "operationId": "getTimestampResponse",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TimestampRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns a timestamp response",
+            "schema": {
+              "$ref": "#/definitions/TimestampResponse"
+            }
+          },
+          "400": {
+            "$ref": "#/responses/BadContent"
+          },
+          "default": {
+            "$ref": "#/responses/InternalServerError"
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -550,6 +589,31 @@ func init() {
           "items": {
             "type": "integer"
           }
+        }
+      }
+    },
+    "TimestampRequest": {
+      "type": "object",
+      "properties": {
+        "rfcRequest": {
+          "description": "RFC 3161 formatted timestamp request",
+          "type": "string",
+          "format": "byte"
+        },
+        "url": {
+          "description": "URL of a Timestamp Authority",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "TimestampResponse": {
+      "type": "object",
+      "properties": {
+        "rfcResponse": {
+          "description": "RFC 3161 formatted timestamp response",
+          "type": "string",
+          "format": "byte"
         }
       }
     },
@@ -990,6 +1054,51 @@ func init() {
             "description": "The public key",
             "schema": {
               "type": "string"
+            }
+          },
+          "default": {
+            "description": "There was an internal error in the server while processing the request",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tsr": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "timestamp"
+        ],
+        "summary": "Returns a timestamp response from a specified URL",
+        "operationId": "getTimestampResponse",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TimestampRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns a timestamp response",
+            "schema": {
+              "$ref": "#/definitions/TimestampResponse"
+            }
+          },
+          "400": {
+            "description": "The content supplied to the server was invalid",
+            "schema": {
+              "$ref": "#/definitions/Error"
             }
           },
           "default": {
@@ -1679,6 +1788,31 @@ func init() {
             "type": "integer",
             "minimum": 0
           }
+        }
+      }
+    },
+    "TimestampRequest": {
+      "type": "object",
+      "properties": {
+        "rfcRequest": {
+          "description": "RFC 3161 formatted timestamp request",
+          "type": "string",
+          "format": "byte"
+        },
+        "url": {
+          "description": "URL of a Timestamp Authority",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "TimestampResponse": {
+      "type": "object",
+      "properties": {
+        "rfcResponse": {
+          "description": "RFC 3161 formatted timestamp response",
+          "type": "string",
+          "format": "byte"
         }
       }
     },

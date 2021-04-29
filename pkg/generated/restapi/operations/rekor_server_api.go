@@ -40,6 +40,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/pubkey"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/timestamp"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 )
 
@@ -87,6 +88,9 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 		}),
 		PubkeyGetPublicKeyHandler: pubkey.GetPublicKeyHandlerFunc(func(params pubkey.GetPublicKeyParams) middleware.Responder {
 			return middleware.NotImplemented("operation pubkey.GetPublicKey has not yet been implemented")
+		}),
+		TimestampGetTimestampResponseHandler: timestamp.GetTimestampResponseHandlerFunc(func(params timestamp.GetTimestampResponseParams) middleware.Responder {
+			return middleware.NotImplemented("operation timestamp.GetTimestampResponse has not yet been implemented")
 		}),
 		IndexSearchIndexHandler: index.SearchIndexHandlerFunc(func(params index.SearchIndexParams) middleware.Responder {
 			return middleware.NotImplemented("operation index.SearchIndex has not yet been implemented")
@@ -151,6 +155,8 @@ type RekorServerAPI struct {
 	TlogGetLogProofHandler tlog.GetLogProofHandler
 	// PubkeyGetPublicKeyHandler sets the operation handler for the get public key operation
 	PubkeyGetPublicKeyHandler pubkey.GetPublicKeyHandler
+	// TimestampGetTimestampResponseHandler sets the operation handler for the get timestamp response operation
+	TimestampGetTimestampResponseHandler timestamp.GetTimestampResponseHandler
 	// IndexSearchIndexHandler sets the operation handler for the search index operation
 	IndexSearchIndexHandler index.SearchIndexHandler
 	// EntriesSearchLogQueryHandler sets the operation handler for the search log query operation
@@ -258,6 +264,9 @@ func (o *RekorServerAPI) Validate() error {
 	}
 	if o.PubkeyGetPublicKeyHandler == nil {
 		unregistered = append(unregistered, "pubkey.GetPublicKeyHandler")
+	}
+	if o.TimestampGetTimestampResponseHandler == nil {
+		unregistered = append(unregistered, "timestamp.GetTimestampResponseHandler")
 	}
 	if o.IndexSearchIndexHandler == nil {
 		unregistered = append(unregistered, "index.SearchIndexHandler")
@@ -383,6 +392,10 @@ func (o *RekorServerAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/api/v1/log/publicKey"] = pubkey.NewGetPublicKey(o.context, o.PubkeyGetPublicKeyHandler)
+	if o.handlers["POST"] == nil {
+		o.handlers["POST"] = make(map[string]http.Handler)
+	}
+	o.handlers["POST"]["/api/v1/tsr"] = timestamp.NewGetTimestampResponse(o.context, o.TimestampGetTimestampResponseHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
