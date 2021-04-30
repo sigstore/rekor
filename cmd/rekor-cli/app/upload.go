@@ -16,18 +16,24 @@
 package app
 
 import (
+	"context"
+	"crypto/ecdsa"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"os"
 
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/swag"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
+	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
 type uploadCmdOutput struct {
@@ -60,6 +66,7 @@ var uploadCmd = &cobra.Command{
 	},
 	Long: `This command takes the public key, signature and URL of the release artifact and uploads it to the rekor server.`,
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
+		ctx := context.Background()
 		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			return nil, err
@@ -103,8 +110,15 @@ var uploadCmd = &cobra.Command{
 		}
 
 		var newIndex int64
+		var logEntry models.LogEntryAnon
 		for _, entry := range resp.Payload {
 			newIndex = swag.Int64Value(entry.LogIndex)
+			logEntry = entry
+		}
+
+		// verify log entry
+		if verified, err := verifyLogEntry(ctx, rekorClient, logEntry); err != nil || !verified {
+			fmt.Fprintf(os.Stderr, "unable to verify entry was added to log: %v", err)
 		}
 
 		return &uploadCmdOutput{
@@ -112,6 +126,39 @@ var uploadCmd = &cobra.Command{
 			Index:    newIndex,
 		}, nil
 	}),
+}
+
+func verifyLogEntry(ctx context.Context, rekorClient *client.Rekor, logEntry models.LogEntryAnon) (bool, error) {
+	if logEntry.Verification == nil {
+		return false, nil
+	}
+	// verify the entry
+	le := &models.LogEntryAnon{
+		IntegratedTime: logEntry.IntegratedTime,
+		LogIndex:       logEntry.LogIndex,
+		Body:           logEntry.Body,
+	}
+	payload, err := le.MarshalBinary()
+	if err != nil {
+		return false, err
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(payload)
+	if err != nil {
+		return false, err
+	}
+
+	// get rekor's public key
+	rekorPubKey, err := util.PublicKey(ctx, rekorClient)
+	if err != nil {
+		return false, err
+	}
+
+	// verify the SET against the public key
+	hash := sha256.Sum256(canonicalized)
+	if !ecdsa.VerifyASN1(rekorPubKey, hash[:], []byte(logEntry.Verification.SignedEntryTimestamp)) {
+		return false, fmt.Errorf("unable to verify")
+	}
+	return true, nil
 }
 
 func init() {
