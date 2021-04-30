@@ -400,8 +400,10 @@ func init() {
       "additionalProperties": {
         "type": "object",
         "required": [
+          "logID",
           "logIndex",
-          "body"
+          "body",
+          "integratedTime"
         ],
         "properties": {
           "body": {
@@ -410,6 +412,9 @@ func init() {
           },
           "integratedTime": {
             "type": "integer"
+          },
+          "logID": {
+            "type": "string"
           },
           "logIndex": {
             "type": "integer"
@@ -421,7 +426,7 @@ func init() {
                 "$ref": "#/definitions/InclusionProof"
               },
               "signedEntryTimestamp": {
-                "description": "Signature over the logIndex, body and integratedTime.",
+                "description": "Signature over the logID, logIndex, body and integratedTime.",
                 "type": "string",
                 "format": "byte"
               }
@@ -1193,8 +1198,10 @@ func init() {
     "LogEntryAnon": {
       "type": "object",
       "required": [
+        "logID",
         "logIndex",
-        "body"
+        "body",
+        "integratedTime"
       ],
       "properties": {
         "body": {
@@ -1203,6 +1210,9 @@ func init() {
         },
         "integratedTime": {
           "type": "integer"
+        },
+        "logID": {
+          "type": "string"
         },
         "logIndex": {
           "type": "integer",
@@ -1215,7 +1225,7 @@ func init() {
               "$ref": "#/definitions/InclusionProof"
             },
             "signedEntryTimestamp": {
-              "description": "Signature over the logIndex, body and integratedTime.",
+              "description": "Signature over the logID, logIndex, body and integratedTime.",
               "type": "string",
               "format": "byte"
             }
@@ -1230,7 +1240,7 @@ func init() {
           "$ref": "#/definitions/InclusionProof"
         },
         "signedEntryTimestamp": {
-          "description": "Signature over the logIndex, body and integratedTime.",
+          "description": "Signature over the logID, logIndex, body and integratedTime.",
           "type": "string",
           "format": "byte"
         }
