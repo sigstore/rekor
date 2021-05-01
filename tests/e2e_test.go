@@ -40,12 +40,11 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
-	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
-	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/signer"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
 func getUUIDFromUploadOutput(t *testing.T, out string) string {
@@ -460,7 +459,10 @@ func TestSignedEntryTimestamp(t *testing.T) {
 		t.Fatal(err)
 	}
 	// get rekor's public key
-	rekorPubKey := rekorPublicKey(t, ctx, rekorClient)
+	rekorPubKey, err := util.PublicKey(ctx, rekorClient)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// verify the signature against the public key
 	h := crypto.SHA256.New()
@@ -472,28 +474,4 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	if !ecdsa.VerifyASN1(rekorPubKey, sum, []byte(sig)) {
 		t.Fatal("unable to verify")
 	}
-}
-
-func rekorPublicKey(t *testing.T, ctx context.Context, c *client.Rekor) *ecdsa.PublicKey {
-	resp, err := c.Pubkey.GetPublicKey(&pubkey.GetPublicKeyParams{Context: ctx})
-	if err != nil {
-		t.Fatal(err)
-	}
-	pubKey := resp.GetPayload()
-
-	// marshal the pubkey
-	p, _ := pem.Decode([]byte(pubKey))
-	if p == nil {
-		t.Fatal("shouldn't be nil")
-	}
-
-	decoded, err := x509.ParsePKIXPublicKey(p.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ed, ok := decoded.(*ecdsa.PublicKey)
-	if !ok {
-		t.Fatal("not ecdsa public key")
-	}
-	return ed
 }
