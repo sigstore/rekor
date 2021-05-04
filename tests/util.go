@@ -71,7 +71,7 @@ func runCli(t *testing.T, arg ...string) string {
 	return run(t, "", cli, arg...)
 }
 
-func runCliErr(t *testing.T, arg ...string) {
+func runCliErr(t *testing.T, arg ...string) string {
 	t.Helper()
 	cmd := exec.Command(cli, arg...)
 	b, err := cmd.CombinedOutput()
@@ -79,6 +79,7 @@ func runCliErr(t *testing.T, arg ...string) {
 		t.Log(string(b))
 		t.Fatalf("expected error, got %s", string(b))
 	}
+	return string(b)
 }
 
 func readFile(t *testing.T, p string) string {

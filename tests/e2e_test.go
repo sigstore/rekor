@@ -475,3 +475,15 @@ func TestSignedEntryTimestamp(t *testing.T) {
 		t.Fatal("unable to verify")
 	}
 }
+
+func TestGetNonExistantIndex(t *testing.T) {
+	// this index is extremely likely to not exist
+	out := runCliErr(t, "get", "--log-index", "100000000")
+	outputContains(t, out, "404")
+}
+
+func TestGetNonExistantUUID(t *testing.T) {
+	// this uuid is extremely likely to not exist
+	out := runCliErr(t, "get", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+	outputContains(t, out, "404")
+}
