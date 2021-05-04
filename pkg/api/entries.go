@@ -62,7 +62,7 @@ func logEntryFromLeaf(tc TrillianClient, leaf *trillian.LogLeaf, signedLogRoot *
 
 	logEntry := models.LogEntry{
 		hex.EncodeToString(leaf.MerkleLeafHash): models.LogEntryAnon{
-			LogID:          swag.String(fmt.Sprintf("%v", tc.logID)),
+			LogID:          swag.String(api.pubkeyHash),
 			LogIndex:       &leaf.LeafIndex,
 			Body:           leaf.LeafValue,
 			IntegratedTime: swag.Int64(leaf.IntegrateTimestamp.AsTime().Unix()),
@@ -144,7 +144,7 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 	uuid := hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
 
 	logEntryAnon := models.LogEntryAnon{
-		LogID:          swag.String(fmt.Sprintf("%v", tc.logID)),
+		LogID:          swag.String(api.pubkeyHash),
 		LogIndex:       swag.Int64(queuedLeaf.LeafIndex),
 		Body:           queuedLeaf.GetLeafValue(),
 		IntegratedTime: swag.Int64(queuedLeaf.IntegrateTimestamp.AsTime().Unix()),
