@@ -58,3 +58,9 @@ jobs:
           go-version: ${{ env.GOVERSION }}
       - name: CLI
         run: ./tests/e2e-test.sh
+      - name: Upload logs if they exist
+        uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: Docker Compose logs
+          path: /tmp/docker-compose.log

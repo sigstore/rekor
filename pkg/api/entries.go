@@ -81,7 +81,7 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 	resp := tc.getLeafAndProofByIndex(params.LogIndex)
 	switch resp.status {
 	case codes.OK:
-	case codes.NotFound, codes.OutOfRange:
+	case codes.NotFound, codes.OutOfRange, codes.InvalidArgument:
 		return handleRekorAPIError(params, http.StatusNotFound, fmt.Errorf("grpc error: %w", resp.err), "")
 	default:
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc err: %w", resp.err), trillianCommunicationError)
