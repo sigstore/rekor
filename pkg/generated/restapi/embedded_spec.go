@@ -414,7 +414,9 @@ func init() {
             "type": "integer"
           },
           "logID": {
-            "type": "string"
+            "description": "This is the SHA256 hash of the DER-encoded public key for the log at the time the entry was included in the log",
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{64}$"
           },
           "logIndex": {
             "type": "integer"
@@ -1212,7 +1214,9 @@ func init() {
           "type": "integer"
         },
         "logID": {
-          "type": "string"
+          "description": "This is the SHA256 hash of the DER-encoded public key for the log at the time the entry was included in the log",
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$"
         },
         "logIndex": {
           "type": "integer",

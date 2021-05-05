@@ -91,8 +91,9 @@ type LogEntryAnon struct {
 	// Required: true
 	IntegratedTime *int64 `json:"integratedTime"`
 
-	// log ID
+	// This is the SHA256 hash of the DER-encoded public key for the log at the time the entry was included in the log
 	// Required: true
+	// Pattern: ^[0-9a-fA-F]{64}$
 	LogID *string `json:"logID"`
 
 	// log index
@@ -155,6 +156,10 @@ func (m *LogEntryAnon) validateIntegratedTime(formats strfmt.Registry) error {
 func (m *LogEntryAnon) validateLogID(formats strfmt.Registry) error {
 
 	if err := validate.Required("logID", "body", m.LogID); err != nil {
+		return err
+	}
+
+	if err := validate.Pattern("logID", "body", *m.LogID, `^[0-9a-fA-F]{64}$`); err != nil {
 		return err
 	}
 
