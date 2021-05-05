@@ -73,6 +73,11 @@ func runCli(t *testing.T, arg ...string) string {
 
 func runCliErr(t *testing.T, arg ...string) string {
 	t.Helper()
+	arg = append(arg, "--rekor_server=http://localhost:3000")
+	// use a blank config file to ensure no collision
+	if os.Getenv("TMPDIR") != "" {
+		arg = append(arg, "--config="+os.Getenv("TMPDIR")+".rekor.yaml")
+	}
 	cmd := exec.Command(cli, arg...)
 	b, err := cmd.CombinedOutput()
 	if err == nil {
