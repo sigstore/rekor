@@ -17,7 +17,9 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"time"
@@ -47,12 +49,12 @@ func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
 }
 
 type API struct {
-	logClient trillian.TrillianLogClient
-	logID     int64
-	// PEM encoded public key
-	pubkey   string
-	signer   signature.Signer
-	verifier *client.LogVerifier
+	logClient  trillian.TrillianLogClient
+	logID      int64
+	pubkey     string // PEM encoded public key
+	pubkeyHash string // SHA256 hash of DER-encoded public key
+	signer     signature.Signer
+	verifier   *client.LogVerifier
 }
 
 func NewAPI() (*API, error) {
@@ -95,6 +97,12 @@ func NewAPI() (*API, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "marshalling public key")
 	}
+	hasher := sha256.New()
+	if _, err = hasher.Write(b); err != nil {
+		return nil, errors.Wrap(err, "computing hash of public key")
+	}
+	pubkeyHashBytes := hasher.Sum(nil)
+
 	pubkey := pem.EncodeToMemory(&pem.Block{
 		Type:  "PUBLIC KEY",
 		Bytes: b,
@@ -106,11 +114,12 @@ func NewAPI() (*API, error) {
 	}
 
 	return &API{
-		logClient: logClient,
-		logID:     tLogID,
-		pubkey:    string(pubkey),
-		signer:    signer,
-		verifier:  verifier,
+		logClient:  logClient,
+		logID:      tLogID,
+		pubkey:     string(pubkey),
+		pubkeyHash: hex.EncodeToString(pubkeyHashBytes),
+		signer:     signer,
+		verifier:   verifier,
 	}, nil
 }
 

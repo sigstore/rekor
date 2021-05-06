@@ -40,10 +40,12 @@ type getCmdOutput struct {
 	LogIndex       int
 	IntegratedTime int64
 	UUID           string
+	LogID          string
 }
 
 func (g *getCmdOutput) String() string {
-	s := fmt.Sprintf("Index: %d\n", g.LogIndex)
+	s := fmt.Sprintf("LogID: %v\n", g.LogID)
+	s += fmt.Sprintf("Index: %d\n", g.LogIndex)
 	dt := time.Unix(g.IntegratedTime, 0).UTC().Format(time.RFC3339)
 	s += fmt.Sprintf("IntegratedTime: %s\n", dt)
 	s += fmt.Sprintf("UUID: %s\n", g.UUID)
@@ -130,8 +132,9 @@ func parseEntry(uuid string, e models.LogEntryAnon) (interface{}, error) {
 	obj := getCmdOutput{
 		Body:           eimpl,
 		UUID:           uuid,
-		IntegratedTime: e.IntegratedTime,
+		IntegratedTime: *e.IntegratedTime,
 		LogIndex:       int(*e.LogIndex),
+		LogID:          *e.LogID,
 	}
 
 	return &obj, nil
