@@ -335,6 +335,10 @@ definitions:
     additionalProperties:
       type: object
       properties:
+        logID:
+          type: string
+          pattern: '^[0-9a-fA-F]{64}$'
+          description: This is the SHA256 hash of the DER-encoded public key for the log at the time the entry was included in the log
         logIndex:
           type: integer
           minimum: 0
@@ -355,10 +359,12 @@ definitions:
                 # 1. Remove the Verification object from the JSON Document
                 # 2. Canonicalize the remaining JSON document by following RFC 8785 rules
                 # 3. Verify the canonicalized payload and signedEntryTimestamp against rekor's public key
-              description: Signature over the logIndex, body and integratedTime. 
+              description: Signature over the logID, logIndex, body and integratedTime.
       required:
+        - "logID"
         - "logIndex"
         - "body"
+        - "integratedTime"
 
   SearchIndex:
     type: object
@@ -382,7 +388,7 @@ definitions:
           - "format"
       hash:
         type: string
-        pattern: '^[0-9a-fA-F]{64}$'
+        pattern: '^(sha256:)?[0-9a-fA-F]{64}$'
 
   SearchLogQuery:
     type: object

@@ -88,7 +88,13 @@ type LogEntryAnon struct {
 	Body interface{} `json:"body"`
 
 	// integrated time
-	IntegratedTime int64 `json:"integratedTime,omitempty"`
+	// Required: true
+	IntegratedTime *int64 `json:"integratedTime"`
+
+	// This is the SHA256 hash of the DER-encoded public key for the log at the time the entry was included in the log
+	// Required: true
+	// Pattern: ^[0-9a-fA-F]{64}$
+	LogID *string `json:"logID"`
 
 	// log index
 	// Required: true
@@ -104,6 +110,14 @@ func (m *LogEntryAnon) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateBody(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateIntegratedTime(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateLogID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -125,6 +139,28 @@ func (m *LogEntryAnon) validateBody(formats strfmt.Registry) error {
 
 	if m.Body == nil {
 		return errors.Required("body", "body", nil)
+	}
+
+	return nil
+}
+
+func (m *LogEntryAnon) validateIntegratedTime(formats strfmt.Registry) error {
+
+	if err := validate.Required("integratedTime", "body", m.IntegratedTime); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *LogEntryAnon) validateLogID(formats strfmt.Registry) error {
+
+	if err := validate.Required("logID", "body", m.LogID); err != nil {
+		return err
+	}
+
+	if err := validate.Pattern("logID", "body", *m.LogID, `^[0-9a-fA-F]{64}$`); err != nil {
+		return err
 	}
 
 	return nil
@@ -214,7 +250,7 @@ type LogEntryAnonVerification struct {
 	// inclusion proof
 	InclusionProof *InclusionProof `json:"inclusionProof,omitempty"`
 
-	// Signature over the logIndex, body and integratedTime.
+	// Signature over the logID, logIndex, body and integratedTime.
 	// Format: byte
 	SignedEntryTimestamp strfmt.Base64 `json:"signedEntryTimestamp,omitempty"`
 }

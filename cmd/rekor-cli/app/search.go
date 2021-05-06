@@ -116,7 +116,7 @@ var searchCmd = &cobra.Command{
 			}
 
 			hashVal := strings.ToLower(hex.EncodeToString(hasher.Sum(nil)))
-			params.Query.Hash = hashVal
+			params.Query.Hash = "sha256:" + hashVal
 		}
 
 		publicKeyStr := viper.GetString("public-key")

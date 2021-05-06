@@ -22,7 +22,9 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -41,11 +43,11 @@ import (
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
-	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/client/timestamp"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/signer"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
 func getUUIDFromUploadOutput(t *testing.T, out string) string {
@@ -188,6 +190,17 @@ func TestGet(t *testing.T) {
 	outputContains(t, out, uuid)
 
 	out = runCli(t, "search", "--public-key", pubPath)
+	outputContains(t, out, uuid)
+
+	hash := sha256.New()
+	artifactBytes, err := ioutil.ReadFile(artifactPath)
+	if err != nil {
+		t.Error(err)
+	}
+	hash.Write(artifactBytes)
+	sha := hash.Sum(nil)
+
+	out = runCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha)))
 	outputContains(t, out, uuid)
 }
 
@@ -450,7 +463,10 @@ func TestSignedEntryTimestamp(t *testing.T) {
 		t.Fatal(err)
 	}
 	// get rekor's public key
-	rekorPubKey := rekorPublicKey(t, ctx, rekorClient)
+	rekorPubKey, err := util.PublicKey(ctx, rekorClient)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// verify the signature against the public key
 	h := crypto.SHA256.New()
@@ -509,28 +525,16 @@ func TestTimestampResponseCLI(t *testing.T) {
 	}
 }
 
-func rekorPublicKey(t *testing.T, ctx context.Context, c *client.Rekor) *ecdsa.PublicKey {
-	resp, err := c.Pubkey.GetPublicKey(&pubkey.GetPublicKeyParams{Context: ctx})
-	if err != nil {
-		t.Fatal(err)
-	}
-	pubKey := resp.GetPayload()
+func TestGetNonExistantIndex(t *testing.T) {
+	// this index is extremely likely to not exist
+	out := runCliErr(t, "get", "--log-index", "100000000")
+	outputContains(t, out, "404")
+}
 
-	// marshal the pubkey
-	p, _ := pem.Decode([]byte(pubKey))
-	if p == nil {
-		t.Fatal("shouldn't be nil")
-	}
-
-	decoded, err := x509.ParsePKIXPublicKey(p.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ed, ok := decoded.(*ecdsa.PublicKey)
-	if !ok {
-		t.Fatal("not ecdsa public key")
-	}
-	return ed
+func TestGetNonExistantUUID(t *testing.T) {
+	// this uuid is extremely likely to not exist
+	out := runCliErr(t, "get", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+	outputContains(t, out, "404")
 }
 
 func rekorTimestampCertChain(t *testing.T, ctx context.Context, c *client.Rekor) []*x509.Certificate {

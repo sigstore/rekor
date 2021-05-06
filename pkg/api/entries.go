@@ -62,9 +62,10 @@ func logEntryFromLeaf(tc TrillianClient, leaf *trillian.LogLeaf, signedLogRoot *
 
 	logEntry := models.LogEntry{
 		hex.EncodeToString(leaf.MerkleLeafHash): models.LogEntryAnon{
+			LogID:          swag.String(api.pubkeyHash),
 			LogIndex:       &leaf.LeafIndex,
 			Body:           leaf.LeafValue,
-			IntegratedTime: leaf.IntegrateTimestamp.AsTime().Unix(),
+			IntegratedTime: swag.Int64(leaf.IntegrateTimestamp.AsTime().Unix()),
 			Verification: &models.LogEntryAnonVerification{
 				InclusionProof: &inclusionProof,
 			},
@@ -81,7 +82,7 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 	resp := tc.getLeafAndProofByIndex(params.LogIndex)
 	switch resp.status {
 	case codes.OK:
-	case codes.NotFound, codes.OutOfRange:
+	case codes.NotFound, codes.OutOfRange, codes.InvalidArgument:
 		return handleRekorAPIError(params, http.StatusNotFound, fmt.Errorf("grpc error: %w", resp.err), "")
 	default:
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc err: %w", resp.err), trillianCommunicationError)
@@ -143,9 +144,10 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 	uuid := hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
 
 	logEntryAnon := models.LogEntryAnon{
+		LogID:          swag.String(api.pubkeyHash),
 		LogIndex:       swag.Int64(queuedLeaf.LeafIndex),
 		Body:           queuedLeaf.GetLeafValue(),
-		IntegratedTime: queuedLeaf.IntegrateTimestamp.AsTime().Unix(),
+		IntegratedTime: swag.Int64(queuedLeaf.IntegrateTimestamp.AsTime().Unix()),
 	}
 
 	if viper.GetBool("enable_retrieve_api") {
@@ -296,12 +298,14 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		}
 
 		for _, leafResp := range searchByHashResults {
-			logEntry, err := logEntryFromLeaf(tc, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof)
-			if err != nil {
-				return handleRekorAPIError(params, code, err, err.Error())
-			}
+			if leafResp != nil {
+				logEntry, err := logEntryFromLeaf(tc, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof)
+				if err != nil {
+					return handleRekorAPIError(params, code, err, err.Error())
+				}
 
-			resultPayload = append(resultPayload, logEntry)
+				resultPayload = append(resultPayload, logEntry)
+			}
 		}
 	}
 

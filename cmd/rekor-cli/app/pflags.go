@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -47,7 +48,7 @@ func addSearchPFlags(cmd *cobra.Command) error {
 
 	cmd.Flags().Var(&fileOrURLFlag{}, "artifact", "path or URL to artifact file")
 
-	cmd.Flags().Var(&uuidFlag{}, "sha", "the SHA256 sum of the artifact")
+	cmd.Flags().Var(&shaFlag{}, "sha", "the SHA256 sum of the artifact")
 
 	cmd.Flags().Var(&emailFlag{}, "email", "email associated with the public key's subject")
 	return nil
@@ -466,6 +467,36 @@ func (f *pkiFormatFlag) Set(s string) error {
 		return nil
 	}
 	return fmt.Errorf("value specified is invalid: [%s] supported values are: [pgp, minisign, x509, ssh]", s)
+}
+
+type shaFlag struct {
+	hash string
+}
+
+func (s *shaFlag) String() string {
+	return s.hash
+}
+
+func (s *shaFlag) Set(v string) error {
+	if v == "" {
+		return errors.New("flag must be specified")
+	}
+	strToCheck := v
+	if strings.HasPrefix(v, "sha256:") {
+		strToCheck = strings.Replace(v, "sha256:", "", 1)
+	}
+	if _, err := hex.DecodeString(strToCheck); (err != nil) || (len(strToCheck) != 64) {
+		if err == nil {
+			err = errors.New("invalid length for value")
+		}
+		return fmt.Errorf("value specified is invalid: %w", err)
+	}
+	s.hash = v
+	return nil
+}
+
+func (s *shaFlag) Type() string {
+	return "sha"
 }
 
 type uuidFlag struct {

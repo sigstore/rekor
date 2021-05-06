@@ -71,14 +71,20 @@ func runCli(t *testing.T, arg ...string) string {
 	return run(t, "", cli, arg...)
 }
 
-func runCliErr(t *testing.T, arg ...string) {
+func runCliErr(t *testing.T, arg ...string) string {
 	t.Helper()
+	arg = append(arg, "--rekor_server=http://localhost:3000")
+	// use a blank config file to ensure no collision
+	if os.Getenv("TMPDIR") != "" {
+		arg = append(arg, "--config="+os.Getenv("TMPDIR")+".rekor.yaml")
+	}
 	cmd := exec.Command(cli, arg...)
 	b, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Log(string(b))
 		t.Fatalf("expected error, got %s", string(b))
 	}
+	return string(b)
 }
 
 func readFile(t *testing.T, p string) string {
