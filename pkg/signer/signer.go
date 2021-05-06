@@ -18,6 +18,7 @@ package signer
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"strings"
 
@@ -25,13 +26,19 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-func New(ctx context.Context, signer string) (signature.Signer, error) {
+func New(ctx context.Context, signer string) (signature.Signer, []*x509.Certificate, error) {
 	switch {
 	case strings.HasPrefix(signer, gcp.ReferenceScheme):
-		return gcp.NewGCP(ctx, signer)
+		kms, err := gcp.NewGCP(ctx, signer)
+		// TODO: Add timestamping cert issued by Fulcio and Fulcio's Root CA.
+		return kms, nil, err
 	case signer == MemoryScheme:
-		return NewMemory()
+		mem, err := NewMemory()
+		if err != nil {
+			return nil, nil, err
+		}
+		return mem.Signer, mem.CertChain, err
 	default:
-		return nil, fmt.Errorf("please provide a valid signer, %v is not valid", signer)
+		return nil, nil, fmt.Errorf("please provide a valid signer, %v is not valid", signer)
 	}
 }

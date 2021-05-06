@@ -89,6 +89,7 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	}
 
 	api.TimestampGetTimestampResponseHandler = timestamp.GetTimestampResponseHandlerFunc(pkgapi.TimestampResponseHandler)
+	api.TimestampGetTimestampCertChainHandler = timestamp.GetTimestampCertChainHandlerFunc(pkgapi.GetTimestampCertChainHandler)
 
 	api.PreServerShutdown = func() {}
 
@@ -103,6 +104,7 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 
 	// cache forever
 	api.AddMiddlewareFor("GET", "/api/v1/log/publicKey", cacheForever)
+	api.AddMiddlewareFor("GET", "/api/v1/log/timestampCertChain", cacheForever)
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
 }

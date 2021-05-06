@@ -17,54 +17,62 @@ limitations under the License.
 package api
 
 import (
-	"bytes"
 	"context"
+	"encoding/asn1"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/timestamp"
+	pki "github.com/sigstore/rekor/pkg/pki/x509"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
-func RequestFromURL(ctx context.Context, request []byte, url string) ([]byte, error) {
-	client := &http.Client{}
-	httpRequest, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(request))
+func RequestFromRekor(ctx context.Context, requestBytes []byte) ([]byte, error) {
+	// Fail early if we don't haven't configured rekor with a certificate for timestamping.
+	if len(api.certChain) == 0 {
+		return nil, fmt.Errorf("rekor is not configured to serve timestamps")
+	}
+
+	req, err := util.ParseTimestampRequest(requestBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	httpRequest.Header.Set("Content-Type", "application/timestamp-query")
-
-	resp, err := client.Do(httpRequest)
+	resp, err := util.CreateResponse(ctx, *req, api.certChain, api.signer)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error fetching from TSA %d: %s", resp.StatusCode, resp.Status)
-	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := asn1.Marshal(*resp)
 	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %w", err)
+		return nil, err
 	}
 
 	return body, nil
 }
 
 func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middleware.Responder {
-	httpReqCtx := params.HTTPRequest.Context()
+	ctx := params.HTTPRequest.Context()
 
-	// TODO: Add support for in-house timestamp response if JSONRequest (or RFC 3161).
-	resp, err := RequestFromURL(httpReqCtx, params.Query.RfcRequest, params.Query.URL.String())
+	// TODO: Add support for in-house JSON based timestamp response.
+	resp, err := RequestFromRekor(ctx, params.Query.RfcRequest)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateTimestampResponse)
 	}
 
-	// TODO: Add optional to upload to transparency log and add to response.
+	// TODO: Add upload to transparency log.
 	timestampResponse := new(models.TimestampResponse)
 	timestampResponse.RfcResponse = resp
 	return timestamp.NewGetTimestampResponseOK().WithPayload(timestampResponse)
+}
+
+func GetTimestampCertChainHandler(params timestamp.GetTimestampCertChainParams) middleware.Responder {
+	certChainBytes, err := pki.CertChainToPEM(api.certChain)
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("PEM encoding error: %w", err), "")
+
+	}
+	return timestamp.NewGetTimestampCertChainOK().WithPayload(string(certChainBytes))
 }

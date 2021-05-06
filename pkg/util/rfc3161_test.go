@@ -17,10 +17,13 @@ package util
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"testing"
 
+	"github.com/sassoftware/relic/lib/pkcs9"
 	"github.com/sassoftware/relic/lib/x509tools"
+	"github.com/sigstore/rekor/pkg/signer"
 )
 
 func TestCreateTimestampRequest(t *testing.T) {
@@ -43,7 +46,7 @@ func TestCreateTimestampRequest(t *testing.T) {
 		if (err == nil) != tc.expectSuccess {
 			t.Errorf("unexpected error in test case '%v': %v", tc.caseDesc, err)
 		}
-		// Validate request.
+		// Validate that the hashed message matches the hash of the file.
 		hash, _ := x509tools.PkixDigestToHash(req.MessageImprint.HashAlgorithm)
 		h := hash.New()
 		h.Write(fileBytes)
@@ -81,5 +84,30 @@ func TestParseTimestampRequest(t *testing.T) {
 		if _, err := ParseTimestampRequest(tc.entry); (err == nil) != tc.expectSuccess {
 			t.Errorf("unexpected error in test case '%v': %v", tc.caseDesc, err)
 		}
+	}
+}
+
+// Create an in-memory CA and TSA and verify the response.
+func TestCreateResponse(t *testing.T) {
+	ctx := context.Background()
+	mem, err := signer.NewMemory()
+	if err != nil {
+		t.Error(err)
+	}
+
+	fileBytes, _ := ioutil.ReadFile("../../tests/test_file.txt")
+	req, err := TimestampRequestFromData(fileBytes)
+	if err != nil {
+		t.Error(err)
+	}
+
+	resp, err := CreateResponse(ctx, *req, mem.CertChain, mem.Signer)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = pkcs9.Verify(&resp.TimeStampToken, fileBytes, mem.CertChain)
+	if err != nil {
+		t.Error(err)
 	}
 }

@@ -188,3 +188,13 @@ func (k PublicKey) EmailAddresses() []string {
 	}
 	return names
 }
+
+func CertChainToPEM(certChain []*x509.Certificate) ([]byte, error) {
+	var pemBytes bytes.Buffer
+	for _, cert := range certChain {
+		if err := pem.Encode(&pemBytes, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}); err != nil {
+			return nil, err
+		}
+	}
+	return pemBytes.Bytes(), nil
+}

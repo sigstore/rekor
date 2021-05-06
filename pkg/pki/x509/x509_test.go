@@ -27,6 +27,8 @@ import (
 	"encoding/pem"
 	"strings"
 	"testing"
+
+	"github.com/sigstore/rekor/pkg/signer"
 )
 
 // Generated with:
@@ -205,4 +207,30 @@ func TestSignature_VerifyFail(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCertChain_Verify(t *testing.T) {
+	mem, err := signer.NewMemory()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A properly created cert chain should encode to PEM OK.
+	certChainBytes, err := CertChainToPEM(mem.CertChain)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify bytes by comparing with the certs.
+	var block *pem.Block
+	block, certChainBytes = pem.Decode(certChainBytes)
+	for i := 0; block != nil; block, certChainBytes = pem.Decode(certChainBytes) {
+		if block.Type != "CERTIFICATE" {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(block.Bytes, mem.CertChain[i].Raw) {
+			t.Fatal(err)
+		}
+		i++
+	}
+
 }

@@ -16,16 +16,90 @@
 package util
 
 import (
+	"context"
 	"crypto"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/asn1"
 	"fmt"
+	"math/big"
+	"time"
 
+	"github.com/sassoftware/relic/lib/pkcs7"
 	"github.com/sassoftware/relic/lib/pkcs9"
 	"github.com/sassoftware/relic/lib/x509tools"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
+type GeneralName struct {
+	Name asn1.RawValue `asn1:"optional,tag:4"`
+}
+
+type IssuerNameAndSerial struct {
+	IssuerName   GeneralName
+	SerialNumber *big.Int
+}
+
+type EssCertIDv2 struct {
+	HashAlgorithm       pkix.AlgorithmIdentifier `asn1:"optional"` // SHA256
+	CertHash            []byte
+	IssuerNameAndSerial IssuerNameAndSerial `asn1:"optional"`
+}
+
+type SigningCertificateV2 struct {
+	Certs []EssCertIDv2
+}
+
+func createSigningCertificate(certificate *x509.Certificate) ([]byte, error) {
+	h := crypto.SHA256.New() // TODO: Get from certificate, defaults to 256
+	_, err := h.Write(certificate.Raw)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create hash")
+	}
+	signingCert := SigningCertificateV2{
+		Certs: []EssCertIDv2{{
+			CertHash: h.Sum(nil),
+			IssuerNameAndSerial: IssuerNameAndSerial{
+				IssuerName:   GeneralName{Name: asn1.RawValue{Tag: 4, Class: 2, IsCompound: true, Bytes: certificate.RawIssuer}},
+				SerialNumber: certificate.SerialNumber,
+			},
+		}},
+	}
+	signingCertBytes, err := asn1.Marshal(signingCert)
+	if err != nil {
+		return nil, err
+	}
+	return signingCertBytes, nil
+}
+
+func marshalCertificates(certs []*x509.Certificate) pkcs7.RawCertificates {
+	c := make(pkcs7.RawCertificates, len(certs))
+	for i, cert := range certs {
+		c[i] = asn1.RawValue{FullBytes: cert.Raw}
+	}
+	return c
+}
+
+func getPKIXPublicKeyAlgorithm(cert x509.Certificate) (*pkix.AlgorithmIdentifier, error) {
+	identifier := pkix.AlgorithmIdentifier{
+		Parameters: asn1.NullRawValue,
+	}
+	switch alg := cert.PublicKeyAlgorithm; alg {
+	case x509.RSA:
+		identifier.Algorithm = x509tools.OidPublicKeyRSA
+	case x509.ECDSA:
+		identifier.Algorithm = x509tools.OidPublicKeyECDSA
+	case x509.Ed25519:
+		identifier.Algorithm = asn1.ObjectIdentifier{1, 3, 101, 112}
+	default:
+		return nil, fmt.Errorf("unknown public key algorithm")
+	}
+
+	return &identifier, nil
+}
+
 func TimestampRequestFromData(data []byte) (*pkcs9.TimeStampReq, error) {
-	// Use a default hash algorithm right now
+	// Use a default hash algorithm right now.
 	hash := crypto.SHA256
 	h := hash.New()
 	if _, err := h.Write(data); err != nil {
@@ -53,4 +127,99 @@ func ParseTimestampRequest(data []byte) (*pkcs9.TimeStampReq, error) {
 		return nil, fmt.Errorf("error umarshalling request, trailing bytes")
 	}
 	return msg, nil
+}
+
+func CreateResponse(ctx context.Context, req pkcs9.TimeStampReq, certChain []*x509.Certificate, signer signature.Signer) (*pkcs9.TimeStampResp, error) {
+	// Populate TSTInfo.
+	info := new(pkcs9.TSTInfo)
+	info.Version = req.Version
+	if req.ReqPolicy.String() != "" {
+		info.Policy = req.ReqPolicy
+	} else {
+		info.Policy = asn1.ObjectIdentifier{1, 2, 3, 4, 1}
+	}
+	info.MessageImprint = req.MessageImprint
+	// TODO: info.TSA is optional but ideally we should include it from the subject name of the certificate.
+	// TODO: Ensure that every (SerialNumber, TSA name) identifies a unique token.
+	info.SerialNumber = x509tools.MakeSerial()
+	genTimeBytes, _ := asn1.MarshalWithParams(time.Now(), "generalized")
+	info.GenTime = asn1.RawValue{FullBytes: genTimeBytes}
+	info.Nonce = req.Nonce
+	info.Extensions = req.Extensions
+
+	encoded, err := asn1.Marshal(*info)
+	if err != nil {
+		return nil, err
+	}
+	contentInfo, err := pkcs7.NewContentInfo(pkcs9.OidTSTInfo, encoded)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Does this need to match the hash algorithm in the request?
+	h := crypto.SHA256.New()
+	alg, _ := x509tools.PkixDigestAlgorithm(crypto.SHA256)
+	contentInfoBytes, _ := contentInfo.Bytes()
+	h.Write(contentInfoBytes)
+	digest := h.Sum(nil)
+
+	// Create SignerInfo and signature.
+	signingCert, err := createSigningCertificate(certChain[0])
+	if err != nil {
+		return nil, err
+	}
+	attributes := new(pkcs7.AttributeList)
+	if err := attributes.Add(pkcs7.OidAttributeContentType, contentInfo.ContentType); err != nil {
+		return nil, err
+	}
+	if err := attributes.Add(pkcs7.OidAttributeMessageDigest, digest); err != nil {
+		return nil, err
+	}
+	if err := attributes.Add(asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 47}, signingCert); err != nil {
+		return nil, err
+	}
+
+	// The signature is over the entire authenticated attributes, not just the TstInfo.
+	attrBytes, err := attributes.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	// Get signature.
+	signature, _, err := signer.Sign(ctx, attrBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	sigAlg, err := getPKIXPublicKeyAlgorithm(*certChain[0])
+	if err != nil {
+		return nil, err
+	}
+
+	response := pkcs9.TimeStampResp{
+		Status: pkcs9.PKIStatusInfo{
+			Status: 0,
+		},
+		TimeStampToken: pkcs7.ContentInfoSignedData{
+			ContentType: asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 7, 2}, // id-signedData
+			Content: pkcs7.SignedData{
+				Version:                    1,
+				DigestAlgorithmIdentifiers: []pkix.AlgorithmIdentifier{alg},
+				ContentInfo:                contentInfo,
+				Certificates:               marshalCertificates(certChain),
+				CRLs:                       nil,
+				SignerInfos: []pkcs7.SignerInfo{{
+					Version: 1,
+					IssuerAndSerialNumber: pkcs7.IssuerAndSerial{
+						IssuerName:   asn1.RawValue{FullBytes: certChain[0].RawIssuer},
+						SerialNumber: certChain[0].SerialNumber,
+					},
+					DigestAlgorithm:           alg,
+					DigestEncryptionAlgorithm: *sigAlg,
+					AuthenticatedAttributes:   *attributes,
+					EncryptedDigest:           signature,
+				}},
+			},
+		},
+	}
+	return &response, nil
 }

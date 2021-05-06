@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"path/filepath"
 
@@ -64,23 +63,18 @@ func addTimestampFlags(cmd *cobra.Command) error {
 
 	cmd.Flags().Var(&fileFlag{}, "file", "path to a file containing the message to timestamp")
 
-	cmd.Flags().Var(&urlFlag{}, "url", "URL to a timestamp authority, e.g. https://freetsa.org/tsr")
+	cmd.Flags().String("out", "response.tsr", "path to a file to write response.")
 
-	// TODO: Add a flag to upload the timestamp response to the log and return the log index.
-	// TODO: Add data to validate response.
+	// TODO: Add a flag to upload a pre-formed timestamp response to the log.
+	// TODO: Add a flag to indicate a JSON formatted timestamp request/response.
 	return nil
 }
 
 func validateTimestampFlags() error {
 	requestStr := viper.GetString("request")
 	fileStr := viper.GetString("file")
-	urlStr := viper.GetString("url")
 	if requestStr == "" && fileStr == "" {
 		return errors.New("request or file must be specified")
-	}
-	// TODO: Make this optional when rekor can produce RFC 3161 os JSON signatures.
-	if urlStr == "" {
-		return errors.New("URL must be specified")
 	}
 	return nil
 }
@@ -124,7 +118,7 @@ Wrote response to: %v
 var timestampCmd = &cobra.Command{
 	Use:   "timestamp",
 	Short: "Rekor timestamp command",
-	Long:  "Retrieves an RFC 3161 timestamp response from a TSA with a specified URL. Note: the user must verify the RFC 3161 response with the TSA's certificates",
+	Long:  "Generates and uploads (WIP) an RFC 3161 timestamp response to the log. The timestamp response can be verified locally using Rekor's timestamping cert chain.",
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			log.Logger.Fatal("Error initializing cmd line args: ", err)
@@ -151,17 +145,8 @@ var timestampCmd = &cobra.Command{
 			return nil, err
 		}
 
-		urlStr := viper.GetString("url")
-		tsaURL, err := url.Parse(urlStr)
-		if err != nil || !tsaURL.IsAbs() {
-			return nil, fmt.Errorf("error parsing URL %w", err)
-		}
-
 		params := timestamp.NewGetTimestampResponseParams()
 		params.Query = &models.TimestampRequest{}
-		params.Query.URL = strfmt.URI(urlStr)
-		base64Request := make([]byte, base64.StdEncoding.EncodedLen(len(requestBytes)))
-		base64.StdEncoding.Encode(base64Request, requestBytes)
 		params.Query.RfcRequest = strfmt.Base64(requestBytes)
 
 		resp, err := rekorClient.Timestamp.GetTimestampResponse(params)
@@ -180,7 +165,11 @@ var timestampCmd = &cobra.Command{
 		}
 
 		// Write response to file
-		f, err := os.Create("response.tsr")
+		outStr := viper.GetString("out")
+		if outStr == "" {
+			outStr = "response.tsr"
+		}
+		f, err := os.Create(outStr)
 		if err != nil {
 			return nil, err
 		}
@@ -192,6 +181,8 @@ var timestampCmd = &cobra.Command{
 		if err := f.Sync(); err != nil {
 			return nil, err
 		}
+
+		// TODO: Add log index after support for uploading to transparency log is added.
 		return &timestampCmdOutput{
 			Location: f.Name(),
 		}, nil

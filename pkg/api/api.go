@@ -50,9 +50,11 @@ type API struct {
 	logClient trillian.TrillianLogClient
 	logID     int64
 	// PEM encoded public key
-	pubkey   string
-	signer   signature.Signer
-	verifier *client.LogVerifier
+	pubkey string
+	signer signature.Signer
+	// timestamping cert chain
+	certChain []*x509.Certificate
+	verifier  *client.LogVerifier
 }
 
 func NewAPI() (*API, error) {
@@ -83,7 +85,7 @@ func NewAPI() (*API, error) {
 		return nil, errors.Wrap(err, "get tree")
 	}
 
-	signer, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
+	signer, certChain, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
 	if err != nil {
 		return nil, errors.Wrap(err, "getting new signer")
 	}
@@ -105,11 +107,30 @@ func NewAPI() (*API, error) {
 		return nil, errors.Wrap(err, "new verifier")
 	}
 
+	// verify cert chain if present
+	if len(certChain) > 0 {
+		roots := x509.NewCertPool()
+		intermediates := x509.NewCertPool()
+		for _, cert := range certChain[1:(len(certChain) - 1)] {
+			intermediates.AddCert(cert)
+		}
+		roots.AddCert(certChain[len(certChain)-1])
+		_, err = certChain[0].Verify(x509.VerifyOptions{
+			Roots:         roots,
+			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+			Intermediates: intermediates,
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid timestamping cert chain")
+		}
+	}
+
 	return &API{
 		logClient: logClient,
 		logID:     tLogID,
 		pubkey:    string(pubkey),
 		signer:    signer,
+		certChain: certChain,
 		verifier:  verifier,
 	}, nil
 }

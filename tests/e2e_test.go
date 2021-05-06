@@ -18,6 +18,7 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -41,6 +42,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
+	"github.com/sigstore/rekor/pkg/generated/client/timestamp"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/signer"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
@@ -380,10 +382,11 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	// Create a random payload and sign it
 	ctx := context.Background()
 	payload := []byte("payload")
-	s, err := signer.NewMemory()
+	mem, err := signer.NewMemory()
 	if err != nil {
 		t.Fatal(err)
 	}
+	s := mem.Signer
 	signature, _, err := s.Sign(ctx, payload)
 	if err != nil {
 		t.Fatal(err)
@@ -461,6 +464,51 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	}
 }
 
+func TestTimestampResponseCLI(t *testing.T) {
+	ctx := context.Background()
+	payload := []byte("i am a cat")
+	// Create files for data, response, and CA.
+
+	filePath := filepath.Join(t.TempDir(), "file.txt")
+	CAPath := filepath.Join(t.TempDir(), "ca.pem")
+	responsePath := filepath.Join(t.TempDir(), "response.tsr")
+	if err := ioutil.WriteFile(filePath, payload, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := runCli(t, "timestamp", "--file", filePath, "--out", responsePath)
+	outputContains(t, out, "Wrote response to")
+
+	rekorClient, err := app.GetRekorClient("http://localhost:3000")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	certChain := rekorTimestampCertChain(t, ctx, rekorClient)
+	var rootCABytes bytes.Buffer
+	if err := pem.Encode(&rootCABytes, &pem.Block{Type: "CERTIFICATE", Bytes: certChain[len(certChain)-1].Raw}); err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(CAPath, rootCABytes.Bytes(), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Use openssl to verify
+	cmd := exec.Command("openssl", "ts", "-verify", "-data", filePath, "-in", responsePath, "-CAfile", CAPath)
+	in := &bytes.Buffer{}
+	cmdOut := &bytes.Buffer{}
+	errs := &bytes.Buffer{}
+
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = in, cmdOut, errs
+	if err := cmd.Run(); err != nil {
+		// Check that the result was OK.
+		if len(errs.Bytes()) > 0 {
+			t.Fatalf("error verifying with openssl %s", errs.String())
+		}
+
+	}
+}
+
 func rekorPublicKey(t *testing.T, ctx context.Context, c *client.Rekor) *ecdsa.PublicKey {
 	resp, err := c.Pubkey.GetPublicKey(&pubkey.GetPublicKeyParams{Context: ctx})
 	if err != nil {
@@ -483,4 +531,32 @@ func rekorPublicKey(t *testing.T, ctx context.Context, c *client.Rekor) *ecdsa.P
 		t.Fatal("not ecdsa public key")
 	}
 	return ed
+}
+
+func rekorTimestampCertChain(t *testing.T, ctx context.Context, c *client.Rekor) []*x509.Certificate {
+	resp, err := c.Timestamp.GetTimestampCertChain(&timestamp.GetTimestampCertChainParams{Context: ctx})
+	if err != nil {
+		t.Fatal(err)
+	}
+	certChainBytes := []byte(resp.GetPayload())
+
+	var block *pem.Block
+	block, certChainBytes = pem.Decode(certChainBytes)
+	certificates := []*x509.Certificate{}
+	for ; block != nil; block, certChainBytes = pem.Decode(certChainBytes) {
+		if block.Type == "CERTIFICATE" {
+			cert, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				t.Fatal(err)
+			}
+			certificates = append(certificates, cert)
+		} else {
+			t.Fatal(err)
+		}
+	}
+
+	if len(certificates) == 0 {
+		t.Fatal("could not find certificates")
+	}
+	return certificates
 }

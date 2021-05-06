@@ -24,21 +24,21 @@ import (
 )
 
 func TestVerify(t *testing.T) {
-	signer, err := signer.NewMemory()
+	m, err := signer.NewMemory()
 	if err != nil {
-		t.Fatalf("getting signer: %v", signer)
+		t.Fatalf("getting signer: %v", m.Signer)
 	}
 
 	// sign and verify
 	ctx := context.Background()
 	msg := []byte("foo")
-	signature, _, err := signer.Sign(ctx, msg)
+	signature, _, err := m.Signer.Sign(ctx, msg)
 	if err != nil {
 		t.Fatalf("signing: %v", err)
 	}
 
 	// get public key
-	pubKey, err := signer.PublicKey(ctx)
+	pubKey, err := m.Signer.PublicKey(ctx)
 	if err != nil {
 		t.Fatalf("getting public key: %v", err)
 	}
