@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.16.3 AS builder
+FROM golang:1.16.4 AS builder
 ENV APP_ROOT=/opt/app-root
 ENV GOPATH=$APP_ROOT
 
@@ -29,7 +29,7 @@ RUN go build ./cmd/rekor-server
 RUN CGO_ENABLED=0 go build -gcflags "all=-N -l" -o rekor-server_debug ./cmd/rekor-server
 
 # Multi-Stage production build
-FROM golang:1.16.3 as deploy
+FROM golang:1.16.4 as deploy
 
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
