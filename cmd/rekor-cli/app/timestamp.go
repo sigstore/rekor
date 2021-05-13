@@ -16,19 +16,22 @@
 package app
 
 import (
+	"bytes"
+	"crypto"
 	"encoding/asn1"
-	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
-	"github.com/go-openapi/strfmt"
 	"github.com/sassoftware/relic/lib/pkcs9"
+	"github.com/sassoftware/relic/lib/x509tools"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
 	"github.com/sigstore/rekor/pkg/generated/client/timestamp"
-	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
 	"github.com/spf13/cobra"
@@ -58,10 +61,36 @@ func (f *fileFlag) Type() string {
 	return "fileFlag"
 }
 
-func addTimestampFlags(cmd *cobra.Command) error {
-	cmd.Flags().Var(&fileFlag{}, "request", "path to an RFC 3161 timestamp request")
+type oidFlag struct {
+	value asn1.ObjectIdentifier
+}
 
-	cmd.Flags().Var(&fileFlag{}, "file", "path to a file containing the message to timestamp")
+func (f *oidFlag) String() string {
+	return f.value.String()
+}
+
+func (f *oidFlag) Set(s string) error {
+	parts := strings.Split(s, ".")
+	f.value = make(asn1.ObjectIdentifier, len(parts))
+	for i, part := range parts {
+		num, err := strconv.Atoi(part)
+		if err != nil {
+			return errors.New("error parsing OID")
+		}
+		f.value[i] = num
+	}
+	return nil
+}
+
+func (f *oidFlag) Type() string {
+	return "oidFlag"
+}
+
+func addTimestampFlags(cmd *cobra.Command) error {
+	cmd.Flags().Var(&fileFlag{}, "artifact", "path to an artifact to timestamp")
+	cmd.Flags().Var(&uuidFlag{}, "artifact-hash", "hex encoded SHA256 hash of the the artifact to timestamp")
+	cmd.Flags().Bool("nonce", false, "specify a pseudo-random nonce in the request")
+	cmd.Flags().Var(&oidFlag{}, "tsa-policy", "optional dotted OID notation for the policy that the TSA should use to create the response")
 
 	cmd.Flags().String("out", "response.tsr", "path to a file to write response.")
 
@@ -71,37 +100,77 @@ func addTimestampFlags(cmd *cobra.Command) error {
 }
 
 func validateTimestampFlags() error {
-	requestStr := viper.GetString("request")
-	fileStr := viper.GetString("file")
-	if requestStr == "" && fileStr == "" {
-		return errors.New("request or file must be specified")
+	artifactStr := viper.GetString("artifact")
+	digestStr := viper.GetString("artifact-hash")
+
+	if artifactStr == "" && digestStr == "" {
+		return errors.New("artifact or hash to timestamp must be specified")
 	}
+
+	if digestStr != "" {
+		digest := uuidFlag{}
+		if err := digest.Set(digestStr); err != nil {
+			return err
+		}
+	}
+
+	policyStr := viper.GetString("tsa-policy")
+	if policyStr != "" {
+		oid := oidFlag{}
+		if err := oid.Set(policyStr); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 func createRequestFromFlags() (*pkcs9.TimeStampReq, error) {
-	requestStr := viper.GetString("request")
 	var timestampReq *pkcs9.TimeStampReq
-	if requestStr == "" {
-		fileStr := viper.GetString("file")
-		fileBytes, err := ioutil.ReadFile(filepath.Clean(fileStr))
-		if err != nil {
-			return nil, fmt.Errorf("error reading request from file: %w", err)
-		}
-		timestampReq, err = util.TimestampRequestFromData(fileBytes)
-		if err != nil {
-			return nil, fmt.Errorf("error creating timestamp request: %w", err)
-		}
-	} else {
-		rawBytes, err := ioutil.ReadFile(filepath.Clean(requestStr))
-		if err != nil {
-			return nil, fmt.Errorf("error reading request from file: %w", err)
-		}
-		timestampReq, err = util.ParseTimestampRequest(rawBytes)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing timestamp request: %w", err)
-		}
+	digestStr := viper.GetString("artifact-hash")
+	policyStr := viper.GetString("tsa-policy")
+
+	opts := util.TimestampRequestOptions{
+		// Always use a SHA256 right now.
+		Hash: crypto.SHA256,
 	}
+	if policyStr != "" {
+		oid := oidFlag{}
+		if err := oid.Set(policyStr); err != nil {
+			return nil, err
+		}
+		opts.TSAPolicyOid = oid.value
+	}
+	if viper.GetBool("nonce") {
+		opts.Nonce = x509tools.MakeSerial()
+	}
+
+	var digest []byte
+	if digestStr != "" {
+		decoded, err := hex.DecodeString(digestStr)
+		if err != nil {
+			return nil, err
+		}
+		digest = decoded
+	}
+	if digestStr == "" {
+		artifactStr := viper.GetString("artifact")
+		artifactBytes, err := ioutil.ReadFile(filepath.Clean(artifactStr))
+		if err != nil {
+			return nil, fmt.Errorf("error reading request from file: %w", err)
+		}
+		h := opts.Hash.New()
+		if _, err := h.Write(artifactBytes); err != nil {
+			return nil, err
+		}
+		digest = h.Sum(nil)
+	}
+
+	timestampReq, err := util.TimestampRequestFromDigest(digest, opts)
+	if err != nil {
+		return nil, fmt.Errorf("error creating timestamp request: %w", err)
+	}
+
 	return timestampReq, nil
 }
 
@@ -146,21 +215,14 @@ var timestampCmd = &cobra.Command{
 		}
 
 		params := timestamp.NewGetTimestampResponseParams()
-		params.Query = &models.TimestampRequest{}
-		params.Query.RfcRequest = strfmt.Base64(requestBytes)
+		params.Request = ioutil.NopCloser(bytes.NewReader(requestBytes))
 
 		resp, err := rekorClient.Timestamp.GetTimestampResponse(params)
 		if err != nil {
 			return nil, err
 		}
-		body, err := base64.StdEncoding.DecodeString(resp.Payload.RfcResponse.String())
-		if err != nil {
-			return nil, err
-		}
-
 		// Sanity check response and check if the TimeStampToken was successfully created
-		_, err = timestampReq.ParseResponse(body)
-		if err != nil {
+		if _, err = timestampReq.ParseResponse([]byte(resp.Payload)); err != nil {
 			return nil, err
 		}
 
@@ -169,22 +231,13 @@ var timestampCmd = &cobra.Command{
 		if outStr == "" {
 			outStr = "response.tsr"
 		}
-		f, err := os.Create(outStr)
-		if err != nil {
-			return nil, err
-		}
-		defer f.Close()
-
-		if _, err := f.Write(body); err != nil {
-			return nil, err
-		}
-		if err := f.Sync(); err != nil {
+		if err := ioutil.WriteFile(outStr, []byte(resp.Payload), 0600); err != nil {
 			return nil, err
 		}
 
 		// TODO: Add log index after support for uploading to transparency log is added.
 		return &timestampCmdOutput{
-			Location: f.Name(),
+			Location: outStr,
 		}, nil
 	}),
 }

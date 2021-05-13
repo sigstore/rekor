@@ -124,6 +124,8 @@ func GetRekorClient(rekorServerURL string) (*client.Rekor, error) {
 	rt.Consumers["application/yaml"] = util.YamlConsumer()
 	rt.Consumers["application/x-pem-file"] = runtime.TextConsumer()
 	rt.Producers["application/yaml"] = util.YamlProducer()
+	rt.Producers["application/timestamp-query"] = runtime.TextProducer()
+	rt.Consumers["application/timestamp-reply"] = runtime.TextConsumer()
 
 	if viper.GetString("api-key") != "" {
 		rt.DefaultAuthentication = httptransport.APIKeyAuth("apiKey", "query", viper.GetString("api-key"))

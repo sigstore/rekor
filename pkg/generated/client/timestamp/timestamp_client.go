@@ -64,7 +64,7 @@ func (a *Client) GetTimestampCertChain(params *GetTimestampCertChainParams, opts
 	op := &runtime.ClientOperation{
 		ID:                 "getTimestampCertChain",
 		Method:             "GET",
-		PathPattern:        "/api/v1/log/timestampCertChain",
+		PathPattern:        "/api/v1/timestamp/certchain",
 		ProducesMediaTypes: []string{"application/x-pem-file"},
 		ConsumesMediaTypes: []string{"application/json", "application/yaml"},
 		Schemes:            []string{"http"},
@@ -101,9 +101,9 @@ func (a *Client) GetTimestampResponse(params *GetTimestampResponseParams, opts .
 	op := &runtime.ClientOperation{
 		ID:                 "getTimestampResponse",
 		Method:             "POST",
-		PathPattern:        "/api/v1/tsr",
-		ProducesMediaTypes: []string{"application/json"},
-		ConsumesMediaTypes: []string{"application/json"},
+		PathPattern:        "/api/v1/timestamp",
+		ProducesMediaTypes: []string{"application/timestamp-reply"},
+		ConsumesMediaTypes: []string{"application/timestamp-query"},
 		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &GetTimestampResponseReader{formats: a.formats},

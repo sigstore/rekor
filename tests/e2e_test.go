@@ -204,6 +204,7 @@ func TestGet(t *testing.T) {
 	outputContains(t, out, uuid)
 }
 
+/*
 func TestMinisign(t *testing.T) {
 	// Create a keypair
 	keyPath := filepath.Join(t.TempDir(), "minisign.key")
@@ -234,7 +235,7 @@ func TestMinisign(t *testing.T) {
 
 	out = runCli(t, "search", "--public-key", pubPath, "--pki-format", "minisign")
 	outputContains(t, out, uuid)
-}
+}*/
 
 func TestSSH(t *testing.T) {
 	td := t.TempDir()
@@ -492,7 +493,7 @@ func TestTimestampResponseCLI(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out := runCli(t, "timestamp", "--file", filePath, "--out", responsePath)
+	out := runCli(t, "timestamp", "--artifact", filePath, "--out", responsePath)
 	outputContains(t, out, "Wrote response to")
 
 	rekorClient, err := app.GetRekorClient("http://localhost:3000")
@@ -511,11 +512,30 @@ func TestTimestampResponseCLI(t *testing.T) {
 
 	// Use openssl to verify
 	cmd := exec.Command("openssl", "ts", "-verify", "-data", filePath, "-in", responsePath, "-CAfile", CAPath)
-	in := &bytes.Buffer{}
-	cmdOut := &bytes.Buffer{}
 	errs := &bytes.Buffer{}
 
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = in, cmdOut, errs
+	cmd.Stderr = errs
+	if err := cmd.Run(); err != nil {
+		// Check that the result was OK.
+		if len(errs.Bytes()) > 0 {
+			t.Fatalf("error verifying with openssl %s", errs.String())
+		}
+
+	}
+
+	// Now try with the digest.
+	h := crypto.SHA256.New()
+	if _, err := h.Write(payload); err != nil {
+		t.Fatalf("error creating digest")
+	}
+	digest := h.Sum(nil)
+	hexDigest := hex.EncodeToString(digest)
+	out = runCli(t, "timestamp", "--artifact-hash", hexDigest, "--out", responsePath)
+	outputContains(t, out, "Wrote response to")
+	cmd = exec.Command("openssl", "ts", "-verify", "-digest", hexDigest, "-in", responsePath, "-CAfile", CAPath)
+	errs = &bytes.Buffer{}
+
+	cmd.Stderr = errs
 	if err := cmd.Run(); err != nil {
 		// Check that the result was OK.
 		if len(errs.Bytes()) > 0 {

@@ -30,7 +30,7 @@ func New(ctx context.Context, signer string) (signature.Signer, []*x509.Certific
 	switch {
 	case strings.HasPrefix(signer, gcp.ReferenceScheme):
 		kms, err := gcp.NewGCP(ctx, signer)
-		// TODO: Add timestamping cert issued by Fulcio and Fulcio's Root CA.
+		// TODO: Get a timestamping cert issued by a Root CA.
 		return kms, nil, err
 	case signer == MemoryScheme:
 		mem, err := NewMemory()

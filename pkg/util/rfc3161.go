@@ -98,24 +98,35 @@ func getPKIXPublicKeyAlgorithm(cert x509.Certificate) (*pkix.AlgorithmIdentifier
 	return &identifier, nil
 }
 
-func TimestampRequestFromData(data []byte) (*pkcs9.TimeStampReq, error) {
-	// Use a default hash algorithm right now.
-	hash := crypto.SHA256
-	h := hash.New()
-	if _, err := h.Write(data); err != nil {
-		return nil, err
-	}
-	digest := h.Sum(nil)
-	alg, _ := x509tools.PkixDigestAlgorithm(hash)
+type TimestampRequestOptions struct {
+	// The policy that the client expects the TSA to use for creating the timestamp token.
+	// If no policy is specified the TSA uses its default policy.
+	TSAPolicyOid asn1.ObjectIdentifier
+
+	// The nonce to specify in the request.
+	Nonce *big.Int
+
+	// Hash function to use when constructing the timestamp request. Defaults to SHA-256.
+	Hash crypto.Hash
+}
+
+func TimestampRequestFromDigest(digest []byte, opts TimestampRequestOptions) (*pkcs9.TimeStampReq, error) {
+	alg, _ := x509tools.PkixDigestAlgorithm(opts.Hash)
 	msg := pkcs9.TimeStampReq{
 		Version: 1,
 		MessageImprint: pkcs9.MessageImprint{
 			HashAlgorithm: alg,
 			HashedMessage: digest,
 		},
-		Nonce:   x509tools.MakeSerial(),
 		CertReq: true,
 	}
+	if opts.Nonce != nil {
+		msg.Nonce = opts.Nonce
+	}
+	if opts.TSAPolicyOid != nil {
+		msg.ReqPolicy = opts.TSAPolicyOid
+	}
+
 	return &msg, nil
 }
 
@@ -129,7 +140,7 @@ func ParseTimestampRequest(data []byte) (*pkcs9.TimeStampReq, error) {
 	return msg, nil
 }
 
-func CreateResponse(ctx context.Context, req pkcs9.TimeStampReq, certChain []*x509.Certificate, signer signature.Signer) (*pkcs9.TimeStampResp, error) {
+func CreateRfc3161Response(ctx context.Context, req pkcs9.TimeStampReq, certChain []*x509.Certificate, signer signature.Signer) (*pkcs9.TimeStampResp, error) {
 	// Populate TSTInfo.
 	info := new(pkcs9.TSTInfo)
 	info.Version = req.Version

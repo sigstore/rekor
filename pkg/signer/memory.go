@@ -50,7 +50,7 @@ func createTimestampingCertWithSelfSignedCA(pub ecdsa.PublicKey) ([]*x509.Certif
 	ca := &x509.Certificate{
 		SerialNumber: big.NewInt(2019),
 		Subject: pkix.Name{
-			Organization:  []string{"Company Parent, INC."},
+			Organization:  []string{"Root CA Test"},
 			Country:       []string{"US"},
 			Province:      []string{""},
 			Locality:      []string{"San Francisco"},
@@ -75,7 +75,7 @@ func createTimestampingCertWithSelfSignedCA(pub ecdsa.PublicKey) ([]*x509.Certif
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(1658),
 		Subject: pkix.Name{
-			Organization:  []string{"Company, INC."},
+			Organization:  []string{"Rekor Test"},
 			Country:       []string{"US"},
 			Province:      []string{""},
 			Locality:      []string{"San Francisco"},

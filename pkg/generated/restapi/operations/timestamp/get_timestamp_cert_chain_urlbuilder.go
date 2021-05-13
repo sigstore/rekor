@@ -51,7 +51,7 @@ func (o *GetTimestampCertChainURL) SetBasePath(bp string) {
 func (o *GetTimestampCertChainURL) Build() (*url.URL, error) {
 	var _result url.URL
 
-	var _path = "/api/v1/log/timestampCertChain"
+	var _path = "/api/v1/timestamp/certchain"
 
 	_basePath := o._basePath
 	_result.Path = golangswaggerpaths.Join(_basePath, _path)

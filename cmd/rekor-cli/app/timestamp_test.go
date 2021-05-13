@@ -25,8 +25,9 @@ import (
 func TestTimestampFlags(t *testing.T) {
 	type test struct {
 		caseDesc              string
-		request               string
-		file                  string
+		artifact              string
+		artifactHash          string
+		oid                   string
 		expectParseSuccess    bool
 		expectValidateSuccess bool
 		expectRequestSuccess  bool
@@ -34,35 +35,58 @@ func TestTimestampFlags(t *testing.T) {
 
 	tests := []test{
 		{
-			caseDesc:              "valid local file",
-			file:                  "../../../tests/test_file.txt",
+			caseDesc:              "valid local artifact",
+			artifact:              "../../../tests/test_file.txt",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 			expectRequestSuccess:  true,
 		},
 		{
-			caseDesc:              "nonexistant local file",
-			file:                  "../../../tests/not_a_file",
+			caseDesc:              "nonexistant local artifact",
+			artifact:              "../../../tests/not_a_file",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 			expectRequestSuccess:  false,
 		},
 		{
-			caseDesc:              "valid request file",
-			request:               "../../../tests/test_request.tsq",
+			caseDesc:              "valid artifact hash",
+			artifactHash:          "45c7b11fcbf07dec1694adecd8c5b85770a12a6c8dfdcf2580a2db0c47c31779",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 			expectRequestSuccess:  true,
 		},
 		{
-			caseDesc:              "nonexistant request file",
-			file:                  "../../../tests/not_a_request",
+			caseDesc:              "invalid artifact hash",
+			artifactHash:          "aaa",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 			expectRequestSuccess:  false,
 		},
 		{
-			caseDesc:              "no request or file specified",
+			caseDesc:              "nonexistant request artifact",
+			artifact:              "../../../tests/not_a_request",
+			expectParseSuccess:    false,
+			expectValidateSuccess: false,
+			expectRequestSuccess:  false,
+		},
+		{
+			caseDesc:              "valid oid",
+			artifact:              "../../../tests/test_file.txt",
+			oid:                   "1.2.3.4",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+			expectRequestSuccess:  true,
+		},
+		{
+			caseDesc:              "invalid oid",
+			artifact:              "../../../tests/test_file.txt",
+			oid:                   "1.a.3.4",
+			expectParseSuccess:    false,
+			expectValidateSuccess: true,
+			expectRequestSuccess:  true,
+		},
+		{
+			caseDesc:              "no request or artifact specified",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 			expectRequestSuccess:  false,
@@ -77,11 +101,14 @@ func TestTimestampFlags(t *testing.T) {
 
 		args := []string{}
 
-		if tc.request != "" {
-			args = append(args, "--request", tc.request)
+		if tc.artifact != "" {
+			args = append(args, "--artifact", tc.artifact)
 		}
-		if tc.file != "" {
-			args = append(args, "--file", tc.file)
+		if tc.artifactHash != "" {
+			args = append(args, "--artifact-hash", tc.artifactHash)
+		}
+		if tc.oid != "" {
+			args = append(args, "--tsa-policy", tc.oid)
 		}
 		if err := blankCmd.ParseFlags(args); (err == nil) != tc.expectParseSuccess {
 			t.Errorf("unexpected result parsing '%v': %v", tc.caseDesc, err)

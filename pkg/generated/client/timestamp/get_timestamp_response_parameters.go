@@ -23,6 +23,7 @@ package timestamp
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"time"
 
@@ -30,8 +31,6 @@ import (
 	"github.com/go-openapi/runtime"
 	cr "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
-
-	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 // NewGetTimestampResponseParams creates a new GetTimestampResponseParams object,
@@ -77,8 +76,10 @@ func NewGetTimestampResponseParamsWithHTTPClient(client *http.Client) *GetTimest
 */
 type GetTimestampResponseParams struct {
 
-	// Query.
-	Query *models.TimestampRequest
+	// Request.
+	//
+	// Format: binary
+	Request io.ReadCloser
 
 	timeout    time.Duration
 	Context    context.Context
@@ -133,15 +134,15 @@ func (o *GetTimestampResponseParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
-// WithQuery adds the query to the get timestamp response params
-func (o *GetTimestampResponseParams) WithQuery(query *models.TimestampRequest) *GetTimestampResponseParams {
-	o.SetQuery(query)
+// WithRequest adds the request to the get timestamp response params
+func (o *GetTimestampResponseParams) WithRequest(request io.ReadCloser) *GetTimestampResponseParams {
+	o.SetRequest(request)
 	return o
 }
 
-// SetQuery adds the query to the get timestamp response params
-func (o *GetTimestampResponseParams) SetQuery(query *models.TimestampRequest) {
-	o.Query = query
+// SetRequest adds the request to the get timestamp response params
+func (o *GetTimestampResponseParams) SetRequest(request io.ReadCloser) {
+	o.Request = request
 }
 
 // WriteToRequest writes these params to a swagger request
@@ -151,8 +152,8 @@ func (o *GetTimestampResponseParams) WriteToRequest(r runtime.ClientRequest, reg
 		return err
 	}
 	var res []error
-	if o.Query != nil {
-		if err := r.SetBodyParam(o.Query); err != nil {
+	if o.Request != nil {
+		if err := r.SetBodyParam(o.Request); err != nil {
 			return err
 		}
 	}

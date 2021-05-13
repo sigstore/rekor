@@ -51,7 +51,7 @@ func (o *GetTimestampResponseURL) SetBasePath(bp string) {
 func (o *GetTimestampResponseURL) Build() (*url.URL, error) {
 	var _result url.URL
 
-	var _path = "/api/v1/tsr"
+	var _path = "/api/v1/timestamp"
 
 	_basePath := o._basePath
 	_result.Path = golangswaggerpaths.Join(_basePath, _path)

@@ -71,7 +71,7 @@ type GetTimestampCertChainOK struct {
 }
 
 func (o *GetTimestampCertChainOK) Error() string {
-	return fmt.Sprintf("[GET /api/v1/log/timestampCertChain][%d] getTimestampCertChainOK  %+v", 200, o.Payload)
+	return fmt.Sprintf("[GET /api/v1/timestamp/certchain][%d] getTimestampCertChainOK  %+v", 200, o.Payload)
 }
 func (o *GetTimestampCertChainOK) GetPayload() string {
 	return o.Payload
@@ -110,7 +110,7 @@ func (o *GetTimestampCertChainDefault) Code() int {
 }
 
 func (o *GetTimestampCertChainDefault) Error() string {
-	return fmt.Sprintf("[GET /api/v1/log/timestampCertChain][%d] getTimestampCertChain default  %+v", o._statusCode, o.Payload)
+	return fmt.Sprintf("[GET /api/v1/timestamp/certchain][%d] getTimestampCertChain default  %+v", o._statusCode, o.Payload)
 }
 func (o *GetTimestampCertChainDefault) GetPayload() *models.Error {
 	return o.Payload

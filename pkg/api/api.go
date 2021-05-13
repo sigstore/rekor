@@ -32,6 +32,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/sigstore/rekor/pkg/log"
+	pki "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
@@ -49,14 +50,14 @@ func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
 }
 
 type API struct {
-	logClient  trillian.TrillianLogClient
-	logID      int64
-	pubkey     string // PEM encoded public key
-	pubkeyHash string // SHA256 hash of DER-encoded public key
-	signer     signature.Signer
-	// timestamping cert chain
-	certChain []*x509.Certificate
-	verifier  *client.LogVerifier
+	logClient    trillian.TrillianLogClient
+	logID        int64
+	pubkey       string // PEM encoded public key
+	pubkeyHash   string // SHA256 hash of DER-encoded public key
+	signer       signature.Signer
+	certChain    []*x509.Certificate // timestamping cert chain
+	certChainPem string              // PEM encoded timestamping cert chain
+	verifier     *client.LogVerifier
 }
 
 func NewAPI() (*API, error) {
@@ -123,24 +124,28 @@ func NewAPI() (*API, error) {
 			intermediates.AddCert(cert)
 		}
 		roots.AddCert(certChain[len(certChain)-1])
-		_, err = certChain[0].Verify(x509.VerifyOptions{
+		if _, err = certChain[0].Verify(x509.VerifyOptions{
 			Roots:         roots,
 			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
 			Intermediates: intermediates,
-		})
-		if err != nil {
+		}); err != nil {
 			return nil, errors.Wrap(err, "invalid timestamping cert chain")
 		}
 	}
+	certChainPem, err := pki.CertChainToPEM(certChain)
+	if err != nil {
+		return nil, errors.Wrap(err, "timestamping cert chain")
+	}
 
 	return &API{
-		logClient:  logClient,
-		logID:      tLogID,
-		pubkey:     string(pubkey),
-		pubkeyHash: hex.EncodeToString(pubkeyHashBytes),
-		signer:     signer,
-		certChain:  certChain,
-		verifier:   verifier,
+		logClient:    logClient,
+		logID:        tLogID,
+		pubkey:       string(pubkey),
+		pubkeyHash:   hex.EncodeToString(pubkeyHashBytes),
+		signer:       signer,
+		certChain:    certChain,
+		certChainPem: string(certChainPem),
+		verifier:     verifier,
 	}, nil
 }
 

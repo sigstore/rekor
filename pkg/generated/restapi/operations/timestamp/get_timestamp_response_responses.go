@@ -41,7 +41,7 @@ type GetTimestampResponseOK struct {
 	/*
 	  In: Body
 	*/
-	Payload *models.TimestampResponse `json:"body,omitempty"`
+	Payload string `json:"body,omitempty"`
 }
 
 // NewGetTimestampResponseOK creates GetTimestampResponseOK with default headers values
@@ -51,13 +51,13 @@ func NewGetTimestampResponseOK() *GetTimestampResponseOK {
 }
 
 // WithPayload adds the payload to the get timestamp response o k response
-func (o *GetTimestampResponseOK) WithPayload(payload *models.TimestampResponse) *GetTimestampResponseOK {
+func (o *GetTimestampResponseOK) WithPayload(payload string) *GetTimestampResponseOK {
 	o.Payload = payload
 	return o
 }
 
 // SetPayload sets the payload to the get timestamp response o k response
-func (o *GetTimestampResponseOK) SetPayload(payload *models.TimestampResponse) {
+func (o *GetTimestampResponseOK) SetPayload(payload string) {
 	o.Payload = payload
 }
 
@@ -65,11 +65,9 @@ func (o *GetTimestampResponseOK) SetPayload(payload *models.TimestampResponse) {
 func (o *GetTimestampResponseOK) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
 
 	rw.WriteHeader(200)
-	if o.Payload != nil {
-		payload := o.Payload
-		if err := producer.Produce(rw, payload); err != nil {
-			panic(err) // let the recovery middleware deal with this
-		}
+	payload := o.Payload
+	if err := producer.Produce(rw, payload); err != nil {
+		panic(err) // let the recovery middleware deal with this
 	}
 }
 
@@ -115,6 +113,30 @@ func (o *GetTimestampResponseBadRequest) WriteResponse(rw http.ResponseWriter, p
 			panic(err) // let the recovery middleware deal with this
 		}
 	}
+}
+
+// GetTimestampResponseNotFoundCode is the HTTP code returned for type GetTimestampResponseNotFound
+const GetTimestampResponseNotFoundCode int = 404
+
+/*GetTimestampResponseNotFound The content requested could not be found
+
+swagger:response getTimestampResponseNotFound
+*/
+type GetTimestampResponseNotFound struct {
+}
+
+// NewGetTimestampResponseNotFound creates GetTimestampResponseNotFound with default headers values
+func NewGetTimestampResponseNotFound() *GetTimestampResponseNotFound {
+
+	return &GetTimestampResponseNotFound{}
+}
+
+// WriteResponse to the client
+func (o *GetTimestampResponseNotFound) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+
+	rw.Header().Del(runtime.HeaderContentType) //Remove Content-Type on empty responses
+
+	rw.WriteHeader(404)
 }
 
 /*GetTimestampResponseDefault There was an internal error in the server while processing the request

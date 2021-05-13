@@ -18,7 +18,11 @@ package util
 import (
 	"bytes"
 	"context"
+	"crypto"
+	"encoding/asn1"
+	"fmt"
 	"io/ioutil"
+	"math/big"
 	"testing"
 
 	"github.com/sassoftware/relic/lib/pkcs9"
@@ -31,6 +35,8 @@ func TestCreateTimestampRequest(t *testing.T) {
 		caseDesc      string
 		entry         []byte
 		expectSuccess bool
+		nonce         *big.Int
+		policy        asn1.ObjectIdentifier
 	}
 
 	fileBytes, _ := ioutil.ReadFile("../../tests/test_file.txt")
@@ -39,20 +45,50 @@ func TestCreateTimestampRequest(t *testing.T) {
 			caseDesc:      "valid timestamp request",
 			entry:         fileBytes,
 			expectSuccess: true,
+			nonce:         x509tools.MakeSerial(),
+		},
+		{
+			caseDesc:      "valid timestamp request no nonce",
+			entry:         fileBytes,
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "valid timestamp request with TSA policy id",
+			entry:         fileBytes,
+			expectSuccess: true,
+			policy:        asn1.ObjectIdentifier{1, 2, 3, 4, 5},
 		},
 	}
 	for _, tc := range testCases {
-		req, err := TimestampRequestFromData(tc.entry)
+		opts := TimestampRequestOptions{
+			Hash:         crypto.SHA256,
+			Nonce:        tc.nonce,
+			TSAPolicyOid: tc.policy,
+		}
+		h := opts.Hash.New()
+		h.Write(tc.entry)
+		digest := h.Sum(nil)
+		req, err := TimestampRequestFromDigest(digest, opts)
 		if (err == nil) != tc.expectSuccess {
 			t.Errorf("unexpected error in test case '%v': %v", tc.caseDesc, err)
 		}
-		// Validate that the hashed message matches the hash of the file.
-		hash, _ := x509tools.PkixDigestToHash(req.MessageImprint.HashAlgorithm)
-		h := hash.New()
-		h.Write(fileBytes)
-		digest := h.Sum(nil)
+		// Validate that the message hash matches the original file has.
 		if !bytes.Equal(digest, req.MessageImprint.HashedMessage) {
-			t.Errorf("unexpected error in test case '%v': %v", tc.caseDesc, err)
+			t.Errorf("unexpected error in test case '%v': %v", tc.caseDesc, "hashes do not match")
+		}
+		if tc.nonce != nil {
+			if tc.nonce.Cmp(req.Nonce) != 0 {
+				t.Errorf("unexpected error in test case '%v': %v", tc.caseDesc, "nonce does not match")
+			}
+		} else if req.Nonce != nil {
+			t.Errorf("unexpected error in test case '%v': %v", tc.caseDesc, fmt.Sprintf("nonce does not match got (%s) expected nil", req.Nonce.String()))
+		}
+		if tc.policy != nil {
+			if !tc.policy.Equal(req.ReqPolicy) {
+				t.Errorf("unexpected error in test case '%v': %v", tc.caseDesc, "policy does not match")
+			}
+		} else if req.ReqPolicy != nil {
+			t.Errorf("unexpected error in test case '%v': %v", tc.caseDesc, "policy does not match")
 		}
 	}
 }
@@ -88,7 +124,7 @@ func TestParseTimestampRequest(t *testing.T) {
 }
 
 // Create an in-memory CA and TSA and verify the response.
-func TestCreateResponse(t *testing.T) {
+func TestCreateRFC3161Response(t *testing.T) {
 	ctx := context.Background()
 	mem, err := signer.NewMemory()
 	if err != nil {
@@ -96,12 +132,19 @@ func TestCreateResponse(t *testing.T) {
 	}
 
 	fileBytes, _ := ioutil.ReadFile("../../tests/test_file.txt")
-	req, err := TimestampRequestFromData(fileBytes)
+	opts := TimestampRequestOptions{
+		Hash:  crypto.SHA256,
+		Nonce: x509tools.MakeSerial(),
+	}
+	h := opts.Hash.New()
+	h.Write(fileBytes)
+	digest := h.Sum(nil)
+	req, err := TimestampRequestFromDigest(digest, opts)
 	if err != nil {
 		t.Error(err)
 	}
 
-	resp, err := CreateResponse(ctx, *req, mem.CertChain, mem.Signer)
+	resp, err := CreateRfc3161Response(ctx, *req, mem.CertChain, mem.Signer)
 	if err != nil {
 		t.Error(err)
 	}

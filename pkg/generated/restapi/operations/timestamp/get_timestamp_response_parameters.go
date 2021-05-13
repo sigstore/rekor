@@ -22,16 +22,12 @@ package timestamp
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
-	"context"
 	"io"
 	"net/http"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
-	"github.com/go-openapi/validate"
-
-	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 // NewGetTimestampResponseParams creates a new GetTimestampResponseParams object
@@ -55,7 +51,7 @@ type GetTimestampResponseParams struct {
 	  Required: true
 	  In: body
 	*/
-	Query *models.TimestampRequest
+	Request io.ReadCloser
 }
 
 // BindRequest both binds and validates a request, it assumes that complex things implement a Validatable(strfmt.Registry) error interface
@@ -68,31 +64,9 @@ func (o *GetTimestampResponseParams) BindRequest(r *http.Request, route *middlew
 	o.HTTPRequest = r
 
 	if runtime.HasBody(r) {
-		defer r.Body.Close()
-		var body models.TimestampRequest
-		if err := route.Consumer.Consume(r.Body, &body); err != nil {
-			if err == io.EOF {
-				res = append(res, errors.Required("query", "body", ""))
-			} else {
-				res = append(res, errors.NewParseError("query", "body", "", err))
-			}
-		} else {
-			// validate body object
-			if err := body.Validate(route.Formats); err != nil {
-				res = append(res, err)
-			}
-
-			ctx := validate.WithOperationRequest(context.Background())
-			if err := body.ContextValidate(ctx, route.Formats); err != nil {
-				res = append(res, err)
-			}
-
-			if len(res) == 0 {
-				o.Query = &body
-			}
-		}
+		o.Request = r.Body
 	} else {
-		res = append(res, errors.Required("query", "body", ""))
+		res = append(res, errors.Required("request", "body", ""))
 	}
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)

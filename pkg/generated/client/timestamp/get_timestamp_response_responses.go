@@ -51,6 +51,12 @@ func (o *GetTimestampResponseReader) ReadResponse(response runtime.ClientRespons
 			return nil, err
 		}
 		return nil, result
+	case 404:
+		result := NewGetTimestampResponseNotFound()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
 	default:
 		result := NewGetTimestampResponseDefault(response.Code())
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -73,22 +79,20 @@ func NewGetTimestampResponseOK() *GetTimestampResponseOK {
 Returns a timestamp response
 */
 type GetTimestampResponseOK struct {
-	Payload *models.TimestampResponse
+	Payload string
 }
 
 func (o *GetTimestampResponseOK) Error() string {
-	return fmt.Sprintf("[POST /api/v1/tsr][%d] getTimestampResponseOK  %+v", 200, o.Payload)
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseOK  %+v", 200, o.Payload)
 }
-func (o *GetTimestampResponseOK) GetPayload() *models.TimestampResponse {
+func (o *GetTimestampResponseOK) GetPayload() string {
 	return o.Payload
 }
 
 func (o *GetTimestampResponseOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.TimestampResponse)
-
 	// response payload
-	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
+	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && err != io.EOF {
 		return err
 	}
 
@@ -109,7 +113,7 @@ type GetTimestampResponseBadRequest struct {
 }
 
 func (o *GetTimestampResponseBadRequest) Error() string {
-	return fmt.Sprintf("[POST /api/v1/tsr][%d] getTimestampResponseBadRequest  %+v", 400, o.Payload)
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseBadRequest  %+v", 400, o.Payload)
 }
 func (o *GetTimestampResponseBadRequest) GetPayload() *models.Error {
 	return o.Payload
@@ -123,6 +127,27 @@ func (o *GetTimestampResponseBadRequest) readResponse(response runtime.ClientRes
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
 		return err
 	}
+
+	return nil
+}
+
+// NewGetTimestampResponseNotFound creates a GetTimestampResponseNotFound with default headers values
+func NewGetTimestampResponseNotFound() *GetTimestampResponseNotFound {
+	return &GetTimestampResponseNotFound{}
+}
+
+/* GetTimestampResponseNotFound describes a response with status code 404, with default header values.
+
+The content requested could not be found
+*/
+type GetTimestampResponseNotFound struct {
+}
+
+func (o *GetTimestampResponseNotFound) Error() string {
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseNotFound ", 404)
+}
+
+func (o *GetTimestampResponseNotFound) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	return nil
 }
@@ -150,7 +175,7 @@ func (o *GetTimestampResponseDefault) Code() int {
 }
 
 func (o *GetTimestampResponseDefault) Error() string {
-	return fmt.Sprintf("[POST /api/v1/tsr][%d] getTimestampResponse default  %+v", o._statusCode, o.Payload)
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponse default  %+v", o._statusCode, o.Payload)
 }
 func (o *GetTimestampResponseDefault) GetPayload() *models.Error {
 	return o.Payload
