@@ -51,7 +51,7 @@ func init() {
     "title": "Rekor",
     "version": "0.0.1"
   },
-  "host": "api.rekor.dev",
+  "host": "rekor.sigstore.dev",
   "paths": {
     "/api/v1/index/retrieve": {
       "post": {
@@ -687,7 +687,7 @@ func init() {
     "title": "Rekor",
     "version": "0.0.1"
   },
-  "host": "api.rekor.dev",
+  "host": "rekor.sigstore.dev",
   "paths": {
     "/api/v1/index/retrieve": {
       "post": {
