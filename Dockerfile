@@ -25,8 +25,9 @@ RUN go mod download
 ADD ./cmd/ $APP_ROOT/src/cmd/
 ADD ./pkg/ $APP_ROOT/src/pkg/
 
-RUN go build ./cmd/rekor-server
-RUN CGO_ENABLED=0 go build -gcflags "all=-N -l" -o rekor-server_debug ./cmd/rekor-server
+ARG SERVER_LDFLAGS
+RUN go build -ldflags "${SERVER_LDFLAGS}" ./cmd/rekor-server
+RUN CGO_ENABLED=0 go build -gcflags "all=-N -l" -ldflags "${SERVER_LDFLAGS}" -o rekor-server_debug ./cmd/rekor-server
 
 # Multi-Stage production build
 FROM golang:1.16.4 as deploy
