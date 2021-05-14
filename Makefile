@@ -73,9 +73,9 @@ clean-gen: clean
 	rm -rf $(shell find pkg/generated -iname "*.go"|grep -v pkg/generated/restapi/configure_rekor_server.go)
 
 up:
-	docker-compose -f docker-compose.yml build
+	docker-compose -f docker-compose.yml build --build-arg SERVER_LDFLAGS=$(SERVER_LDFLAGS)
 	docker-compose -f docker-compose.yml up
 
 debug:
-	docker-compose -f docker-compose.yml -f docker-compose.debug.yml build rekor-server-debug
+	docker-compose -f docker-compose.yml -f docker-compose.debug.yml build --build-arg SERVER_LDFLAGS=$(SERVER_LDFLAGS) rekor-server-debug
 	docker-compose -f docker-compose.yml -f docker-compose.debug.yml up rekor-server-debug
