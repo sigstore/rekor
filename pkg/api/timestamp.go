@@ -24,18 +24,14 @@ import (
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/pkg/errors"
+	"github.com/sassoftware/relic/lib/pkcs9"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/timestamp"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
 )
 
-func RequestFromRekor(ctx context.Context, requestBytes []byte) ([]byte, error) {
-	req, err := util.ParseTimestampRequest(requestBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := util.CreateRfc3161Response(ctx, *req, api.certChain, api.signer)
+func RequestFromRekor(ctx context.Context, req pkcs9.TimeStampReq) ([]byte, error) {
+	resp, err := util.CreateRfc3161Response(ctx, req, api.certChain, api.signer)
 	if err != nil {
 		return nil, err
 	}
@@ -51,23 +47,28 @@ func RequestFromRekor(ctx context.Context, requestBytes []byte) ([]byte, error) 
 func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middleware.Responder {
 	// Fail early if we don't haven't configured rekor with a certificate for timestamping.
 	if len(api.certChain) == 0 {
-		return handleRekorAPIError(params, http.StatusNotFound, errors.New("rekor is not configured to serve timestamps"), "")
+		return handleRekorAPIError(params, http.StatusNotImplemented, errors.New("rekor is not configured to serve timestamps"), "")
 	}
 
 	// TODO: Add support for in-house JSON based timestamp response.
-	request, err := ioutil.ReadAll(params.Request)
+	requestBytes, err := ioutil.ReadAll(params.Request)
 	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateTimestampResponse)
+		return handleRekorAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
+	}
+	req, err := util.ParseTimestampRequest(requestBytes)
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusBadRequest, err, failedToGenerateTimestampResponse)
 	}
 
+	// Create response
 	ctx := params.HTTPRequest.Context()
-	resp, err := RequestFromRekor(ctx, request)
+	resp, err := RequestFromRekor(ctx, *req)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateTimestampResponse)
 	}
 
 	// TODO: Upload to transparency log and add entry UUID to location header.
-	log.RequestIDLogger(params.HTTPRequest).Debug("generating ok")
+	log.Logger.Errorf("generated OK")
 	return timestamp.NewGetTimestampResponseOK().WithPayload(string(resp))
 }
 

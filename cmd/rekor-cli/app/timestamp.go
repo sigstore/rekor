@@ -89,7 +89,7 @@ func (f *oidFlag) Type() string {
 func addTimestampFlags(cmd *cobra.Command) error {
 	cmd.Flags().Var(&fileFlag{}, "artifact", "path to an artifact to timestamp")
 	cmd.Flags().Var(&uuidFlag{}, "artifact-hash", "hex encoded SHA256 hash of the the artifact to timestamp")
-	cmd.Flags().Bool("nonce", false, "specify a pseudo-random nonce in the request")
+	cmd.Flags().Bool("nonce", true, "specify a pseudo-random nonce in the request")
 	cmd.Flags().Var(&oidFlag{}, "tsa-policy", "optional dotted OID notation for the policy that the TSA should use to create the response")
 
 	cmd.Flags().String("out", "response.tsr", "path to a file to write response.")

@@ -263,7 +263,7 @@ paths:
       tags:
         - timestamp
       produces:
-        - application/x-pem-file
+        - application/pem-certificate-chain
       responses:
         200:
           description: The PEM encoded cert chain

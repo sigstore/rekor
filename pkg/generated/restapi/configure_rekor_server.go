@@ -71,8 +71,9 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.YamlProducer = util.YamlProducer()
 
 	api.ApplicationXPemFileProducer = runtime.TextProducer()
-	api.ApplicationTimestampQueryConsumer = runtime.TextConsumer()
-	api.ApplicationTimestampReplyProducer = runtime.TextProducer()
+	api.ApplicationPemCertificateChainProducer = runtime.TextProducer()
+	api.ApplicationTimestampQueryConsumer = runtime.ByteStreamConsumer()
+	api.ApplicationTimestampReplyProducer = runtime.ByteStreamProducer()
 
 	api.EntriesCreateLogEntryHandler = entries.CreateLogEntryHandlerFunc(pkgapi.CreateLogEntryHandler)
 	api.EntriesGetLogEntryByIndexHandler = entries.GetLogEntryByIndexHandlerFunc(pkgapi.GetLogEntryByIndexHandler)

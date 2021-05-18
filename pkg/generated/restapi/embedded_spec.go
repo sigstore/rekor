@@ -373,7 +373,7 @@ func init() {
       "get": {
         "description": "Returns the certfiicate chain for timestamping that can be used to validate trusted timestamps",
         "produces": [
-          "application/x-pem-file"
+          "application/pem-certificate-chain"
         ],
         "tags": [
           "timestamp"
@@ -1128,7 +1128,7 @@ func init() {
       "get": {
         "description": "Returns the certfiicate chain for timestamping that can be used to validate trusted timestamps",
         "produces": [
-          "application/x-pem-file"
+          "application/pem-certificate-chain"
         ],
         "tags": [
           "timestamp"

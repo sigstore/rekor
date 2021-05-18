@@ -68,6 +68,9 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 		JSONConsumer: runtime.JSONConsumer(),
 		YamlConsumer: yamlpc.YAMLConsumer(),
 
+		ApplicationPemCertificateChainProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
+			return errors.NotImplemented("applicationPemCertificateChain producer has not yet been implemented")
+		}),
 		ApplicationTimestampReplyProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
 			return errors.NotImplemented("applicationTimestampReply producer has not yet been implemented")
 		}),
@@ -145,6 +148,9 @@ type RekorServerAPI struct {
 	//   - application/yaml
 	YamlConsumer runtime.Consumer
 
+	// ApplicationPemCertificateChainProducer registers a producer for the following mime types:
+	//   - application/pem-certificate-chain
+	ApplicationPemCertificateChainProducer runtime.Producer
 	// ApplicationTimestampReplyProducer registers a producer for the following mime types:
 	//   - application/timestamp-reply
 	ApplicationTimestampReplyProducer runtime.Producer
@@ -257,6 +263,9 @@ func (o *RekorServerAPI) Validate() error {
 		unregistered = append(unregistered, "YamlConsumer")
 	}
 
+	if o.ApplicationPemCertificateChainProducer == nil {
+		unregistered = append(unregistered, "ApplicationPemCertificateChainProducer")
+	}
 	if o.ApplicationTimestampReplyProducer == nil {
 		unregistered = append(unregistered, "ApplicationTimestampReplyProducer")
 	}
@@ -350,6 +359,8 @@ func (o *RekorServerAPI) ProducersFor(mediaTypes []string) map[string]runtime.Pr
 	result := make(map[string]runtime.Producer, len(mediaTypes))
 	for _, mt := range mediaTypes {
 		switch mt {
+		case "application/pem-certificate-chain":
+			result["application/pem-certificate-chain"] = o.ApplicationPemCertificateChainProducer
 		case "application/timestamp-reply":
 			result["application/timestamp-reply"] = o.ApplicationTimestampReplyProducer
 		case "application/x-pem-file":

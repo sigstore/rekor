@@ -65,7 +65,7 @@ func (a *Client) GetTimestampCertChain(params *GetTimestampCertChainParams, opts
 		ID:                 "getTimestampCertChain",
 		Method:             "GET",
 		PathPattern:        "/api/v1/timestamp/certchain",
-		ProducesMediaTypes: []string{"application/x-pem-file"},
+		ProducesMediaTypes: []string{"application/pem-certificate-chain"},
 		ConsumesMediaTypes: []string{"application/json", "application/yaml"},
 		Schemes:            []string{"http"},
 		Params:             params,

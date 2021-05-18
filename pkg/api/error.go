@@ -27,6 +27,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/timestamp"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/sigstore/rekor/pkg/log"
 )
@@ -139,6 +140,19 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		default:
 			return index.NewSearchIndexDefault(code).WithPayload(errorMsg(message, code))
 		}
+	case timestamp.GetTimestampResponseParams:
+		logMsg(params.HTTPRequest)
+		switch code {
+		case http.StatusBadRequest:
+			return timestamp.NewGetTimestampResponseBadRequest().WithPayload(errorMsg(message, code))
+		case http.StatusNotFound:
+			return timestamp.NewGetTimestampResponseNotFound()
+		default:
+			return timestamp.NewGetTimestampResponseDefault(code).WithPayload(errorMsg(message, code))
+		}
+	case timestamp.GetTimestampCertChainParams:
+		logMsg(params.HTTPRequest)
+		return timestamp.NewGetTimestampCertChainDefault(code).WithPayload(errorMsg(message, code))
 	default:
 		log.Logger.Errorf("unable to find method for type %T; error: %v", params, err)
 		return middleware.Error(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))

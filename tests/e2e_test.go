@@ -204,7 +204,6 @@ func TestGet(t *testing.T) {
 	outputContains(t, out, uuid)
 }
 
-/*
 func TestMinisign(t *testing.T) {
 	// Create a keypair
 	keyPath := filepath.Join(t.TempDir(), "minisign.key")
@@ -235,7 +234,7 @@ func TestMinisign(t *testing.T) {
 
 	out = runCli(t, "search", "--public-key", pubPath, "--pki-format", "minisign")
 	outputContains(t, out, uuid)
-}*/
+}
 
 func TestSSH(t *testing.T) {
 	td := t.TempDir()
