@@ -248,6 +248,7 @@ paths:
           description: Returns a timestamp response 
           schema:
             type: string
+            format: binary
         404:
           $ref: '#/responses/NotFound'
         400:

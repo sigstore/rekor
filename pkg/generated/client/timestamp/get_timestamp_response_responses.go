@@ -34,13 +34,14 @@ import (
 // GetTimestampResponseReader is a Reader for the GetTimestampResponse structure.
 type GetTimestampResponseReader struct {
 	formats strfmt.Registry
+	writer  io.Writer
 }
 
 // ReadResponse reads a server response into the received o.
 func (o *GetTimestampResponseReader) ReadResponse(response runtime.ClientResponse, consumer runtime.Consumer) (interface{}, error) {
 	switch response.Code() {
 	case 200:
-		result := NewGetTimestampResponseOK()
+		result := NewGetTimestampResponseOK(o.writer)
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
 			return nil, err
 		}
@@ -70,8 +71,11 @@ func (o *GetTimestampResponseReader) ReadResponse(response runtime.ClientRespons
 }
 
 // NewGetTimestampResponseOK creates a GetTimestampResponseOK with default headers values
-func NewGetTimestampResponseOK() *GetTimestampResponseOK {
-	return &GetTimestampResponseOK{}
+func NewGetTimestampResponseOK(writer io.Writer) *GetTimestampResponseOK {
+	return &GetTimestampResponseOK{
+
+		Payload: writer,
+	}
 }
 
 /* GetTimestampResponseOK describes a response with status code 200, with default header values.
@@ -79,20 +83,20 @@ func NewGetTimestampResponseOK() *GetTimestampResponseOK {
 Returns a timestamp response
 */
 type GetTimestampResponseOK struct {
-	Payload string
+	Payload io.Writer
 }
 
 func (o *GetTimestampResponseOK) Error() string {
 	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseOK  %+v", 200, o.Payload)
 }
-func (o *GetTimestampResponseOK) GetPayload() string {
+func (o *GetTimestampResponseOK) GetPayload() io.Writer {
 	return o.Payload
 }
 
 func (o *GetTimestampResponseOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && err != io.EOF {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
 		return err
 	}
 

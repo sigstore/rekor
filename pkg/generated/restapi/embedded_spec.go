@@ -354,7 +354,8 @@ func init() {
           "200": {
             "description": "Returns a timestamp response",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "binary"
             }
           },
           "400": {
@@ -1103,7 +1104,8 @@ func init() {
           "200": {
             "description": "Returns a timestamp response",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "binary"
             }
           },
           "400": {

@@ -17,6 +17,7 @@ limitations under the License.
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/asn1"
 	"io/ioutil"
@@ -69,7 +70,7 @@ func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middl
 
 	// TODO: Upload to transparency log and add entry UUID to location header.
 	log.Logger.Errorf("generated OK")
-	return timestamp.NewGetTimestampResponseOK().WithPayload(string(resp))
+	return timestamp.NewGetTimestampResponseOK().WithPayload(ioutil.NopCloser(bytes.NewReader(resp)))
 }
 
 func GetTimestampCertChainHandler(params timestamp.GetTimestampCertChainParams) middleware.Responder {

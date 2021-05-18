@@ -217,12 +217,13 @@ var timestampCmd = &cobra.Command{
 		params := timestamp.NewGetTimestampResponseParams()
 		params.Request = ioutil.NopCloser(bytes.NewReader(requestBytes))
 
-		resp, err := rekorClient.Timestamp.GetTimestampResponse(params)
+		var respBytes bytes.Buffer
+		_, err = rekorClient.Timestamp.GetTimestampResponse(params, &respBytes)
 		if err != nil {
 			return nil, err
 		}
 		// Sanity check response and check if the TimeStampToken was successfully created
-		if _, err = timestampReq.ParseResponse([]byte(resp.Payload)); err != nil {
+		if _, err = timestampReq.ParseResponse(respBytes.Bytes()); err != nil {
 			return nil, err
 		}
 
@@ -231,7 +232,7 @@ var timestampCmd = &cobra.Command{
 		if outStr == "" {
 			outStr = "response.tsr"
 		}
-		if err := ioutil.WriteFile(outStr, []byte(resp.Payload), 0600); err != nil {
+		if err := ioutil.WriteFile(outStr, respBytes.Bytes(), 0600); err != nil {
 			return nil, err
 		}
 

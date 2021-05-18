@@ -22,6 +22,7 @@ package timestamp
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/go-openapi/runtime"
@@ -41,7 +42,7 @@ type GetTimestampResponseOK struct {
 	/*
 	  In: Body
 	*/
-	Payload string `json:"body,omitempty"`
+	Payload io.ReadCloser `json:"body,omitempty"`
 }
 
 // NewGetTimestampResponseOK creates GetTimestampResponseOK with default headers values
@@ -51,13 +52,13 @@ func NewGetTimestampResponseOK() *GetTimestampResponseOK {
 }
 
 // WithPayload adds the payload to the get timestamp response o k response
-func (o *GetTimestampResponseOK) WithPayload(payload string) *GetTimestampResponseOK {
+func (o *GetTimestampResponseOK) WithPayload(payload io.ReadCloser) *GetTimestampResponseOK {
 	o.Payload = payload
 	return o
 }
 
 // SetPayload sets the payload to the get timestamp response o k response
-func (o *GetTimestampResponseOK) SetPayload(payload string) {
+func (o *GetTimestampResponseOK) SetPayload(payload io.ReadCloser) {
 	o.Payload = payload
 }
 
