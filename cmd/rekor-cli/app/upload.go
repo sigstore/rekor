@@ -137,10 +137,7 @@ func verifyLogEntry(ctx context.Context, rekorClient *client.Rekor, logEntry mod
 		IntegratedTime: logEntry.IntegratedTime,
 		LogIndex:       logEntry.LogIndex,
 		Body:           logEntry.Body,
-	}
-	// this was added after later, so we check for the scenario where it might be unset
-	if logEntry.LogID != nil {
-		le.LogID = logEntry.LogID
+		LogID:          logEntry.LogID,
 	}
 
 	payload, err := le.MarshalBinary()
