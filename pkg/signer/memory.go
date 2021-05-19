@@ -110,5 +110,7 @@ func NewMemory() (*Memory, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "generating private key")
 	}
-	return &Memory{signature.NewECDSASignerVerifier(privKey, crypto.SHA256)}, nil
+	return &Memory{
+		ECDSASignerVerifier: signature.NewECDSASignerVerifier(privKey, crypto.SHA256),
+	}, nil
 }

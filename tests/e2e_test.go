@@ -395,15 +395,15 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	// Create a random payload and sign it
 	ctx := context.Background()
 	payload := []byte("payload")
-	mem, err := signer.NewMemory()
+	s, err := signer.NewMemory()
 	if err != nil {
 		t.Fatal(err)
 	}
-	signature, _, err := mem.Sign(ctx, payload)
+	signature, _, err := s.Sign(ctx, payload)
 	if err != nil {
 		t.Fatal(err)
 	}
-	pubkey, err := mem.PublicKey(ctx)
+	pubkey, err := s.PublicKey(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
