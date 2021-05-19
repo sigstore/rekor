@@ -22,7 +22,7 @@ If you're interesting in integration with Rekor, we have an [OpenAPI swagger edi
 
 ## Public Instance
 
-A public instance of rekor can be found at [api.sigstore.dev](https://api.sigstore.dev/api/v1/log/)
+A public instance of rekor can be found at [rekor.sigstore.dev](https://rekor.sigstore.dev/api/v1/log/)
 
 **IMPORTANT**: This instance is currently operated on a best-effort basis.
 We **will take the log down** and reset it with zero notice.

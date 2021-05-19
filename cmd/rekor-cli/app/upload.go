@@ -19,7 +19,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"os"
 
@@ -28,6 +27,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
@@ -118,7 +118,7 @@ var uploadCmd = &cobra.Command{
 
 		// verify log entry
 		if verified, err := verifyLogEntry(ctx, rekorClient, logEntry); err != nil || !verified {
-			fmt.Fprintf(os.Stderr, "unable to verify entry was added to log: %v", err)
+			return nil, errors.Wrap(err, "unable to verify entry was added to log")
 		}
 
 		return &uploadCmdOutput{
@@ -137,7 +137,9 @@ func verifyLogEntry(ctx context.Context, rekorClient *client.Rekor, logEntry mod
 		IntegratedTime: logEntry.IntegratedTime,
 		LogIndex:       logEntry.LogIndex,
 		Body:           logEntry.Body,
+		LogID:          logEntry.LogID,
 	}
+
 	payload, err := le.MarshalBinary()
 	if err != nil {
 		return false, err

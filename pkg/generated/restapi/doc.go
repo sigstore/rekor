@@ -20,7 +20,7 @@
 //  Rekor is a cryptographically secure, immutable transparency log for signed software releases.
 //  Schemes:
 //    http
-//  Host: api.rekor.dev
+//  Host: rekor.sigstore.dev
 //  BasePath: /
 //  Version: 0.0.1
 //

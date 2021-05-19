@@ -55,10 +55,10 @@ func init() {
 	rootCmd.PersistentFlags().String("config", "", "config file (default is $HOME/.rekor.yaml)")
 	rootCmd.PersistentFlags().Bool("store_tree_state", true, "whether to store tree state in between invocations for additional verification")
 
-	rootCmd.PersistentFlags().Var(&urlFlag{url: "https://api.rekor.dev"}, "rekor_server", "Server address:port")
+	rootCmd.PersistentFlags().Var(&urlFlag{url: "https://rekor.sigstore.dev"}, "rekor_server", "Server address:port")
 	rootCmd.PersistentFlags().Var(&formatFlag{format: "default"}, "format", "Command output format")
 
-	rootCmd.PersistentFlags().String("api-key", "", "API key for api.rekor.dev")
+	rootCmd.PersistentFlags().String("api-key", "", "API key for rekor.sigstore.dev")
 
 	// these are bound here and not in PreRun so that all child commands can use them
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {

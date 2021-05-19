@@ -50,6 +50,13 @@ var serveCmd = &cobra.Command{
 		// from https://github.com/golang/glog/commit/fca8c8854093a154ff1eb580aae10276ad6b1b5f
 		_ = flag.CommandLine.Parse([]string{})
 
+		vi := VersionInfo()
+		viStr, err := vi.JSONString()
+		if err != nil {
+			viStr = vi.String()
+		}
+		log.Logger.Infof("starting rekor-server @ %v", viStr)
+
 		doc, _ := loads.Embedded(restapi.SwaggerJSON, restapi.FlatSwaggerJSON)
 		server := restapi.NewServer(operations.NewRekorServerAPI(doc))
 		defer func() {
