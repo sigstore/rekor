@@ -142,23 +142,29 @@ func ParseTimestampRequest(data []byte) (*pkcs9.TimeStampReq, error) {
 
 func CreateRfc3161Response(ctx context.Context, req pkcs9.TimeStampReq, certChain []*x509.Certificate, signer signature.Signer) (*pkcs9.TimeStampResp, error) {
 	// Populate TSTInfo.
-	info := new(pkcs9.TSTInfo)
-	info.Version = req.Version
-	if req.ReqPolicy.String() != "" {
-		info.Policy = req.ReqPolicy
-	} else {
-		info.Policy = asn1.ObjectIdentifier{1, 2, 3, 4, 1}
+	genTimeBytes, err := asn1.MarshalWithParams(time.Now(), "generalized")
+	if err != nil {
+		return nil, err
 	}
-	info.MessageImprint = req.MessageImprint
-	// TODO: info.TSA is optional but ideally we should include it from the subject name of the certificate.
-	// TODO: Ensure that every (SerialNumber, TSA name) identifies a unique token.
-	info.SerialNumber = x509tools.MakeSerial()
-	genTimeBytes, _ := asn1.MarshalWithParams(time.Now(), "generalized")
-	info.GenTime = asn1.RawValue{FullBytes: genTimeBytes}
-	info.Nonce = req.Nonce
-	info.Extensions = req.Extensions
+	policy := asn1.ObjectIdentifier{1, 2, 3, 4, 1}
+	if req.ReqPolicy.String() != "" {
+		policy = req.ReqPolicy
+	}
 
-	encoded, err := asn1.Marshal(*info)
+	info := pkcs9.TSTInfo{
+		Version:        req.Version,
+		MessageImprint: req.MessageImprint,
+		// directoryName is tag 4 https://datatracker.ietf.org/doc/html/rfc3280#section-4.2.1.7
+		TSA: pkcs9.GeneralName{Value: asn1.RawValue{Tag: 4, Class: 2, IsCompound: true, Bytes: certChain[0].RawSubject}},
+		// TODO: Ensure that every (SerialNumber, TSA name) identifies a unique token.
+		SerialNumber: x509tools.MakeSerial(),
+		GenTime:      asn1.RawValue{FullBytes: genTimeBytes},
+		Nonce:        req.Nonce,
+		Policy:       policy,
+		Extensions:   req.Extensions,
+	}
+
+	encoded, err := asn1.Marshal(info)
 	if err != nil {
 		return nil, err
 	}
