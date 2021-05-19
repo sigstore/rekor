@@ -27,7 +27,7 @@ import (
 func TestMemory(t *testing.T) {
 	ctx := context.Background()
 
-	m, certChain, err := New(ctx, "memory")
+	m, err := New(ctx, "memory")
 	if err != nil {
 		t.Fatalf("new memory: %v", err)
 	}
@@ -58,6 +58,7 @@ func TestMemory(t *testing.T) {
 	}
 
 	// verify signature using the cert's public key
+	certChain, err := NewTimestampingCertWithSelfSignedCA(pk)
 	pkCert, ok := certChain[0].PublicKey.(*ecdsa.PublicKey)
 	if !ok {
 		t.Fatalf("cert ecdsa public key: %v", err)

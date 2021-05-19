@@ -36,12 +36,11 @@ const MemoryScheme = "memory"
 
 // returns an in-memory signer and verify, used for spinning up local instances
 type Memory struct {
-	Signer    signature.ECDSASignerVerifier
-	CertChain []*x509.Certificate
+	signature.ECDSASignerVerifier
 }
 
 // create a self-signed CA and generate a timestamping certificate to rekor
-func createTimestampingCertWithSelfSignedCA(pub ecdsa.PublicKey) ([]*x509.Certificate, error) {
+func NewTimestampingCertWithSelfSignedCA(pub crypto.PublicKey) ([]*x509.Certificate, error) {
 	// generate self-signed CA
 	caPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -98,7 +97,7 @@ func createTimestampingCertWithSelfSignedCA(pub ecdsa.PublicKey) ([]*x509.Certif
 		},
 		BasicConstraintsValid: true,
 	}
-	certBytes, err := x509.CreateCertificate(rand.Reader, cert, ca, &pub, caPrivKey)
+	certBytes, err := x509.CreateCertificate(rand.Reader, cert, ca, pub.(*ecdsa.PublicKey), caPrivKey)
 	if err != nil {
 		return nil, err
 	}
@@ -111,13 +110,5 @@ func NewMemory() (*Memory, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "generating private key")
 	}
-	signer := signature.NewECDSASignerVerifier(privKey, crypto.SHA256)
-	certChain, err := createTimestampingCertWithSelfSignedCA(privKey.PublicKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "generating certificate")
-	}
-	return &Memory{
-		signer,
-		certChain,
-	}, nil
+	return &Memory{signature.NewECDSASignerVerifier(privKey, crypto.SHA256)}, nil
 }

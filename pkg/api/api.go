@@ -88,11 +88,11 @@ func NewAPI() (*API, error) {
 		return nil, errors.Wrap(err, "get tree")
 	}
 
-	signer, certChain, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
+	rekorSigner, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
 	if err != nil {
 		return nil, errors.Wrap(err, "getting new signer")
 	}
-	pk, err := signer.PublicKey(ctx)
+	pk, err := rekorSigner.PublicKey(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting public key")
 	}
@@ -116,22 +116,22 @@ func NewAPI() (*API, error) {
 		return nil, errors.Wrap(err, "new verifier")
 	}
 
-	// verify cert chain if present
-	if len(certChain) > 0 {
-		roots := x509.NewCertPool()
-		intermediates := x509.NewCertPool()
-		for _, cert := range certChain[1:(len(certChain) - 1)] {
-			intermediates.AddCert(cert)
+	var certChain []*x509.Certificate
+	certChainStr := viper.GetString("rekor_server.timestamp_chain")
+	if certChainStr != "" {
+		var err error
+		if certChain, err = pki.ParseTimestampCertChain([]byte(certChainStr)); err != nil {
+			return nil, errors.Wrap(err, "parsing timestamp cert chain")
 		}
-		roots.AddCert(certChain[len(certChain)-1])
-		if _, err = certChain[0].Verify(x509.VerifyOptions{
-			Roots:         roots,
-			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
-			Intermediates: intermediates,
-		}); err != nil {
-			return nil, errors.Wrap(err, "invalid timestamping cert chain")
+	} else if viper.GetString("rekor_server.signer") == signer.MemoryScheme {
+		// Generate a timestaming cert with a self signed CA if we are configured with an in-memory signer.
+		var err error
+		certChain, err = signer.NewTimestampingCertWithSelfSignedCA(pk)
+		if err != nil {
+			return nil, errors.Wrap(err, "generating timestaping cert chain")
 		}
 	}
+
 	certChainPem, err := pki.CertChainToPEM(certChain)
 	if err != nil {
 		return nil, errors.Wrap(err, "timestamping cert chain")
@@ -142,7 +142,7 @@ func NewAPI() (*API, error) {
 		logID:        tLogID,
 		pubkey:       string(pubkey),
 		pubkeyHash:   hex.EncodeToString(pubkeyHashBytes),
-		signer:       signer,
+		signer:       rekorSigner,
 		certChain:    certChain,
 		certChainPem: string(certChainPem),
 		verifier:     verifier,

@@ -17,6 +17,7 @@ package x509
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -209,28 +210,43 @@ func TestSignature_VerifyFail(t *testing.T) {
 	}
 }
 
+func TestNilCertChainToPEM(t *testing.T) {
+	certChain := []*x509.Certificate{}
+	if _, err := CertChainToPEM(certChain); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestCertChain_Verify(t *testing.T) {
 	mem, err := signer.NewMemory()
 	if err != nil {
 		t.Fatal(err)
 	}
 	// A properly created cert chain should encode to PEM OK.
-	certChainBytes, err := CertChainToPEM(mem.CertChain)
+	ctx := context.Background()
+	pk, err := mem.PublicKey(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certChain, err := signer.NewTimestampingCertWithSelfSignedCA(pk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certChainBytes, err := CertChainToPEM(certChain)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Verify bytes by comparing with the certs.
-	var block *pem.Block
-	block, certChainBytes = pem.Decode(certChainBytes)
-	for i := 0; block != nil; block, certChainBytes = pem.Decode(certChainBytes) {
-		if block.Type != "CERTIFICATE" {
-			t.Fatal(err)
-		}
-		if !bytes.Equal(block.Bytes, mem.CertChain[i].Raw) {
-			t.Fatal(err)
-		}
-		i++
+	// Parse and verify timestamping cert chain
+	parsedCertChain, err := ParseTimestampCertChain(certChainBytes)
+	if err != nil {
+		t.Fatal(err)
 	}
 
+	// Compare with original
+	for idx, cert := range parsedCertChain {
+		if !cert.Equal(certChain[idx]) {
+			t.Fatal("unexpected error comparing cert chain")
+		}
+	}
 }

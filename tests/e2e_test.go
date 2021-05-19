@@ -399,12 +399,11 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := mem.Signer
-	signature, _, err := s.Sign(ctx, payload)
+	signature, _, err := mem.Sign(ctx, payload)
 	if err != nil {
 		t.Fatal(err)
 	}
-	pubkey, err := s.PublicKey(ctx)
+	pubkey, err := mem.PublicKey(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

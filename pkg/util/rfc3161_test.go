@@ -130,6 +130,14 @@ func TestCreateRFC3161Response(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	pk, err := mem.PublicKey(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certChain, err := signer.NewTimestampingCertWithSelfSignedCA(pk)
+	if err != nil {
+		t.Error(err)
+	}
 
 	fileBytes, _ := ioutil.ReadFile("../../tests/test_file.txt")
 	opts := TimestampRequestOptions{
@@ -144,12 +152,12 @@ func TestCreateRFC3161Response(t *testing.T) {
 		t.Error(err)
 	}
 
-	resp, err := CreateRfc3161Response(ctx, *req, mem.CertChain, mem.Signer)
+	resp, err := CreateRfc3161Response(ctx, *req, certChain, mem)
 	if err != nil {
 		t.Error(err)
 	}
 
-	_, err = pkcs9.Verify(&resp.TimeStampToken, fileBytes, mem.CertChain)
+	_, err = pkcs9.Verify(&resp.TimeStampToken, fileBytes, certChain)
 	if err != nil {
 		t.Error(err)
 	}
