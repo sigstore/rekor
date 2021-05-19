@@ -52,8 +52,8 @@ func (o *GetTimestampResponseReader) ReadResponse(response runtime.ClientRespons
 			return nil, err
 		}
 		return nil, result
-	case 404:
-		result := NewGetTimestampResponseNotFound()
+	case 501:
+		result := NewGetTimestampResponseNotImplemented()
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
 			return nil, err
 		}
@@ -135,23 +135,23 @@ func (o *GetTimestampResponseBadRequest) readResponse(response runtime.ClientRes
 	return nil
 }
 
-// NewGetTimestampResponseNotFound creates a GetTimestampResponseNotFound with default headers values
-func NewGetTimestampResponseNotFound() *GetTimestampResponseNotFound {
-	return &GetTimestampResponseNotFound{}
+// NewGetTimestampResponseNotImplemented creates a GetTimestampResponseNotImplemented with default headers values
+func NewGetTimestampResponseNotImplemented() *GetTimestampResponseNotImplemented {
+	return &GetTimestampResponseNotImplemented{}
 }
 
-/* GetTimestampResponseNotFound describes a response with status code 404, with default header values.
+/* GetTimestampResponseNotImplemented describes a response with status code 501, with default header values.
 
-The content requested could not be found
+The content requested is not implemented
 */
-type GetTimestampResponseNotFound struct {
+type GetTimestampResponseNotImplemented struct {
 }
 
-func (o *GetTimestampResponseNotFound) Error() string {
-	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseNotFound ", 404)
+func (o *GetTimestampResponseNotImplemented) Error() string {
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseNotImplemented ", 501)
 }
 
-func (o *GetTimestampResponseNotFound) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+func (o *GetTimestampResponseNotImplemented) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	return nil
 }

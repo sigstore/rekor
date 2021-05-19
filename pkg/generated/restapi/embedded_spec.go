@@ -361,8 +361,8 @@ func init() {
           "400": {
             "$ref": "#/responses/BadContent"
           },
-          "404": {
-            "$ref": "#/responses/NotFound"
+          "501": {
+            "$ref": "#/responses/NotImplemented"
           },
           "default": {
             "$ref": "#/responses/InternalServerError"
@@ -387,6 +387,9 @@ func init() {
             "schema": {
               "type": "string"
             }
+          },
+          "404": {
+            "$ref": "#/responses/NotFound"
           },
           "default": {
             "$ref": "#/responses/InternalServerError"
@@ -734,6 +737,9 @@ func init() {
     },
     "NotFound": {
       "description": "The content requested could not be found"
+    },
+    "NotImplemented": {
+      "description": "The content requested is not implemented"
     }
   }
 }`))
@@ -1114,8 +1120,8 @@ func init() {
               "$ref": "#/definitions/Error"
             }
           },
-          "404": {
-            "description": "The content requested could not be found"
+          "501": {
+            "description": "The content requested is not implemented"
           },
           "default": {
             "description": "There was an internal error in the server while processing the request",
@@ -1143,6 +1149,9 @@ func init() {
             "schema": {
               "type": "string"
             }
+          },
+          "404": {
+            "description": "The content requested could not be found"
           },
           "default": {
             "description": "There was an internal error in the server while processing the request",
@@ -2314,6 +2323,9 @@ func init() {
     },
     "NotFound": {
       "description": "The content requested could not be found"
+    },
+    "NotImplemented": {
+      "description": "The content requested is not implemented"
     }
   }
 }`))

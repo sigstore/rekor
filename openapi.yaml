@@ -249,10 +249,10 @@ paths:
           schema:
             type: string
             format: binary
-        404:
-          $ref: '#/responses/NotFound'
         400:
           $ref: '#/responses/BadContent'
+        501:
+          $ref: '#/responses/NotImplemented'
         default:
           $ref: '#/responses/InternalServerError'
 
@@ -270,6 +270,8 @@ paths:
           description: The PEM encoded cert chain
           schema:
             type: string
+        404:
+          $ref: '#/responses/NotFound'
         default:
           $ref: '#/responses/InternalServerError'
 
@@ -519,6 +521,8 @@ responses:
         format: uri
   NotFound:
     description: The content requested could not be found
+  NotImplemented:
+    description: The content requested is not implemented
   InternalServerError:
     description: There was an internal error in the server while processing the request
     schema:

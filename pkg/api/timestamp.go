@@ -74,5 +74,8 @@ func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middl
 }
 
 func GetTimestampCertChainHandler(params timestamp.GetTimestampCertChainParams) middleware.Responder {
+	if len(api.certChain) == 0 {
+		return handleRekorAPIError(params, http.StatusNotFound, errors.New("rekor is not configured with a timestamping certificate"), "")
+	}
 	return timestamp.NewGetTimestampCertChainOK().WithPayload(api.certChainPem)
 }

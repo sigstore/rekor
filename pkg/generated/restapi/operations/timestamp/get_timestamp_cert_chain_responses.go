@@ -71,6 +71,30 @@ func (o *GetTimestampCertChainOK) WriteResponse(rw http.ResponseWriter, producer
 	}
 }
 
+// GetTimestampCertChainNotFoundCode is the HTTP code returned for type GetTimestampCertChainNotFound
+const GetTimestampCertChainNotFoundCode int = 404
+
+/*GetTimestampCertChainNotFound The content requested could not be found
+
+swagger:response getTimestampCertChainNotFound
+*/
+type GetTimestampCertChainNotFound struct {
+}
+
+// NewGetTimestampCertChainNotFound creates GetTimestampCertChainNotFound with default headers values
+func NewGetTimestampCertChainNotFound() *GetTimestampCertChainNotFound {
+
+	return &GetTimestampCertChainNotFound{}
+}
+
+// WriteResponse to the client
+func (o *GetTimestampCertChainNotFound) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+
+	rw.Header().Del(runtime.HeaderContentType) //Remove Content-Type on empty responses
+
+	rw.WriteHeader(404)
+}
+
 /*GetTimestampCertChainDefault There was an internal error in the server while processing the request
 
 swagger:response getTimestampCertChainDefault

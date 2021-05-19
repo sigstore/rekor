@@ -146,13 +146,18 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		case http.StatusBadRequest:
 			return timestamp.NewGetTimestampResponseBadRequest().WithPayload(errorMsg(message, code))
 		case http.StatusNotFound:
-			return timestamp.NewGetTimestampResponseNotFound()
+			return timestamp.NewGetTimestampResponseNotImplemented()
 		default:
 			return timestamp.NewGetTimestampResponseDefault(code).WithPayload(errorMsg(message, code))
 		}
 	case timestamp.GetTimestampCertChainParams:
 		logMsg(params.HTTPRequest)
-		return timestamp.NewGetTimestampCertChainDefault(code).WithPayload(errorMsg(message, code))
+		switch code {
+		case http.StatusNotFound:
+			return timestamp.NewGetTimestampCertChainNotFound()
+		default:
+			return timestamp.NewGetTimestampCertChainDefault(code).WithPayload(errorMsg(message, code))
+		}
 	default:
 		log.Logger.Errorf("unable to find method for type %T; error: %v", params, err)
 		return middleware.Error(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))

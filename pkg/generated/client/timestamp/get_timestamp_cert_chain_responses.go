@@ -45,6 +45,12 @@ func (o *GetTimestampCertChainReader) ReadResponse(response runtime.ClientRespon
 			return nil, err
 		}
 		return result, nil
+	case 404:
+		result := NewGetTimestampCertChainNotFound()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
 	default:
 		result := NewGetTimestampCertChainDefault(response.Code())
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -83,6 +89,27 @@ func (o *GetTimestampCertChainOK) readResponse(response runtime.ClientResponse, 
 	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && err != io.EOF {
 		return err
 	}
+
+	return nil
+}
+
+// NewGetTimestampCertChainNotFound creates a GetTimestampCertChainNotFound with default headers values
+func NewGetTimestampCertChainNotFound() *GetTimestampCertChainNotFound {
+	return &GetTimestampCertChainNotFound{}
+}
+
+/* GetTimestampCertChainNotFound describes a response with status code 404, with default header values.
+
+The content requested could not be found
+*/
+type GetTimestampCertChainNotFound struct {
+}
+
+func (o *GetTimestampCertChainNotFound) Error() string {
+	return fmt.Sprintf("[GET /api/v1/timestamp/certchain][%d] getTimestampCertChainNotFound ", 404)
+}
+
+func (o *GetTimestampCertChainNotFound) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	return nil
 }

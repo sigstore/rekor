@@ -116,28 +116,28 @@ func (o *GetTimestampResponseBadRequest) WriteResponse(rw http.ResponseWriter, p
 	}
 }
 
-// GetTimestampResponseNotFoundCode is the HTTP code returned for type GetTimestampResponseNotFound
-const GetTimestampResponseNotFoundCode int = 404
+// GetTimestampResponseNotImplementedCode is the HTTP code returned for type GetTimestampResponseNotImplemented
+const GetTimestampResponseNotImplementedCode int = 501
 
-/*GetTimestampResponseNotFound The content requested could not be found
+/*GetTimestampResponseNotImplemented The content requested is not implemented
 
-swagger:response getTimestampResponseNotFound
+swagger:response getTimestampResponseNotImplemented
 */
-type GetTimestampResponseNotFound struct {
+type GetTimestampResponseNotImplemented struct {
 }
 
-// NewGetTimestampResponseNotFound creates GetTimestampResponseNotFound with default headers values
-func NewGetTimestampResponseNotFound() *GetTimestampResponseNotFound {
+// NewGetTimestampResponseNotImplemented creates GetTimestampResponseNotImplemented with default headers values
+func NewGetTimestampResponseNotImplemented() *GetTimestampResponseNotImplemented {
 
-	return &GetTimestampResponseNotFound{}
+	return &GetTimestampResponseNotImplemented{}
 }
 
 // WriteResponse to the client
-func (o *GetTimestampResponseNotFound) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+func (o *GetTimestampResponseNotImplemented) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
 
 	rw.Header().Del(runtime.HeaderContentType) //Remove Content-Type on empty responses
 
-	rw.WriteHeader(404)
+	rw.WriteHeader(501)
 }
 
 /*GetTimestampResponseDefault There was an internal error in the server while processing the request
