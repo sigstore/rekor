@@ -145,7 +145,7 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		switch code {
 		case http.StatusBadRequest:
 			return timestamp.NewGetTimestampResponseBadRequest().WithPayload(errorMsg(message, code))
-		case http.StatusNotFound:
+		case http.StatusNotImplemented:
 			return timestamp.NewGetTimestampResponseNotImplemented()
 		default:
 			return timestamp.NewGetTimestampResponseDefault(code).WithPayload(errorMsg(message, code))
