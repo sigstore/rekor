@@ -57,7 +57,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&logType, "log_type", "dev", "logger type to use (dev/prod)")
 
 	rootCmd.PersistentFlags().String("trillian_log_server.address", "127.0.0.1", "Trillian log server address")
-	rootCmd.PersistentFlags().Uint16("trillian_log_server.port", 8091, "Trillian log server port")
+	rootCmd.PersistentFlags().Uint16("trillian_log_server.port", 8090, "Trillian log server port")
 	rootCmd.PersistentFlags().Uint("trillian_log_server.tlog_id", 0, "Trillian tree id")
 	rootCmd.PersistentFlags().String("rekor_server.address", "127.0.0.1", "Address to bind to")
 	rootCmd.PersistentFlags().String("rekor_server.signer", "memory", "Rekor signer to use. Current valid options include: [gcpkms, memory]")
