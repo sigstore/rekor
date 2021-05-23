@@ -49,8 +49,8 @@ services:
     command: [
       "--storage_system=mysql",
       "--mysql_uri=test:zaphod@tcp(mysql:3306)/test",
-      "--rpc_endpoint=0.0.0.0:8091",
-      "--http_endpoint=0.0.0.0:8090",
+      "--rpc_endpoint=0.0.0.0:8090",
+      "--http_endpoint=0.0.0.0:8091",
       "--alsologtostderr",
     ]
     restart: always # retry while mysql is starting up
@@ -82,7 +82,7 @@ services:
       "rekor-server",
       "serve",
       "--trillian_log_server.address=trillian-log-server",
-      "--trillian_log_server.port=8091",
+      "--trillian_log_server.port=8090",
       "--redis_server.address=redis-server",
       "--redis_server.port=6379",
       "--rekor_server.address=0.0.0.0",
