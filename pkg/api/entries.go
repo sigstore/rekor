@@ -160,6 +160,20 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 		}()
 	}
 
+	if viper.GetBool("enable_attestation_storage") {
+
+		go func() {
+			typ, attestation := entry.Attestation()
+			if typ == "" {
+				log.RequestIDLogger(params.HTTPRequest).Infof("no attestation for %s", uuid)
+				return
+			}
+			if err := storeAttestation(context.Background(), uuid, typ, attestation); err != nil {
+				log.RequestIDLogger(params.HTTPRequest).Errorf("error storing attestation: %s", err)
+			}
+		}()
+	}
+
 	payload, err := logEntryAnon.MarshalBinary()
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %v", err), signingError)

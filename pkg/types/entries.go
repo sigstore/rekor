@@ -35,6 +35,7 @@ type EntryImpl interface {
 	HasExternalEntities() bool                        // indicates whether there is a need fetch any additional external content required to process the entry
 	Unmarshal(e models.ProposedEntry) error           // unmarshal the abstract entry into the specific struct for this versioned type
 	Validate() error                                  // performs any cross-field validation that is not expressed in the OpenAPI spec
+	Attestation() (string, []byte)
 }
 
 // EntryFactory describes a factory function that can generate structs for a specific versioned type

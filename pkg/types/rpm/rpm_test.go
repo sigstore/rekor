@@ -62,6 +62,10 @@ func (u UnmarshalTester) Validate() error {
 	return nil
 }
 
+func (u UnmarshalTester) Attestation() (string, []byte) {
+	return "", nil
+}
+
 type UnmarshalFailsTester struct {
 	UnmarshalTester
 }

@@ -28,7 +28,6 @@ import (
 	"testing"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/in-toto/in-toto-golang/pkg/ssl"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -51,7 +50,7 @@ func p(b []byte) *strfmt.Base64 {
 	return &b64
 }
 
-func envelope(t *testing.T, k *ecdsa.PrivateKey, payload, payloadType string) *string {
+func envelope(t *testing.T, k *ecdsa.PrivateKey, payload, payloadType string) string {
 
 	signer, err := in_toto.NewSSLSigner(&verifier{
 		signer: k,
@@ -68,8 +67,7 @@ func envelope(t *testing.T, k *ecdsa.PrivateKey, payload, payloadType string) *s
 		t.Fatal(err)
 	}
 
-	s := string(b)
-	return &s
+	return string(b)
 }
 
 func TestV001Entry_Unmarshal(t *testing.T) {
@@ -140,7 +138,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 			it: &models.IntotoV001Schema{
 				PublicKey: p(pub),
 				Content: &models.IntotoV001SchemaContent{
-					Envelope: swag.String(string(invalid)),
+					Envelope: string(invalid),
 				},
 			},
 			wantErr: true,
