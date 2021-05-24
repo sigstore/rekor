@@ -32,6 +32,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/sigstore/rekor/pkg/log"
+	pki "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
@@ -49,12 +50,14 @@ func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
 }
 
 type API struct {
-	logClient  trillian.TrillianLogClient
-	logID      int64
-	pubkey     string // PEM encoded public key
-	pubkeyHash string // SHA256 hash of DER-encoded public key
-	signer     signature.Signer
-	verifier   *client.LogVerifier
+	logClient    trillian.TrillianLogClient
+	logID        int64
+	pubkey       string // PEM encoded public key
+	pubkeyHash   string // SHA256 hash of DER-encoded public key
+	signer       signature.Signer
+	certChain    []*x509.Certificate // timestamping cert chain
+	certChainPem string              // PEM encoded timestamping cert chain
+	verifier     *client.LogVerifier
 }
 
 func NewAPI() (*API, error) {
@@ -85,11 +88,11 @@ func NewAPI() (*API, error) {
 		return nil, errors.Wrap(err, "get tree")
 	}
 
-	signer, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
+	rekorSigner, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
 	if err != nil {
 		return nil, errors.Wrap(err, "getting new signer")
 	}
-	pk, err := signer.PublicKey(ctx)
+	pk, err := rekorSigner.PublicKey(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting public key")
 	}
@@ -113,13 +116,36 @@ func NewAPI() (*API, error) {
 		return nil, errors.Wrap(err, "new verifier")
 	}
 
+	var certChain []*x509.Certificate
+	certChainStr := viper.GetString("rekor_server.timestamp_chain")
+	if certChainStr != "" {
+		var err error
+		if certChain, err = pki.ParseTimestampCertChain([]byte(certChainStr)); err != nil {
+			return nil, errors.Wrap(err, "parsing timestamp cert chain")
+		}
+	} else if viper.GetString("rekor_server.signer") == signer.MemoryScheme {
+		// Generate a timestaming cert with a self signed CA if we are configured with an in-memory signer.
+		var err error
+		certChain, err = signer.NewTimestampingCertWithSelfSignedCA(pk)
+		if err != nil {
+			return nil, errors.Wrap(err, "generating timestaping cert chain")
+		}
+	}
+
+	certChainPem, err := pki.CertChainToPEM(certChain)
+	if err != nil {
+		return nil, errors.Wrap(err, "timestamping cert chain")
+	}
+
 	return &API{
-		logClient:  logClient,
-		logID:      tLogID,
-		pubkey:     string(pubkey),
-		pubkeyHash: hex.EncodeToString(pubkeyHashBytes),
-		signer:     signer,
-		verifier:   verifier,
+		logClient:    logClient,
+		logID:        tLogID,
+		pubkey:       string(pubkey),
+		pubkeyHash:   hex.EncodeToString(pubkeyHashBytes),
+		signer:       rekorSigner,
+		certChain:    certChain,
+		certChainPem: string(certChainPem),
+		verifier:     verifier,
 	}, nil
 }
 

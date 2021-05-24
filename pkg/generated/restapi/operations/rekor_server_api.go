@@ -40,6 +40,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/pubkey"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/timestamp"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 )
 
@@ -61,9 +62,18 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 		APIKeyAuthenticator: security.APIKeyAuth,
 		BearerAuthenticator: security.BearerAuth,
 
+		ApplicationTimestampQueryConsumer: runtime.ConsumerFunc(func(r io.Reader, target interface{}) error {
+			return errors.NotImplemented("applicationTimestampQuery consumer has not yet been implemented")
+		}),
 		JSONConsumer: runtime.JSONConsumer(),
 		YamlConsumer: yamlpc.YAMLConsumer(),
 
+		ApplicationPemCertificateChainProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
+			return errors.NotImplemented("applicationPemCertificateChain producer has not yet been implemented")
+		}),
+		ApplicationTimestampReplyProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
+			return errors.NotImplemented("applicationTimestampReply producer has not yet been implemented")
+		}),
 		ApplicationXPemFileProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
 			return errors.NotImplemented("applicationXPemFile producer has not yet been implemented")
 		}),
@@ -87,6 +97,12 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 		}),
 		PubkeyGetPublicKeyHandler: pubkey.GetPublicKeyHandlerFunc(func(params pubkey.GetPublicKeyParams) middleware.Responder {
 			return middleware.NotImplemented("operation pubkey.GetPublicKey has not yet been implemented")
+		}),
+		TimestampGetTimestampCertChainHandler: timestamp.GetTimestampCertChainHandlerFunc(func(params timestamp.GetTimestampCertChainParams) middleware.Responder {
+			return middleware.NotImplemented("operation timestamp.GetTimestampCertChain has not yet been implemented")
+		}),
+		TimestampGetTimestampResponseHandler: timestamp.GetTimestampResponseHandlerFunc(func(params timestamp.GetTimestampResponseParams) middleware.Responder {
+			return middleware.NotImplemented("operation timestamp.GetTimestampResponse has not yet been implemented")
 		}),
 		IndexSearchIndexHandler: index.SearchIndexHandlerFunc(func(params index.SearchIndexParams) middleware.Responder {
 			return middleware.NotImplemented("operation index.SearchIndex has not yet been implemented")
@@ -122,6 +138,9 @@ type RekorServerAPI struct {
 	// It has a default implementation in the security package, however you can replace it for your particular usage.
 	BearerAuthenticator func(string, security.ScopedTokenAuthentication) runtime.Authenticator
 
+	// ApplicationTimestampQueryConsumer registers a consumer for the following mime types:
+	//   - application/timestamp-query
+	ApplicationTimestampQueryConsumer runtime.Consumer
 	// JSONConsumer registers a consumer for the following mime types:
 	//   - application/json
 	JSONConsumer runtime.Consumer
@@ -129,6 +148,12 @@ type RekorServerAPI struct {
 	//   - application/yaml
 	YamlConsumer runtime.Consumer
 
+	// ApplicationPemCertificateChainProducer registers a producer for the following mime types:
+	//   - application/pem-certificate-chain
+	ApplicationPemCertificateChainProducer runtime.Producer
+	// ApplicationTimestampReplyProducer registers a producer for the following mime types:
+	//   - application/timestamp-reply
+	ApplicationTimestampReplyProducer runtime.Producer
 	// ApplicationXPemFileProducer registers a producer for the following mime types:
 	//   - application/x-pem-file
 	ApplicationXPemFileProducer runtime.Producer
@@ -151,6 +176,10 @@ type RekorServerAPI struct {
 	TlogGetLogProofHandler tlog.GetLogProofHandler
 	// PubkeyGetPublicKeyHandler sets the operation handler for the get public key operation
 	PubkeyGetPublicKeyHandler pubkey.GetPublicKeyHandler
+	// TimestampGetTimestampCertChainHandler sets the operation handler for the get timestamp cert chain operation
+	TimestampGetTimestampCertChainHandler timestamp.GetTimestampCertChainHandler
+	// TimestampGetTimestampResponseHandler sets the operation handler for the get timestamp response operation
+	TimestampGetTimestampResponseHandler timestamp.GetTimestampResponseHandler
 	// IndexSearchIndexHandler sets the operation handler for the search index operation
 	IndexSearchIndexHandler index.SearchIndexHandler
 	// EntriesSearchLogQueryHandler sets the operation handler for the search log query operation
@@ -224,6 +253,9 @@ func (o *RekorServerAPI) RegisterFormat(name string, format strfmt.Format, valid
 func (o *RekorServerAPI) Validate() error {
 	var unregistered []string
 
+	if o.ApplicationTimestampQueryConsumer == nil {
+		unregistered = append(unregistered, "ApplicationTimestampQueryConsumer")
+	}
 	if o.JSONConsumer == nil {
 		unregistered = append(unregistered, "JSONConsumer")
 	}
@@ -231,6 +263,12 @@ func (o *RekorServerAPI) Validate() error {
 		unregistered = append(unregistered, "YamlConsumer")
 	}
 
+	if o.ApplicationPemCertificateChainProducer == nil {
+		unregistered = append(unregistered, "ApplicationPemCertificateChainProducer")
+	}
+	if o.ApplicationTimestampReplyProducer == nil {
+		unregistered = append(unregistered, "ApplicationTimestampReplyProducer")
+	}
 	if o.ApplicationXPemFileProducer == nil {
 		unregistered = append(unregistered, "ApplicationXPemFileProducer")
 	}
@@ -258,6 +296,12 @@ func (o *RekorServerAPI) Validate() error {
 	}
 	if o.PubkeyGetPublicKeyHandler == nil {
 		unregistered = append(unregistered, "pubkey.GetPublicKeyHandler")
+	}
+	if o.TimestampGetTimestampCertChainHandler == nil {
+		unregistered = append(unregistered, "timestamp.GetTimestampCertChainHandler")
+	}
+	if o.TimestampGetTimestampResponseHandler == nil {
+		unregistered = append(unregistered, "timestamp.GetTimestampResponseHandler")
 	}
 	if o.IndexSearchIndexHandler == nil {
 		unregistered = append(unregistered, "index.SearchIndexHandler")
@@ -294,6 +338,8 @@ func (o *RekorServerAPI) ConsumersFor(mediaTypes []string) map[string]runtime.Co
 	result := make(map[string]runtime.Consumer, len(mediaTypes))
 	for _, mt := range mediaTypes {
 		switch mt {
+		case "application/timestamp-query":
+			result["application/timestamp-query"] = o.ApplicationTimestampQueryConsumer
 		case "application/json":
 			result["application/json"] = o.JSONConsumer
 		case "application/yaml":
@@ -313,6 +359,10 @@ func (o *RekorServerAPI) ProducersFor(mediaTypes []string) map[string]runtime.Pr
 	result := make(map[string]runtime.Producer, len(mediaTypes))
 	for _, mt := range mediaTypes {
 		switch mt {
+		case "application/pem-certificate-chain":
+			result["application/pem-certificate-chain"] = o.ApplicationPemCertificateChainProducer
+		case "application/timestamp-reply":
+			result["application/timestamp-reply"] = o.ApplicationTimestampReplyProducer
 		case "application/x-pem-file":
 			result["application/x-pem-file"] = o.ApplicationXPemFileProducer
 		case "application/json":
@@ -383,6 +433,14 @@ func (o *RekorServerAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/api/v1/log/publicKey"] = pubkey.NewGetPublicKey(o.context, o.PubkeyGetPublicKeyHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/api/v1/timestamp/certchain"] = timestamp.NewGetTimestampCertChain(o.context, o.TimestampGetTimestampCertChainHandler)
+	if o.handlers["POST"] == nil {
+		o.handlers["POST"] = make(map[string]http.Handler)
+	}
+	o.handlers["POST"]["/api/v1/timestamp"] = timestamp.NewGetTimestampResponse(o.context, o.TimestampGetTimestampResponseHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}

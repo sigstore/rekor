@@ -27,22 +27,24 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/timestamp"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/sigstore/rekor/pkg/log"
 )
 
 const (
-	trillianCommunicationError     = "Unexpected error communicating with transparency log"
-	trillianUnexpectedResult       = "Unexpected result from transparency log"
-	failedToGenerateCanonicalEntry = "Error generating canonicalized entry"
-	entryAlreadyExists             = "An equivalent entry already exists in the transparency log with UUID %v"
-	firstSizeLessThanLastSize      = "firstSize(%d) must be less than lastSize(%d)"
-	malformedUUID                  = "UUID must be a 64-character hexadecimal string"
-	malformedPublicKey             = "Public key provided could not be parsed"
-	failedToGenerateCanonicalKey   = "Error generating canonicalized public key"
-	redisUnexpectedResult          = "Unexpected result from searching index"
-	lastSizeGreaterThanKnown       = "The tree size requested(%d) was greater than what is currently observable(%d)"
-	signingError                   = "Error signing"
+	trillianCommunicationError        = "Unexpected error communicating with transparency log"
+	trillianUnexpectedResult          = "Unexpected result from transparency log"
+	failedToGenerateCanonicalEntry    = "Error generating canonicalized entry"
+	entryAlreadyExists                = "An equivalent entry already exists in the transparency log with UUID %v"
+	firstSizeLessThanLastSize         = "firstSize(%d) must be less than lastSize(%d)"
+	malformedUUID                     = "UUID must be a 64-character hexadecimal string"
+	malformedPublicKey                = "Public key provided could not be parsed"
+	failedToGenerateCanonicalKey      = "Error generating canonicalized public key"
+	redisUnexpectedResult             = "Unexpected result from searching index"
+	lastSizeGreaterThanKnown          = "The tree size requested(%d) was greater than what is currently observable(%d)"
+	signingError                      = "Error signing"
+	failedToGenerateTimestampResponse = "Error generating timestamp response"
 )
 
 func errorMsg(message string, code int) *models.Error {
@@ -137,6 +139,24 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 			return index.NewSearchIndexBadRequest().WithPayload(errorMsg(message, code))
 		default:
 			return index.NewSearchIndexDefault(code).WithPayload(errorMsg(message, code))
+		}
+	case timestamp.GetTimestampResponseParams:
+		logMsg(params.HTTPRequest)
+		switch code {
+		case http.StatusBadRequest:
+			return timestamp.NewGetTimestampResponseBadRequest().WithPayload(errorMsg(message, code))
+		case http.StatusNotImplemented:
+			return timestamp.NewGetTimestampResponseNotImplemented()
+		default:
+			return timestamp.NewGetTimestampResponseDefault(code).WithPayload(errorMsg(message, code))
+		}
+	case timestamp.GetTimestampCertChainParams:
+		logMsg(params.HTTPRequest)
+		switch code {
+		case http.StatusNotFound:
+			return timestamp.NewGetTimestampCertChainNotFound()
+		default:
+			return timestamp.NewGetTimestampCertChainDefault(code).WithPayload(errorMsg(message, code))
 		}
 	default:
 		log.Logger.Errorf("unable to find method for type %T; error: %v", params, err)

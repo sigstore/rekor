@@ -25,10 +25,13 @@
 //  Version: 0.0.1
 //
 //  Consumes:
+//    - application/timestamp-query
 //    - application/json
 //    - application/yaml
 //
 //  Produces:
+//    - application/pem-certificate-chain
+//    - application/timestamp-reply
 //    - application/x-pem-file
 //    - application/json
 //    - application/yaml

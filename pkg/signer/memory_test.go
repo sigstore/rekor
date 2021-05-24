@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/x509"
 	"testing"
 )
 
@@ -54,5 +55,30 @@ func TestMemory(t *testing.T) {
 	}
 	if !ecdsa.VerifyASN1(pk, h.Sum(nil), signature) {
 		t.Fatalf("unable to verify signature")
+	}
+
+	// verify signature using the cert's public key
+	certChain, err := NewTimestampingCertWithSelfSignedCA(pk)
+	pkCert, ok := certChain[0].PublicKey.(*ecdsa.PublicKey)
+	if !ok {
+		t.Fatalf("cert ecdsa public key: %v", err)
+	}
+	if !ecdsa.VerifyASN1(pkCert, h.Sum(nil), signature) {
+		t.Fatalf("unable to verify signature")
+	}
+	// verify that the cert chain is configured for timestamping
+	roots := x509.NewCertPool()
+	intermediates := x509.NewCertPool()
+	for _, cert := range certChain[1:(len(certChain) - 1)] {
+		intermediates.AddCert(cert)
+	}
+	roots.AddCert(certChain[len(certChain)-1])
+	_, err = certChain[0].Verify(x509.VerifyOptions{
+		Roots:         roots,
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+		Intermediates: intermediates,
+	})
+	if err != nil {
+		t.Fatalf("invalid timestamping cert chain")
 	}
 }

@@ -35,6 +35,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/pubkey"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/timestamp"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
@@ -70,6 +71,9 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.YamlProducer = util.YamlProducer()
 
 	api.ApplicationXPemFileProducer = runtime.TextProducer()
+	api.ApplicationPemCertificateChainProducer = runtime.TextProducer()
+	api.ApplicationTimestampQueryConsumer = runtime.ByteStreamConsumer()
+	api.ApplicationTimestampReplyProducer = runtime.ByteStreamProducer()
 
 	api.EntriesCreateLogEntryHandler = entries.CreateLogEntryHandlerFunc(pkgapi.CreateLogEntryHandler)
 	api.EntriesGetLogEntryByIndexHandler = entries.GetLogEntryByIndexHandlerFunc(pkgapi.GetLogEntryByIndexHandler)
@@ -87,6 +91,9 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 		api.IndexSearchIndexHandler = index.SearchIndexHandlerFunc(pkgapi.SearchIndexNotImplementedHandler)
 	}
 
+	api.TimestampGetTimestampResponseHandler = timestamp.GetTimestampResponseHandlerFunc(pkgapi.TimestampResponseHandler)
+	api.TimestampGetTimestampCertChainHandler = timestamp.GetTimestampCertChainHandlerFunc(pkgapi.GetTimestampCertChainHandler)
+
 	api.PreServerShutdown = func() {}
 
 	api.ServerShutdown = func() {}
@@ -96,9 +103,11 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.AddMiddlewareFor("GET", "/api/v1/log/proof", middleware.NoCache)
 	api.AddMiddlewareFor("GET", "/api/v1/log/entries", middleware.NoCache)
 	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}", middleware.NoCache)
+	api.AddMiddlewareFor("GET", "/api/v1/timestamp", middleware.NoCache)
 
 	// cache forever
 	api.AddMiddlewareFor("GET", "/api/v1/log/publicKey", cacheForever)
+	api.AddMiddlewareFor("GET", "/api/v1/log/timestamp/certchain", cacheForever)
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
 }
