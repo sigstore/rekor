@@ -40,6 +40,8 @@ import (
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/in-toto/in-toto-golang/pkg/ssl"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
@@ -284,6 +286,68 @@ func TestJAR(t *testing.T) {
 	out := runCli(t, "upload", "--artifact", artifactPath, "--type", "jar")
 	outputContains(t, out, "Created entry at")
 	out = runCli(t, "upload", "--artifact", artifactPath, "--type", "jar")
+	outputContains(t, out, "Entry already exists")
+}
+
+func TestIntoto(t *testing.T) {
+	td := t.TempDir()
+	attestationPath := filepath.Join(td, "attestation.json")
+	pubKeyPath := filepath.Join(td, "pub.pem")
+
+	it := in_toto.Statement{
+		StatementHeader: in_toto.StatementHeader{
+			Type:          in_toto.StatementInTotoV01,
+			PredicateType: in_toto.PredicateProvenanceV01,
+			Subject: []in_toto.Subject{
+				{
+					Name: "foobar",
+					Digest: in_toto.DigestSet{
+						"foo": "bar",
+					},
+				},
+			},
+		},
+		Predicate: in_toto.ProvenancePredicate{
+			Builder: in_toto.ProvenanceBuilder{
+				ID: "foo",
+			},
+		},
+	}
+
+	b, err := json.Marshal(it)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pb, _ := pem.Decode([]byte(ecdsaPriv))
+	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signer, err := ssl.NewEnvelopeSigner(&IntotoSigner{
+		priv: priv.(*ecdsa.PrivateKey),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	env, err := signer.SignPayload("application/vnd.in-toto+json", b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	eb, err := json.Marshal(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	write(t, string(eb), attestationPath)
+	write(t, ecdsaPub, pubKeyPath)
+
+	// If we do it twice, it should already exist
+	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
+	outputContains(t, out, "Created entry at")
+	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Entry already exists")
 }
 

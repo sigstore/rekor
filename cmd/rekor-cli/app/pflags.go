@@ -36,6 +36,7 @@ import (
 
 	"github.com/go-playground/validator"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	jar_v001 "github.com/sigstore/rekor/pkg/types/jar/v0.0.1"
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	rpm_v001 "github.com/sigstore/rekor/pkg/types/rpm/v0.0.1"
@@ -211,6 +212,37 @@ func CreateJarFromPFlags() (models.ProposedEntry, error) {
 		returnVal.APIVersion = swag.String(re.APIVersion())
 		returnVal.Spec = re.JARModel
 	}
+
+	return &returnVal, nil
+}
+
+func CreateIntotoFromPFlags() (models.ProposedEntry, error) {
+	//TODO: how to select version of item to create
+	returnVal := models.Intoto{}
+
+	intoto := viper.GetString("artifact")
+	b, err := ioutil.ReadFile(filepath.Clean(intoto))
+	if err != nil {
+		return nil, err
+	}
+	publicKey := viper.GetString("public-key")
+	keyBytes, err := ioutil.ReadFile(filepath.Clean(publicKey))
+	if err != nil {
+		return nil, fmt.Errorf("error reading public key file: %w", err)
+	}
+	kb := strfmt.Base64(keyBytes)
+
+	re := intoto_v001.V001Entry{
+		IntotoObj: models.IntotoV001Schema{
+			Content: &models.IntotoV001SchemaContent{
+				Envelope: swag.String(string(b)),
+			},
+			PublicKey: &kb,
+		},
+	}
+
+	returnVal.Spec = re.IntotoObj
+	returnVal.APIVersion = swag.String(re.APIVersion())
 
 	return &returnVal, nil
 }
@@ -435,12 +467,13 @@ func (t *typeFlag) Set(s string) error {
 		"rekord": {},
 		"rpm":    {},
 		"jar":    {},
+		"intoto": {},
 	}
 	if _, ok := set[s]; ok {
 		t.value = s
 		return nil
 	}
-	return fmt.Errorf("value specified is invalid: [%s] supported values are: [rekord, rpm]", s)
+	return fmt.Errorf("value specified is invalid: [%s] supported values are: [rekord, rpm, jar, intoto]", s)
 }
 
 type pkiFormatFlag struct {

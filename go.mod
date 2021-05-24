@@ -19,6 +19,7 @@ require (
 	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/google/rpmpack v0.0.0-20210107155803-d6befbf05148
 	github.com/google/trillian v1.3.14-0.20210413093047-5e12fb368c8f
+	github.com/in-toto/in-toto-golang v0.1.1-0.20210528150343-f7dc21abaccf
 	github.com/jedisct1/go-minisign v0.0.0-20210106175330-e54e81d562c7
 	github.com/mediocregopher/radix/v4 v4.0.0-beta.1
 	github.com/mitchellh/go-homedir v1.1.0
@@ -47,5 +48,3 @@ require (
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.6 // indirect
 )
-
-// replace github.com/sassoftware/relic => ../relic-7.2.6
