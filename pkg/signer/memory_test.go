@@ -18,8 +18,8 @@ package signer
 
 import (
 	"context"
-	"crypto"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"testing"
 )
@@ -49,11 +49,10 @@ func TestMemory(t *testing.T) {
 	if !ok {
 		t.Fatalf("ecdsa public key: %v", err)
 	}
-	h := crypto.SHA256.New()
-	if _, err := h.Write(payload); err != nil {
-		t.Fatalf("writing payload: %v", err)
-	}
-	if !ecdsa.VerifyASN1(pk, h.Sum(nil), signature) {
+
+	h := sha256.Sum256(payload)
+
+	if !ecdsa.VerifyASN1(pk, h[:], signature) {
 		t.Fatalf("unable to verify signature")
 	}
 
@@ -63,7 +62,7 @@ func TestMemory(t *testing.T) {
 	if !ok {
 		t.Fatalf("cert ecdsa public key: %v", err)
 	}
-	if !ecdsa.VerifyASN1(pkCert, h.Sum(nil), signature) {
+	if !ecdsa.VerifyASN1(pkCert, h[:], signature) {
 		t.Fatalf("unable to verify signature")
 	}
 	// verify that the cert chain is configured for timestamping

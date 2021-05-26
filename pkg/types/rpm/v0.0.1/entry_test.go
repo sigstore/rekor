@@ -56,9 +56,8 @@ func TestCrossFieldValidation(t *testing.T) {
 	keyBytes, _ := ioutil.ReadFile("../../../../tests/test_rpm_public_key.key")
 	dataBytes, _ := ioutil.ReadFile("../../../../tests/test.rpm")
 
-	h := sha256.New()
-	_, _ = h.Write(dataBytes)
-	dataSHA := hex.EncodeToString(h.Sum(nil))
+	h := sha256.Sum256(dataBytes)
+	dataSHA := hex.EncodeToString(h[:])
 
 	testServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {

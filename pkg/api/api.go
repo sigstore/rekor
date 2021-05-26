@@ -100,11 +100,7 @@ func NewAPI() (*API, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "marshalling public key")
 	}
-	hasher := sha256.New()
-	if _, err = hasher.Write(b); err != nil {
-		return nil, errors.Wrap(err, "computing hash of public key")
-	}
-	pubkeyHashBytes := hasher.Sum(nil)
+	pubkeyHashBytes := sha256.Sum256(b)
 
 	pubkey := pem.EncodeToMemory(&pem.Block{
 		Type:  "PUBLIC KEY",
@@ -141,7 +137,7 @@ func NewAPI() (*API, error) {
 		logClient:    logClient,
 		logID:        tLogID,
 		pubkey:       string(pubkey),
-		pubkeyHash:   hex.EncodeToString(pubkeyHashBytes),
+		pubkeyHash:   hex.EncodeToString(pubkeyHashBytes[:]),
 		signer:       rekorSigner,
 		certChain:    certChain,
 		certChainPem: string(certChainPem),

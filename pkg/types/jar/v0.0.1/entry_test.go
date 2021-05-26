@@ -54,9 +54,8 @@ func TestCrossFieldValidation(t *testing.T) {
 
 	jarBytes, _ := ioutil.ReadFile("../../../../tests/test.jar")
 
-	h := sha256.New()
-	_, _ = h.Write(jarBytes)
-	dataSHA := hex.EncodeToString(h.Sum(nil))
+	h := sha256.Sum256(jarBytes)
+	dataSHA := hex.EncodeToString(h[:])
 
 	testServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {

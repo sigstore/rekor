@@ -20,7 +20,6 @@ package e2e
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -192,15 +191,13 @@ func TestGet(t *testing.T) {
 	out = runCli(t, "search", "--public-key", pubPath)
 	outputContains(t, out, uuid)
 
-	hash := sha256.New()
 	artifactBytes, err := ioutil.ReadFile(artifactPath)
 	if err != nil {
 		t.Error(err)
 	}
-	hash.Write(artifactBytes)
-	sha := hash.Sum(nil)
+	sha := sha256.Sum256(artifactBytes)
 
-	out = runCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha)))
+	out = runCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
 	outputContains(t, out, uuid)
 }
 
@@ -468,13 +465,8 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	}
 
 	// verify the signature against the public key
-	h := crypto.SHA256.New()
-	if _, err := h.Write(canonicalized); err != nil {
-		t.Fatal(err)
-	}
-	sum := h.Sum(nil)
-
-	if !ecdsa.VerifyASN1(rekorPubKey, sum, []byte(sig)) {
+	h := sha256.Sum256(canonicalized)
+	if !ecdsa.VerifyASN1(rekorPubKey, h[:], []byte(sig)) {
 		t.Fatal("unable to verify")
 	}
 }
@@ -522,12 +514,8 @@ func TestTimestampResponseCLI(t *testing.T) {
 	}
 
 	// Now try with the digest.
-	h := crypto.SHA256.New()
-	if _, err := h.Write(payload); err != nil {
-		t.Fatalf("error creating digest")
-	}
-	digest := h.Sum(nil)
-	hexDigest := hex.EncodeToString(digest)
+	h := sha256.Sum256(payload)
+	hexDigest := hex.EncodeToString(h[:])
 	out = runCli(t, "timestamp", "--artifact-hash", hexDigest, "--out", responsePath)
 	outputContains(t, out, "Wrote response to")
 	cmd = exec.Command("openssl", "ts", "-verify", "-digest", hexDigest, "-in", responsePath, "-CAfile", CAPath)
