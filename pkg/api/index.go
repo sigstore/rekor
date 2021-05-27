@@ -61,13 +61,9 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 			return handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalKey)
 		}
 
-		hasher := sha256.New()
-		if _, err := hasher.Write(canonicalKey); err != nil {
-			return handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalKey)
-		}
-		keyHash := hasher.Sum(nil)
+		keyHash := sha256.Sum256(canonicalKey)
 		var resultUUIDs []string
-		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(hex.EncodeToString(keyHash)), "0", "-1")); err != nil {
+		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(hex.EncodeToString(keyHash[:])), "0", "-1")); err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, err, redisUnexpectedResult)
 		}
 		result = append(result, resultUUIDs...)

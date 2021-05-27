@@ -18,6 +18,7 @@ package util
 import (
 	"context"
 	"crypto"
+	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -51,14 +52,10 @@ type SigningCertificateV2 struct {
 }
 
 func createSigningCertificate(certificate *x509.Certificate) ([]byte, error) {
-	h := crypto.SHA256.New() // TODO: Get from certificate, defaults to 256
-	_, err := h.Write(certificate.Raw)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create hash")
-	}
+	h := sha256.Sum256(certificate.Raw) // TODO: Get from certificate, defaults to 256
 	signingCert := SigningCertificateV2{
 		Certs: []EssCertIDv2{{
-			CertHash: h.Sum(nil),
+			CertHash: h[:],
 			IssuerNameAndSerial: IssuerNameAndSerial{
 				IssuerName:   GeneralName{Name: asn1.RawValue{Tag: 4, Class: 2, IsCompound: true, Bytes: certificate.RawIssuer}},
 				SerialNumber: certificate.SerialNumber,
@@ -174,11 +171,9 @@ func CreateRfc3161Response(ctx context.Context, req pkcs9.TimeStampReq, certChai
 	}
 
 	// TODO: Does this need to match the hash algorithm in the request?
-	h := crypto.SHA256.New()
 	alg, _ := x509tools.PkixDigestAlgorithm(crypto.SHA256)
 	contentInfoBytes, _ := contentInfo.Bytes()
-	h.Write(contentInfoBytes)
-	digest := h.Sum(nil)
+	h := sha256.Sum256(contentInfoBytes)
 
 	// Create SignerInfo and signature.
 	signingCert, err := createSigningCertificate(certChain[0])
@@ -189,7 +184,7 @@ func CreateRfc3161Response(ctx context.Context, req pkcs9.TimeStampReq, certChai
 	if err := attributes.Add(pkcs7.OidAttributeContentType, contentInfo.ContentType); err != nil {
 		return nil, err
 	}
-	if err := attributes.Add(pkcs7.OidAttributeMessageDigest, digest); err != nil {
+	if err := attributes.Add(pkcs7.OidAttributeMessageDigest, h[:]); err != nil {
 		return nil, err
 	}
 	if err := attributes.Add(asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 47}, signingCert); err != nil {

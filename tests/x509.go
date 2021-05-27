@@ -131,10 +131,8 @@ func init() {
 }
 
 func SignX509Cert(b []byte) ([]byte, error) {
-	h := sha256.New()
-	h.Write(b)
-	dgst := h.Sum(nil)
-	signature, err := certPrivateKey.Sign(rand.Reader, dgst, crypto.SHA256)
+	dgst := sha256.Sum256(b)
+	signature, err := certPrivateKey.Sign(rand.Reader, dgst[:], crypto.SHA256)
 	return signature, err
 }
 

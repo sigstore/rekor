@@ -77,12 +77,8 @@ func (v V001Entry) IndexKeys() []string {
 	if err != nil {
 		log.Logger.Error(err)
 	} else {
-		hasher := sha256.New()
-		if _, err := hasher.Write(key); err != nil {
-			log.Logger.Error(err)
-		} else {
-			result = append(result, strings.ToLower(hex.EncodeToString(hasher.Sum(nil))))
-		}
+		keyHash := sha256.Sum256(key)
+		result = append(result, strings.ToLower(hex.EncodeToString(keyHash[:])))
 	}
 
 	result = append(result, v.keyObj.EmailAddresses()...)
