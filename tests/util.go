@@ -49,9 +49,9 @@ func run(t *testing.T, stdin, cmd string, arg ...string) string {
 	if stdin != "" {
 		c.Stdin = strings.NewReader(stdin)
 	}
-	if os.Getenv("TMPDIR") != "" {
+	if os.Getenv("REKORTMPDIR") != "" {
 		// ensure that we use a clean state.json file for each run
-		c.Env = append(c.Env, "HOME="+os.Getenv("TMPDIR"))
+		c.Env = append(c.Env, "HOME="+os.Getenv("REKORTMPDIR"))
 	}
 	b, err := c.CombinedOutput()
 	if err != nil {
@@ -65,8 +65,8 @@ func runCli(t *testing.T, arg ...string) string {
 	t.Helper()
 	arg = append(arg, "--rekor_server=http://localhost:3000")
 	// use a blank config file to ensure no collision
-	if os.Getenv("TMPDIR") != "" {
-		arg = append(arg, "--config="+os.Getenv("TMPDIR")+".rekor.yaml")
+	if os.Getenv("REKORTMPDIR") != "" {
+		arg = append(arg, "--config="+os.Getenv("REKORTMPDIR")+".rekor.yaml")
 	}
 	return run(t, "", cli, arg...)
 }
@@ -75,8 +75,8 @@ func runCliErr(t *testing.T, arg ...string) string {
 	t.Helper()
 	arg = append(arg, "--rekor_server=http://localhost:3000")
 	// use a blank config file to ensure no collision
-	if os.Getenv("TMPDIR") != "" {
-		arg = append(arg, "--config="+os.Getenv("TMPDIR")+".rekor.yaml")
+	if os.Getenv("REKORTMPDIR") != "" {
+		arg = append(arg, "--config="+os.Getenv("REKORTMPDIR")+".rekor.yaml")
 	}
 	cmd := exec.Command(cli, arg...)
 	b, err := cmd.CombinedOutput()
@@ -114,9 +114,7 @@ func createArtifact(t *testing.T, artifactPath string) string {
 
 	artifact := base64.StdEncoding.EncodeToString(data[:])
 	// Write this to a file
-	if err := ioutil.WriteFile(artifactPath, []byte(artifact), 0644); err != nil {
-		t.Fatal(err)
-	}
+	write(t, artifact, artifactPath)
 	return artifact
 }
 
@@ -131,4 +129,11 @@ func extractLogEntry(t *testing.T, le models.LogEntry) models.LogEntryAnon {
 	}
 	// this should never happen
 	return models.LogEntryAnon{}
+}
+
+func write(t *testing.T, data string, path string) {
+	t.Helper()
+	if err := ioutil.WriteFile(path, []byte(data), 0644); err != nil {
+		t.Fatal(err)
+	}
 }

@@ -41,10 +41,10 @@ done
 
 echo
 echo "running tests"
-TMPDIR="$(mktemp -d -t rekor_test.XXXXXX)"
-touch $TMPDIR.rekor.yaml
-trap "rm -rf $TMPDIR" EXIT
-if ! TMPDIR=$TMPDIR go test -tags=e2e ./tests/; then 
+REKORTMPDIR="$(mktemp -d -t rekor_test.XXXXXX)"
+touch $REKORTMPDIR.rekor.yaml
+trap "rm -rf $REKORTMPDIR" EXIT
+if ! REKORTMPDIR=$REKORTMPDIR go test -tags=e2e ./tests/; then 
    docker-compose logs --no-color > /tmp/docker-compose.log
    exit 1
 fi

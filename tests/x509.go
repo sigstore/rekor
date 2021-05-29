@@ -19,6 +19,7 @@ package e2e
 
 import (
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -26,6 +27,8 @@ import (
 	"encoding/pem"
 	"io/ioutil"
 	"testing"
+
+	"github.com/in-toto/in-toto-golang/pkg/ssl"
 )
 
 // Generated with:
@@ -149,4 +152,26 @@ func createdX509SignedArtifact(t *testing.T, artifactPath, sigPath string) {
 	if err := ioutil.WriteFile(sigPath, []byte(signature), 0644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+type IntotoSigner struct {
+	priv *ecdsa.PrivateKey
+}
+
+var _ ssl.SignVerifier = &IntotoSigner{}
+
+func (it *IntotoSigner) Sign(data []byte) ([]byte, string, error) {
+	h := sha256.Sum256(data)
+	sig, err := it.priv.Sign(rand.Reader, h[:], crypto.SHA256)
+	if err != nil {
+		return nil, "", err
+	}
+	return sig, "", nil
+}
+
+func (it *IntotoSigner) Verify(_ string, data, sig []byte) (bool, error) {
+	h := sha256.Sum256(data)
+
+	ok := ecdsa.VerifyASN1(&it.priv.PublicKey, h[:], sig)
+	return ok, nil
 }

@@ -115,6 +115,12 @@ func unmarshalProposedEntry(data []byte, consumer runtime.Consumer) (ProposedEnt
 			return nil, err
 		}
 		return &result, nil
+	case "intoto":
+		var result Intoto
+		if err := consumer.Consume(buf2, &result); err != nil {
+			return nil, err
+		}
+		return &result, nil
 	case "jar":
 		var result Jar
 		if err := consumer.Consume(buf2, &result); err != nil {

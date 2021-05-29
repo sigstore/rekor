@@ -28,6 +28,8 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/types/intoto"
+	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/jar"
 	jar_v001 "github.com/sigstore/rekor/pkg/types/jar/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/rekord"
@@ -73,6 +75,7 @@ var serveCmd = &cobra.Command{
 			rekord.KIND: rekord_v001.APIVERSION,
 			rpm.KIND:    rpm_v001.APIVERSION,
 			jar.KIND:    jar_v001.APIVERSION,
+			intoto.KIND: intoto_v001.APIVERSION,
 		}
 
 		for k, v := range pluggableTypeMap {

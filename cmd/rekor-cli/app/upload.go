@@ -90,6 +90,11 @@ var uploadCmd = &cobra.Command{
 			if err != nil {
 				return nil, err
 			}
+		case "intoto":
+			entry, err = CreateIntotoFromPFlags()
+			if err != nil {
+				return nil, err
+			}
 		default:
 			return nil, errors.New("unknown type specified")
 		}
