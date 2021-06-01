@@ -63,6 +63,10 @@ func NewEntry() types.EntryImpl {
 
 func (v V001Entry) IndexKeys() []string {
 	var result []string
+
+	h := sha256.Sum256([]byte(v.env.Payload))
+	payloadKey := "sha256:" + string(h[:])
+	result = append(result, payloadKey)
 	return result
 }
 
