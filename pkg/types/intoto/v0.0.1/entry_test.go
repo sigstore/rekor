@@ -19,9 +19,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -95,6 +97,9 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	validPayload := "hellothispayloadisvalid"
+
 	tests := []struct {
 		name    string
 		want    models.IntotoV001Schema
@@ -125,7 +130,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 			it: &models.IntotoV001Schema{
 				PublicKey: p(pub),
 				Content: &models.IntotoV001SchemaContent{
-					Envelope: envelope(t, key, "hello", "text"),
+					Envelope: envelope(t, key, validPayload, "text"),
 				},
 			},
 			wantErr: false,
@@ -145,7 +150,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 			it: &models.IntotoV001Schema{
 				PublicKey: p([]byte("notavalidkey")),
 				Content: &models.IntotoV001SchemaContent{
-					Envelope: envelope(t, key, "hello", "text"),
+					Envelope: envelope(t, key, validPayload, "text"),
 				},
 			},
 			wantErr: true,
@@ -163,6 +168,11 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				}
 				if err := v.Validate(); err != nil {
 					return err
+				}
+				keys := v.IndexKeys()
+				h := sha256.Sum256([]byte(v.env.Payload))
+				if keys[0] != "sha256:"+string(h[:]) {
+					return fmt.Errorf("expected index key: %s, got %s", h[:], keys[0])
 				}
 				return nil
 			}
