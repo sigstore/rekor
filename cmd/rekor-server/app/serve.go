@@ -34,6 +34,8 @@ import (
 	jar_v001 "github.com/sigstore/rekor/pkg/types/jar/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/rekord"
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
+	"github.com/sigstore/rekor/pkg/types/rfc3161"
+	rfc3161_v001 "github.com/sigstore/rekor/pkg/types/rfc3161/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/rpm"
 	rpm_v001 "github.com/sigstore/rekor/pkg/types/rpm/v0.0.1"
 )
@@ -72,10 +74,11 @@ var serveCmd = &cobra.Command{
 
 		// these trigger loading of package and therefore init() methods to run
 		pluggableTypeMap := map[string]string{
-			rekord.KIND: rekord_v001.APIVERSION,
-			rpm.KIND:    rpm_v001.APIVERSION,
-			jar.KIND:    jar_v001.APIVERSION,
-			intoto.KIND: intoto_v001.APIVERSION,
+			rekord.KIND:  rekord_v001.APIVERSION,
+			rpm.KIND:     rpm_v001.APIVERSION,
+			jar.KIND:     jar_v001.APIVERSION,
+			intoto.KIND:  intoto_v001.APIVERSION,
+			rfc3161.KIND: rfc3161_v001.APIVERSION,
 		}
 
 		for k, v := range pluggableTypeMap {

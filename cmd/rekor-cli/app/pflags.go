@@ -39,6 +39,7 @@ import (
 	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	jar_v001 "github.com/sigstore/rekor/pkg/types/jar/v0.0.1"
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
+	rfc3161_v001 "github.com/sigstore/rekor/pkg/types/rfc3161/v0.0.1"
 	rpm_v001 "github.com/sigstore/rekor/pkg/types/rpm/v0.0.1"
 )
 
@@ -139,7 +140,7 @@ func validateArtifactPFlags(uuidValid, indexValid bool) error {
 		if signature == "" && typeStr == "rekord" {
 			return errors.New("--signature is required when --artifact is used")
 		}
-		if publicKey == "" && typeStr != "jar" {
+		if publicKey == "" && typeStr != "jar" && typeStr != "rfc3161" {
 			return errors.New("--public-key is required when --artifact is used")
 		}
 	}
@@ -242,6 +243,31 @@ func CreateIntotoFromPFlags() (models.ProposedEntry, error) {
 	}
 
 	returnVal.Spec = re.IntotoObj
+	returnVal.APIVersion = swag.String(re.APIVersion())
+
+	return &returnVal, nil
+}
+
+func CreateRFC3161FromPFlags() (models.ProposedEntry, error) {
+	//TODO: how to select version of item to create
+	returnVal := models.Rfc3161{}
+
+	rfc3161 := viper.GetString("artifact")
+	b, err := ioutil.ReadFile(filepath.Clean(rfc3161))
+	if err != nil {
+		return nil, fmt.Errorf("error reading public key file: %w", err)
+	}
+
+	b64 := strfmt.Base64(b)
+	re := rfc3161_v001.V001Entry{
+		Rfc3161Obj: models.Rfc3161V001Schema{
+			Tsr: &models.Rfc3161V001SchemaTsr{
+				Content: &b64,
+			},
+		},
+	}
+
+	returnVal.Spec = re.Rfc3161Obj
 	returnVal.APIVersion = swag.String(re.APIVersion())
 
 	return &returnVal, nil
@@ -464,16 +490,17 @@ func (t *typeFlag) String() string {
 
 func (t *typeFlag) Set(s string) error {
 	set := map[string]struct{}{
-		"rekord": {},
-		"rpm":    {},
-		"jar":    {},
-		"intoto": {},
+		"rekord":  {},
+		"rpm":     {},
+		"jar":     {},
+		"intoto":  {},
+		"rfc3161": {},
 	}
 	if _, ok := set[s]; ok {
 		t.value = s
 		return nil
 	}
-	return fmt.Errorf("value specified is invalid: [%s] supported values are: [rekord, rpm, jar, intoto]", s)
+	return fmt.Errorf("value specified is invalid: [%s] supported values are: [rekord, rpm, jar, intoto, rfc3161]", s)
 }
 
 type pkiFormatFlag struct {

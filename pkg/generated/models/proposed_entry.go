@@ -133,6 +133,12 @@ func unmarshalProposedEntry(data []byte, consumer runtime.Consumer) (ProposedEnt
 			return nil, err
 		}
 		return &result, nil
+	case "rfc3161":
+		var result Rfc3161
+		if err := consumer.Consume(buf2, &result); err != nil {
+			return nil, err
+		}
+		return &result, nil
 	case "rpm":
 		var result Rpm
 		if err := consumer.Consume(buf2, &result); err != nil {

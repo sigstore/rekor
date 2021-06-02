@@ -1,0 +1,12 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.sigstore.dev/types/rfc3161/rfc3161_schema.json",
+    "title": "Timestamp Schema",
+    "description": "Schema for RFC 3161 timestamp objects",
+    "type": "object",
+    "oneOf": [
+        {
+            "$ref": "v0.0.1/rfc3161_v0_0_1_schema.json"
+        }
+    ]
+}

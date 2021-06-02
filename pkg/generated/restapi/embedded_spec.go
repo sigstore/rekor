@@ -688,6 +688,32 @@ func init() {
         }
       ]
     },
+    "rfc3161": {
+      "description": "RFC3161 Timestamp",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "type": "object",
+              "$ref": "pkg/types/rfc3161/rfc3161_schema.json"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "rpm": {
       "description": "RPM object",
       "type": "object",
@@ -1665,6 +1691,20 @@ func init() {
         }
       }
     },
+    "Rfc3161V001SchemaTsr": {
+      "description": "Information about the tsr file associated with the entry",
+      "type": "object",
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "content": {
+          "description": "Specifies the tsr file content inline within the document",
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
     "RpmV001SchemaPackage": {
       "description": "Information about the package associated with the entry",
       "type": "object",
@@ -2254,6 +2294,74 @@ func init() {
       },
       "$schema": "http://json-schema.org/draft-07/schema",
       "$id": "http://rekor.sigstore.dev/types/rekord/rekord_v0_0_1_schema.json"
+    },
+    "rfc3161": {
+      "description": "RFC3161 Timestamp",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "$ref": "#/definitions/rfc3161Schema"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "rfc3161Schema": {
+      "description": "Schema for RFC 3161 timestamp objects",
+      "type": "object",
+      "title": "Timestamp Schema",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/rfc3161V001Schema"
+        }
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/rfc3161/rfc3161_schema.json"
+    },
+    "rfc3161V001Schema": {
+      "description": "Schema for RFC3161 entries",
+      "type": "object",
+      "title": "Timestamp v0.0.1 Schema",
+      "required": [
+        "tsr"
+      ],
+      "properties": {
+        "extraData": {
+          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
+          "type": "object",
+          "additionalProperties": true
+        },
+        "tsr": {
+          "description": "Information about the tsr file associated with the entry",
+          "type": "object",
+          "required": [
+            "content"
+          ],
+          "properties": {
+            "content": {
+              "description": "Specifies the tsr file content inline within the document",
+              "type": "string",
+              "format": "byte"
+            }
+          }
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/timestamp/timestamp_v0_0_1_schema.json"
     },
     "rpm": {
       "description": "RPM object",

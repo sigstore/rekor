@@ -1,0 +1,27 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.sigstore.dev/types/timestamp/timestamp_v0_0_1_schema.json",
+    "title": "Timestamp v0.0.1 Schema",
+    "description": "Schema for RFC3161 entries",
+    "type": "object",
+    "properties": {
+        "tsr": {
+            "description": "Information about the tsr file associated with the entry",
+            "type": "object",
+            "properties" : {
+                "content": {
+                    "description": "Specifies the tsr file content inline within the document",
+                    "type": "string",
+                    "format": "byte"
+                }
+            },
+            "required": [ "content" ]
+        },
+        "extraData": {
+            "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
+            "type": "object",
+            "additionalProperties": true
+        }
+    },
+    "required": [ "tsr" ]
+}
