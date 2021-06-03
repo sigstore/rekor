@@ -40,9 +40,9 @@ type LogInfo struct {
 	// Pattern: ^[0-9a-fA-F]{64}$
 	RootHash *string `json:"rootHash"`
 
-	// signed tree head
+	// The current signed tree head
 	// Required: true
-	SignedTreeHead *LogInfoSignedTreeHead `json:"signedTreeHead"`
+	SignedTreeHead *string `json:"signedTreeHead"`
 
 	// The current number of nodes in the merkle tree
 	// Required: true
@@ -91,15 +91,6 @@ func (m *LogInfo) validateSignedTreeHead(formats strfmt.Registry) error {
 		return err
 	}
 
-	if m.SignedTreeHead != nil {
-		if err := m.SignedTreeHead.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("signedTreeHead")
-			}
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -116,31 +107,8 @@ func (m *LogInfo) validateTreeSize(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validate this log info based on the context it is used
+// ContextValidate validates this log info based on context it is used
 func (m *LogInfo) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateSignedTreeHead(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *LogInfo) contextValidateSignedTreeHead(ctx context.Context, formats strfmt.Registry) error {
-
-	if m.SignedTreeHead != nil {
-		if err := m.SignedTreeHead.ContextValidate(ctx, formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("signedTreeHead")
-			}
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -155,99 +123,6 @@ func (m *LogInfo) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary interface implementation
 func (m *LogInfo) UnmarshalBinary(b []byte) error {
 	var res LogInfo
-	if err := swag.ReadJSON(b, &res); err != nil {
-		return err
-	}
-	*m = res
-	return nil
-}
-
-// LogInfoSignedTreeHead The current signed tree head
-//
-// swagger:model LogInfoSignedTreeHead
-type LogInfoSignedTreeHead struct {
-
-	// Key hint
-	// Required: true
-	// Format: byte
-	KeyHint *strfmt.Base64 `json:"keyHint"`
-
-	// Log root
-	// Required: true
-	// Format: byte
-	LogRoot *strfmt.Base64 `json:"logRoot"`
-
-	// Signature for log root
-	// Required: true
-	// Format: byte
-	Signature *strfmt.Base64 `json:"signature"`
-}
-
-// Validate validates this log info signed tree head
-func (m *LogInfoSignedTreeHead) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateKeyHint(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateLogRoot(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateSignature(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *LogInfoSignedTreeHead) validateKeyHint(formats strfmt.Registry) error {
-
-	if err := validate.Required("signedTreeHead"+"."+"keyHint", "body", m.KeyHint); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *LogInfoSignedTreeHead) validateLogRoot(formats strfmt.Registry) error {
-
-	if err := validate.Required("signedTreeHead"+"."+"logRoot", "body", m.LogRoot); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *LogInfoSignedTreeHead) validateSignature(formats strfmt.Registry) error {
-
-	if err := validate.Required("signedTreeHead"+"."+"signature", "body", m.Signature); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// ContextValidate validates this log info signed tree head based on context it is used
-func (m *LogInfoSignedTreeHead) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	return nil
-}
-
-// MarshalBinary interface implementation
-func (m *LogInfoSignedTreeHead) MarshalBinary() ([]byte, error) {
-	if m == nil {
-		return nil, nil
-	}
-	return swag.WriteJSON(m)
-}
-
-// UnmarshalBinary interface implementation
-func (m *LogInfoSignedTreeHead) UnmarshalBinary(b []byte) error {
-	var res LogInfoSignedTreeHead
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

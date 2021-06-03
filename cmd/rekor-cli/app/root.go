@@ -131,7 +131,10 @@ func GetRekorClient(rekorServerURL string) (*client.Rekor, error) {
 	if viper.GetString("api-key") != "" {
 		rt.DefaultAuthentication = httptransport.APIKeyAuth("apiKey", "query", viper.GetString("api-key"))
 	}
-	return client.New(rt, strfmt.Default), nil
+
+	registry := strfmt.Default
+	registry.Add("signedCheckpoint", &util.SignedCheckpoint{}, util.SignedCheckpointValidator)
+	return client.New(rt, registry), nil
 }
 
 type urlFlag struct {

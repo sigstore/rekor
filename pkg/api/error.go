@@ -45,6 +45,7 @@ const (
 	lastSizeGreaterThanKnown          = "The tree size requested(%d) was greater than what is currently observable(%d)"
 	signingError                      = "Error signing"
 	failedToGenerateTimestampResponse = "Error generating timestamp response"
+	sthGenerateError                  = "Error generating signed tree head"
 )
 
 func errorMsg(message string, code int) *models.Error {
