@@ -238,32 +238,26 @@ func (s SignedCheckpoint) Verify(public crypto.PublicKey) bool {
 	//TODO: generalize this
 	digest := sha256.Sum256(msg)
 
-	var errorArray []error
-	for i, s := range s.Signatures {
+	for _, s := range s.Signatures {
 		sigBytes, err := base64.StdEncoding.DecodeString(s.Base64)
 		if err != nil {
 			return false
 		}
-		count := len(errorArray)
 		switch pk := public.(type) {
 		case *rsa.PublicKey:
-			err := rsa.VerifyPSS(pk, crypto.SHA256, digest[:], sigBytes, &rsa.PSSOptions{Hash: crypto.SHA256})
-			if err != nil {
-				errorArray = append(errorArray, err)
+			if err := rsa.VerifyPSS(pk, crypto.SHA256, digest[:], sigBytes, &rsa.PSSOptions{Hash: crypto.SHA256}); err == nil {
+				return true
 			}
 		case *ecdsa.PublicKey:
-			if !ecdsa.VerifyASN1(pk, digest[:], sigBytes) {
-				errorArray = append(errorArray, fmt.Errorf("failed signature verification for signature #%d", i))
+			if ecdsa.VerifyASN1(pk, digest[:], sigBytes) {
+				return true
 			}
 		case *ed25519.PublicKey:
-			if !ed25519.Verify(*pk, msg, sigBytes) {
-				errorArray = append(errorArray, fmt.Errorf("failed signature verification for signature #%d", i))
+			if ed25519.Verify(*pk, msg, sigBytes) {
+				return true
 			}
 		default:
 			return false
-		}
-		if len(errorArray) == count {
-			return true
 		}
 	}
 	return false
