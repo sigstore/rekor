@@ -312,3 +312,7 @@ func extractPKCS7SignatureFromJAR(inz *zip.Reader) ([]byte, error) {
 	}
 	return nil, errors.New("unable to locate signature in JAR file")
 }
+
+func (v V001Entry) Attestation() (string, []byte) {
+	return "", nil
+}

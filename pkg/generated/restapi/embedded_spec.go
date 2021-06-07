@@ -1239,9 +1239,6 @@ func init() {
     },
     "IntotoV001SchemaContent": {
       "type": "object",
-      "required": [
-        "envelope"
-      ],
       "properties": {
         "envelope": {
           "description": "envelope",
@@ -1910,9 +1907,6 @@ func init() {
       "properties": {
         "content": {
           "type": "object",
-          "required": [
-            "envelope"
-          ],
           "properties": {
             "envelope": {
               "description": "envelope",

@@ -90,9 +90,10 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 			return entries.NewGetLogEntryByUUIDDefault(code).WithPayload(errorMsg(message, code))
 		}
 	case entries.CreateLogEntryParams:
-		logMsg(params.HTTPRequest)
 		switch code {
+		// We treat "duplicate entry" as an error, but it's not really an error, so we don't need to log it as one.
 		case http.StatusBadRequest:
+			logMsg(params.HTTPRequest)
 			return entries.NewCreateLogEntryBadRequest().WithPayload(errorMsg(message, code))
 		case http.StatusConflict:
 			resp := entries.NewCreateLogEntryConflict().WithPayload(errorMsg(message, code))

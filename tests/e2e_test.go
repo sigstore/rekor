@@ -23,6 +23,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
@@ -39,6 +40,7 @@ import (
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/google/go-cmp/cmp"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/in-toto/in-toto-golang/pkg/ssl"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
@@ -291,7 +293,11 @@ func TestIntoto(t *testing.T) {
 	attestationPath := filepath.Join(td, "attestation.json")
 	pubKeyPath := filepath.Join(td, "pub.pem")
 
-	it := in_toto.Statement{
+	// Get some random data so it's unique each run
+	d := randomData(t, 10)
+	id := base64.StdEncoding.EncodeToString(d)
+
+	it := in_toto.ProvenanceStatement{
 		StatementHeader: in_toto.StatementHeader{
 			Type:          in_toto.StatementInTotoV01,
 			PredicateType: in_toto.PredicateProvenanceV01,
@@ -306,7 +312,7 @@ func TestIntoto(t *testing.T) {
 		},
 		Predicate: in_toto.ProvenancePredicate{
 			Builder: in_toto.ProvenanceBuilder{
-				ID: "foo",
+				ID: "foo" + id,
 			},
 		},
 	}
@@ -344,8 +350,32 @@ func TestIntoto(t *testing.T) {
 	// If we do it twice, it should already exist
 	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Created entry at")
+	uuid := getUUIDFromUploadOutput(t, out)
+
+	// The atteestation should be stored at /var/run/attestations/$uuid
+	cmd := exec.Command("docker", "run", "-v", "/var/run/attestations:/var/run/attestations", "alpine", "cat", "/var/run/attestations/"+uuid)
+	b64, err := cmd.Output()
+	if err != nil {
+		t.Fatal(string(b64), err)
+	}
+	t.Logf("Read file contents: %s", string(b64))
+
+	attStr, err := base64.StdEncoding.DecodeString(string(b64))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored := in_toto.ProvenanceStatement{}
+	if err := json.Unmarshal([]byte(attStr), &stored); err != nil {
+		t.Error(err)
+	}
+
+	if diff := cmp.Diff(it, stored); diff != "" {
+		t.Errorf("diff: %s", diff)
+	}
+
 	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Entry already exists")
+
 }
 
 func TestJARURL(t *testing.T) {

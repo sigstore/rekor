@@ -235,7 +235,7 @@ func CreateIntotoFromPFlags() (models.ProposedEntry, error) {
 	re := intoto_v001.V001Entry{
 		IntotoObj: models.IntotoV001Schema{
 			Content: &models.IntotoV001SchemaContent{
-				Envelope: swag.String(string(b)),
+				Envelope: string(b),
 			},
 			PublicKey: &kb,
 		},

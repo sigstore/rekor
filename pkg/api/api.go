@@ -34,6 +34,7 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	pki "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/signer"
+	"github.com/sigstore/rekor/pkg/storage"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -146,8 +147,9 @@ func NewAPI() (*API, error) {
 }
 
 var (
-	api         *API
-	redisClient radix.Client
+	api           *API
+	redisClient   radix.Client
+	storageClient storage.AttestationStorage
 )
 
 func ConfigureAPI() {
@@ -159,6 +161,13 @@ func ConfigureAPI() {
 	}
 	if viper.GetBool("enable_retrieve_api") {
 		redisClient, err = cfg.New(context.Background(), "tcp", fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")))
+		if err != nil {
+			log.Logger.Panic(err)
+		}
+	}
+
+	if viper.GetBool("enable_attestation_storage") {
+		storageClient, err = storage.NewAttestationStorage()
 		if err != nil {
 			log.Logger.Panic(err)
 		}

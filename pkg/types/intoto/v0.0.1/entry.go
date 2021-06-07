@@ -26,6 +26,7 @@ import (
 	"errors"
 
 	"github.com/in-toto/in-toto-golang/pkg/ssl"
+	"github.com/spf13/viper"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -93,13 +94,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
-	if err := json.Unmarshal([]byte(*v.IntotoObj.Content.Envelope), &v.env); err != nil {
-		return err
-	}
-
-	// cross field validation
-	return nil
-
+	return v.Validate()
 }
 
 func (v V001Entry) HasExternalEntities() bool {
@@ -120,7 +115,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 	pkb := strfmt.Base64(pk)
 
-	h := sha256.Sum256([]byte(*v.IntotoObj.Content.Envelope))
+	h := sha256.Sum256([]byte(v.IntotoObj.Content.Envelope))
 
 	canonicalEntry := models.IntotoV001Schema{
 		PublicKey: &pkb,
@@ -131,9 +126,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 			},
 		},
 	}
-
-	// TODO: if the envelope kind is correct (application/vnd..), inspect the payload itself too
-	// We can use the Subject/Materials fields to build up an index.
 
 	itObj := models.Intoto{}
 	itObj.APIVersion = swag.String(APIVERSION)
@@ -148,24 +140,18 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 }
 
 // Validate performs cross-field validation for fields in object
-func (v V001Entry) Validate() error {
+func (v *V001Entry) Validate() error {
 	// TODO handle multiple
 	sslVerifier, err := ssl.NewEnvelopeSigner(&verifier{pub: v.keyObj})
 	if err != nil {
 		return err
 	}
 
-	sslEnv := &ssl.Envelope{
-		PayloadType: v.env.PayloadType,
-		Payload:     string(v.env.Payload),
-		Signatures: []ssl.Signature{
-			{
-				Sig: string(v.env.Signatures[0].Sig),
-			},
-		},
+	if err := json.Unmarshal([]byte(v.IntotoObj.Content.Envelope), &v.env); err != nil {
+		return err
 	}
 
-	ok, err := sslVerifier.Verify(sslEnv)
+	ok, err := sslVerifier.Verify(&v.env)
 	if err != nil {
 		return err
 	}
@@ -174,6 +160,14 @@ func (v V001Entry) Validate() error {
 	}
 
 	return nil
+}
+
+func (v *V001Entry) Attestation() (string, []byte) {
+	if len(v.env.Payload) > viper.GetInt("max_attestation_size") {
+		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", len(v.env.Payload), viper.GetInt("max_attestation_size"))
+		return "", nil
+	}
+	return v.env.PayloadType, []byte(v.env.Payload)
 }
 
 type verifier struct {
