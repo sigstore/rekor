@@ -49,6 +49,8 @@ spec:
           "--trillian_log_server.tlog_id=3904496407287907110",
           "--log_type=prod",
           "--rekor_server.signer=$(KMS)",
+          "--enable_attestation_storage=$(ENABLE_ATTESTATION_STORAGE)",
+          "attestation_storage_bucket=$(ATTESTATION_BUCKET)"
         ]
         env:
         - name: KMS
@@ -56,6 +58,16 @@ spec:
             configMapKeyRef:
               name: rekor-config
               key: kms
+        - name: ENABLE_ATTESTATION_STORAGE
+          valueFrom:
+            configMapKeyRef:
+              name: rekor-config
+              key: enable_attestation_storage
+        - name: ATTESTATION_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: rekor-config
+              key: attestation_bucket
         resources:
           requests:
             memory: "1G"
