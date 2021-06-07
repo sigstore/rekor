@@ -21,13 +21,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/google/trillian/types"
 	"github.com/mitchellh/go-homedir"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
-type persistedState map[string]*types.LogRootV1
+type persistedState map[string]*util.RekorSTH
 
-func Dump(url string, lr *types.LogRootV1) error {
+func Dump(url string, sth *util.RekorSTH) error {
 	rekorDir, err := getRekorDir()
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func Dump(url string, lr *types.LogRootV1) error {
 	if state == nil {
 		state = make(persistedState)
 	}
-	state[url] = lr
+	state[url] = sth
 
 	b, err := json.Marshal(&state)
 	if err != nil {
@@ -67,7 +67,7 @@ func loadStateFile() persistedState {
 	return result
 }
 
-func Load(url string) *types.LogRootV1 {
+func Load(url string) *util.RekorSTH {
 	if state := loadStateFile(); state != nil {
 		return state[url]
 	}

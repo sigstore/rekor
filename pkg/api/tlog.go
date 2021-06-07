@@ -16,17 +16,22 @@
 package api
 
 import (
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-openapi/runtime/middleware"
-	"github.com/go-openapi/strfmt"
 	"github.com/google/trillian/types"
+	"github.com/spf13/viper"
+	"golang.org/x/mod/sumdb/note"
 	"google.golang.org/grpc/codes"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
 // GetLogInfoHandler returns the current size of the tree and the STH
@@ -46,25 +51,42 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 
 	hashString := hex.EncodeToString(root.RootHash)
 	treeSize := int64(root.TreeSize)
-	logRoot := strfmt.Base64(result.SignedLogRoot.GetLogRoot())
+
+	sth := util.RekorSTH{
+		SignedCheckpoint: util.SignedCheckpoint{
+			Checkpoint: util.Checkpoint{
+				Ecosystem: "Rekor",
+				Size:      root.TreeSize,
+				Hash:      root.RootHash,
+			},
+		},
+	}
+	sth.SetTimestamp(uint64(time.Now().UnixNano()))
+	// TODO: once api.signer implements crypto.Signer, switch to using Sign() API on Checkpoint
 
 	// sign the log root ourselves to get the log root signature
-	sig, _, err := api.signer.Sign(params.HTTPRequest.Context(), result.SignedLogRoot.GetLogRoot())
+	cpString, _ := sth.Checkpoint.MarshalText()
+	sig, _, err := api.signer.Sign(params.HTTPRequest.Context(), []byte(cpString))
 	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %w", err), trillianCommunicationError)
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %w", err), signingError)
 	}
 
-	signature := strfmt.Base64(sig)
+	sth.Signatures = append(sth.Signatures, note.Signature{
+		Name:   viper.GetString("rekor_server.hostname"),
+		Hash:   binary.BigEndian.Uint32([]byte(api.pubkeyHash)[0:4]),
+		Base64: base64.StdEncoding.EncodeToString(sig),
+	})
 
-	sth := models.LogInfoSignedTreeHead{
-		LogRoot:   &logRoot,
-		Signature: &signature,
+	scBytes, err := sth.MarshalText()
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("marshalling error: %w", err), sthGenerateError)
 	}
+	scString := string(scBytes)
 
 	logInfo := models.LogInfo{
 		RootHash:       &hashString,
 		TreeSize:       &treeSize,
-		SignedTreeHead: &sth,
+		SignedTreeHead: &scString,
 	}
 	return tlog.NewGetLogInfoOK().WithPayload(&logInfo)
 }

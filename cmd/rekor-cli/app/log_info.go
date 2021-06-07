@@ -22,7 +22,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/trillian/merkle/logverifier"
@@ -34,7 +33,7 @@ import (
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/state"
 	"github.com/sigstore/rekor/pkg/generated/client/tlog"
 	"github.com/sigstore/rekor/pkg/log"
-	"github.com/sigstore/rekor/pkg/verify"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
 type logInfoCmdOutput struct {
@@ -72,14 +71,11 @@ var logInfoCmd = &cobra.Command{
 
 		logInfo := result.GetPayload()
 
-		logRoot := *logInfo.SignedTreeHead.LogRoot
-		if logRoot == nil {
-			return nil, errors.New("logroot should not be nil")
+		sth := util.RekorSTH{}
+		if err := sth.UnmarshalText([]byte(*logInfo.SignedTreeHead)); err != nil {
+			return nil, err
 		}
-		signature := *logInfo.SignedTreeHead.Signature
-		if signature == nil {
-			return nil, errors.New("signature should not be nil")
-		}
+
 		publicKey := viper.GetString("rekor_server_public_key")
 		if publicKey == "" {
 			// fetch key from server
@@ -100,33 +96,25 @@ var logInfoCmd = &cobra.Command{
 			return nil, err
 		}
 
-		lr, err := verify.SignedLogRoot(pub, logRoot, signature)
-		if err != nil {
-			return nil, err
+		if !sth.Verify(pub) {
+			return nil, errors.New("signature on tree head did not verify")
 		}
+
 		cmdOutput := &logInfoCmdOutput{
 			TreeSize:       *logInfo.TreeSize,
 			RootHash:       *logInfo.RootHash,
-			TimestampNanos: lr.TimestampNanos,
-		}
-
-		if lr.TreeSize != uint64(*logInfo.TreeSize) {
-			return nil, errors.New("tree size in signed tree head does not match value returned in API call")
-		}
-
-		if !strings.EqualFold(hex.EncodeToString(lr.RootHash), *logInfo.RootHash) {
-			return nil, errors.New("root hash in signed tree head does not match value returned in API call")
+			TimestampNanos: sth.GetTimestamp(),
 		}
 
 		oldState := state.Load(serverURL)
 		if oldState != nil {
-			persistedSize := oldState.TreeSize
-			if persistedSize < lr.TreeSize {
-				log.CliLogger.Infof("Found previous log state, proving consistency between %d and %d", oldState.TreeSize, lr.TreeSize)
+			persistedSize := oldState.Size
+			if persistedSize < sth.Size {
+				log.CliLogger.Infof("Found previous log state, proving consistency between %d and %d", oldState.Size, sth.Size)
 				params := tlog.NewGetLogProofParams()
 				firstSize := int64(persistedSize)
 				params.FirstSize = &firstSize
-				params.LastSize = int64(lr.TreeSize)
+				params.LastSize = int64(sth.Size)
 				proof, err := rekorClient.Tlog.GetLogProof(params)
 				if err != nil {
 					return nil, err
@@ -137,25 +125,25 @@ var logInfoCmd = &cobra.Command{
 					hashes = append(hashes, b)
 				}
 				v := logverifier.New(rfc6962.DefaultHasher)
-				if err := v.VerifyConsistencyProof(firstSize, int64(lr.TreeSize), oldState.RootHash,
-					lr.RootHash, hashes); err != nil {
+				if err := v.VerifyConsistencyProof(firstSize, int64(sth.Size), oldState.Hash,
+					sth.Hash, hashes); err != nil {
 					return nil, err
 				}
 				log.CliLogger.Infof("Consistency proof valid!")
-			} else if persistedSize == lr.TreeSize {
-				if !bytes.Equal(oldState.RootHash, lr.RootHash) {
+			} else if persistedSize == sth.Size {
+				if !bytes.Equal(oldState.Hash, sth.Hash) {
 					return nil, errors.New("root hash returned from server does not match previously persisted state")
 				}
 				log.CliLogger.Infof("Persisted log state matches the current state of the log")
-			} else if persistedSize > lr.TreeSize {
-				return nil, fmt.Errorf("current size of tree reported from server %d is less than previously persisted state %d", lr.TreeSize, persistedSize)
+			} else if persistedSize > sth.Size {
+				return nil, fmt.Errorf("current size of tree reported from server %d is less than previously persisted state %d", sth.Size, persistedSize)
 			}
 		} else {
 			log.CliLogger.Infof("No previous log state stored, unable to prove consistency")
 		}
 
 		if viper.GetBool("store_tree_state") {
-			if err := state.Dump(serverURL, lr); err != nil {
+			if err := state.Dump(serverURL, &sth); err != nil {
 				log.CliLogger.Infof("Unable to store previous state: %v", err)
 			}
 		}

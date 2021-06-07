@@ -444,25 +444,9 @@ definitions:
         description: The current number of nodes in the merkle tree
         minimum: 1
       signedTreeHead:
-        type: object
+        type: string
+        format: signedCheckpoint
         description: The current signed tree head
-        properties: 
-          keyHint:
-            type: string
-            description: Key hint
-            format: byte
-          logRoot:
-            type: string
-            description: Log root
-            format: byte
-          signature:
-            type: string
-            description: Signature for log root
-            format: byte
-        required:
-          - keyHint
-          - logRoot
-          - signature
     required:
       - rootHash
       - treeSize

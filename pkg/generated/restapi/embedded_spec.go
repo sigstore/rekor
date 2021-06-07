@@ -523,29 +523,8 @@ func init() {
         },
         "signedTreeHead": {
           "description": "The current signed tree head",
-          "type": "object",
-          "required": [
-            "keyHint",
-            "logRoot",
-            "signature"
-          ],
-          "properties": {
-            "keyHint": {
-              "description": "Key hint",
-              "type": "string",
-              "format": "byte"
-            },
-            "logRoot": {
-              "description": "Log root",
-              "type": "string",
-              "format": "byte"
-            },
-            "signature": {
-              "description": "Signature for log root",
-              "type": "string",
-              "format": "byte"
-            }
-          }
+          "type": "string",
+          "format": "signedCheckpoint"
         },
         "treeSize": {
           "description": "The current number of nodes in the merkle tree",
@@ -1496,60 +1475,13 @@ func init() {
         },
         "signedTreeHead": {
           "description": "The current signed tree head",
-          "type": "object",
-          "required": [
-            "keyHint",
-            "logRoot",
-            "signature"
-          ],
-          "properties": {
-            "keyHint": {
-              "description": "Key hint",
-              "type": "string",
-              "format": "byte"
-            },
-            "logRoot": {
-              "description": "Log root",
-              "type": "string",
-              "format": "byte"
-            },
-            "signature": {
-              "description": "Signature for log root",
-              "type": "string",
-              "format": "byte"
-            }
-          }
+          "type": "string",
+          "format": "signedCheckpoint"
         },
         "treeSize": {
           "description": "The current number of nodes in the merkle tree",
           "type": "integer",
           "minimum": 1
-        }
-      }
-    },
-    "LogInfoSignedTreeHead": {
-      "description": "The current signed tree head",
-      "type": "object",
-      "required": [
-        "keyHint",
-        "logRoot",
-        "signature"
-      ],
-      "properties": {
-        "keyHint": {
-          "description": "Key hint",
-          "type": "string",
-          "format": "byte"
-        },
-        "logRoot": {
-          "description": "Log root",
-          "type": "string",
-          "format": "byte"
-        },
-        "signature": {
-          "description": "Signature for log root",
-          "type": "string",
-          "format": "byte"
         }
       }
     },

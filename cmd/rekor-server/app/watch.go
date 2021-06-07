@@ -29,7 +29,6 @@ import (
 	_ "gocloud.dev/blob/fileblob" // fileblob
 	_ "gocloud.dev/blob/gcsblob"
 
-	"github.com/google/trillian/types"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -37,9 +36,8 @@ import (
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
-	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
-	"github.com/sigstore/rekor/pkg/verify"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
 const rekorSthBucketEnv = "REKOR_STH_BUCKET"
@@ -109,10 +107,10 @@ var watchCmd = &cobra.Command{
 				log.Logger.Warnf("error verifiying tree: %s", err)
 				continue
 			}
-			log.Logger.Infof("Found and verified state at %d %d", lr.VerifiedLogRoot.TreeSize, lr.VerifiedLogRoot.TimestampNanos)
-			if last != nil && last.VerifiedLogRoot.TreeSize == lr.VerifiedLogRoot.TreeSize {
+			log.Logger.Infof("Found and verified state at %d", lr.VerifiedLogRoot.Size)
+			if last != nil && last.VerifiedLogRoot.Size == lr.VerifiedLogRoot.Size {
 				log.Logger.Infof("Last tree size is the same as the current one: %d %d",
-					last.VerifiedLogRoot.TreeSize, lr.VerifiedLogRoot.TreeSize)
+					last.VerifiedLogRoot.Size, lr.VerifiedLogRoot.Size)
 				// If it's the same, it shouldn't have changed but we'll still upload anyway
 				// in case that failed.
 			}
@@ -136,23 +134,17 @@ func doCheck(c *client.Rekor, pub crypto.PublicKey) (*SignedAndUnsignedLogRoot, 
 	if err != nil {
 		return nil, errors.Wrap(err, "getting log info")
 	}
-	logRoot := *li.Payload.SignedTreeHead.LogRoot
-	if logRoot == nil {
-		return nil, errors.New("logroot should not be nil")
-	}
-	signature := *li.Payload.SignedTreeHead.Signature
-	if signature == nil {
-		return nil, errors.New("signature should not be nil")
+	sth := util.RekorSTH{}
+	if err := sth.UnmarshalText([]byte(*li.Payload.SignedTreeHead)); err != nil {
+		return nil, errors.Wrap(err, "unmarshalling tree head")
 	}
 
-	verifiedLogRoot, err := verify.SignedLogRoot(pub, logRoot, signature)
-	if err != nil {
-		return nil, errors.Wrap(err, "signing log root")
+	if !sth.Verify(pub) {
+		return nil, errors.Wrap(err, "signed tree head failed verification")
 	}
 
 	return &SignedAndUnsignedLogRoot{
-		SignedLogRoot:   li.GetPayload().SignedTreeHead,
-		VerifiedLogRoot: verifiedLogRoot,
+		VerifiedLogRoot: &sth,
 	}, nil
 }
 
@@ -162,7 +154,7 @@ func uploadToBlobStorage(ctx context.Context, bucket *blob.Bucket, lr *SignedAnd
 		return err
 	}
 
-	objName := fmt.Sprintf("sth-%d.json", lr.VerifiedLogRoot.TreeSize)
+	objName := fmt.Sprintf("sth-%d.json", lr.VerifiedLogRoot.Size)
 	w, err := bucket.NewWriter(ctx, objName, nil)
 	if err != nil {
 		return err
@@ -176,6 +168,5 @@ func uploadToBlobStorage(ctx context.Context, bucket *blob.Bucket, lr *SignedAnd
 
 // For JSON marshalling
 type SignedAndUnsignedLogRoot struct {
-	SignedLogRoot   *models.LogInfoSignedTreeHead
-	VerifiedLogRoot *types.LogRootV1
+	VerifiedLogRoot *util.RekorSTH
 }
