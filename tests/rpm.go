@@ -54,10 +54,7 @@ func createSignedRpm(t *testing.T, artifactPath string) {
 
 	rpm.SetPGPSigner(SignPGP)
 
-	data, err := randomData(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	data := randomData(t, 100)
 
 	rpm.AddFile(rpmpack.RPMFile{
 		Name:  randomRpmSuffix(),

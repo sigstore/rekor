@@ -33,10 +33,7 @@
                         "value"
                     ]
                 }
-            },
-            "required": [
-                "envelope"
-            ]
+            }
         },
         "publicKey": {
             "description": "The public key that can verify the signature",

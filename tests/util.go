@@ -95,22 +95,20 @@ func readFile(t *testing.T, p string) string {
 	return strings.TrimSpace(string(b))
 }
 
-func randomData(n int) ([]byte, error) {
+func randomData(t *testing.T, n int) []byte {
+	t.Helper()
 	rand.Seed(time.Now().UnixNano())
 	data := make([]byte, n)
 	if _, err := rand.Read(data[:]); err != nil {
-		return nil, err
+		t.Fatal(err)
 	}
-	return data, nil
+	return data
 }
 
 func createArtifact(t *testing.T, artifactPath string) string {
 	t.Helper()
 	// First let's generate some random data so we don't have to worry about dupes.
-	data, err := randomData(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	data := randomData(t, 100)
 
 	artifact := base64.StdEncoding.EncodeToString(data[:])
 	// Write this to a file

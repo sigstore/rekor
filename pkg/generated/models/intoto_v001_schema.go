@@ -148,8 +148,7 @@ func (m *IntotoV001Schema) UnmarshalBinary(b []byte) error {
 type IntotoV001SchemaContent struct {
 
 	// envelope
-	// Required: true
-	Envelope *string `json:"envelope"`
+	Envelope string `json:"envelope,omitempty"`
 
 	// hash
 	Hash *IntotoV001SchemaContentHash `json:"hash,omitempty"`
@@ -159,10 +158,6 @@ type IntotoV001SchemaContent struct {
 func (m *IntotoV001SchemaContent) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateEnvelope(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateHash(formats); err != nil {
 		res = append(res, err)
 	}
@@ -170,15 +165,6 @@ func (m *IntotoV001SchemaContent) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *IntotoV001SchemaContent) validateEnvelope(formats strfmt.Registry) error {
-
-	if err := validate.Required("content"+"."+"envelope", "body", m.Envelope); err != nil {
-		return err
-	}
-
 	return nil
 }
 

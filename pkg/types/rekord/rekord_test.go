@@ -62,6 +62,10 @@ func (u UnmarshalTester) Unmarshal(pe models.ProposedEntry) error {
 	return nil
 }
 
+func (u UnmarshalTester) Attestation() (string, []byte) {
+	return "", nil
+}
+
 type UnmarshalFailsTester struct {
 	UnmarshalTester
 }

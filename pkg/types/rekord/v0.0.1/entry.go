@@ -379,3 +379,7 @@ func (v V001Entry) Validate() error {
 
 	return nil
 }
+
+func (v V001Entry) Attestation() (string, []byte) {
+	return "", nil
+}

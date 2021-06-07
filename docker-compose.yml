@@ -87,9 +87,13 @@ services:
       "--redis_server.port=6379",
       "--rekor_server.address=0.0.0.0",
       "--rekor_server.signer=memory",
+      "--enable_attestation_storage",
+      "--attestation_storage_bucket=file:///var/run/attestations",
       # Uncomment this for production logging
       # "--log_type=prod",
       ]
+    volumes:
+    - "/var/run/attestations:/var/run/attestations"
     restart: always # keep the server running
     ports:
       - "3000:3000"
