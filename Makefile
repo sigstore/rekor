@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: all test clean clean-gen lint gosec
+.PHONY: all test clean clean-gen lint gosec ko sign-container
 
 all: rekor-cli rekor-server
 
@@ -79,3 +79,12 @@ up:
 debug:
 	docker-compose -f docker-compose.yml -f docker-compose.debug.yml build --build-arg SERVER_LDFLAGS=$(SERVER_LDFLAGS) rekor-server-debug
 	docker-compose -f docker-compose.yml -f docker-compose.debug.yml up rekor-server-debug
+
+ko:
+	# We can't pass more than one LDFLAG via GOFLAGS, you can't have spaces in there.
+	CGO_ENABLED=0 GOFLAGS="-tags=pivkeydisabled -ldflags=-X=$(SERVER_PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
+                --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+                github.com/sigstore/rekor/cmd/rekor-server
+
+sign-container: ko
+	cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}:$(GIT_HASH)

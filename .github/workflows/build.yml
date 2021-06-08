@@ -1,0 +1,55 @@
+#
+# Copyright 2021 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: CI-Container-Build
+
+on:
+  push:
+    branches:
+      - main
+      - release-*
+    tags:
+      - '*'
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2.3.4
+      - uses: sigstore/cosign-installer@main
+        with:
+          cosign-release: 'v0.5.0'
+      - name: Extract version of Go to use
+        run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | sed -r 's/^.*://g'| uniq)" >> $GITHUB_ENV
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVERSION }}
+      - name: deps
+        run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
+      - uses: imjasonh/setup-ko@v0.4
+        with:
+          version: v0.8.3
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@master
+        with:
+          project_id: projectsigstore
+          service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          export_default_credentials: true
+      - name: creds
+        run: gcloud auth configure-docker --quiet
+      - name: container
+        run: echo -n "${{secrets.COSIGN_PASSWORD}}" | KO_DOCKER_REPO=gcr.io/projectsigstore/rekor/ci/rekor make sign-container
