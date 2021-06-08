@@ -50,7 +50,7 @@ spec:
           "--log_type=prod",
           "--rekor_server.signer=$(KMS)",
           "--enable_attestation_storage=$(ENABLE_ATTESTATION_STORAGE)",
-          "attestation_storage_bucket=$(ATTESTATION_BUCKET)"
+          "--attestation_storage_bucket=$(ATTESTATION_BUCKET)"
         ]
         env:
         - name: KMS
