@@ -26,7 +26,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.10.0
+	github.com/prometheus/client_golang v1.11.0
 	github.com/rs/cors v1.7.0
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
 	github.com/sigstore/sigstore v0.0.0-20210415112811-cb2061113e4a
