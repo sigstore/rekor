@@ -66,7 +66,7 @@ func Decode(b []byte) (*Signature, error) {
 		return nil, fmt.Errorf("unsupported signature version: %d", sig.Version)
 	}
 	if string(sig.MagicHeader[:]) != magicHeader {
-		return nil, fmt.Errorf("invalid magic header: %s", sig.MagicHeader)
+		return nil, fmt.Errorf("invalid magic header: %s", sig.MagicHeader[:])
 	}
 	if sig.Namespace != "file" {
 		return nil, fmt.Errorf("invalid signature namespace: %s", sig.Namespace)
