@@ -57,6 +57,8 @@ lint:
 gosec:
 	$(GOBIN)/gosec ./...
 
+gen: $(GENSRC)
+
 rekor-cli: $(SRCS)
 	CGO_ENABLED=0 go build -ldflags $(CLI_LDFLAGS) -o rekor-cli ./cmd/rekor-cli
 

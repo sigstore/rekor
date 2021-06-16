@@ -378,6 +378,42 @@ func TestIntoto(t *testing.T) {
 
 }
 
+func TestTimestampArtifact(t *testing.T) {
+	payload := []byte("tell me when to go")
+	filePath := filepath.Join(t.TempDir(), "file.txt")
+	tsrPath := filepath.Join(t.TempDir(), "file.tsr")
+	tsr2Path := filepath.Join(t.TempDir(), "file2.tsr")
+	if err := ioutil.WriteFile(filePath, payload, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_ = runCli(t, "timestamp", "--artifact", filePath, "--out", tsrPath)
+	artifactBytes, err := ioutil.ReadFile(tsrPath)
+	if err != nil {
+		t.Error(err)
+	}
+	sha := sha256.Sum256(artifactBytes)
+
+
+	var out string
+
+	out = runCli(t, "upload", "--type", "rfc3161", "--artifact", tsrPath)
+	outputContains(t, out, "Created entry at")
+	uuid := getUUIDFromUploadOutput(t, out)
+	out = runCli(t, "upload", "--type", "rfc3161", "--artifact", tsrPath)
+	outputContains(t, out, "Entry already exists")
+
+	out = runCli(t, "search", "--artifact", tsrPath)
+	outputContains(t, out, uuid)
+
+	out = runCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
+	outputContains(t, out, uuid)
+
+	_ = runCli(t, "timestamp", "--artifact", filePath, "--out", tsr2Path)
+	out = runCli(t, "upload", "--type", "rfc3161", "--artifact", tsr2Path)
+	outputContains(t, out, "Created entry at")
+}
+
 func TestJARURL(t *testing.T) {
 	out := runCli(t, "upload", "--artifact", "https://get.jenkins.io/war-stable/2.277.3/jenkins.war", "--type", "jar", "--artifact-hash=3e22c7e8cd7c8ee1e92cbaa8d0d303a7b53e07bc2a152ddc66f8ce55caea91ab")
 	outputContains(t, out, "Created entry at")
