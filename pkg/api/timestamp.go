@@ -24,10 +24,14 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime/middleware"
+	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
 	"github.com/pkg/errors"
 	"github.com/sassoftware/relic/lib/pkcs9"
+	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/timestamp"
-	"github.com/sigstore/rekor/pkg/log"
+	rfc3161_v001 "github.com/sigstore/rekor/pkg/types/rfc3161/v0.0.1"
 	"github.com/sigstore/rekor/pkg/util"
 )
 
@@ -43,6 +47,22 @@ func RequestFromRekor(ctx context.Context, req pkcs9.TimeStampReq) ([]byte, erro
 	}
 
 	return body, nil
+}
+
+func createRFC3161FromBytes(resp []byte) models.ProposedEntry {
+	b64 := strfmt.Base64(resp)
+	re := rfc3161_v001.V001Entry{
+		Rfc3161Obj: models.Rfc3161V001Schema{
+			Tsr: &models.Rfc3161V001SchemaTsr{
+				Content: &b64,
+			},
+		},
+	}
+
+	return &models.Rfc3161{
+		Spec:       re.Rfc3161Obj,
+		APIVersion: swag.String(re.APIVersion()),
+	}
 }
 
 func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middleware.Responder {
@@ -62,15 +82,32 @@ func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middl
 	}
 
 	// Create response
-	ctx := params.HTTPRequest.Context()
+	httpReq := params.HTTPRequest
+	ctx := httpReq.Context()
 	resp, err := RequestFromRekor(ctx, *req)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateTimestampResponse)
 	}
 
-	// TODO: Upload to transparency log and add entry UUID to location header.
-	log.Logger.Errorf("generated OK")
-	return timestamp.NewGetTimestampResponseOK().WithPayload(ioutil.NopCloser(bytes.NewReader(resp)))
+	// Upload to transparency log and add entry UUID to location header.
+	entryParams := entries.CreateLogEntryParams{
+		HTTPRequest:   httpReq,
+		ProposedEntry: createRFC3161FromBytes(resp),
+	}
+
+	logEntry, code, msg, err := createLogEntry(ctx, entryParams)
+	if err != nil {
+		return handleRekorAPIError(params, code, err, msg)
+	}
+
+	var uuid string
+	var newIndex int64
+	for location, entry := range logEntry {
+		uuid = location
+		newIndex = *entry.LogIndex
+	}
+
+	return timestamp.NewGetTimestampResponseOK().WithPayload(ioutil.NopCloser(bytes.NewReader(resp))).WithLocation(getEntryURL(*httpReq.URL, uuid)).WithETag(uuid).WithIndex(newIndex)
 }
 
 func GetTimestampCertChainHandler(params timestamp.GetTimestampCertChainParams) middleware.Responder {

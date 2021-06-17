@@ -26,6 +26,8 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
@@ -38,6 +40,18 @@ const GetTimestampResponseOKCode int = 200
 swagger:response getTimestampResponseOK
 */
 type GetTimestampResponseOK struct {
+	/*UUID of log entry
+
+	 */
+	ETag string `json:"ETag"`
+	/*Log index of the log entry
+
+	 */
+	Index int64 `json:"Index"`
+	/*URI location of log entry
+
+	 */
+	Location strfmt.URI `json:"Location"`
 
 	/*
 	  In: Body
@@ -49,6 +63,39 @@ type GetTimestampResponseOK struct {
 func NewGetTimestampResponseOK() *GetTimestampResponseOK {
 
 	return &GetTimestampResponseOK{}
+}
+
+// WithETag adds the eTag to the get timestamp response o k response
+func (o *GetTimestampResponseOK) WithETag(eTag string) *GetTimestampResponseOK {
+	o.ETag = eTag
+	return o
+}
+
+// SetETag sets the eTag to the get timestamp response o k response
+func (o *GetTimestampResponseOK) SetETag(eTag string) {
+	o.ETag = eTag
+}
+
+// WithIndex adds the index to the get timestamp response o k response
+func (o *GetTimestampResponseOK) WithIndex(index int64) *GetTimestampResponseOK {
+	o.Index = index
+	return o
+}
+
+// SetIndex sets the index to the get timestamp response o k response
+func (o *GetTimestampResponseOK) SetIndex(index int64) {
+	o.Index = index
+}
+
+// WithLocation adds the location to the get timestamp response o k response
+func (o *GetTimestampResponseOK) WithLocation(location strfmt.URI) *GetTimestampResponseOK {
+	o.Location = location
+	return o
+}
+
+// SetLocation sets the location to the get timestamp response o k response
+func (o *GetTimestampResponseOK) SetLocation(location strfmt.URI) {
+	o.Location = location
 }
 
 // WithPayload adds the payload to the get timestamp response o k response
@@ -64,6 +111,27 @@ func (o *GetTimestampResponseOK) SetPayload(payload io.ReadCloser) {
 
 // WriteResponse to the client
 func (o *GetTimestampResponseOK) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+
+	// response header ETag
+
+	eTag := o.ETag
+	if eTag != "" {
+		rw.Header().Set("ETag", eTag)
+	}
+
+	// response header Index
+
+	index := swag.FormatInt64(o.Index)
+	if index != "" {
+		rw.Header().Set("Index", index)
+	}
+
+	// response header Location
+
+	location := o.Location.String()
+	if location != "" {
+		rw.Header().Set("Location", location)
+	}
 
 	rw.WriteHeader(200)
 	payload := o.Payload

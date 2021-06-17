@@ -25,8 +25,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
@@ -83,6 +85,21 @@ func NewGetTimestampResponseOK(writer io.Writer) *GetTimestampResponseOK {
 Returns a timestamp response
 */
 type GetTimestampResponseOK struct {
+
+	/* UUID of log entry
+	 */
+	ETag string
+
+	/* Log index of the log entry
+	 */
+	Index int64
+
+	/* URI location of log entry
+
+	   Format: uri
+	*/
+	Location strfmt.URI
+
 	Payload io.Writer
 }
 
@@ -94,6 +111,35 @@ func (o *GetTimestampResponseOK) GetPayload() io.Writer {
 }
 
 func (o *GetTimestampResponseOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	// hydrates response header ETag
+	hdrETag := response.GetHeader("ETag")
+
+	if hdrETag != "" {
+		o.ETag = hdrETag
+	}
+
+	// hydrates response header Index
+	hdrIndex := response.GetHeader("Index")
+
+	if hdrIndex != "" {
+		valindex, err := swag.ConvertInt64(hdrIndex)
+		if err != nil {
+			return errors.InvalidType("Index", "header", "int64", hdrIndex)
+		}
+		o.Index = valindex
+	}
+
+	// hydrates response header Location
+	hdrLocation := response.GetHeader("Location")
+
+	if hdrLocation != "" {
+		vallocation, err := formats.Parse("uri", hdrLocation)
+		if err != nil {
+			return errors.InvalidType("Location", "header", "strfmt.URI", hdrLocation)
+		}
+		o.Location = *(vallocation.(*strfmt.URI))
+	}
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {

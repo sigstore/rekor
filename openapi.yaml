@@ -249,6 +249,17 @@ paths:
           schema:
             type: string
             format: binary
+          headers:
+            ETag:
+              type: string
+              description: UUID of log entry
+            Location:
+              type: string
+              description: URI location of log entry
+              format: uri
+            Index:
+              type: integer
+              description: Log index of the log entry
         400:
           $ref: '#/responses/BadContent'
         501:

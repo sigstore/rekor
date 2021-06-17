@@ -55,11 +55,18 @@ import (
 
 func getUUIDFromUploadOutput(t *testing.T, out string) string {
 	t.Helper()
-	// Output looks like "Created entry at index X, available at $URL/UUID", so grab the UUID:
+	// Output looks like "Artifact timestamped at ...\m Wrote response \n Created entry at index X, available at $URL/UUID", so grab the UUID:
 	urlTokens := strings.Split(strings.TrimSpace(out), " ")
 	url := urlTokens[len(urlTokens)-1]
 	splitUrl := strings.Split(url, "/")
 	return splitUrl[len(splitUrl)-1]
+}
+
+func getUUIDFromTimestampOutput(t *testing.T, out string) string {
+	t.Helper()
+	// Output looks like "Created entry at index X, available at $URL/UUID", so grab the UUID:
+	urlTokens := strings.Split(strings.TrimSpace(out), "\n")
+	return getUUIDFromUploadOutput(t, urlTokens[len(urlTokens)-1])
 }
 
 func TestEnvVariableValidation(t *testing.T) {
@@ -387,19 +394,17 @@ func TestTimestampArtifact(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_ = runCli(t, "timestamp", "--artifact", filePath, "--out", tsrPath)
+	var out string
+	out = runCli(t, "timestamp", "--artifact", filePath, "--out", tsrPath)
+	outputContains(t, out, "Created entry at")
+	uuid := getUUIDFromTimestampOutput(t, out)
+
 	artifactBytes, err := ioutil.ReadFile(tsrPath)
 	if err != nil {
 		t.Error(err)
 	}
 	sha := sha256.Sum256(artifactBytes)
 
-
-	var out string
-
-	out = runCli(t, "upload", "--type", "rfc3161", "--artifact", tsrPath)
-	outputContains(t, out, "Created entry at")
-	uuid := getUUIDFromUploadOutput(t, out)
 	out = runCli(t, "upload", "--type", "rfc3161", "--artifact", tsrPath)
 	outputContains(t, out, "Entry already exists")
 
@@ -409,8 +414,8 @@ func TestTimestampArtifact(t *testing.T) {
 	out = runCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
 	outputContains(t, out, uuid)
 
-	_ = runCli(t, "timestamp", "--artifact", filePath, "--out", tsr2Path)
-	out = runCli(t, "upload", "--type", "rfc3161", "--artifact", tsr2Path)
+	// Generates a fresh timestamp on the same artifact
+	out = runCli(t, "timestamp", "--artifact", filePath, "--out", tsr2Path)
 	outputContains(t, out, "Created entry at")
 }
 
@@ -614,7 +619,7 @@ func TestTimestampResponseCLI(t *testing.T) {
 	}
 
 	out := runCli(t, "timestamp", "--artifact", filePath, "--out", responsePath)
-	outputContains(t, out, "Wrote response to")
+	outputContains(t, out, "Wrote timestamp response to")
 
 	rekorClient, err := app.GetRekorClient("http://localhost:3000")
 	if err != nil {
@@ -647,7 +652,7 @@ func TestTimestampResponseCLI(t *testing.T) {
 	h := sha256.Sum256(payload)
 	hexDigest := hex.EncodeToString(h[:])
 	out = runCli(t, "timestamp", "--artifact-hash", hexDigest, "--out", responsePath)
-	outputContains(t, out, "Wrote response to")
+	outputContains(t, out, "Wrote timestamp response to")
 	cmd = exec.Command("openssl", "ts", "-verify", "-digest", hexDigest, "-in", responsePath, "-CAfile", CAPath)
 	errs = &bytes.Buffer{}
 

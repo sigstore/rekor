@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sassoftware/relic/lib/pkcs9"
 	"github.com/sassoftware/relic/lib/x509tools"
@@ -94,7 +95,6 @@ func addTimestampFlags(cmd *cobra.Command) error {
 
 	cmd.Flags().String("out", "response.tsr", "path to a file to write response.")
 
-	// TODO: Add a flag to upload a pre-formed timestamp response to the log.
 	// TODO: Add a flag to indicate a JSON formatted timestamp request/response.
 	return nil
 }
@@ -175,13 +175,15 @@ func createRequestFromFlags() (*pkcs9.TimeStampReq, error) {
 }
 
 type timestampCmdOutput struct {
-	Location string
+	Timestamp time.Time
+	Location  string
+	UUID      string
+	Index     int64
 }
 
 func (t *timestampCmdOutput) String() string {
-	return fmt.Sprintf(`
-Wrote response to: %v
-`, t.Location)
+	return fmt.Sprintf("Artifact timestamped at %s\nWrote timestamp response to %v\nCreated entry at index %d, available at: %v%v\n",
+		t.Timestamp, t.Location, t.Index, viper.GetString("rekor_server"), t.UUID)
 }
 
 var timestampCmd = &cobra.Command{
@@ -218,12 +220,17 @@ var timestampCmd = &cobra.Command{
 		params.Request = ioutil.NopCloser(bytes.NewReader(requestBytes))
 
 		var respBytes bytes.Buffer
-		_, err = rekorClient.Timestamp.GetTimestampResponse(params, &respBytes)
+		resp, err := rekorClient.Timestamp.GetTimestampResponse(params, &respBytes)
 		if err != nil {
 			return nil, err
 		}
 		// Sanity check response and check if the TimeStampToken was successfully created
-		if _, err = timestampReq.ParseResponse(respBytes.Bytes()); err != nil {
+		psd, err := timestampReq.ParseResponse(respBytes.Bytes())
+		if err != nil {
+			return nil, err
+		}
+		genTime, err := util.GetSigningTime(psd)
+		if err != nil {
 			return nil, err
 		}
 
@@ -238,7 +245,10 @@ var timestampCmd = &cobra.Command{
 
 		// TODO: Add log index after support for uploading to transparency log is added.
 		return &timestampCmdOutput{
-			Location: outStr,
+			Location:  outStr,
+			UUID:      string(resp.Location),
+			Timestamp: genTime,
+			Index:     resp.Index,
 		}, nil
 	}),
 }

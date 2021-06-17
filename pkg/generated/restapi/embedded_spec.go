@@ -356,6 +356,21 @@ func init() {
             "schema": {
               "type": "string",
               "format": "binary"
+            },
+            "headers": {
+              "ETag": {
+                "type": "string",
+                "description": "UUID of log entry"
+              },
+              "Index": {
+                "type": "integer",
+                "description": "Log index of the log entry"
+              },
+              "Location": {
+                "type": "string",
+                "format": "uri",
+                "description": "URI location of log entry"
+              }
             }
           },
           "400": {
@@ -1143,6 +1158,21 @@ func init() {
             "schema": {
               "type": "string",
               "format": "binary"
+            },
+            "headers": {
+              "ETag": {
+                "type": "string",
+                "description": "UUID of log entry"
+              },
+              "Index": {
+                "type": "integer",
+                "description": "Log index of the log entry"
+              },
+              "Location": {
+                "type": "string",
+                "format": "uri",
+                "description": "URI location of log entry"
+              }
             }
           },
           "400": {
