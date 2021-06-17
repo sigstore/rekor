@@ -84,8 +84,8 @@ debug:
 
 ko:
 	# We can't pass more than one LDFLAG via GOFLAGS, you can't have spaces in there.
-	CGO_ENABLED=0 GOFLAGS="-tags=pivkeydisabled -ldflags=-X=$(SERVER_PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
-                --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+	CGO_ENABLED=0 GOFLAGS="-ldflags=-X=$(SERVER_PKG).gitCommit=$(GIT_HASH)" ko publish --bare \
+                --tags $(GIT_VERSION) --tags $(GIT_HASH) --platform=linux/amd64,linux/arm64 \
                 github.com/sigstore/rekor/cmd/rekor-server
 
 sign-container: ko
