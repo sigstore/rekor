@@ -243,11 +243,10 @@ var timestampCmd = &cobra.Command{
 			return nil, err
 		}
 
-		// TODO: Add log index after support for uploading to transparency log is added.
 		return &timestampCmdOutput{
 			Location:  outStr,
 			UUID:      string(resp.Location),
-			Timestamp: genTime,
+			Timestamp: genTime.Round(time.Second),
 			Index:     resp.Index,
 		}, nil
 	}),

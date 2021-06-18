@@ -90,14 +90,17 @@ func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middl
 	}
 
 	// Upload to transparency log and add entry UUID to location header.
+	paramReq := *httpReq
+	paramReq.URL.Path = "/api/v1/log/entries"
 	entryParams := entries.CreateLogEntryParams{
-		HTTPRequest:   httpReq,
+		HTTPRequest:   &paramReq,
 		ProposedEntry: createRFC3161FromBytes(resp),
 	}
 
-	logEntry, code, msg, err := createLogEntry(ctx, entryParams)
-	if err != nil {
-		return handleRekorAPIError(params, code, err, msg)
+	// If middleware is returned, this indicates an error.
+	logEntry, middleware := createLogEntry(ctx, entryParams)
+	if middleware != nil {
+		return middleware
 	}
 
 	var uuid string
@@ -107,7 +110,7 @@ func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middl
 		newIndex = *entry.LogIndex
 	}
 
-	return timestamp.NewGetTimestampResponseOK().WithPayload(ioutil.NopCloser(bytes.NewReader(resp))).WithLocation(getEntryURL(*httpReq.URL, uuid)).WithETag(uuid).WithIndex(newIndex)
+	return timestamp.NewGetTimestampResponseOK().WithPayload(ioutil.NopCloser(bytes.NewReader(resp))).WithLocation(getEntryURL(*paramReq.URL, uuid)).WithETag(uuid).WithIndex(newIndex)
 }
 
 func GetTimestampCertChainHandler(params timestamp.GetTimestampCertChainParams) middleware.Responder {
