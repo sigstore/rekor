@@ -116,6 +116,26 @@ var verifyCmd = &cobra.Command{
 				if err != nil {
 					return nil, err
 				}
+			case "jar":
+				entry, err = CreateJarFromPFlags()
+				if err != nil {
+					return nil, err
+				}
+			case "intoto":
+				entry, err = CreateIntotoFromPFlags()
+				if err != nil {
+					return nil, err
+				}
+			case "rfc3161":
+				entry, err = CreateRFC3161FromPFlags()
+				if err != nil {
+					return nil, err
+				}
+			case "alpine":
+				entry, err = CreateAlpineFromPFlags()
+				if err != nil {
+					return nil, err
+				}
 			default:
 				return nil, errors.New("invalid type specified")
 			}

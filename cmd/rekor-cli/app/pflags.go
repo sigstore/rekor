@@ -36,6 +36,7 @@ import (
 
 	"github.com/go-playground/validator"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	alpine_v001 "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
 	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	jar_v001 "github.com/sigstore/rekor/pkg/types/jar/v0.0.1"
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
@@ -349,6 +350,82 @@ func CreateRpmFromPFlags() (models.ProposedEntry, error) {
 	return &returnVal, nil
 }
 
+func CreateAlpineFromPFlags() (models.ProposedEntry, error) {
+	//TODO: how to select version of item to create
+	returnVal := models.Alpine{}
+	re := new(alpine_v001.V001Entry)
+
+	apk := viper.GetString("entry")
+	if apk != "" {
+		var apkBytes []byte
+		apkURL, err := url.Parse(apk)
+		if err == nil && apkURL.IsAbs() {
+			/* #nosec G107 */
+			apkResp, err := http.Get(apk)
+			if err != nil {
+				return nil, fmt.Errorf("error fetching 'alpine': %w", err)
+			}
+			defer apkResp.Body.Close()
+			apkBytes, err = ioutil.ReadAll(apkResp.Body)
+			if err != nil {
+				return nil, fmt.Errorf("error fetching 'alpine': %w", err)
+			}
+		} else {
+			apkBytes, err = ioutil.ReadFile(filepath.Clean(apk))
+			if err != nil {
+				return nil, fmt.Errorf("error processing 'alpine' file: %w", err)
+			}
+		}
+		if err := json.Unmarshal(apkBytes, &returnVal); err != nil {
+			return nil, fmt.Errorf("error parsing alpine file: %w", err)
+		}
+	} else {
+		// we will need artifact, public-key, signature
+		re.AlpineModel = models.AlpineV001Schema{}
+		re.AlpineModel.Package = &models.AlpineV001SchemaPackage{}
+
+		artifact := viper.GetString("artifact")
+		dataURL, err := url.Parse(artifact)
+		if err == nil && dataURL.IsAbs() {
+			re.AlpineModel.Package.URL = strfmt.URI(artifact)
+		} else {
+			artifactBytes, err := ioutil.ReadFile(filepath.Clean(artifact))
+			if err != nil {
+				return nil, fmt.Errorf("error reading artifact file: %w", err)
+			}
+			re.AlpineModel.Package.Content = strfmt.Base64(artifactBytes)
+		}
+
+		re.AlpineModel.PublicKey = &models.AlpineV001SchemaPublicKey{}
+		publicKey := viper.GetString("public-key")
+		keyURL, err := url.Parse(publicKey)
+		if err == nil && keyURL.IsAbs() {
+			re.AlpineModel.PublicKey.URL = strfmt.URI(publicKey)
+		} else {
+			keyBytes, err := ioutil.ReadFile(filepath.Clean(publicKey))
+			if err != nil {
+				return nil, fmt.Errorf("error reading public key file: %w", err)
+			}
+			re.AlpineModel.PublicKey.Content = strfmt.Base64(keyBytes)
+		}
+
+		if err := re.Validate(); err != nil {
+			return nil, err
+		}
+
+		if re.HasExternalEntities() {
+			if err := re.FetchExternalEntities(context.Background()); err != nil {
+				return nil, fmt.Errorf("error retrieving external entities: %v", err)
+			}
+		}
+
+		returnVal.APIVersion = swag.String(re.APIVersion())
+		returnVal.Spec = re.AlpineModel
+	}
+
+	return &returnVal, nil
+}
+
 func CreateRekordFromPFlags() (models.ProposedEntry, error) {
 	//TODO: how to select version of item to create
 	returnVal := models.Rekord{}
@@ -495,12 +572,17 @@ func (t *typeFlag) Set(s string) error {
 		"jar":     {},
 		"intoto":  {},
 		"rfc3161": {},
+		"alpine":  {},
 	}
 	if _, ok := set[s]; ok {
 		t.value = s
 		return nil
 	}
-	return fmt.Errorf("value specified is invalid: [%s] supported values are: [rekord, rpm, jar, intoto, rfc3161]", s)
+	var types []string
+	for typeStr := range set {
+		types = append(types, typeStr)
+	}
+	return fmt.Errorf("value specified is invalid: [%s] supported values are: [%v]", s, strings.Join(types, ", "))
 }
 
 type pkiFormatFlag struct {

@@ -60,6 +60,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 // Verify implements the pki.Signature interface
 func (s Signature) Verify(r io.Reader, k interface{}) error {
 	if len(s.signature) == 0 {
+		//lint:ignore ST1005 X509 is proper use of term
 		return fmt.Errorf("X509 signature has not been initialized")
 	}
 
@@ -73,7 +74,7 @@ func (s Signature) Verify(r io.Reader, k interface{}) error {
 
 	key, ok := k.(*PublicKey)
 	if !ok {
-		return fmt.Errorf("Invalid public key type for: %v", k)
+		return fmt.Errorf("invalid public key type for: %v", k)
 	}
 
 	p := key.key
@@ -172,6 +173,10 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func (k PublicKey) CryptoPubKey() crypto.PublicKey {
+	return k.key
 }
 
 // EmailAddresses implements the pki.PublicKey interface
