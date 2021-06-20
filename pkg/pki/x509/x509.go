@@ -176,6 +176,10 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+func (k PublicKey) CryptoPubKey() crypto.PublicKey {
+	return k.key
+}
+
 // EmailAddresses implements the pki.PublicKey interface
 func (k PublicKey) EmailAddresses() []string {
 	var names []string

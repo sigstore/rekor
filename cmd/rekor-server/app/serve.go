@@ -28,6 +28,8 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/types/alpine"
+	alpine_v001 "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/intoto"
 	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/jar"
@@ -79,6 +81,7 @@ var serveCmd = &cobra.Command{
 			jar.KIND:     jar_v001.APIVERSION,
 			intoto.KIND:  intoto_v001.APIVERSION,
 			rfc3161.KIND: rfc3161_v001.APIVERSION,
+			alpine.KIND:  alpine_v001.APIVERSION,
 		}
 
 		for k, v := range pluggableTypeMap {

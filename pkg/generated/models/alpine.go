@@ -32,10 +32,10 @@ import (
 	"github.com/go-openapi/validate"
 )
 
-// Rpm RPM package
+// Alpine Alpine package
 //
-// swagger:model rpm
-type Rpm struct {
+// swagger:model alpine
+type Alpine struct {
 
 	// api version
 	// Required: true
@@ -44,20 +44,20 @@ type Rpm struct {
 
 	// spec
 	// Required: true
-	Spec RpmSchema `json:"spec"`
+	Spec AlpineSchema `json:"spec"`
 }
 
 // Kind gets the kind of this subtype
-func (m *Rpm) Kind() string {
-	return "rpm"
+func (m *Alpine) Kind() string {
+	return "alpine"
 }
 
 // SetKind sets the kind of this subtype
-func (m *Rpm) SetKind(val string) {
+func (m *Alpine) SetKind(val string) {
 }
 
 // UnmarshalJSON unmarshals this object with a polymorphic type from a JSON structure
-func (m *Rpm) UnmarshalJSON(raw []byte) error {
+func (m *Alpine) UnmarshalJSON(raw []byte) error {
 	var data struct {
 
 		// api version
@@ -67,7 +67,7 @@ func (m *Rpm) UnmarshalJSON(raw []byte) error {
 
 		// spec
 		// Required: true
-		Spec RpmSchema `json:"spec"`
+		Spec AlpineSchema `json:"spec"`
 	}
 	buf := bytes.NewBuffer(raw)
 	dec := json.NewDecoder(buf)
@@ -90,7 +90,7 @@ func (m *Rpm) UnmarshalJSON(raw []byte) error {
 		return err
 	}
 
-	var result Rpm
+	var result Alpine
 
 	if base.Kind != result.Kind() {
 		/* Not the type we're looking for. */
@@ -106,7 +106,7 @@ func (m *Rpm) UnmarshalJSON(raw []byte) error {
 }
 
 // MarshalJSON marshals this object with a polymorphic type to a JSON structure
-func (m Rpm) MarshalJSON() ([]byte, error) {
+func (m Alpine) MarshalJSON() ([]byte, error) {
 	var b1, b2, b3 []byte
 	var err error
 	b1, err = json.Marshal(struct {
@@ -118,7 +118,7 @@ func (m Rpm) MarshalJSON() ([]byte, error) {
 
 		// spec
 		// Required: true
-		Spec RpmSchema `json:"spec"`
+		Spec AlpineSchema `json:"spec"`
 	}{
 
 		APIVersion: m.APIVersion,
@@ -141,8 +141,8 @@ func (m Rpm) MarshalJSON() ([]byte, error) {
 	return swag.ConcatJSON(b1, b2, b3), nil
 }
 
-// Validate validates this rpm
-func (m *Rpm) Validate(formats strfmt.Registry) error {
+// Validate validates this alpine
+func (m *Alpine) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateAPIVersion(formats); err != nil {
@@ -159,7 +159,7 @@ func (m *Rpm) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *Rpm) validateAPIVersion(formats strfmt.Registry) error {
+func (m *Alpine) validateAPIVersion(formats strfmt.Registry) error {
 
 	if err := validate.Required("apiVersion", "body", m.APIVersion); err != nil {
 		return err
@@ -172,7 +172,7 @@ func (m *Rpm) validateAPIVersion(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *Rpm) validateSpec(formats strfmt.Registry) error {
+func (m *Alpine) validateSpec(formats strfmt.Registry) error {
 
 	if m.Spec == nil {
 		return errors.Required("spec", "body", nil)
@@ -181,8 +181,8 @@ func (m *Rpm) validateSpec(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validate this rpm based on the context it is used
-func (m *Rpm) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validate this alpine based on the context it is used
+func (m *Alpine) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if len(res) > 0 {
@@ -192,7 +192,7 @@ func (m *Rpm) ContextValidate(ctx context.Context, formats strfmt.Registry) erro
 }
 
 // MarshalBinary interface implementation
-func (m *Rpm) MarshalBinary() ([]byte, error) {
+func (m *Alpine) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -200,8 +200,8 @@ func (m *Rpm) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *Rpm) UnmarshalBinary(b []byte) error {
-	var res Rpm
+func (m *Alpine) UnmarshalBinary(b []byte) error {
+	var res Alpine
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

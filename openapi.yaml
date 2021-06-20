@@ -304,7 +304,7 @@ definitions:
 
   rpm:
     type: object
-    description: RPM object
+    description: RPM package
     allOf:
     - $ref: '#/definitions/ProposedEntry'
     - properties:
@@ -318,6 +318,24 @@ definitions:
         - apiVersion
         - spec
       additionalProperties: false
+
+  alpine:
+    type: object
+    description: Alpine package
+    allOf:
+    - $ref: '#/definitions/ProposedEntry'
+    - properties:
+        apiVersion:
+          type: string
+          pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
+        spec:
+          type: object
+          $ref: 'pkg/types/alpine/alpine_schema.json'
+      required:
+        - apiVersion
+        - spec
+      additionalProperties: false
+
   intoto:
     type: object
     description: Intoto object
@@ -334,6 +352,7 @@ definitions:
         - apiVersion
         - spec
       additionalProperties: false
+
   jar:
     type: object
     description: Java Archive (JAR)

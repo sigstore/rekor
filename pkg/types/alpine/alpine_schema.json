@@ -1,0 +1,12 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.sigstore.dev/types/alpine/alpine_schema.json",
+    "title": "Alpine Package Schema",
+    "description": "Schema for Alpine package objects",
+    "type": "object",
+    "oneOf": [
+        {
+            "$ref": "v0.0.1/alpine_v0_0_1_schema.json"
+        }
+    ]
+}

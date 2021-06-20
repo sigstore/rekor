@@ -18,7 +18,6 @@ package app
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -66,6 +65,12 @@ func TestArtifactPFlags(t *testing.T) {
 				file, err = ioutil.ReadFile("../../../tests/test.rpm")
 			case "/rpmPublicKey":
 				file, err = ioutil.ReadFile("../../../tests/test_rpm_public_key.key")
+			case "/alpine":
+				file, err = ioutil.ReadFile("../../../tests/test_alpine.apk")
+			case "/alpinePublicKey":
+				file, err = ioutil.ReadFile("../../../tests/test_alpine.pub")
+			case "/alpineEntry":
+				file, err = ioutil.ReadFile("../../../tests/alpine.json")
 			case "/not_found":
 				err = errors.New("file not found")
 			}
@@ -113,6 +118,13 @@ func TestArtifactPFlags(t *testing.T) {
 			expectValidateSuccess: true,
 		},
 		{
+			caseDesc:              "valid alpine URL",
+			entry:                 testServer.URL + "/alpineEntry",
+			typeStr:               "alpine",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
 			caseDesc:              "valid rpm file, wrong type",
 			typeStr:               "rekord",
 			entry:                 "../../../tests/rpm.json",
@@ -144,6 +156,14 @@ func TestArtifactPFlags(t *testing.T) {
 			typeStr:               "rpm",
 			artifact:              "../../../tests/test.rpm",
 			publicKey:             "../../../tests/test_rpm_public_key.key",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "valid alpine - local artifact with required flags",
+			typeStr:               "alpine",
+			artifact:              "../../../tests/test_alpine.apk",
+			publicKey:             "../../../tests/test_alpine.pub",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -230,6 +250,14 @@ func TestArtifactPFlags(t *testing.T) {
 			typeStr:               "rpm",
 			artifact:              testServer.URL + "/rpm",
 			publicKey:             "../../../tests/test_rpm_public_key.key",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "valid alpine - remote artifact with required flags",
+			typeStr:               "alpine",
+			artifact:              testServer.URL + "/alpine",
+			publicKey:             "../../../tests/test_alpine.pub",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -366,7 +394,6 @@ func TestArtifactPFlags(t *testing.T) {
 					t.Errorf("error parsing typeStr: %v", err)
 				}
 				props := CreatePropsFromPflags()
-				fmt.Println(props)
 				if _, err := types.NewProposedEntry(context.Background(), typeStr, versionStr, *props); err != nil {
 					t.Errorf("unexpected result in '%v' building entry: %v", tc.caseDesc, err)
 				}

@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpm
+package alpine
 
 import (
 	"context"
@@ -25,11 +25,9 @@ import (
 	"io"
 	"io/ioutil"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/asaskevich/govalidator"
-	rpmutils "github.com/cavaliercoder/go-rpm"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"golang.org/x/sync/errgroup"
@@ -38,9 +36,9 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
 	pkifactory "github.com/sigstore/rekor/pkg/pki/factory"
-	"github.com/sigstore/rekor/pkg/pki/pgp"
+	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
-	"github.com/sigstore/rekor/pkg/types/rpm"
+	"github.com/sigstore/rekor/pkg/types/alpine"
 	"github.com/sigstore/rekor/pkg/util"
 )
 
@@ -49,16 +47,16 @@ const (
 )
 
 func init() {
-	if err := rpm.VersionMap.SetEntryFactory(APIVERSION, NewEntry); err != nil {
+	if err := alpine.VersionMap.SetEntryFactory(APIVERSION, NewEntry); err != nil {
 		log.Logger.Panic(err)
 	}
 }
 
 type V001Entry struct {
-	RPMModel                models.RpmV001Schema
+	AlpineModel             models.AlpineV001Schema
 	fetchedExternalEntities bool
 	keyObj                  pki.PublicKey
-	rpmObj                  *rpmutils.PackageFile
+	apkObj                  *alpine.Package
 }
 
 func (v V001Entry) APIVersion() string {
@@ -89,8 +87,8 @@ func (v V001Entry) IndexKeys() []string {
 
 	result = append(result, v.keyObj.EmailAddresses()...)
 
-	if v.RPMModel.Package.Hash != nil {
-		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.RPMModel.Package.Hash.Algorithm, *v.RPMModel.Package.Hash.Value))
+	if v.AlpineModel.Package.Hash != nil {
+		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.AlpineModel.Package.Hash.Algorithm, *v.AlpineModel.Package.Hash.Value))
 		result = append(result, hashKey)
 	}
 
@@ -98,17 +96,17 @@ func (v V001Entry) IndexKeys() []string {
 }
 
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
-	rpm, ok := pe.(*models.Rpm)
+	apk, ok := pe.(*models.Alpine)
 	if !ok {
-		return errors.New("cannot unmarshal non RPM v0.0.1 type")
+		return errors.New("cannot unmarshal non Alpine v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(rpm.Spec, &v.RPMModel); err != nil {
+	if err := types.DecodeEntry(apk.Spec, &v.AlpineModel); err != nil {
 		return err
 	}
 
 	// field validation
-	if err := v.RPMModel.Validate(strfmt.Default); err != nil {
+	if err := v.AlpineModel.Validate(strfmt.Default); err != nil {
 		return err
 	}
 	return nil
@@ -120,10 +118,10 @@ func (v V001Entry) HasExternalEntities() bool {
 		return false
 	}
 
-	if v.RPMModel.Package != nil && v.RPMModel.Package.URL.String() != "" {
+	if v.AlpineModel.Package != nil && v.AlpineModel.Package.URL.String() != "" {
 		return true
 	}
-	if v.RPMModel.PublicKey != nil && v.RPMModel.PublicKey.URL.String() != "" {
+	if v.AlpineModel.PublicKey != nil && v.AlpineModel.PublicKey.URL.String() != "" {
 		return true
 	}
 	return false
@@ -141,15 +139,13 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	hashR, hashW := io.Pipe()
-	sigR, sigW := io.Pipe()
-	rpmR, rpmW := io.Pipe()
+	apkR, apkW := io.Pipe()
 	defer hashR.Close()
-	defer sigR.Close()
-	defer rpmR.Close()
+	defer apkR.Close()
 
 	closePipesOnError := func(err error) error {
-		pipeReaders := []*io.PipeReader{hashR, sigR, rpmR}
-		pipeWriters := []*io.PipeWriter{hashW, sigW, rpmW}
+		pipeReaders := []*io.PipeReader{hashR, apkR}
+		pipeWriters := []*io.PipeWriter{hashW, apkW}
 		for idx := range pipeReaders {
 			if e := pipeReaders[idx].CloseWithError(err); e != nil {
 				log.Logger.Error(fmt.Errorf("error closing pipe: %w", e))
@@ -162,27 +158,23 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	}
 
 	oldSHA := ""
-	if v.RPMModel.Package.Hash != nil && v.RPMModel.Package.Hash.Value != nil {
-		oldSHA = swag.StringValue(v.RPMModel.Package.Hash.Value)
+	if v.AlpineModel.Package.Hash != nil && v.AlpineModel.Package.Hash.Value != nil {
+		oldSHA = swag.StringValue(v.AlpineModel.Package.Hash.Value)
 	}
-	artifactFactory, err := pkifactory.NewArtifactFactory("pgp")
-	if err != nil {
-		return err
-	}
+	artifactFactory, _ := pkifactory.NewArtifactFactory(string(pkifactory.X509))
 
 	g.Go(func() error {
 		defer hashW.Close()
-		defer sigW.Close()
-		defer rpmW.Close()
+		defer apkW.Close()
 
-		dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.RPMModel.Package.URL.String(), v.RPMModel.Package.Content)
+		dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.AlpineModel.Package.URL.String(), v.AlpineModel.Package.Content)
 		if err != nil {
 			return closePipesOnError(err)
 		}
 		defer dataReadCloser.Close()
 
 		/* #nosec G110 */
-		if _, err := io.Copy(io.MultiWriter(hashW, sigW, rpmW), dataReadCloser); err != nil {
+		if _, err := io.Copy(io.MultiWriter(hashW, apkW), dataReadCloser); err != nil {
 			return closePipesOnError(err)
 		}
 		return nil
@@ -211,9 +203,12 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		}
 	})
 
+	keyResult := make(chan *x509.PublicKey)
+
 	g.Go(func() error {
-		keyReadCloser, err := util.FileOrURLReadCloser(ctx, v.RPMModel.PublicKey.URL.String(),
-			v.RPMModel.PublicKey.Content)
+		defer close(keyResult)
+		keyReadCloser, err := util.FileOrURLReadCloser(ctx, v.AlpineModel.PublicKey.URL.String(),
+			v.AlpineModel.PublicKey.Content)
 		if err != nil {
 			return closePipesOnError(err)
 		}
@@ -224,34 +219,30 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 			return closePipesOnError(err)
 		}
 
-		keyring, err := v.keyObj.(*pgp.PublicKey).KeyRing()
-		if err != nil {
-			return closePipesOnError(err)
-		}
-
-		if _, err := rpmutils.GPGCheck(sigR, keyring); err != nil {
-			return closePipesOnError(err)
-		}
-
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		default:
+		case keyResult <- v.keyObj.(*x509.PublicKey):
 			return nil
 		}
 	})
 
 	g.Go(func() error {
+		apk := alpine.Package{}
+		if err := apk.Unmarshal(apkR); err != nil {
+			return closePipesOnError(err)
+		}
 
-		var err error
-		v.rpmObj, err = rpmutils.ReadPackageFile(rpmR)
-		if err != nil {
+		key := <-keyResult
+		if key == nil {
+			return closePipesOnError(errors.New("error processing public key"))
+		}
+
+		if err := apk.VerifySignature(key.CryptoPubKey()); err != nil {
 			return closePipesOnError(err)
 		}
-		// ReadPackageFile does not drain the entire reader so we need to discard the rest
-		if _, err = io.Copy(ioutil.Discard, rpmR); err != nil {
-			return closePipesOnError(err)
-		}
+
+		v.apkObj = &apk
 
 		select {
 		case <-ctx.Done():
@@ -269,9 +260,9 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 
 	// if we get here, all goroutines succeeded without error
 	if oldSHA == "" {
-		v.RPMModel.Package.Hash = &models.RpmV001SchemaPackageHash{}
-		v.RPMModel.Package.Hash.Algorithm = swag.String(models.RpmV001SchemaPackageHashAlgorithmSha256)
-		v.RPMModel.Package.Hash.Value = swag.String(computedSHA)
+		v.AlpineModel.Package.Hash = &models.AlpineV001SchemaPackageHash{}
+		v.AlpineModel.Package.Hash.Algorithm = swag.String(models.AlpineV001SchemaPackageHashAlgorithmSha256)
+		v.AlpineModel.Package.Hash.Value = swag.String(computedSHA)
 	}
 
 	v.fetchedExternalEntities = true
@@ -286,54 +277,41 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 		return nil, errors.New("key object not initialized before canonicalization")
 	}
 
-	canonicalEntry := models.RpmV001Schema{}
-	canonicalEntry.ExtraData = v.RPMModel.ExtraData
+	canonicalEntry := models.AlpineV001Schema{}
+	canonicalEntry.ExtraData = v.AlpineModel.ExtraData
 
 	var err error
+
 	// need to canonicalize key content
-	canonicalEntry.PublicKey = &models.RpmV001SchemaPublicKey{}
+	canonicalEntry.PublicKey = &models.AlpineV001SchemaPublicKey{}
 	canonicalEntry.PublicKey.Content, err = v.keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
 
-	canonicalEntry.Package = &models.RpmV001SchemaPackage{}
-	canonicalEntry.Package.Hash = &models.RpmV001SchemaPackageHash{}
-	canonicalEntry.Package.Hash.Algorithm = v.RPMModel.Package.Hash.Algorithm
-	canonicalEntry.Package.Hash.Value = v.RPMModel.Package.Hash.Value
+	canonicalEntry.Package = &models.AlpineV001SchemaPackage{}
+	canonicalEntry.Package.Hash = &models.AlpineV001SchemaPackageHash{}
+	canonicalEntry.Package.Hash.Algorithm = v.AlpineModel.Package.Hash.Algorithm
+	canonicalEntry.Package.Hash.Value = v.AlpineModel.Package.Hash.Value
 	// data content is not set deliberately
 
-	// set NEVRA headers
-	canonicalEntry.Package.Headers = make(map[string]string)
-	canonicalEntry.Package.Headers["Name"] = v.rpmObj.Name()
-	canonicalEntry.Package.Headers["Epoch"] = strconv.Itoa(v.rpmObj.Epoch())
-	canonicalEntry.Package.Headers["Version"] = v.rpmObj.Version()
-	canonicalEntry.Package.Headers["Release"] = v.rpmObj.Release()
-	canonicalEntry.Package.Headers["Architecture"] = v.rpmObj.Architecture()
-	if md5sum := v.rpmObj.GetBytes(0, 1004); md5sum != nil {
-		canonicalEntry.Package.Headers["RPMSIGTAG_MD5"] = hex.EncodeToString(md5sum)
-	}
-	if sha1sum := v.rpmObj.GetBytes(0, 1012); sha1sum != nil {
-		canonicalEntry.Package.Headers["RPMSIGTAG_SHA1"] = hex.EncodeToString(sha1sum)
-	}
-	if sha256sum := v.rpmObj.GetBytes(0, 1016); sha256sum != nil {
-		canonicalEntry.Package.Headers["RPMSIGTAG_SHA256"] = hex.EncodeToString(sha256sum)
-	}
+	// set .PKGINFO headers
+	canonicalEntry.Package.Pkginfo = v.apkObj.Pkginfo
 
 	// ExtraData is copied through unfiltered
-	canonicalEntry.ExtraData = v.RPMModel.ExtraData
+	canonicalEntry.ExtraData = v.AlpineModel.ExtraData
 
 	// wrap in valid object with kind and apiVersion set
-	rpm := models.Rpm{}
-	rpm.APIVersion = swag.String(APIVERSION)
-	rpm.Spec = &canonicalEntry
+	apk := models.Alpine{}
+	apk.APIVersion = swag.String(APIVERSION)
+	apk.Spec = &canonicalEntry
 
-	return json.Marshal(&rpm)
+	return json.Marshal(&apk)
 }
 
 // Validate performs cross-field validation for fields in object
 func (v V001Entry) Validate() error {
-	key := v.RPMModel.PublicKey
+	key := v.AlpineModel.PublicKey
 	if key == nil {
 		return errors.New("missing public key")
 	}
@@ -341,7 +319,7 @@ func (v V001Entry) Validate() error {
 		return errors.New("one of 'content' or 'url' must be specified for publicKey")
 	}
 
-	pkg := v.RPMModel.Package
+	pkg := v.AlpineModel.Package
 	if pkg == nil {
 		return errors.New("missing package")
 	}
@@ -365,49 +343,49 @@ func (v V001Entry) Attestation() (string, []byte) {
 }
 
 func (v V001Entry) CreateFromPFlags(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
-	returnVal := models.Rpm{}
+	returnVal := models.Alpine{}
 	re := V001Entry{}
 
 	// we will need artifact, public-key, signature
-	re.RPMModel = models.RpmV001Schema{}
-	re.RPMModel.Package = &models.RpmV001SchemaPackage{}
+	re.AlpineModel = models.AlpineV001Schema{}
+	re.AlpineModel.Package = &models.AlpineV001SchemaPackage{}
 
 	var err error
 	artifactBytes := props.ArtifactBytes
 	if artifactBytes == nil {
-		if props.ArtifactPath == nil {
-			return nil, errors.New("invalid path to artifact")
-		}
 		if props.ArtifactPath.IsAbs() {
-			re.RPMModel.Package.URL = strfmt.URI(props.ArtifactPath.String())
+			re.AlpineModel.Package.URL = strfmt.URI(props.ArtifactPath.String())
+			if props.ArtifactHash != "" {
+				re.AlpineModel.Package.Hash = &models.AlpineV001SchemaPackageHash{
+					Algorithm: swag.String(models.AlpineV001SchemaPackageHashAlgorithmSha256),
+					Value:     swag.String(props.ArtifactHash),
+				}
+			}
 		} else {
 			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
 			if err != nil {
 				return nil, fmt.Errorf("error reading artifact file: %w", err)
 			}
-			re.RPMModel.Package.Content = strfmt.Base64(artifactBytes)
+			re.AlpineModel.Package.Content = strfmt.Base64(artifactBytes)
 		}
 	} else {
-		re.RPMModel.Package.Content = strfmt.Base64(artifactBytes)
+		re.AlpineModel.Package.Content = strfmt.Base64(artifactBytes)
 	}
 
-	re.RPMModel.PublicKey = &models.RpmV001SchemaPublicKey{}
+	re.AlpineModel.PublicKey = &models.AlpineV001SchemaPublicKey{}
 	publicKeyBytes := props.PublicKeyBytes
 	if publicKeyBytes == nil {
-		if props.PublicKeyPath == nil {
-			return nil, errors.New("invalid path to artifact")
-		}
 		if props.PublicKeyPath.IsAbs() {
-			re.RPMModel.PublicKey.URL = strfmt.URI(props.PublicKeyPath.String())
+			re.AlpineModel.PublicKey.URL = strfmt.URI(props.PublicKeyPath.String())
 		} else {
 			publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
 			if err != nil {
 				return nil, fmt.Errorf("error reading public key file: %w", err)
 			}
-			re.RPMModel.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+			re.AlpineModel.PublicKey.Content = strfmt.Base64(publicKeyBytes)
 		}
 	} else {
-		re.RPMModel.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+		re.AlpineModel.PublicKey.Content = strfmt.Base64(publicKeyBytes)
 	}
 
 	if err := re.Validate(); err != nil {
@@ -415,13 +393,13 @@ func (v V001Entry) CreateFromPFlags(ctx context.Context, props types.ArtifactPro
 	}
 
 	if re.HasExternalEntities() {
-		if err := re.FetchExternalEntities(context.Background()); err != nil {
+		if err := re.FetchExternalEntities(ctx); err != nil {
 			return nil, fmt.Errorf("error retrieving external entities: %v", err)
 		}
 	}
 
 	returnVal.APIVersion = swag.String(re.APIVersion())
-	returnVal.Spec = re.RPMModel
+	returnVal.Spec = re.AlpineModel
 
 	return &returnVal, nil
 }
