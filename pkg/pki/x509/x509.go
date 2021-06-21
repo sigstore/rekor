@@ -32,6 +32,7 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator"
+	"github.com/sigstore/rekor/pkg/pki"
 )
 
 // EmailAddressOID defined by https://oidref.com/1.2.840.113549.1.9.1
@@ -42,7 +43,7 @@ type Signature struct {
 }
 
 // NewSignature creates and validates an x509 signature object
-func NewSignature(r io.Reader) (*Signature, error) {
+func NewSignature(r io.Reader) (pki.Signature, error) {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -58,8 +59,9 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(r io.Reader, k interface{}) error {
+func (s Signature) Verify(r io.Reader, k pki.PublicKey) error {
 	if len(s.signature) == 0 {
+		//lint:ignore ST1005 X509 is correct capitalization
 		return fmt.Errorf("X509 signature has not been initialized")
 	}
 
@@ -73,7 +75,7 @@ func (s Signature) Verify(r io.Reader, k interface{}) error {
 
 	key, ok := k.(*PublicKey)
 	if !ok {
-		return fmt.Errorf("Invalid public key type for: %v", k)
+		return fmt.Errorf("invalid public key type for: %v", k)
 	}
 
 	p := key.key
@@ -111,7 +113,7 @@ type cert struct {
 }
 
 // NewPublicKey implements the pki.PublicKey interface
-func NewPublicKey(r io.Reader) (*PublicKey, error) {
+func NewPublicKey(r io.Reader) (pki.PublicKey, error) {
 	rawPub, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err

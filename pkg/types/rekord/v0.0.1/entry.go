@@ -33,6 +33,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
+	pkifactory "github.com/sigstore/rekor/pkg/pki/factory"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/rekord"
 	"github.com/sigstore/rekor/pkg/util"
@@ -161,7 +162,10 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	if v.RekordObj.Data.Hash != nil && v.RekordObj.Data.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.RekordObj.Data.Hash.Value)
 	}
-	artifactFactory := pki.NewArtifactFactory(v.RekordObj.Signature.Format)
+	artifactFactory, err := pkifactory.NewArtifactFactory(v.RekordObj.Signature.Format)
+	if err != nil {
+		return err
+	}
 
 	g.Go(func() error {
 		defer hashW.Close()

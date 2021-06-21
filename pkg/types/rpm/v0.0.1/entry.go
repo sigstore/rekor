@@ -36,6 +36,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
+	pkifactory "github.com/sigstore/rekor/pkg/pki/factory"
 	"github.com/sigstore/rekor/pkg/pki/pgp"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/rpm"
@@ -163,7 +164,10 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	if v.RPMModel.Package.Hash != nil && v.RPMModel.Package.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.RPMModel.Package.Hash.Value)
 	}
-	artifactFactory := pki.NewArtifactFactory("pgp")
+	artifactFactory, err := pkifactory.NewArtifactFactory("pgp")
+	if err != nil {
+		return err
+	}
 
 	g.Go(func() error {
 		defer hashW.Close()

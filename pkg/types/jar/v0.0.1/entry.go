@@ -31,6 +31,7 @@ import (
 
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
+	pkifactory "github.com/sigstore/rekor/pkg/pki/factory"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/jar"
 	"github.com/sigstore/rekor/pkg/util"
@@ -178,7 +179,10 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	}
 	v.jarObj = jarObj[0]
 
-	af := pki.NewArtifactFactory("pkcs7")
+	af, err := pkifactory.NewArtifactFactory("pkcs7")
+	if err != nil {
+		return err
+	}
 	// we need to find and extract the PKCS7 bundle from the JAR file manually
 	sigPKCS7, err := extractPKCS7SignatureFromJAR(zipReader)
 	if err != nil {

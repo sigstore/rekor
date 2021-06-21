@@ -28,7 +28,7 @@ import (
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
-	"github.com/sigstore/rekor/pkg/pki"
+	pkifactory "github.com/sigstore/rekor/pkg/pki/factory"
 	"github.com/sigstore/rekor/pkg/util"
 )
 
@@ -45,7 +45,10 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 		result = append(result, resultUUIDs...)
 	}
 	if params.Query.PublicKey != nil {
-		af := pki.NewArtifactFactory(swag.StringValue(params.Query.PublicKey.Format))
+		af, err := pkifactory.NewArtifactFactory(swag.StringValue(params.Query.PublicKey.Format))
+		if err != nil {
+			return handleRekorAPIError(params, http.StatusBadRequest, err, unsupportedPKIFormat)
+		}
 		keyReader, err := util.FileOrURLReadCloser(httpReqCtx, params.Query.PublicKey.URL.String(), params.Query.PublicKey.Content)
 		if err != nil {
 			return handleRekorAPIError(params, http.StatusBadRequest, err, malformedPublicKey)

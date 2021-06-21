@@ -34,6 +34,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
+	pkifactory "github.com/sigstore/rekor/pkg/pki/factory"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/intoto"
 )
@@ -88,7 +89,11 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	// Only support x509 signatures for intoto attestations
-	af := pki.NewArtifactFactory("x509")
+	af, err := pkifactory.NewArtifactFactory("x509")
+	if err != nil {
+		return err
+	}
+
 	v.keyObj, err = af.NewPublicKey(bytes.NewReader(*v.IntotoObj.PublicKey))
 	if err != nil {
 		return err
@@ -188,7 +193,11 @@ func (v *verifier) Sign(d []byte) ([]byte, string, error) {
 }
 
 func (v *verifier) Verify(keyID string, data, sig []byte) (bool, error) {
-	af := pki.NewArtifactFactory("x509")
+	af, err := pkifactory.NewArtifactFactory("x509")
+	if err != nil {
+		return false, err
+	}
+
 	s, err := af.NewSignature(bytes.NewReader(sig))
 	if err != nil {
 		return false, err

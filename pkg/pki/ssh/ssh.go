@@ -20,6 +20,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/sigstore/rekor/pkg/pki"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -30,7 +31,7 @@ type Signature struct {
 }
 
 // NewSignature creates and Validates an ssh signature object
-func NewSignature(r io.Reader) (*Signature, error) {
+func NewSignature(r io.Reader) (pki.Signature, error) {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -48,14 +49,14 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(r io.Reader, k interface{}) error {
+func (s Signature) Verify(r io.Reader, k pki.PublicKey) error {
 	if s.signature == nil {
 		return fmt.Errorf("ssh signature has not been initialized")
 	}
 
 	key, ok := k.(*PublicKey)
 	if !ok {
-		return fmt.Errorf("Invalid public key type for: %v", k)
+		return fmt.Errorf("invalid public key type for: %v", k)
 	}
 
 	ck, err := key.CanonicalValue()
@@ -75,7 +76,7 @@ type PublicKey struct {
 }
 
 // NewPublicKey implements the pki.PublicKey interface
-func NewPublicKey(r io.Reader) (*PublicKey, error) {
+func NewPublicKey(r io.Reader) (pki.PublicKey, error) {
 	rawPub, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err

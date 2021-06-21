@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/sassoftware/relic/lib/pkcs7"
+	"github.com/sigstore/rekor/pkg/pki"
 )
 
 // EmailAddressOID defined by https://oidref.com/1.2.840.113549.1.9.1
@@ -41,7 +42,7 @@ type Signature struct {
 }
 
 // NewSignature creates and validates an PKCS7 signature object
-func NewSignature(r io.Reader) (*Signature, error) {
+func NewSignature(r io.Reader) (pki.Signature, error) {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -105,7 +106,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(r io.Reader, k interface{}) error {
+func (s Signature) Verify(r io.Reader, k pki.PublicKey) error {
 	if len(*s.raw) == 0 {
 		return fmt.Errorf("PKCS7 signature has not been initialized")
 	}
@@ -140,7 +141,7 @@ type PublicKey struct {
 }
 
 // NewPublicKey implements the pki.PublicKey interface
-func NewPublicKey(r io.Reader) (*PublicKey, error) {
+func NewPublicKey(r io.Reader) (pki.PublicKey, error) {
 	rawPub, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
