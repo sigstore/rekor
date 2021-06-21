@@ -127,7 +127,8 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 	return entries.NewGetLogEntryByIndexOK().WithPayload(logEntry)
 }
 
-func createLogEntry(ctx context.Context, params entries.CreateLogEntryParams) (models.LogEntry, middleware.Responder) {
+func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middleware.Responder) {
+	ctx := params.HTTPRequest.Context()
 	entry, err := types.NewEntry(params.ProposedEntry)
 	if err != nil {
 		return nil, handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
@@ -214,10 +215,9 @@ func createLogEntry(ctx context.Context, params entries.CreateLogEntryParams) (m
 
 // CreateLogEntryHandler creates new entry into log
 func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Responder {
-	ctx := params.HTTPRequest.Context()
 	httpReq := params.HTTPRequest
 
-	logEntry, err := createLogEntry(ctx, params)
+	logEntry, err := createLogEntry(params)
 	if err != nil {
 		return err
 	}

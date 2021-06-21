@@ -98,7 +98,7 @@ func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middl
 	}
 
 	// If middleware is returned, this indicates an error.
-	logEntry, middleware := createLogEntry(ctx, entryParams)
+	logEntry, middleware := createLogEntry(entryParams)
 	if middleware != nil {
 		return middleware
 	}
