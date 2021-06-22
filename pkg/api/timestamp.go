@@ -92,7 +92,7 @@ func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middl
 		newIndex = *entry.LogIndex
 	}
 
-	return timestamp.NewGetTimestampResponseOK().WithPayload(ioutil.NopCloser(bytes.NewReader(resp))).WithLocation(getEntryURL(*cleReq.URL, uuid)).WithETag(uuid).WithIndex(newIndex)
+	return timestamp.NewGetTimestampResponseCreated().WithPayload(ioutil.NopCloser(bytes.NewReader(resp))).WithLocation(getEntryURL(*cleReq.URL, uuid)).WithETag(uuid).WithIndex(newIndex)
 }
 
 func GetTimestampCertChainHandler(params timestamp.GetTimestampCertChainParams) middleware.Responder {

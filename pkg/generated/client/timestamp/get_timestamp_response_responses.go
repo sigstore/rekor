@@ -42,8 +42,8 @@ type GetTimestampResponseReader struct {
 // ReadResponse reads a server response into the received o.
 func (o *GetTimestampResponseReader) ReadResponse(response runtime.ClientResponse, consumer runtime.Consumer) (interface{}, error) {
 	switch response.Code() {
-	case 200:
-		result := NewGetTimestampResponseOK(o.writer)
+	case 201:
+		result := NewGetTimestampResponseCreated(o.writer)
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
 			return nil, err
 		}
@@ -72,29 +72,29 @@ func (o *GetTimestampResponseReader) ReadResponse(response runtime.ClientRespons
 	}
 }
 
-// NewGetTimestampResponseOK creates a GetTimestampResponseOK with default headers values
-func NewGetTimestampResponseOK(writer io.Writer) *GetTimestampResponseOK {
-	return &GetTimestampResponseOK{
+// NewGetTimestampResponseCreated creates a GetTimestampResponseCreated with default headers values
+func NewGetTimestampResponseCreated(writer io.Writer) *GetTimestampResponseCreated {
+	return &GetTimestampResponseCreated{
 
 		Payload: writer,
 	}
 }
 
-/* GetTimestampResponseOK describes a response with status code 200, with default header values.
+/* GetTimestampResponseCreated describes a response with status code 201, with default header values.
 
-Returns a timestamp response
+Returns a timestamp response and the location of the log entry in the transprency log
 */
-type GetTimestampResponseOK struct {
+type GetTimestampResponseCreated struct {
 
-	/* UUID of log entry
+	/* UUID of the log entry made for the timestamp response
 	 */
 	ETag string
 
-	/* Log index of the log entry
+	/* Log index of the log entry made for the timestamp response
 	 */
 	Index int64
 
-	/* URI location of log entry
+	/* URI location of the log entry made for the timestamp response
 
 	   Format: uri
 	*/
@@ -103,14 +103,14 @@ type GetTimestampResponseOK struct {
 	Payload io.Writer
 }
 
-func (o *GetTimestampResponseOK) Error() string {
-	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseOK  %+v", 200, o.Payload)
+func (o *GetTimestampResponseCreated) Error() string {
+	return fmt.Sprintf("[POST /api/v1/timestamp][%d] getTimestampResponseCreated  %+v", 201, o.Payload)
 }
-func (o *GetTimestampResponseOK) GetPayload() io.Writer {
+func (o *GetTimestampResponseCreated) GetPayload() io.Writer {
 	return o.Payload
 }
 
-func (o *GetTimestampResponseOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+func (o *GetTimestampResponseCreated) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	// hydrates response header ETag
 	hdrETag := response.GetHeader("ETag")
