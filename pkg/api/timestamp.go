@@ -24,11 +24,8 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime/middleware"
-	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
 	"github.com/pkg/errors"
 	"github.com/sassoftware/relic/lib/pkcs9"
-	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/timestamp"
 	rfc3161_v001 "github.com/sigstore/rekor/pkg/types/rfc3161/v0.0.1"
@@ -47,22 +44,6 @@ func RequestFromRekor(ctx context.Context, req pkcs9.TimeStampReq) ([]byte, erro
 	}
 
 	return body, nil
-}
-
-func createRFC3161FromBytes(resp []byte) models.ProposedEntry {
-	b64 := strfmt.Base64(resp)
-	re := rfc3161_v001.V001Entry{
-		Rfc3161Obj: models.Rfc3161V001Schema{
-			Tsr: &models.Rfc3161V001SchemaTsr{
-				Content: &b64,
-			},
-		},
-	}
-
-	return &models.Rfc3161{
-		Spec:       re.Rfc3161Obj,
-		APIVersion: swag.String(re.APIVersion()),
-	}
 }
 
 func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middleware.Responder {
@@ -90,11 +71,12 @@ func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middl
 	}
 
 	// Upload to transparency log and add entry UUID to location header.
-	paramReq := *httpReq
-	paramReq.URL.Path = "/api/v1/log/entries"
+	cleReq := *httpReq
+	cleURL := entries.CreateLogEntryURL{}
+	cleReq.URL = cleURL.Must(cleURL.Build())
 	entryParams := entries.CreateLogEntryParams{
-		HTTPRequest:   &paramReq,
-		ProposedEntry: createRFC3161FromBytes(resp),
+		HTTPRequest:   &cleReq,
+		ProposedEntry: rfc3161_v001.NewEntryFromBytes(resp),
 	}
 
 	// If middleware is returned, this indicates an error.
@@ -110,7 +92,7 @@ func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middl
 		newIndex = *entry.LogIndex
 	}
 
-	return timestamp.NewGetTimestampResponseOK().WithPayload(ioutil.NopCloser(bytes.NewReader(resp))).WithLocation(getEntryURL(*paramReq.URL, uuid)).WithETag(uuid).WithIndex(newIndex)
+	return timestamp.NewGetTimestampResponseOK().WithPayload(ioutil.NopCloser(bytes.NewReader(resp))).WithLocation(getEntryURL(*cleReq.URL, uuid)).WithETag(uuid).WithIndex(newIndex)
 }
 
 func GetTimestampCertChainHandler(params timestamp.GetTimestampCertChainParams) middleware.Responder {

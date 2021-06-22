@@ -250,27 +250,13 @@ func CreateIntotoFromPFlags() (models.ProposedEntry, error) {
 
 func CreateRFC3161FromPFlags() (models.ProposedEntry, error) {
 	//TODO: how to select version of item to create
-	returnVal := models.Rfc3161{}
-
 	rfc3161 := viper.GetString("artifact")
 	b, err := ioutil.ReadFile(filepath.Clean(rfc3161))
 	if err != nil {
 		return nil, fmt.Errorf("error reading public key file: %w", err)
 	}
 
-	b64 := strfmt.Base64(b)
-	re := rfc3161_v001.V001Entry{
-		Rfc3161Obj: models.Rfc3161V001Schema{
-			Tsr: &models.Rfc3161V001SchemaTsr{
-				Content: &b64,
-			},
-		},
-	}
-
-	returnVal.Spec = re.Rfc3161Obj
-	returnVal.APIVersion = swag.String(re.APIVersion())
-
-	return &returnVal, nil
+	return rfc3161_v001.NewEntryFromBytes(b), nil
 }
 
 func CreateRpmFromPFlags() (models.ProposedEntry, error) {
