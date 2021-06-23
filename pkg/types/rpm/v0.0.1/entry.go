@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -366,4 +367,66 @@ func (v V001Entry) Validate() error {
 
 func (v V001Entry) Attestation() (string, []byte) {
 	return "", nil
+}
+
+func (v V001Entry) CreateFromPFlags(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	returnVal := models.Rpm{}
+	re := V001Entry{}
+
+	// we will need artifact, public-key, signature
+	re.RPMModel = models.RpmV001Schema{}
+	re.RPMModel.Package = &models.RpmV001SchemaPackage{}
+
+	var err error
+	artifactBytes := props.ArtifactBytes
+	if artifactBytes == nil {
+		if props.ArtifactPath == nil {
+			return nil, errors.New("invalid path to artifact")
+		}
+		if props.ArtifactPath.IsAbs() {
+			re.RPMModel.Package.URL = strfmt.URI(props.ArtifactPath.String())
+		} else {
+			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading artifact file: %w", err)
+			}
+			re.RPMModel.Package.Content = strfmt.Base64(artifactBytes)
+		}
+	} else {
+		re.RPMModel.Package.Content = strfmt.Base64(artifactBytes)
+	}
+
+	re.RPMModel.PublicKey = &models.RpmV001SchemaPublicKey{}
+	publicKeyBytes := props.PublicKeyBytes
+	if publicKeyBytes == nil {
+		if props.PublicKeyPath == nil {
+			return nil, errors.New("invalid path to artifact")
+		}
+		if props.PublicKeyPath.IsAbs() {
+			re.RPMModel.PublicKey.URL = strfmt.URI(props.PublicKeyPath.String())
+		} else {
+			publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading public key file: %w", err)
+			}
+			re.RPMModel.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+		}
+	} else {
+		re.RPMModel.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+	}
+
+	if err := re.Validate(); err != nil {
+		return nil, err
+	}
+
+	if re.HasExternalEntities() {
+		if err := re.FetchExternalEntities(context.Background()); err != nil {
+			return nil, fmt.Errorf("error retrieving external entities: %v", err)
+		}
+	}
+
+	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.Spec = re.RPMModel
+
+	return &returnVal, nil
 }

@@ -24,6 +24,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 
 	"github.com/sigstore/rekor/pkg/types/rfc3161"
 
@@ -159,14 +161,14 @@ func (v V001Entry) Validate() error {
 		return err
 	}
 	if tsr.Status.Status != pkcs9.StatusGranted && tsr.Status.Status != pkcs9.StatusGrantedWithMods {
-		return fmt.Errorf("Tsr status not granted: %v", tsr.Status.Status)
+		return fmt.Errorf("tsr status not granted: %v", tsr.Status.Status)
 	}
 	if !tsr.TimeStampToken.ContentType.Equal(asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 7, 2}) {
-		return fmt.Errorf("Tsr wrong content type: %v", tsr.TimeStampToken.ContentType)
+		return fmt.Errorf("tsr wrong content type: %v", tsr.TimeStampToken.ContentType)
 	}
 	_, err = tsr.TimeStampToken.Content.Verify(nil, false)
 	if err != nil {
-		return fmt.Errorf("Tsr verification error: %v", err)
+		return fmt.Errorf("tsr verification error: %v", err)
 	}
 
 	return nil
@@ -174,4 +176,34 @@ func (v V001Entry) Validate() error {
 
 func (v V001Entry) Attestation() (string, []byte) {
 	return "", nil
+}
+
+func (v V001Entry) CreateFromPFlags(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	returnVal := models.Rfc3161{}
+
+	var err error
+	artifactBytes := props.ArtifactBytes
+	if artifactBytes == nil {
+		if props.ArtifactPath == nil {
+			return nil, errors.New("invalid path to artifact specified")
+		}
+		artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+		if err != nil {
+			return nil, fmt.Errorf("error reading public key file: %w", err)
+		}
+	}
+
+	b64 := strfmt.Base64(artifactBytes)
+	re := V001Entry{
+		Rfc3161Obj: models.Rfc3161V001Schema{
+			Tsr: &models.Rfc3161V001SchemaTsr{
+				Content: &b64,
+			},
+		},
+	}
+
+	returnVal.Spec = re.Rfc3161Obj
+	returnVal.APIVersion = swag.String(re.APIVersion())
+
+	return &returnVal, nil
 }

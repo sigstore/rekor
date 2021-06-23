@@ -24,6 +24,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
 
 	"github.com/in-toto/in-toto-golang/pkg/ssl"
 	"github.com/spf13/viper"
@@ -206,4 +209,45 @@ func (v *verifier) Verify(keyID string, data, sig []byte) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func (v V001Entry) CreateFromPFlags(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	returnVal := models.Intoto{}
+
+	var err error
+	artifactBytes := props.ArtifactBytes
+	if artifactBytes == nil {
+		if props.ArtifactPath == nil {
+			return nil, errors.New("invalid path to artifact specified")
+		}
+		artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+		if err != nil {
+			return nil, err
+		}
+	}
+	publicKeyBytes := props.PublicKeyBytes
+	if publicKeyBytes == nil {
+		if props.PublicKeyPath == nil {
+			return nil, errors.New("invalid path to public key specified")
+		}
+		publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
+		if err != nil {
+			return nil, fmt.Errorf("error reading public key file: %w", err)
+		}
+	}
+	kb := strfmt.Base64(publicKeyBytes)
+
+	re := V001Entry{
+		IntotoObj: models.IntotoV001Schema{
+			Content: &models.IntotoV001SchemaContent{
+				Envelope: string(artifactBytes),
+			},
+			PublicKey: &kb,
+		},
+	}
+
+	returnVal.Spec = re.IntotoObj
+	returnVal.APIVersion = swag.String(re.APIVersion())
+
+	return &returnVal, nil
 }

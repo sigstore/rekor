@@ -16,8 +16,9 @@
 package rfc3161
 
 import (
-	"errors"
+	"context"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 )
@@ -35,15 +36,15 @@ func init() {
 }
 
 func New() types.TypeImpl {
-	brt := BaseTimestampType{}
-	brt.Kind = KIND
-	brt.VersionMap = VersionMap
-	return &brt
+	btt := BaseTimestampType{}
+	btt.Kind = KIND
+	btt.VersionMap = VersionMap
+	return &btt
 }
 
 var VersionMap = types.NewSemVerEntryFactoryMap()
 
-func (rt BaseTimestampType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
+func (btt BaseTimestampType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
 	if pe == nil {
 		return nil, errors.New("proposed entry cannot be nil")
 	}
@@ -53,5 +54,20 @@ func (rt BaseTimestampType) UnmarshalEntry(pe models.ProposedEntry) (types.Entry
 		return nil, errors.New("cannot unmarshal non-Timestamp types")
 	}
 
-	return rt.VersionedUnmarshal(rfc3161, *rfc3161.APIVersion)
+	return btt.VersionedUnmarshal(rfc3161, *rfc3161.APIVersion)
+}
+
+func (btt *BaseTimestampType) CreateProposedEntry(ctx context.Context, version string, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	if version == "" {
+		version = btt.DefaultVersion()
+	}
+	ei, err := btt.VersionedUnmarshal(nil, version)
+	if err != nil {
+		return nil, errors.Wrap(err, "fetching RFC3161 version implementation")
+	}
+	return ei.CreateFromPFlags(ctx, props)
+}
+
+func (btt BaseTimestampType) DefaultVersion() string {
+	return "0.0.1"
 }

@@ -27,12 +27,22 @@ import (
 	"github.com/sigstore/rekor/pkg/pki/x509"
 )
 
+type PKIFormat string
+
+const (
+	PGP      PKIFormat = "pgp"
+	Minisign PKIFormat = "minisign"
+	SSH      PKIFormat = "ssh"
+	X509     PKIFormat = "x509"
+	PKCS7    PKIFormat = "pkcs7"
+)
+
 type ArtifactFactory struct {
 	impl pkiImpl
 }
 
 func NewArtifactFactory(format string) (*ArtifactFactory, error) {
-	if impl, ok := artifactFactoryMap[format]; ok {
+	if impl, ok := artifactFactoryMap[PKIFormat(format)]; ok {
 		return &ArtifactFactory{impl: impl}, nil
 	}
 	return nil, fmt.Errorf("%v is not a supported PKI format", format)
@@ -43,27 +53,27 @@ type pkiImpl struct {
 	newSignature func(io.Reader) (pki.Signature, error)
 }
 
-var artifactFactoryMap map[string]pkiImpl
+var artifactFactoryMap map[PKIFormat]pkiImpl
 
 func init() {
-	artifactFactoryMap = map[string]pkiImpl{
-		"pgp": {
+	artifactFactoryMap = map[PKIFormat]pkiImpl{
+		PGP: {
 			newPubKey:    pgp.NewPublicKey,
 			newSignature: pgp.NewSignature,
 		},
-		"minisign": {
+		Minisign: {
 			newPubKey:    minisign.NewPublicKey,
 			newSignature: minisign.NewSignature,
 		},
-		"ssh": {
+		SSH: {
 			newPubKey:    ssh.NewPublicKey,
 			newSignature: ssh.NewSignature,
 		},
-		"x509": {
+		X509: {
 			newPubKey:    x509.NewPublicKey,
 			newSignature: x509.NewSignature,
 		},
-		"pkcs7": {
+		PKCS7: {
 			newPubKey:    pkcs7.NewPublicKey,
 			newSignature: pkcs7.NewSignature,
 		},
@@ -73,7 +83,7 @@ func init() {
 func SupportedFormats() []string {
 	var formats []string
 	for f := range artifactFactoryMap {
-		formats = append(formats, f)
+		formats = append(formats, string(f))
 	}
 	return formats
 }

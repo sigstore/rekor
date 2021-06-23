@@ -152,5 +152,6 @@ var logInfoCmd = &cobra.Command{
 }
 
 func init() {
+	initializePFlagMap()
 	rootCmd.AddCommand(logInfoCmd)
 }

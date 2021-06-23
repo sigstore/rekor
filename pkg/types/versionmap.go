@@ -29,6 +29,7 @@ type VersionEntryFactoryMap interface {
 	GetEntryFactory(string) (EntryFactory, error) // return the entry factory for the specified version
 	SetEntryFactory(string, EntryFactory) error   // set the entry factory for the specified version
 	Count() int                                   // return the count of entry factories currently in the map
+	SupportedVersions() []string                  // return a list of versions currently stored in the map
 }
 
 // SemVerEntryFactoryMap implements a map that allows implementations to specify their supported versions using
@@ -85,4 +86,12 @@ func (s *SemVerEntryFactoryMap) SetEntryFactory(constraint string, ef EntryFacto
 
 	s.factoryMap[constraint] = ef
 	return nil
+}
+
+func (s *SemVerEntryFactoryMap) SupportedVersions() []string {
+	var versions []string
+	for k := range s.factoryMap {
+		versions = append(versions, k)
+	}
+	return versions
 }

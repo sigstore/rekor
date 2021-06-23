@@ -141,11 +141,12 @@ func parseEntry(uuid string, e models.LogEntryAnon) (interface{}, error) {
 }
 
 func init() {
+	initializePFlagMap()
 	if err := addUUIDPFlags(getCmd, false); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args:", err)
+		log.Logger.Fatal("Error parsing cmd line args: ", err)
 	}
 	if err := addLogIndexFlag(getCmd, false); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args:", err)
+		log.Logger.Fatal("Error parsing cmd line args: ", err)
 	}
 
 	rootCmd.AddCommand(getCmd)

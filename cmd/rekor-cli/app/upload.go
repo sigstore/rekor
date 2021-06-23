@@ -19,8 +19,13 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/swag"
@@ -33,6 +38,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/util"
 )
 
@@ -71,39 +77,46 @@ var uploadCmd = &cobra.Command{
 		if err != nil {
 			return nil, err
 		}
+		var entry models.ProposedEntry
 		params := entries.NewCreateLogEntryParams()
 
-		var entry models.ProposedEntry
-		switch viper.GetString("type") {
-		case "rekord":
-			entry, err = CreateRekordFromPFlags()
+		entryStr := viper.GetString("entry")
+		if entryStr != "" {
+			var entryBytes []byte
+			entryURL, err := url.Parse(entryStr)
+			if err == nil && entryURL.IsAbs() {
+				/* #nosec G107 */
+				entryResp, err := http.Get(entryStr)
+				if err != nil {
+					return nil, fmt.Errorf("error fetching entry: %w", err)
+				}
+				defer entryResp.Body.Close()
+				entryBytes, err = ioutil.ReadAll(entryResp.Body)
+				if err != nil {
+					return nil, fmt.Errorf("error fetching entry: %w", err)
+				}
+			} else {
+				entryBytes, err = ioutil.ReadFile(filepath.Clean(entryStr))
+				if err != nil {
+					return nil, fmt.Errorf("error processing entry file: %w", err)
+				}
+			}
+			if err := json.Unmarshal(entryBytes, &entry); err != nil {
+				return nil, fmt.Errorf("error parsing entry file: %w", err)
+			}
+		} else {
+			typeStr, versionStr, err := ParseTypeFlag(viper.GetString("type"))
 			if err != nil {
 				return nil, err
 			}
-		case "rpm":
-			entry, err = CreateRpmFromPFlags()
-			if err != nil {
-				return nil, err
-			}
-		case "jar":
-			entry, err = CreateJarFromPFlags()
-			if err != nil {
-				return nil, err
-			}
-		case "intoto":
-			entry, err = CreateIntotoFromPFlags()
-			if err != nil {
-				return nil, err
-			}
-		case "rfc3161":
-			entry, err = CreateRFC3161FromPFlags()
-			if err != nil {
-				return nil, err
-			}
-		default:
-			return nil, errors.New("unknown type specified")
-		}
 
+			props := CreatePropsFromPflags()
+
+			entry, err = types.NewProposedEntry(context.Background(), typeStr, versionStr, *props)
+			if err != nil {
+				return nil, err
+			}
+		}
 		params.SetProposedEntry(entry)
 
 		resp, err := rekorClient.Entries.CreateLogEntry(params)
@@ -174,6 +187,7 @@ func verifyLogEntry(ctx context.Context, rekorClient *client.Rekor, logEntry mod
 }
 
 func init() {
+	initializePFlagMap()
 	if err := addArtifactPFlags(uploadCmd); err != nil {
 		log.Logger.Fatal("Error parsing cmd line args:", err)
 	}

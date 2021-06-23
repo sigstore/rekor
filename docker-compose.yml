@@ -93,7 +93,7 @@ services:
       # "--log_type=prod",
       ]
     volumes:
-    - "/var/run/attestations:/var/run/attestations"
+    - "/var/run/attestations:/var/run/attestations:z"
     restart: always # keep the server running
     ports:
       - "3000:3000"

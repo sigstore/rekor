@@ -16,8 +16,8 @@
 package app
 
 import (
+	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math/bits"
 	"strconv"
@@ -31,6 +31,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/types"
 )
 
 type verifyCmdOutput struct {
@@ -104,20 +105,16 @@ var verifyCmd = &cobra.Command{
 			}
 			searchLogQuery.LogIndexes = []*int64{&logIndexInt}
 		} else {
-			var entry models.ProposedEntry
-			switch viper.GetString("type") {
-			case "rekord":
-				entry, err = CreateRekordFromPFlags()
-				if err != nil {
-					return nil, err
-				}
-			case "rpm":
-				entry, err = CreateRpmFromPFlags()
-				if err != nil {
-					return nil, err
-				}
-			default:
-				return nil, errors.New("invalid type specified")
+			typeStr, versionStr, err := ParseTypeFlag(viper.GetString("type"))
+			if err != nil {
+				return nil, err
+			}
+
+			props := CreatePropsFromPflags()
+
+			entry, err := types.NewProposedEntry(context.Background(), typeStr, versionStr, *props)
+			if err != nil {
+				return nil, err
 			}
 
 			entries := []models.ProposedEntry{entry}
@@ -166,6 +163,7 @@ var verifyCmd = &cobra.Command{
 }
 
 func init() {
+	initializePFlagMap()
 	if err := addArtifactPFlags(verifyCmd); err != nil {
 		log.Logger.Fatal("Error parsing cmd line args:", err)
 	}

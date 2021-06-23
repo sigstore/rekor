@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -38,59 +37,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-type fileFlag struct {
-	value string
-}
-
-func (f *fileFlag) String() string {
-	return f.value
-}
-
-func (f *fileFlag) Set(s string) error {
-	if s == "" {
-		return errors.New("flag must be specified")
-	}
-	if _, err := os.Stat(filepath.Clean(s)); os.IsNotExist(err) {
-		return err
-	}
-	f.value = s
-	return nil
-}
-
-func (f *fileFlag) Type() string {
-	return "fileFlag"
-}
-
-type oidFlag struct {
-	value asn1.ObjectIdentifier
-}
-
-func (f *oidFlag) String() string {
-	return f.value.String()
-}
-
-func (f *oidFlag) Set(s string) error {
-	parts := strings.Split(s, ".")
-	f.value = make(asn1.ObjectIdentifier, len(parts))
-	for i, part := range parts {
-		num, err := strconv.Atoi(part)
-		if err != nil {
-			return errors.New("error parsing OID")
-		}
-		f.value[i] = num
-	}
-	return nil
-}
-
-func (f *oidFlag) Type() string {
-	return "oidFlag"
-}
-
 func addTimestampFlags(cmd *cobra.Command) error {
-	cmd.Flags().Var(&fileFlag{}, "artifact", "path to an artifact to timestamp")
-	cmd.Flags().Var(&uuidFlag{}, "artifact-hash", "hex encoded SHA256 hash of the the artifact to timestamp")
+	cmd.Flags().Var(NewFlagValue(fileFlag, ""), "artifact", "path to an artifact to timestamp")
+	cmd.Flags().Var(NewFlagValue(shaFlag, ""), "artifact-hash", "hex encoded SHA256 hash of the the artifact to timestamp")
 	cmd.Flags().Bool("nonce", true, "specify a pseudo-random nonce in the request")
-	cmd.Flags().Var(&oidFlag{}, "tsa-policy", "optional dotted OID notation for the policy that the TSA should use to create the response")
+	cmd.Flags().Var(NewFlagValue(oidFlag, ""), "tsa-policy", "optional dotted OID notation for the policy that the TSA should use to create the response")
 
 	cmd.Flags().String("out", "response.tsr", "path to a file to write response.")
 
@@ -107,21 +58,6 @@ func validateTimestampFlags() error {
 		return errors.New("artifact or hash to timestamp must be specified")
 	}
 
-	if digestStr != "" {
-		digest := uuidFlag{}
-		if err := digest.Set(digestStr); err != nil {
-			return err
-		}
-	}
-
-	policyStr := viper.GetString("tsa-policy")
-	if policyStr != "" {
-		oid := oidFlag{}
-		if err := oid.Set(policyStr); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -135,11 +71,12 @@ func createRequestFromFlags() (*pkcs9.TimeStampReq, error) {
 		Hash: crypto.SHA256,
 	}
 	if policyStr != "" {
-		oid := oidFlag{}
-		if err := oid.Set(policyStr); err != nil {
-			return nil, err
+		var oidInts []int
+		for _, v := range strings.Split(policyStr, ".") {
+			i, _ := strconv.Atoi(v)
+			oidInts = append(oidInts, i)
 		}
-		opts.TSAPolicyOid = oid.value
+		opts.TSAPolicyOid = oidInts
 	}
 	if viper.GetBool("nonce") {
 		opts.Nonce = x509tools.MakeSerial()
@@ -244,6 +181,7 @@ var timestampCmd = &cobra.Command{
 }
 
 func init() {
+	initializePFlagMap()
 	if err := addTimestampFlags(timestampCmd); err != nil {
 		log.Logger.Fatal("Error parsing cmd line args: ", err)
 	}
