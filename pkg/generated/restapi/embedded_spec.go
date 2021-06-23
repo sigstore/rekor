@@ -625,6 +625,32 @@ func init() {
         }
       }
     },
+    "alpine": {
+      "description": "Alpine package",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "type": "object",
+              "$ref": "pkg/types/alpine/alpine_schema.json"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "intoto": {
       "description": "Intoto object",
       "type": "object",
@@ -730,7 +756,7 @@ func init() {
       ]
     },
     "rpm": {
-      "description": "RPM object",
+      "description": "RPM package",
       "type": "object",
       "allOf": [
         {
@@ -1225,6 +1251,111 @@ func init() {
     }
   },
   "definitions": {
+    "AlpineV001SchemaPackage": {
+      "description": "Information about the package associated with the entry",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "content"
+          ]
+        }
+      ],
+      "properties": {
+        "content": {
+          "description": "Specifies the package inline within the document",
+          "type": "string",
+          "format": "byte"
+        },
+        "hash": {
+          "description": "Specifies the hash algorithm and value for the package",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value": {
+              "description": "The hash value for the package",
+              "type": "string"
+            }
+          }
+        },
+        "pkginfo": {
+          "description": "Values of the .PKGINFO key / value pairs",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "url": {
+          "description": "Specifies the location of the package; if this is specified, a hash value must also be provided",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "AlpineV001SchemaPackageHash": {
+      "description": "Specifies the hash algorithm and value for the package",
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "The hashing function used to compute the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value": {
+          "description": "The hash value for the package",
+          "type": "string"
+        }
+      }
+    },
+    "AlpineV001SchemaPublicKey": {
+      "description": "The public key that can verify the package signature",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "content"
+          ]
+        }
+      ],
+      "properties": {
+        "content": {
+          "description": "Specifies the content of the public key inline within the document",
+          "type": "string",
+          "format": "byte"
+        },
+        "url": {
+          "description": "Specifies the location of the public key",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
     "ConsistencyProof": {
       "type": "object",
       "required": [
@@ -1929,6 +2060,145 @@ func init() {
         }
       }
     },
+    "alpine": {
+      "description": "Alpine package",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "$ref": "#/definitions/alpineSchema"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "alpineSchema": {
+      "description": "Schema for Alpine package objects",
+      "type": "object",
+      "title": "Alpine Package Schema",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/alpineV001Schema"
+        }
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/alpine/alpine_schema.json"
+    },
+    "alpineV001Schema": {
+      "description": "Schema for Alpine Package entries",
+      "type": "object",
+      "title": "Alpine v0.0.1 Schema",
+      "required": [
+        "publicKey",
+        "package"
+      ],
+      "properties": {
+        "extraData": {
+          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
+          "type": "object",
+          "additionalProperties": true
+        },
+        "package": {
+          "description": "Information about the package associated with the entry",
+          "type": "object",
+          "oneOf": [
+            {
+              "required": [
+                "url"
+              ]
+            },
+            {
+              "required": [
+                "content"
+              ]
+            }
+          ],
+          "properties": {
+            "content": {
+              "description": "Specifies the package inline within the document",
+              "type": "string",
+              "format": "byte"
+            },
+            "hash": {
+              "description": "Specifies the hash algorithm and value for the package",
+              "type": "object",
+              "required": [
+                "algorithm",
+                "value"
+              ],
+              "properties": {
+                "algorithm": {
+                  "description": "The hashing function used to compute the hash value",
+                  "type": "string",
+                  "enum": [
+                    "sha256"
+                  ]
+                },
+                "value": {
+                  "description": "The hash value for the package",
+                  "type": "string"
+                }
+              }
+            },
+            "pkginfo": {
+              "description": "Values of the .PKGINFO key / value pairs",
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "url": {
+              "description": "Specifies the location of the package; if this is specified, a hash value must also be provided",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "publicKey": {
+          "description": "The public key that can verify the package signature",
+          "type": "object",
+          "oneOf": [
+            {
+              "required": [
+                "url"
+              ]
+            },
+            {
+              "required": [
+                "content"
+              ]
+            }
+          ],
+          "properties": {
+            "content": {
+              "description": "Specifies the content of the public key inline within the document",
+              "type": "string",
+              "format": "byte"
+            },
+            "url": {
+              "description": "Specifies the location of the public key",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/alpine/alpine_v0_0_1_schema.json"
+    },
     "intoto": {
       "description": "Intoto object",
       "type": "object",
@@ -2394,7 +2664,7 @@ func init() {
       "$id": "http://rekor.sigstore.dev/types/timestamp/timestamp_v0_0_1_schema.json"
     },
     "rpm": {
-      "description": "RPM object",
+      "description": "RPM package",
       "type": "object",
       "allOf": [
         {

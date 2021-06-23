@@ -48,4 +48,5 @@ require (
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
+	gopkg.in/ini.v1 v1.62.0
 )
