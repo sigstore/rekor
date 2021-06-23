@@ -127,26 +127,23 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 	return entries.NewGetLogEntryByIndexOK().WithPayload(logEntry)
 }
 
-// CreateLogEntryHandler creates new entry into log
-func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Responder {
+func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middleware.Responder) {
 	ctx := params.HTTPRequest.Context()
-	httpReq := params.HTTPRequest
 	entry, err := types.NewEntry(params.ProposedEntry)
 	if err != nil {
-		return handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
+		return nil, handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
 	}
-
-	leaf, err := entry.Canonicalize(httpReq.Context())
+	leaf, err := entry.Canonicalize(ctx)
 	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalEntry)
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalEntry)
 	}
 
-	tc := NewTrillianClient(httpReq.Context())
+	tc := NewTrillianClient(ctx)
 
 	resp := tc.addLeaf(leaf)
 	// this represents overall GRPC response state (not the results of insertion into the log)
 	if resp.status != codes.OK {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
 	}
 
 	// this represents the results of inserting the proposed leaf into the log; status is nil in success path
@@ -156,9 +153,11 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 		case int32(code.Code_OK):
 		case int32(code.Code_ALREADY_EXISTS), int32(code.Code_FAILED_PRECONDITION):
 			existingUUID := hex.EncodeToString(rfc6962.DefaultHasher.HashLeaf(leaf))
-			return handleRekorAPIError(params, http.StatusConflict, fmt.Errorf("grpc error: %v", insertionStatus.String()), fmt.Sprintf(entryAlreadyExists, existingUUID), "entryURL", getEntryURL(*httpReq.URL, existingUUID))
+			err := fmt.Errorf("grpc error: %v", insertionStatus.String())
+			return nil, handleRekorAPIError(params, http.StatusConflict, err, fmt.Sprintf(entryAlreadyExists, existingUUID), "entryURL", getEntryURL(*params.HTTPRequest.URL, existingUUID))
 		default:
-			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %v", insertionStatus.String()), trillianUnexpectedResult)
+			err := fmt.Errorf("grpc error: %v", insertionStatus.String())
+			return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 		}
 	}
 
@@ -201,7 +200,7 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 
 	signature, err := signEntry(ctx, api.signer, logEntryAnon)
 	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing entry error: %v", err), signingError)
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing entry error: %v", err), signingError)
 	}
 
 	logEntryAnon.Verification = &models.LogEntryAnonVerification{
@@ -210,6 +209,22 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 
 	logEntry := models.LogEntry{
 		uuid: logEntryAnon,
+	}
+	return logEntry, nil
+}
+
+// CreateLogEntryHandler creates new entry into log
+func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Responder {
+	httpReq := params.HTTPRequest
+
+	logEntry, err := createLogEntry(params)
+	if err != nil {
+		return err
+	}
+
+	var uuid string
+	for location := range logEntry {
+		uuid = location
 	}
 
 	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(getEntryURL(*httpReq.URL, uuid)).WithETag(uuid)

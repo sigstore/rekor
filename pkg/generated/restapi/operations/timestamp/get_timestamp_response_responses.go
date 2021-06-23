@@ -26,18 +26,32 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
-// GetTimestampResponseOKCode is the HTTP code returned for type GetTimestampResponseOK
-const GetTimestampResponseOKCode int = 200
+// GetTimestampResponseCreatedCode is the HTTP code returned for type GetTimestampResponseCreated
+const GetTimestampResponseCreatedCode int = 201
 
-/*GetTimestampResponseOK Returns a timestamp response
+/*GetTimestampResponseCreated Returns a timestamp response and the location of the log entry in the transprency log
 
-swagger:response getTimestampResponseOK
+swagger:response getTimestampResponseCreated
 */
-type GetTimestampResponseOK struct {
+type GetTimestampResponseCreated struct {
+	/*UUID of the log entry made for the timestamp response
+
+	 */
+	ETag string `json:"ETag"`
+	/*Log index of the log entry made for the timestamp response
+
+	 */
+	Index int64 `json:"Index"`
+	/*URI location of the log entry made for the timestamp response
+
+	 */
+	Location strfmt.URI `json:"Location"`
 
 	/*
 	  In: Body
@@ -45,27 +59,81 @@ type GetTimestampResponseOK struct {
 	Payload io.ReadCloser `json:"body,omitempty"`
 }
 
-// NewGetTimestampResponseOK creates GetTimestampResponseOK with default headers values
-func NewGetTimestampResponseOK() *GetTimestampResponseOK {
+// NewGetTimestampResponseCreated creates GetTimestampResponseCreated with default headers values
+func NewGetTimestampResponseCreated() *GetTimestampResponseCreated {
 
-	return &GetTimestampResponseOK{}
+	return &GetTimestampResponseCreated{}
 }
 
-// WithPayload adds the payload to the get timestamp response o k response
-func (o *GetTimestampResponseOK) WithPayload(payload io.ReadCloser) *GetTimestampResponseOK {
+// WithETag adds the eTag to the get timestamp response created response
+func (o *GetTimestampResponseCreated) WithETag(eTag string) *GetTimestampResponseCreated {
+	o.ETag = eTag
+	return o
+}
+
+// SetETag sets the eTag to the get timestamp response created response
+func (o *GetTimestampResponseCreated) SetETag(eTag string) {
+	o.ETag = eTag
+}
+
+// WithIndex adds the index to the get timestamp response created response
+func (o *GetTimestampResponseCreated) WithIndex(index int64) *GetTimestampResponseCreated {
+	o.Index = index
+	return o
+}
+
+// SetIndex sets the index to the get timestamp response created response
+func (o *GetTimestampResponseCreated) SetIndex(index int64) {
+	o.Index = index
+}
+
+// WithLocation adds the location to the get timestamp response created response
+func (o *GetTimestampResponseCreated) WithLocation(location strfmt.URI) *GetTimestampResponseCreated {
+	o.Location = location
+	return o
+}
+
+// SetLocation sets the location to the get timestamp response created response
+func (o *GetTimestampResponseCreated) SetLocation(location strfmt.URI) {
+	o.Location = location
+}
+
+// WithPayload adds the payload to the get timestamp response created response
+func (o *GetTimestampResponseCreated) WithPayload(payload io.ReadCloser) *GetTimestampResponseCreated {
 	o.Payload = payload
 	return o
 }
 
-// SetPayload sets the payload to the get timestamp response o k response
-func (o *GetTimestampResponseOK) SetPayload(payload io.ReadCloser) {
+// SetPayload sets the payload to the get timestamp response created response
+func (o *GetTimestampResponseCreated) SetPayload(payload io.ReadCloser) {
 	o.Payload = payload
 }
 
 // WriteResponse to the client
-func (o *GetTimestampResponseOK) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+func (o *GetTimestampResponseCreated) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
 
-	rw.WriteHeader(200)
+	// response header ETag
+
+	eTag := o.ETag
+	if eTag != "" {
+		rw.Header().Set("ETag", eTag)
+	}
+
+	// response header Index
+
+	index := swag.FormatInt64(o.Index)
+	if index != "" {
+		rw.Header().Set("Index", index)
+	}
+
+	// response header Location
+
+	location := o.Location.String()
+	if location != "" {
+		rw.Header().Set("Location", location)
+	}
+
+	rw.WriteHeader(201)
 	payload := o.Payload
 	if err := producer.Produce(rw, payload); err != nil {
 		panic(err) // let the recovery middleware deal with this

@@ -58,6 +58,22 @@ func NewEntry() types.EntryImpl {
 	return &V001Entry{}
 }
 
+func NewEntryFromBytes(timestamp []byte) models.ProposedEntry {
+	b64 := strfmt.Base64(timestamp)
+	re := V001Entry{
+		Rfc3161Obj: models.Rfc3161V001Schema{
+			Tsr: &models.Rfc3161V001SchemaTsr{
+				Content: &b64,
+			},
+		},
+	}
+
+	return &models.Rfc3161{
+		Spec:       re.Rfc3161Obj,
+		APIVersion: swag.String(re.APIVersion()),
+	}
+}
+
 func (v V001Entry) IndexKeys() []string {
 	var result []string
 
