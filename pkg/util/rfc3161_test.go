@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/sassoftware/relic/lib/pkcs9"
 	"github.com/sassoftware/relic/lib/x509tools"
@@ -157,8 +158,20 @@ func TestCreateRFC3161Response(t *testing.T) {
 		t.Error(err)
 	}
 
+	before := time.Now().Add(-time.Second)
+	timestamp, err := GetSigningTime(&resp.TimeStampToken)
+	if err != nil {
+		t.Error(err)
+	}
+	after := time.Now().Add(time.Second)
+
+	if !timestamp.After(before) || !timestamp.Before(after) {
+		t.Errorf("generated bad time %s, should be after %s and before %s", timestamp, before, after)
+	}
+
 	_, err = pkcs9.Verify(&resp.TimeStampToken, fileBytes, certChain)
 	if err != nil {
 		t.Error(err)
 	}
+
 }
