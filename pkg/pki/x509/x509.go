@@ -61,7 +61,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 // Verify implements the pki.Signature interface
 func (s Signature) Verify(r io.Reader, k pki.PublicKey) error {
 	if len(s.signature) == 0 {
-		//lint:ignore ST1005 X509 is correct capitalization
+		//lint:ignore ST1005 X509 is proper use of term
 		return fmt.Errorf("X509 signature has not been initialized")
 	}
 
