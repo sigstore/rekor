@@ -43,6 +43,23 @@ jobs:
       - name: Ensure no files were modified as a result of the build
         run: git update-index --refresh && git diff-index --quiet HEAD -- || git diff --exit-code
 
+  container-build:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2.3.4
+      - name: Extract version of Go to use
+        run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | sed -r 's/^.*://g'| uniq)" >> $GITHUB_ENV
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVERSION }}
+      - uses: imjasonh/setup-ko@v0.4
+        with:
+          version: v0.8.3
+      - name: container
+        run: |
+          KO_DOCKER_REPO=ko.local make ko 2>&1 | tee output.txt
+          docker run --rm $(tail -1 output.txt) version
+
   e2e:
     runs-on: ubuntu-20.04
     needs: build

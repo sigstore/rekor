@@ -137,6 +137,26 @@ func ParseTimestampRequest(data []byte) (*pkcs9.TimeStampReq, error) {
 	return msg, nil
 }
 
+func GetSigningTime(psd *pkcs7.ContentInfoSignedData) (time.Time, error) {
+	// See sassoftware pkcs9 package for this code extracting TSTInfo
+	infobytes, err := psd.Content.ContentInfo.Bytes()
+	if err != nil {
+		return time.Time{}, fmt.Errorf("unpack TSTInfo: %w", err)
+	} else if infobytes[0] == 0x04 {
+		// unwrap dummy OCTET STRING
+		_, err = asn1.Unmarshal(infobytes, &infobytes)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("unpack TSTInfo: %w", err)
+		}
+	}
+	info := new(pkcs9.TSTInfo)
+	if _, err := asn1.Unmarshal(infobytes, info); err != nil {
+		return time.Time{}, fmt.Errorf("unpack TSTInfo: %w", err)
+	}
+
+	return pkcs7.ParseTime(info.GenTime)
+}
+
 func CreateRfc3161Response(ctx context.Context, req pkcs9.TimeStampReq, certChain []*x509.Certificate, signer signature.Signer) (*pkcs9.TimeStampResp, error) {
 	// Populate TSTInfo.
 	genTimeBytes, err := asn1.MarshalWithParams(time.Now(), "generalized")

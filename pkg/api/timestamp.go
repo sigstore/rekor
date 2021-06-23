@@ -26,8 +26,9 @@ import (
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/pkg/errors"
 	"github.com/sassoftware/relic/lib/pkcs9"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/timestamp"
-	"github.com/sigstore/rekor/pkg/log"
+	rfc3161_v001 "github.com/sigstore/rekor/pkg/types/rfc3161/v0.0.1"
 	"github.com/sigstore/rekor/pkg/util"
 )
 
@@ -62,15 +63,36 @@ func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middl
 	}
 
 	// Create response
-	ctx := params.HTTPRequest.Context()
+	httpReq := params.HTTPRequest
+	ctx := httpReq.Context()
 	resp, err := RequestFromRekor(ctx, *req)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateTimestampResponse)
 	}
 
-	// TODO: Upload to transparency log and add entry UUID to location header.
-	log.Logger.Errorf("generated OK")
-	return timestamp.NewGetTimestampResponseOK().WithPayload(ioutil.NopCloser(bytes.NewReader(resp)))
+	// Upload to transparency log and add entry UUID to location header.
+	cleReq := *httpReq
+	cleURL := entries.CreateLogEntryURL{}
+	cleReq.URL = cleURL.Must(cleURL.Build())
+	entryParams := entries.CreateLogEntryParams{
+		HTTPRequest:   &cleReq,
+		ProposedEntry: rfc3161_v001.NewEntryFromBytes(resp),
+	}
+
+	// If middleware is returned, this indicates an error.
+	logEntry, middleware := createLogEntry(entryParams)
+	if middleware != nil {
+		return middleware
+	}
+
+	var uuid string
+	var newIndex int64
+	for location, entry := range logEntry {
+		uuid = location
+		newIndex = *entry.LogIndex
+	}
+
+	return timestamp.NewGetTimestampResponseCreated().WithPayload(ioutil.NopCloser(bytes.NewReader(resp))).WithLocation(getEntryURL(*cleReq.URL, uuid)).WithETag(uuid).WithIndex(newIndex)
 }
 
 func GetTimestampCertChainHandler(params timestamp.GetTimestampCertChainParams) middleware.Responder {

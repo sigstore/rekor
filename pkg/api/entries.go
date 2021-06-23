@@ -39,10 +39,28 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-// logEntryFromLeaf creates LogEntry struct from trillian structs
-func logEntryFromLeaf(tc TrillianClient, leaf *trillian.LogLeaf, signedLogRoot *trillian.SignedLogRoot, proof *trillian.Proof) (models.LogEntry, error) {
+func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEntryAnon) ([]byte, error) {
+	payload, err := entry.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("marshalling error: %v", err)
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(payload)
+	if err != nil {
+		return nil, fmt.Errorf("canonicalizing error: %v", err)
+	}
+	signature, _, err := signer.Sign(ctx, canonicalized)
+	if err != nil {
+		return nil, fmt.Errorf("signing error: %v", err)
+	}
+	return signature, nil
+}
+
+// logEntryFromLeaf creates a signed LogEntry struct from trillian structs
+func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianClient, leaf *trillian.LogLeaf,
+	signedLogRoot *trillian.SignedLogRoot, proof *trillian.Proof) (models.LogEntry, error) {
 
 	root := &ttypes.LogRootV1{}
 	if err := root.UnmarshalBinary(signedLogRoot.LogRoot); err != nil {
@@ -53,6 +71,18 @@ func logEntryFromLeaf(tc TrillianClient, leaf *trillian.LogLeaf, signedLogRoot *
 		hashes = append(hashes, hex.EncodeToString(hash))
 	}
 
+	logEntryAnon := models.LogEntryAnon{
+		LogID:          swag.String(api.pubkeyHash),
+		LogIndex:       &leaf.LeafIndex,
+		Body:           leaf.LeafValue,
+		IntegratedTime: swag.Int64(leaf.IntegrateTimestamp.AsTime().Unix()),
+	}
+
+	signature, err := signEntry(ctx, signer, logEntryAnon)
+	if err != nil {
+		return nil, fmt.Errorf("signing entry error: %w", err)
+	}
+
 	inclusionProof := models.InclusionProof{
 		TreeSize: swag.Int64(int64(root.TreeSize)),
 		RootHash: swag.String(hex.EncodeToString(root.RootHash)),
@@ -60,24 +90,19 @@ func logEntryFromLeaf(tc TrillianClient, leaf *trillian.LogLeaf, signedLogRoot *
 		Hashes:   hashes,
 	}
 
-	logEntry := models.LogEntry{
-		hex.EncodeToString(leaf.MerkleLeafHash): models.LogEntryAnon{
-			LogID:          swag.String(api.pubkeyHash),
-			LogIndex:       &leaf.LeafIndex,
-			Body:           leaf.LeafValue,
-			IntegratedTime: swag.Int64(leaf.IntegrateTimestamp.AsTime().Unix()),
-			Verification: &models.LogEntryAnonVerification{
-				InclusionProof: &inclusionProof,
-			},
-		},
+	logEntryAnon.Verification = &models.LogEntryAnonVerification{
+		InclusionProof:       &inclusionProof,
+		SignedEntryTimestamp: strfmt.Base64(signature),
 	}
 
-	return logEntry, nil
+	return models.LogEntry{
+		hex.EncodeToString(leaf.MerkleLeafHash): logEntryAnon}, nil
 }
 
 // GetLogEntryAndProofByIndexHandler returns the entry and inclusion proof for a specified log index
 func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middleware.Responder {
-	tc := NewTrillianClient(params.HTTPRequest.Context())
+	ctx := params.HTTPRequest.Context()
+	tc := NewTrillianClient(ctx)
 
 	resp := tc.getLeafAndProofByIndex(params.LogIndex)
 	switch resp.status {
@@ -94,7 +119,7 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 		return handleRekorAPIError(params, http.StatusNotFound, errors.New("grpc returned 0 leaves with success code"), "")
 	}
 
-	logEntry, err := logEntryFromLeaf(tc, leaf, result.SignedLogRoot, result.Proof)
+	logEntry, err := logEntryFromLeaf(ctx, api.signer, tc, leaf, result.SignedLogRoot, result.Proof)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
 	}
@@ -102,26 +127,23 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 	return entries.NewGetLogEntryByIndexOK().WithPayload(logEntry)
 }
 
-// CreateLogEntryHandler creates new entry into log
-func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Responder {
+func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middleware.Responder) {
 	ctx := params.HTTPRequest.Context()
-	httpReq := params.HTTPRequest
 	entry, err := types.NewEntry(params.ProposedEntry)
 	if err != nil {
-		return handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
+		return nil, handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
 	}
-
-	leaf, err := entry.Canonicalize(httpReq.Context())
+	leaf, err := entry.Canonicalize(ctx)
 	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalEntry)
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalEntry)
 	}
 
-	tc := NewTrillianClient(httpReq.Context())
+	tc := NewTrillianClient(ctx)
 
 	resp := tc.addLeaf(leaf)
 	// this represents overall GRPC response state (not the results of insertion into the log)
 	if resp.status != codes.OK {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
 	}
 
 	// this represents the results of inserting the proposed leaf into the log; status is nil in success path
@@ -131,9 +153,11 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 		case int32(code.Code_OK):
 		case int32(code.Code_ALREADY_EXISTS), int32(code.Code_FAILED_PRECONDITION):
 			existingUUID := hex.EncodeToString(rfc6962.DefaultHasher.HashLeaf(leaf))
-			return handleRekorAPIError(params, http.StatusConflict, fmt.Errorf("grpc error: %v", insertionStatus.String()), fmt.Sprintf(entryAlreadyExists, existingUUID), "entryURL", getEntryURL(*httpReq.URL, existingUUID))
+			err := fmt.Errorf("grpc error: %v", insertionStatus.String())
+			return nil, handleRekorAPIError(params, http.StatusConflict, err, fmt.Sprintf(entryAlreadyExists, existingUUID), "entryURL", getEntryURL(*params.HTTPRequest.URL, existingUUID))
 		default:
-			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %v", insertionStatus.String()), trillianUnexpectedResult)
+			err := fmt.Errorf("grpc error: %v", insertionStatus.String())
+			return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 		}
 	}
 
@@ -174,24 +198,33 @@ func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Respo
 		}()
 	}
 
-	payload, err := logEntryAnon.MarshalBinary()
+	signature, err := signEntry(ctx, api.signer, logEntryAnon)
 	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %v", err), signingError)
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing entry error: %v", err), signingError)
 	}
-	canonicalized, err := jsoncanonicalizer.Transform(payload)
-	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("canonicalizing error: %v", err), signingError)
-	}
-	signature, _, err := api.signer.Sign(ctx, canonicalized)
-	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %v", err), signingError)
-	}
+
 	logEntryAnon.Verification = &models.LogEntryAnonVerification{
 		SignedEntryTimestamp: strfmt.Base64(signature),
 	}
 
 	logEntry := models.LogEntry{
 		uuid: logEntryAnon,
+	}
+	return logEntry, nil
+}
+
+// CreateLogEntryHandler creates new entry into log
+func CreateLogEntryHandler(params entries.CreateLogEntryParams) middleware.Responder {
+	httpReq := params.HTTPRequest
+
+	logEntry, err := createLogEntry(params)
+	if err != nil {
+		return err
+	}
+
+	var uuid string
+	for location := range logEntry {
+		uuid = location
 	}
 
 	return entries.NewCreateLogEntryCreated().WithPayload(logEntry).WithLocation(getEntryURL(*httpReq.URL, uuid)).WithETag(uuid)
@@ -210,6 +243,7 @@ func getEntryURL(locationURL url.URL, uuid string) strfmt.URI {
 
 // GetLogEntryByUUIDHandler gets log entry and inclusion proof for specified UUID aka merkle leaf hash
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
+	ctx := params.HTTPRequest.Context()
 	hashValue, _ := hex.DecodeString(params.EntryUUID)
 	tc := NewTrillianClient(params.HTTPRequest.Context())
 
@@ -228,7 +262,7 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 		return handleRekorAPIError(params, http.StatusNotFound, errors.New("grpc returned 0 leaves with success code"), "")
 	}
 
-	logEntry, err := logEntryFromLeaf(tc, leaf, result.SignedLogRoot, result.Proof)
+	logEntry, err := logEntryFromLeaf(ctx, api.signer, tc, leaf, result.SignedLogRoot, result.Proof)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
 	}
@@ -313,7 +347,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 
 		for _, leafResp := range searchByHashResults {
 			if leafResp != nil {
-				logEntry, err := logEntryFromLeaf(tc, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof)
+				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tc, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof)
 				if err != nil {
 					return handleRekorAPIError(params, code, err, err.Error())
 				}
@@ -350,7 +384,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 
 		for _, result := range leafResults {
 			if result != nil {
-				logEntry, err := logEntryFromLeaf(tc, result.Leaf, result.SignedLogRoot, result.Proof)
+				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tc, result.Leaf, result.SignedLogRoot, result.Proof)
 				if err != nil {
 					return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 				}

@@ -17,6 +17,7 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -88,6 +89,10 @@ var getCmd = &cobra.Command{
 				return nil, err
 			}
 			for ix, entry := range resp.Payload {
+				if verified, err := verifyLogEntry(context.Background(), rekorClient, entry); err != nil || !verified {
+					return nil, fmt.Errorf("unable to verify entry was added to log %w", err)
+				}
+
 				return parseEntry(ix, entry)
 			}
 		}
@@ -106,6 +111,11 @@ var getCmd = &cobra.Command{
 				if k != uuid {
 					continue
 				}
+
+				if verified, err := verifyLogEntry(context.Background(), rekorClient, entry); err != nil || !verified {
+					return nil, fmt.Errorf("unable to verify entry was added to log %w", err)
+				}
+
 				return parseEntry(k, entry)
 			}
 		}

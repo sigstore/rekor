@@ -156,6 +156,10 @@ func verifyLogEntry(ctx context.Context, rekorClient *client.Rekor, logEntry mod
 		return false, nil
 	}
 	// verify the entry
+	if logEntry.Verification.SignedEntryTimestamp == nil {
+		return false, fmt.Errorf("signature missing")
+	}
+
 	le := &models.LogEntryAnon{
 		IntegratedTime: logEntry.IntegratedTime,
 		LogIndex:       logEntry.LogIndex,
