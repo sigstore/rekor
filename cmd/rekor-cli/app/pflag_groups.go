@@ -76,7 +76,7 @@ func addArtifactPFlags(cmd *cobra.Command) error {
 			false,
 		},
 		"artifact-hash": {
-			uuidFlag,
+			shaFlag,
 			"hex encoded SHA256 hash of artifact (when using URL)",
 			false,
 		},

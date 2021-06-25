@@ -161,15 +161,13 @@ func IsURL(v string) bool {
 func validateSHA256Value(v string) error {
 	var prefix, hash string
 
-	split := strings.Split(v, ":")
+	split := strings.SplitN(v, ":", 2)
 	switch len(split) {
 	case 1:
 		hash = split[0]
 	case 2:
 		prefix = split[0]
 		hash = split[1]
-	default:
-		return errors.New("invalid format for SHA flag")
 	}
 
 	s := struct {
