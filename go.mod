@@ -32,7 +32,7 @@ require (
 	github.com/sigstore/sigstore v0.0.0-20210415112811-cb2061113e4a
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.8.0
+	github.com/spf13/viper v1.8.1
 	github.com/ulikunitz/xz v0.5.9 // indirect
 	github.com/urfave/negroni v1.0.0
 	github.com/zalando/go-keyring v0.1.1 // indirect
