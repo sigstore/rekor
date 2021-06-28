@@ -37,6 +37,7 @@ import (
 	"github.com/go-playground/validator"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	alpine_v001 "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
+	helm_v001 "github.com/sigstore/rekor/pkg/types/helm/v0.0.1"
 	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	jar_v001 "github.com/sigstore/rekor/pkg/types/jar/v0.0.1"
 	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
@@ -147,6 +148,83 @@ func validateArtifactPFlags(uuidValid, indexValid bool) error {
 	}
 
 	return nil
+}
+
+func CreateHelmFromPFlags() (models.ProposedEntry, error) {
+	//TODO: how to select version of item to create
+	returnVal := models.Helm{}
+	re := new(helm_v001.V001Entry)
+
+	helm := viper.GetString("entry")
+	if helm != "" {
+		var helmBytes []byte
+		provURL, err := url.Parse(helm)
+		if err == nil && provURL.IsAbs() {
+			/* #nosec G107 */
+			helmResp, err := http.Get(helm)
+			if err != nil {
+				return nil, fmt.Errorf("error fetching 'helm': %w", err)
+			}
+			defer helmResp.Body.Close()
+			helmBytes, err = ioutil.ReadAll(helmResp.Body)
+			if err != nil {
+				return nil, fmt.Errorf("error fetching 'provenance file': %w", err)
+			}
+		} else {
+			helmBytes, err = ioutil.ReadFile(filepath.Clean(helm))
+			if err != nil {
+				return nil, fmt.Errorf("error processing 'helm' file: %w", err)
+			}
+		}
+		if err := json.Unmarshal(helmBytes, &returnVal); err != nil {
+			return nil, fmt.Errorf("error parsing helm file: %w", err)
+		}
+	} else {
+		// we will need provenance file and public-key
+		re.HelmObj = models.HelmV001Schema{}
+		re.HelmObj.Chart = &models.HelmV001SchemaChart{}
+		re.HelmObj.Chart.Provenance = &models.HelmV001SchemaChartProvenance{}
+
+		artifact := viper.GetString("artifact")
+		dataURL, err := url.Parse(artifact)
+		if err == nil && dataURL.IsAbs() {
+			re.HelmObj.Chart.Provenance.URL = strfmt.URI(artifact)
+		} else {
+			artifactBytes, err := ioutil.ReadFile(filepath.Clean(artifact))
+			if err != nil {
+				return nil, fmt.Errorf("error reading artifact file: %w", err)
+			}
+			re.HelmObj.Chart.Provenance.Content = strfmt.Base64(artifactBytes)
+		}
+
+		re.HelmObj.PublicKey = &models.HelmV001SchemaPublicKey{}
+		publicKey := viper.GetString("public-key")
+		keyURL, err := url.Parse(publicKey)
+		if err == nil && keyURL.IsAbs() {
+			re.HelmObj.PublicKey.URL = strfmt.URI(publicKey)
+		} else {
+			keyBytes, err := ioutil.ReadFile(filepath.Clean(publicKey))
+			if err != nil {
+				return nil, fmt.Errorf("error reading public key file: %w", err)
+			}
+			re.HelmObj.PublicKey.Content = strfmt.Base64(keyBytes)
+		}
+
+		if err := re.Validate(); err != nil {
+			return nil, err
+		}
+
+		if re.HasExternalEntities() {
+			if err := re.FetchExternalEntities(context.Background()); err != nil {
+				return nil, fmt.Errorf("error retrieving external entities: %v", err)
+			}
+		}
+
+		returnVal.APIVersion = swag.String(re.APIVersion())
+		returnVal.Spec = re.HelmObj
+	}
+
+	return &returnVal, nil
 }
 
 func CreateJarFromPFlags() (models.ProposedEntry, error) {
@@ -559,6 +637,7 @@ func (t *typeFlag) Set(s string) error {
 		"intoto":  {},
 		"rfc3161": {},
 		"alpine":  {},
+		"helm":    {},
 	}
 	if _, ok := set[s]; ok {
 		t.value = s

@@ -102,7 +102,7 @@ func init() {
 }
 ```
 
-6. Add an entry to `pluggableTypeMap` in `cmd/server/app/serve.go` that provides a reference to your package. This ensures that the `init` function of your type (and optionally, your version implementation) will be called before the server starts to process incoming requests and therefore will be added to the map that is used to route request processing for different types.
+6. Add an entry to `pluggableTypeMap` in `cmd/rekor-server/app/serve.go` that provides a reference to your package. This ensures that the `init` function of your type (and optionally, your version implementation) will be called before the server starts to process incoming requests and therefore will be added to the map that is used to route request processing for different types.
 
 7. After adding sufficient unit & integration tests, submit a pull request to `github.com/sigstore/rekor` for review and addition to the codebase.
 
@@ -118,6 +118,6 @@ To add new version of the default `Rekord` type:
 
 4. In your package's `init` method, ensure there is a call to `VersionMap.Store()` which provides the link between the valid *semver* ranges that your package can successfully process and the factory function that creates an instance of a struct for your new version.
 
-5. Add an entry to `pluggableTypeMap` in `cmd/server/app/serve.go` that provides a reference to the Go package implementing the new version. This ensures that the `init` function will be called before the server starts to process incoming requests and therefore will be added to the map that is used to route request processing for different types.
+5. Add an entry to `pluggableTypeMap` in `cmd/rekor-server/app/serve.go` that provides a reference to the Go package implementing the new version. This ensures that the `init` function will be called before the server starts to process incoming requests and therefore will be added to the map that is used to route request processing for different types.
 
 6. After adding sufficient unit & integration tests, submit a pull request to `github.com/sigstore/rekor` for review and addition to the codebase.
