@@ -165,7 +165,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	if v.RPMModel.Package.Hash != nil && v.RPMModel.Package.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.RPMModel.Package.Hash.Value)
 	}
-	artifactFactory, err := pkifactory.NewArtifactFactory("pgp")
+	artifactFactory, err := pkifactory.NewArtifactFactory(pkifactory.PGP)
 	if err != nil {
 		return err
 	}
@@ -376,14 +376,14 @@ func (v V001Entry) CreateFromPFlags(ctx context.Context, props types.ArtifactPro
 	artifactBytes := props.ArtifactBytes
 	if artifactBytes == nil {
 		if props.ArtifactPath == nil {
-			return nil, errors.New("invalid path to artifact")
+			return nil, errors.New("path to RPM file (file or URL) must be specified")
 		}
 		if props.ArtifactPath.IsAbs() {
 			re.RPMModel.Package.URL = strfmt.URI(props.ArtifactPath.String())
 		} else {
 			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
 			if err != nil {
-				return nil, fmt.Errorf("error reading artifact file: %w", err)
+				return nil, fmt.Errorf("error reading RPM file: %w", err)
 			}
 			re.RPMModel.Package.Content = strfmt.Base64(artifactBytes)
 		}
@@ -395,7 +395,7 @@ func (v V001Entry) CreateFromPFlags(ctx context.Context, props types.ArtifactPro
 	publicKeyBytes := props.PublicKeyBytes
 	if publicKeyBytes == nil {
 		if props.PublicKeyPath == nil {
-			return nil, errors.New("invalid path to artifact")
+			return nil, errors.New("public key must be provided to verify RPM signature")
 		}
 		if props.PublicKeyPath.IsAbs() {
 			re.RPMModel.PublicKey.URL = strfmt.URI(props.PublicKeyPath.String())

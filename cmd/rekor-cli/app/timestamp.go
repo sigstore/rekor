@@ -129,10 +129,10 @@ var timestampCmd = &cobra.Command{
 	Long:  "Generates and uploads (WIP) an RFC 3161 timestamp response to the log. The timestamp response can be verified locally using Rekor's timestamping cert chain.",
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			log.Logger.Fatal("Error initializing cmd line args: ", err)
+			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
 		}
 		if err := validateTimestampFlags(); err != nil {
-			log.Logger.Error(err)
+			log.CliLogger.Error(err)
 			_ = cmd.Help()
 			return err
 		}
@@ -192,7 +192,7 @@ var timestampCmd = &cobra.Command{
 func init() {
 	initializePFlagMap()
 	if err := addTimestampFlags(timestampCmd); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args: ", err)
+		log.CliLogger.Fatal("Error parsing cmd line args: ", err)
 	}
 
 	rootCmd.AddCommand(timestampCmd)

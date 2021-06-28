@@ -66,7 +66,7 @@ var getCmd = &cobra.Command{
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			log.Logger.Fatal("Error initializing cmd line args: ", err)
+			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
 		}
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
@@ -153,10 +153,10 @@ func parseEntry(uuid string, e models.LogEntryAnon) (interface{}, error) {
 func init() {
 	initializePFlagMap()
 	if err := addUUIDPFlags(getCmd, false); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args: ", err)
+		log.CliLogger.Fatal("Error parsing cmd line args: ", err)
 	}
 	if err := addLogIndexFlag(getCmd, false); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args: ", err)
+		log.CliLogger.Fatal("Error parsing cmd line args: ", err)
 	}
 
 	rootCmd.AddCommand(getCmd)

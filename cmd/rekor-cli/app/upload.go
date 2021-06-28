@@ -62,10 +62,10 @@ var uploadCmd = &cobra.Command{
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			log.Logger.Fatal("Error initializing cmd line args: ", err)
+			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
 		}
 		if err := validateArtifactPFlags(false, false); err != nil {
-			log.Logger.Error(err)
+			log.CliLogger.Error(err)
 			_ = cmd.Help()
 			os.Exit(1)
 		}
@@ -193,7 +193,7 @@ func verifyLogEntry(ctx context.Context, rekorClient *client.Rekor, logEntry mod
 func init() {
 	initializePFlagMap()
 	if err := addArtifactPFlags(uploadCmd); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args:", err)
+		log.CliLogger.Fatal("Error parsing cmd line args:", err)
 	}
 
 	rootCmd.AddCommand(uploadCmd)

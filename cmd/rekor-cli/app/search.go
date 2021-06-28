@@ -92,16 +92,16 @@ var searchCmd = &cobra.Command{
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			log.Logger.Fatal("Error initializing cmd line args: ", err)
+			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
 		}
 		if err := validateSearchPFlags(); err != nil {
-			log.Logger.Error(err)
+			log.CliLogger.Error(err)
 			_ = cmd.Help()
 			os.Exit(1)
 		}
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
-		log := log.Logger
+		log := log.CliLogger
 		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			return nil, err
@@ -201,7 +201,7 @@ var searchCmd = &cobra.Command{
 func init() {
 	initializePFlagMap()
 	if err := addSearchPFlags(searchCmd); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args:", err)
+		log.CliLogger.Fatal("Error parsing cmd line args:", err)
 	}
 
 	rootCmd.AddCommand(searchCmd)

@@ -401,7 +401,7 @@ func (v V001Entry) CreateFromPFlags(ctx context.Context, props types.ArtifactPro
 	artifactBytes := props.ArtifactBytes
 	if artifactBytes == nil {
 		if props.ArtifactPath == nil {
-			return nil, errors.New("invalid path to artifact")
+			return nil, errors.New("path to artifact (file or URL) must be specified")
 		}
 		if props.ArtifactPath.IsAbs() {
 			re.RekordObj.Data.URL = strfmt.URI(props.ArtifactPath.String())
@@ -436,7 +436,7 @@ func (v V001Entry) CreateFromPFlags(ctx context.Context, props types.ArtifactPro
 	sigBytes := props.SignatureBytes
 	if sigBytes == nil {
 		if props.SignaturePath == nil {
-			return nil, errors.New("invalid path to signature specified")
+			return nil, errors.New("a detached signature must be provided")
 		}
 		if props.SignaturePath.IsAbs() {
 			re.RekordObj.Signature.URL = strfmt.URI(props.SignaturePath.String())
@@ -455,7 +455,7 @@ func (v V001Entry) CreateFromPFlags(ctx context.Context, props types.ArtifactPro
 	publicKeyBytes := props.PublicKeyBytes
 	if publicKeyBytes == nil {
 		if props.PublicKeyPath == nil {
-			return nil, errors.New("invalid path to public key specified")
+			return nil, errors.New("public key must be provided to verify detached signature")
 		}
 		if props.PublicKeyPath.IsAbs() {
 			re.RekordObj.Signature.PublicKey.URL = strfmt.URI(props.PublicKeyPath.String())
@@ -468,7 +468,6 @@ func (v V001Entry) CreateFromPFlags(ctx context.Context, props types.ArtifactPro
 		}
 	} else {
 		re.RekordObj.Signature.PublicKey.Content = strfmt.Base64(publicKeyBytes)
-
 	}
 
 	if err := re.Validate(); err != nil {

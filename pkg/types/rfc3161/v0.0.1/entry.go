@@ -201,11 +201,14 @@ func (v V001Entry) CreateFromPFlags(_ context.Context, props types.ArtifactPrope
 	artifactBytes := props.ArtifactBytes
 	if artifactBytes == nil {
 		if props.ArtifactPath == nil {
-			return nil, errors.New("invalid path to artifact specified")
+			return nil, errors.New("path to artifact file must be specified")
+		}
+		if props.ArtifactPath.IsAbs() {
+			return nil, errors.New("RFC3161 timestamps cannot be fetched over HTTP(S)")
 		}
 		artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
 		if err != nil {
-			return nil, fmt.Errorf("error reading public key file: %w", err)
+			return nil, fmt.Errorf("error reading artifact file: %w", err)
 		}
 	}
 

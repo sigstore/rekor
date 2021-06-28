@@ -92,7 +92,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	// Only support x509 signatures for intoto attestations
-	af, err := pkifactory.NewArtifactFactory("x509")
+	af, err := pkifactory.NewArtifactFactory(pkifactory.X509)
 	if err != nil {
 		return err
 	}
@@ -196,7 +196,7 @@ func (v *verifier) Sign(d []byte) ([]byte, string, error) {
 }
 
 func (v *verifier) Verify(keyID string, data, sig []byte) (bool, error) {
-	af, err := pkifactory.NewArtifactFactory("x509")
+	af, err := pkifactory.NewArtifactFactory(pkifactory.X509)
 	if err != nil {
 		return false, err
 	}
@@ -218,7 +218,10 @@ func (v V001Entry) CreateFromPFlags(_ context.Context, props types.ArtifactPrope
 	artifactBytes := props.ArtifactBytes
 	if artifactBytes == nil {
 		if props.ArtifactPath == nil {
-			return nil, errors.New("invalid path to artifact specified")
+			return nil, errors.New("path to artifact file must be specified")
+		}
+		if props.ArtifactPath.IsAbs() {
+			return nil, errors.New("intoto envelopes cannot be fetched over HTTP(S)")
 		}
 		artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
 		if err != nil {
@@ -228,7 +231,7 @@ func (v V001Entry) CreateFromPFlags(_ context.Context, props types.ArtifactPrope
 	publicKeyBytes := props.PublicKeyBytes
 	if publicKeyBytes == nil {
 		if props.PublicKeyPath == nil {
-			return nil, errors.New("invalid path to public key specified")
+			return nil, errors.New("public key must be provided to verify signature")
 		}
 		publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
 		if err != nil {

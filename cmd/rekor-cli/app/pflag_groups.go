@@ -105,26 +105,13 @@ func validateArtifactPFlags(uuidValid, indexValid bool) error {
 	if indexValid && viper.GetString("log-index") != "" {
 		indexGiven = true
 	}
-	// we will need artifact, public-key, signature
-	entry := viper.GetString("entry")
-	if entry == "" && viper.GetString("artifact") == "" {
+
+	// if neither --entry or --artifact were given, then a reference to a uuid or index is needed
+	if viper.GetString("entry") == "" && viper.GetString("artifact") == "" {
 		if (uuidGiven && uuidValid) || (indexGiven && indexValid) {
 			return nil
 		}
 		return errors.New("either 'entry' or 'artifact' must be specified")
-	}
-
-	typeStr := viper.GetString("type")
-	signature := viper.GetString("signature")
-	publicKey := viper.GetString("public-key")
-
-	if entry == "" {
-		if signature == "" && typeStr == "rekord" {
-			return errors.New("--signature is required when --artifact is used")
-		}
-		if publicKey == "" && typeStr != "jar" && typeStr != "rfc3161" {
-			return errors.New("--public-key is required when --artifact is used")
-		}
 	}
 
 	return nil

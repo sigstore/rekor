@@ -79,6 +79,7 @@ var verifyCmd = &cobra.Command{
 			return fmt.Errorf("error initializing cmd line args: %s", err)
 		}
 		if err := validateArtifactPFlags(true, true); err != nil {
+			log.CliLogger.Error(err)
 			_ = cmd.Help()
 			return err
 		}
@@ -165,13 +166,13 @@ var verifyCmd = &cobra.Command{
 func init() {
 	initializePFlagMap()
 	if err := addArtifactPFlags(verifyCmd); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args:", err)
+		log.CliLogger.Fatal("Error parsing cmd line args:", err)
 	}
 	if err := addUUIDPFlags(verifyCmd, false); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args:", err)
+		log.CliLogger.Fatal("Error parsing cmd line args:", err)
 	}
 	if err := addLogIndexFlag(verifyCmd, false); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args:", err)
+		log.CliLogger.Fatal("Error parsing cmd line args:", err)
 	}
 
 	rootCmd.AddCommand(verifyCmd)

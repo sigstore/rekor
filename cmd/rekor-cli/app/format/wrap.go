@@ -18,8 +18,8 @@ package format
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
+	"github.com/sigstore/rekor/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -32,7 +32,7 @@ func WrapCmd(f formatCmd) CobraCmd {
 	return func(cmd *cobra.Command, args []string) {
 		obj, err := f(args)
 		if err != nil {
-			log.Fatal(err)
+			log.CliLogger.Fatal(err)
 		}
 
 		// TODO: add flags to control output formatting (JSON, plaintext, etc.)
@@ -53,7 +53,7 @@ func WrapCmd(f formatCmd) CobraCmd {
 func toJSON(i interface{}) string {
 	b, err := json.Marshal(i)
 	if err != nil {
-		log.Fatal(err)
+		log.CliLogger.Fatal(err)
 	}
 	return string(b)
 }

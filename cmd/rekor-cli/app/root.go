@@ -18,7 +18,6 @@ package app
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/go-openapi/runtime"
@@ -30,6 +29,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
 
 	// these imports are to call the packages' init methods
@@ -53,8 +53,7 @@ var rootCmd = &cobra.Command{
 // Execute runs the base CLI
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.CliLogger.Fatal(err)
 	}
 }
 
@@ -70,8 +69,7 @@ func init() {
 
 	// these are bound here and not in PreRun so that all child commands can use them
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.CliLogger.Fatal(err)
 	}
 }
 
@@ -116,7 +114,7 @@ func initConfig(cmd *cobra.Command) error {
 			return err
 		}
 	} else if viper.GetString("format") == "default" {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		log.CliLogger.Infof("Using config file:", viper.ConfigFileUsed())
 	}
 
 	return nil

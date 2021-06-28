@@ -180,7 +180,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	}
 	v.jarObj = jarObj[0]
 
-	af, err := pkifactory.NewArtifactFactory("pkcs7")
+	af, err := pkifactory.NewArtifactFactory(pkifactory.PKCS7)
 	if err != nil {
 		return err
 	}
@@ -334,7 +334,7 @@ func (v V001Entry) CreateFromPFlags(ctx context.Context, props types.ArtifactPro
 	artifactBytes := props.ArtifactBytes
 	if artifactBytes == nil {
 		if props.ArtifactPath == nil {
-			return nil, errors.New("invalid path to artifact")
+			return nil, errors.New("path to JAR archive (file or URL) must be specified")
 		}
 		if props.ArtifactPath.IsAbs() {
 			re.JARModel.Archive.URL = strfmt.URI(props.ArtifactPath.String())
@@ -347,7 +347,7 @@ func (v V001Entry) CreateFromPFlags(ctx context.Context, props types.ArtifactPro
 		} else {
 			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
 			if err != nil {
-				return nil, fmt.Errorf("error reading artifact file: %w", err)
+				return nil, fmt.Errorf("error reading JAR file: %w", err)
 			}
 			//TODO: ensure this is a valid JAR file; look for META-INF/MANIFEST.MF?
 			re.JARModel.Archive.Content = strfmt.Base64(artifactBytes)
