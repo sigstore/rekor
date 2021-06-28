@@ -164,7 +164,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	if v.RekordObj.Data.Hash != nil && v.RekordObj.Data.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.RekordObj.Data.Hash.Value)
 	}
-	artifactFactory, err := pkifactory.NewArtifactFactory(v.RekordObj.Signature.Format)
+	artifactFactory, err := pkifactory.NewArtifactFactory(pkifactory.PKIFormat(v.RekordObj.Signature.Format))
 	if err != nil {
 		return err
 	}

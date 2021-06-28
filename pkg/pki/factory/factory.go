@@ -41,8 +41,8 @@ type ArtifactFactory struct {
 	impl pkiImpl
 }
 
-func NewArtifactFactory(format string) (*ArtifactFactory, error) {
-	if impl, ok := artifactFactoryMap[PKIFormat(format)]; ok {
+func NewArtifactFactory(format PKIFormat) (*ArtifactFactory, error) {
+	if impl, ok := artifactFactoryMap[format]; ok {
 		return &ArtifactFactory{impl: impl}, nil
 	}
 	return nil, fmt.Errorf("%v is not a supported PKI format", format)

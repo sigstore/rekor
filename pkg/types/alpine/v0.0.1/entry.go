@@ -161,7 +161,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	if v.AlpineModel.Package.Hash != nil && v.AlpineModel.Package.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.AlpineModel.Package.Hash.Value)
 	}
-	artifactFactory, _ := pkifactory.NewArtifactFactory(string(pkifactory.X509))
+	artifactFactory, _ := pkifactory.NewArtifactFactory(pkifactory.X509)
 
 	g.Go(func() error {
 		defer hashW.Close()

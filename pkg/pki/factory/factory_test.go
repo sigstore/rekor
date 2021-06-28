@@ -95,7 +95,7 @@ func TestFactoryNewKey(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			factory, err := NewArtifactFactory(tc.format)
+			factory, err := NewArtifactFactory(PKIFormat(tc.format))
 			if tc.expectValidFormat != (err == nil) {
 				t.Fatalf("unexpected error initializing factory for %v", tc.format)
 			}

@@ -45,7 +45,7 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 		result = append(result, resultUUIDs...)
 	}
 	if params.Query.PublicKey != nil {
-		af, err := pkifactory.NewArtifactFactory(swag.StringValue(params.Query.PublicKey.Format))
+		af, err := pkifactory.NewArtifactFactory(pkifactory.PKIFormat(swag.StringValue(params.Query.PublicKey.Format)))
 		if err != nil {
 			return handleRekorAPIError(params, http.StatusBadRequest, err, unsupportedPKIFormat)
 		}
