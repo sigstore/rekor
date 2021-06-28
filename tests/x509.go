@@ -25,6 +25,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"io/ioutil"
 	"testing"
 
@@ -169,9 +170,11 @@ func (it *IntotoSigner) Sign(data []byte) ([]byte, string, error) {
 	return sig, "", nil
 }
 
-func (it *IntotoSigner) Verify(_ string, data, sig []byte) (bool, error) {
+func (it *IntotoSigner) Verify(_ string, data, sig []byte) error {
 	h := sha256.Sum256(data)
-
 	ok := ecdsa.VerifyASN1(&it.priv.PublicKey, h[:], sig)
-	return ok, nil
+	if ok {
+		return nil
+	}
+	return errors.New("invalid signature")
 }

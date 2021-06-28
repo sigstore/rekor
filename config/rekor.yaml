@@ -50,7 +50,8 @@ spec:
           "--log_type=prod",
           "--rekor_server.signer=$(KMS)",
           "--enable_attestation_storage=$(ENABLE_ATTESTATION_STORAGE)",
-          "--attestation_storage_bucket=$(ATTESTATION_BUCKET)"
+          "--attestation_storage_bucket=$(ATTESTATION_BUCKET)",
+          "--rekor_server.timestamp_chain=$(TIMESTAMP_CHAIN)"
         ]
         env:
         - name: KMS
@@ -68,6 +69,11 @@ spec:
             configMapKeyRef:
               name: rekor-config
               key: attestation_bucket
+        - name: TIMESTAMP_CHAIN
+          valueFrom:
+            configMapKeyRef:
+              name: rekor-config
+              key: timestamp_chain
         resources:
           requests:
             memory: "1G"

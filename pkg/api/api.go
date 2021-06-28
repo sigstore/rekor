@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
@@ -114,9 +115,12 @@ func NewAPI() (*API, error) {
 	}
 
 	var certChain []*x509.Certificate
-	certChainStr := viper.GetString("rekor_server.timestamp_chain")
-	if certChainStr != "" {
-		var err error
+	b64CertChainStr := viper.GetString("rekor_server.timestamp_chain")
+	if b64CertChainStr != "" {
+		certChainStr, err := base64.StdEncoding.DecodeString(b64CertChainStr)
+		if err != nil {
+			return nil, errors.Wrap(err, "decoding timestamping cert")
+		}
 		if certChain, err = pki.ParseTimestampCertChain([]byte(certChainStr)); err != nil {
 			return nil, errors.Wrap(err, "parsing timestamp cert chain")
 		}
