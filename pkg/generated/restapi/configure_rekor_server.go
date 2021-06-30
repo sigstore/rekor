@@ -94,7 +94,7 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.TimestampGetTimestampResponseHandler = timestamp.GetTimestampResponseHandlerFunc(pkgapi.TimestampResponseHandler)
 	api.TimestampGetTimestampCertChainHandler = timestamp.GetTimestampCertChainHandlerFunc(pkgapi.GetTimestampCertChainHandler)
 
-	api.RegisterFormat("signedCheckpoint", &util.SignedCheckpoint{}, util.SignedCheckpointValidator)
+	api.RegisterFormat("signedCheckpoint", &util.SignedNote{Note: &util.Checkpoint{}}, util.SignedCheckpointValidator)
 
 	api.PreServerShutdown = func() {}
 

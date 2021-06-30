@@ -272,17 +272,14 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 		},
 	} {
 		t.Run(string(test.c.Ecosystem), func(t *testing.T) {
-			sig, err := test.c.Sign(test.identity, test.signer, test.opts)
+			sc := &SignedNote{
+				Note: &test.c,
+			}
+			_, err := sc.Sign(test.identity, test.signer, test.opts)
 			if (err != nil) != test.wantSignErr {
 				t.Fatalf("signing test failed: wantSignErr %v, err %v", test.wantSignErr, err)
 			}
 			if !test.wantSignErr {
-				sc := SignedCheckpoint{
-					Checkpoint: test.c,
-					Signatures: []note.Signature{
-						*sig,
-					},
-				}
 				if !sc.Verify(test.pubKey) != test.wantVerifyErr {
 					t.Fatalf("verification test failed %v", sc.Verify(test.pubKey))
 				}
@@ -297,7 +294,9 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error during marshalling: %v", err)
 				}
-				sc2 := SignedCheckpoint{}
+				sc2 := &SignedNote{
+					Note: &test.c,
+				}
 				if err := sc2.UnmarshalText(marshalledSc); err != nil {
 					t.Fatalf("error unmarshalling just marshalled object %v\n%v", err, string(marshalledSc))
 				}
@@ -311,13 +310,13 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 
 func TestInvalidSigVerification(t *testing.T) {
 	for _, test := range []struct {
-		sc             SignedCheckpoint
+		sc             SignedNote
 		pubKey         crypto.PublicKey
 		expectedResult bool
 	}{
 		{
-			sc: SignedCheckpoint{
-				Checkpoint: Checkpoint{
+			sc: SignedNote{
+				Note: &Checkpoint{
 					Ecosystem: "Log Checkpoint v0",
 					Size:      123,
 					Hash:      []byte("bananas"),
@@ -327,8 +326,8 @@ func TestInvalidSigVerification(t *testing.T) {
 			expectedResult: false,
 		},
 		{
-			sc: SignedCheckpoint{
-				Checkpoint: Checkpoint{
+			sc: SignedNote{
+				Note: &Checkpoint{
 					Ecosystem: "Log Checkpoint v0",
 					Size:      123,
 					Hash:      []byte("bananas"),
@@ -344,8 +343,8 @@ func TestInvalidSigVerification(t *testing.T) {
 			expectedResult: false,
 		},
 		{
-			sc: SignedCheckpoint{
-				Checkpoint: Checkpoint{
+			sc: SignedNote{
+				Note: &Checkpoint{
 					Ecosystem: "Log Checkpoint v0",
 					Size:      123,
 					Hash:      []byte("bananas"),
@@ -361,8 +360,8 @@ func TestInvalidSigVerification(t *testing.T) {
 			expectedResult: false,
 		},
 		{
-			sc: SignedCheckpoint{
-				Checkpoint: Checkpoint{
+			sc: SignedNote{
+				Note: &Checkpoint{
 					Ecosystem: "Log Checkpoint Ed25519 v0",
 					Size:      123,
 					Hash:      []byte("bananas"),
@@ -379,7 +378,7 @@ func TestInvalidSigVerification(t *testing.T) {
 			expectedResult: false,
 		},
 	} {
-		t.Run(string(test.sc.Ecosystem), func(t *testing.T) {
+		t.Run(string(test.sc.Note.(*Checkpoint).Ecosystem), func(t *testing.T) {
 			result := test.sc.Verify(test.pubKey)
 			if result != test.expectedResult {
 				t.Fatal("verification test generated unexpected result")
@@ -430,7 +429,7 @@ func TestUnmarshalSignedCheckpoint(t *testing.T) {
 		},
 	} {
 		t.Run(string(test.desc), func(t *testing.T) {
-			var got SignedCheckpoint
+			var got SignedNote
 			var gotErr error
 			if gotErr = got.UnmarshalText([]byte(test.m)); (gotErr != nil) != test.wantErr {
 				t.Fatalf("UnmarshalText(%s) = %q, wantErr: %v", test.desc, gotErr, test.wantErr)

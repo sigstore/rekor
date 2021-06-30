@@ -53,8 +53,8 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	treeSize := int64(root.TreeSize)
 
 	sth := util.RekorSTH{
-		SignedCheckpoint: util.SignedCheckpoint{
-			Checkpoint: util.Checkpoint{
+		SignedNote: util.SignedNote{
+			Note: &util.Checkpoint{
 				Ecosystem: "Rekor",
 				Size:      root.TreeSize,
 				Hash:      root.RootHash,
@@ -65,7 +65,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	// TODO: once api.signer implements crypto.Signer, switch to using Sign() API on Checkpoint
 
 	// sign the log root ourselves to get the log root signature
-	cpString, _ := sth.Checkpoint.MarshalText()
+	cpString, _ := sth.Note.MarshalText()
 	sig, _, err := api.signer.Sign(params.HTTPRequest.Context(), []byte(cpString))
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %w", err), signingError)

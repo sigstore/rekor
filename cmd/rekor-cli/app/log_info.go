@@ -108,13 +108,15 @@ var logInfoCmd = &cobra.Command{
 
 		oldState := state.Load(serverURL)
 		if oldState != nil {
-			persistedSize := oldState.Size
-			if persistedSize < sth.Size {
-				log.CliLogger.Infof("Found previous log state, proving consistency between %d and %d", oldState.Size, sth.Size)
+			oldCheckpoint := oldState.Note.(*util.Checkpoint)
+			curCheckpoint := sth.Note.(*util.Checkpoint)
+			persistedSize := oldCheckpoint.Size
+			if persistedSize < sth.Note.(*util.Checkpoint).Size {
+				log.CliLogger.Infof("Found previous log state, proving consistency between %d and %d", oldCheckpoint.Size, curCheckpoint.Size)
 				params := tlog.NewGetLogProofParams()
 				firstSize := int64(persistedSize)
 				params.FirstSize = &firstSize
-				params.LastSize = int64(sth.Size)
+				params.LastSize = int64(curCheckpoint.Size)
 				proof, err := rekorClient.Tlog.GetLogProof(params)
 				if err != nil {
 					return nil, err
@@ -125,18 +127,18 @@ var logInfoCmd = &cobra.Command{
 					hashes = append(hashes, b)
 				}
 				v := logverifier.New(rfc6962.DefaultHasher)
-				if err := v.VerifyConsistencyProof(firstSize, int64(sth.Size), oldState.Hash,
-					sth.Hash, hashes); err != nil {
+				if err := v.VerifyConsistencyProof(firstSize, int64(curCheckpoint.Size), oldCheckpoint.Hash,
+					curCheckpoint.Hash, hashes); err != nil {
 					return nil, err
 				}
 				log.CliLogger.Infof("Consistency proof valid!")
-			} else if persistedSize == sth.Size {
-				if !bytes.Equal(oldState.Hash, sth.Hash) {
+			} else if persistedSize == curCheckpoint.Size {
+				if !bytes.Equal(oldCheckpoint.Hash, curCheckpoint.Hash) {
 					return nil, errors.New("root hash returned from server does not match previously persisted state")
 				}
 				log.CliLogger.Infof("Persisted log state matches the current state of the log")
-			} else if persistedSize > sth.Size {
-				return nil, fmt.Errorf("current size of tree reported from server %d is less than previously persisted state %d", sth.Size, persistedSize)
+			} else if persistedSize > curCheckpoint.Size {
+				return nil, fmt.Errorf("current size of tree reported from server %d is less than previously persisted state %d", curCheckpoint.Size, persistedSize)
 			}
 		} else {
 			log.CliLogger.Infof("No previous log state stored, unable to prove consistency")
