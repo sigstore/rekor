@@ -27,7 +27,7 @@ require (
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
-	github.com/rs/cors v1.7.0
+	github.com/rs/cors v1.8.0
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
 	github.com/sigstore/sigstore v0.0.0-20210415112811-cb2061113e4a
 	github.com/spf13/cobra v1.1.3
@@ -47,6 +47,5 @@ require (
 	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c
 	google.golang.org/grpc v1.39.0
 	google.golang.org/protobuf v1.27.1
-	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/ini.v1 v1.62.0
 )
