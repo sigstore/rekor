@@ -43,7 +43,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/in-toto/in-toto-golang/pkg/ssl"
-	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/client"
+	genclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/timestamp"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -567,7 +568,7 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	})
 
 	// submit our newly signed payload to rekor
-	rekorClient, err := util.GetRekorClient("http://localhost:3000")
+	rekorClient, err := client.GetRekorClient("http://localhost:3000")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -638,7 +639,7 @@ func TestTimestampResponseCLI(t *testing.T) {
 	out := runCli(t, "timestamp", "--artifact", filePath, "--out", responsePath)
 	outputContains(t, out, "Wrote timestamp response to")
 
-	rekorClient, err := util.GetRekorClient("http://localhost:3000")
+	rekorClient, err := client.GetRekorClient("http://localhost:3000")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -695,7 +696,7 @@ func TestGetNonExistantUUID(t *testing.T) {
 	outputContains(t, out, "404")
 }
 
-func rekorTimestampCertChain(t *testing.T, ctx context.Context, c *client.Rekor) []*x509.Certificate {
+func rekorTimestampCertChain(t *testing.T, ctx context.Context, c *genclient.Rekor) []*x509.Certificate {
 	resp, err := c.Timestamp.GetTimestampCertChain(&timestamp.GetTimestampCertChainParams{Context: ctx})
 	if err != nil {
 		t.Fatal(err)

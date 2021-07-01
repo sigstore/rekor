@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package client
 
 import (
 	"net/url"
@@ -21,6 +21,7 @@ import (
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/util"
 	"github.com/spf13/viper"
 )
 
@@ -43,6 +44,6 @@ func GetRekorClient(rekorServerURL string) (*client.Rekor, error) {
 	}
 
 	registry := strfmt.Default
-	registry.Add("signedCheckpoint", &SignedCheckpoint{}, SignedCheckpointValidator)
+	registry.Add("signedCheckpoint", &util.SignedCheckpoint{}, util.SignedCheckpointValidator)
 	return client.New(rt, registry), nil
 }

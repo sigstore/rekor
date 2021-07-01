@@ -29,7 +29,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
-	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/client"
+	genclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -67,7 +68,7 @@ var uploadCmd = &cobra.Command{
 	Long: `This command takes the public key, signature and URL of the release artifact and uploads it to the rekor server.`,
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		ctx := context.Background()
-		rekorClient, err := util.GetRekorClient(viper.GetString("rekor_server"))
+		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +144,7 @@ var uploadCmd = &cobra.Command{
 	}),
 }
 
-func verifyLogEntry(ctx context.Context, rekorClient *client.Rekor, logEntry models.LogEntryAnon) (bool, error) {
+func verifyLogEntry(ctx context.Context, rekorClient *genclient.Rekor, logEntry models.LogEntryAnon) (bool, error) {
 	if logEntry.Verification == nil {
 		return false, nil
 	}
