@@ -43,7 +43,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/in-toto/in-toto-golang/pkg/ssl"
-	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/timestamp"
@@ -568,7 +567,7 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	})
 
 	// submit our newly signed payload to rekor
-	rekorClient, err := app.GetRekorClient("http://localhost:3000")
+	rekorClient, err := util.GetRekorClient("http://localhost:3000")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -639,7 +638,7 @@ func TestTimestampResponseCLI(t *testing.T) {
 	out := runCli(t, "timestamp", "--artifact", filePath, "--out", responsePath)
 	outputContains(t, out, "Wrote timestamp response to")
 
-	rekorClient, err := app.GetRekorClient("http://localhost:3000")
+	rekorClient, err := util.GetRekorClient("http://localhost:3000")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -67,7 +67,7 @@ var uploadCmd = &cobra.Command{
 	Long: `This command takes the public key, signature and URL of the release artifact and uploads it to the rekor server.`,
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		ctx := context.Background()
-		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
+		rekorClient, err := util.GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			return nil, err
 		}

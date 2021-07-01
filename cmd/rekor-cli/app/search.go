@@ -35,6 +35,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/index"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
 type searchCmdOutput struct {
@@ -70,7 +71,7 @@ var searchCmd = &cobra.Command{
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		log := log.Logger
-		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
+		rekorClient, err := util.GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			return nil, err
 		}

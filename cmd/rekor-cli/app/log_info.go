@@ -59,7 +59,7 @@ var logInfoCmd = &cobra.Command{
 	Long:  `Prints info about the transparency log`,
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		serverURL := viper.GetString("rekor_server")
-		rekorClient, err := GetRekorClient(serverURL)
+		rekorClient, err := util.GetRekorClient(serverURL)
 		if err != nil {
 			return nil, err
 		}

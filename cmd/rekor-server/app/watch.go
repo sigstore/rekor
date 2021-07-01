@@ -34,7 +34,6 @@ import (
 	"github.com/spf13/viper"
 	"gocloud.dev/blob"
 
-	"github.com/sigstore/rekor/cmd/rekor-cli/app"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
@@ -66,7 +65,7 @@ var watchCmd = &cobra.Command{
 		port := viper.GetUint("rekor_server.port")
 		interval := viper.GetDuration("interval")
 		url := fmt.Sprintf("http://%s:%d", host, port)
-		c, err := app.GetRekorClient(url)
+		c, err := util.GetRekorClient(url)
 		if err != nil {
 			return err
 		}

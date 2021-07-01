@@ -34,6 +34,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
 type getCmdOutput struct {
@@ -70,7 +71,7 @@ var getCmd = &cobra.Command{
 		}
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
-		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
+		rekorClient, err := util.GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			return nil, err
 		}
