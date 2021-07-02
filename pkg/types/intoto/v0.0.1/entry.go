@@ -151,14 +151,9 @@ func (v *V001Entry) Validate() error {
 		return err
 	}
 
-	ok, err := sslVerifier.Verify(&v.env)
-	if err != nil {
+	if err := sslVerifier.Verify(&v.env); err != nil {
 		return err
 	}
-	if !ok {
-		return errors.New("invalid signature")
-	}
-
 	return nil
 }
 
@@ -187,14 +182,14 @@ func (v *verifier) Sign(d []byte) ([]byte, string, error) {
 	return sig, "", nil
 }
 
-func (v *verifier) Verify(keyID string, data, sig []byte) (bool, error) {
+func (v *verifier) Verify(keyID string, data, sig []byte) error {
 	af := pki.NewArtifactFactory("x509")
 	s, err := af.NewSignature(bytes.NewReader(sig))
 	if err != nil {
-		return false, err
+		return err
 	}
 	if err := s.Verify(bytes.NewReader(data), v.pub); err != nil {
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
 }
