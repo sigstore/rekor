@@ -651,6 +651,32 @@ func init() {
         }
       ]
     },
+    "gitpush": {
+      "description": "git push certificate",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "type": "object",
+              "$ref": "pkg/types/gitpush/gitpush_schema.json"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "intoto": {
       "description": "Intoto object",
       "type": "object",
@@ -2198,6 +2224,84 @@ func init() {
       },
       "$schema": "http://json-schema.org/draft-07/schema",
       "$id": "http://rekor.sigstore.dev/types/alpine/alpine_v0_0_1_schema.json"
+    },
+    "gitpush": {
+      "description": "git push certificate",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "$ref": "#/definitions/gitpushSchema"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "gitpushSchema": {
+      "description": "Git push certificates for Rekord objects",
+      "type": "object",
+      "title": "Git push certificate Schema",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/gitpushV001Schema"
+        }
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/gitpush/gitpush_schema.json"
+    },
+    "gitpushV001Schema": {
+      "description": "Schema for Git push certificate object",
+      "type": "object",
+      "title": "Git push certificates v0.0.1 Schema",
+      "required": [
+        "certificate_version",
+        "pusher",
+        "pushee",
+        "nonce",
+        "protocol",
+        "signature"
+      ],
+      "properties": {
+        "certificate_version": {
+          "description": "Git push certificate version",
+          "type": "string"
+        },
+        "nonce": {
+          "description": "Nonce to prevent replay attacks",
+          "type": "string"
+        },
+        "protocol": {
+          "description": "Protocol data",
+          "type": "string"
+        },
+        "pushee": {
+          "description": "Git repository URL",
+          "type": "string"
+        },
+        "pusher": {
+          "description": "GPG key identifier, short keyid or human readable",
+          "type": "string"
+        },
+        "signature": {
+          "description": "Signature data",
+          "type": "string"
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/gitpush/gitpush_v0_0_1_schema.json"
     },
     "intoto": {
       "description": "Intoto object",
