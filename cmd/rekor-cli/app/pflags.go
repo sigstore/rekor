@@ -412,6 +412,37 @@ func CreateAlpineFromPFlags() (models.ProposedEntry, error) {
 	return &returnVal, nil
 }
 
+func CreateGitpushFromPFlags() (models.ProposedEntry, error) {
+	returnVal := models.Gitpush{}
+	gitpush := viper.GetString("entry")
+	if gitpush == "" {
+		return nil, errors.New("no supplied git push certificate entry")
+	}
+	var gitpushBytes []byte
+	gitpushURL, err := url.Parse(gitpush)
+	if err == nil && gitpushURL.IsAbs() {
+		/* #nosec G107 */
+		gitpushResp, err := http.Get(gitpush)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching 'gitpush': %w", err)
+		}
+		defer gitpushResp.Body.Close()
+		gitpushBytes, err = ioutil.ReadAll(gitpushResp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching 'gitpush': %w", err)
+		}
+	} else {
+		gitpushBytes, err = ioutil.ReadFile(filepath.Clean(gitpush))
+		if err != nil {
+			return nil, fmt.Errorf("error processing 'gitpush' file: %w", err)
+		}
+	}
+	if err := json.Unmarshal(gitpushBytes, &returnVal); err != nil {
+		return nil, fmt.Errorf("error parsing gitpush file: %w", err)
+	}
+	return &returnVal, nil
+}
+
 func CreateRekordFromPFlags() (models.ProposedEntry, error) {
 	//TODO: how to select version of item to create
 	returnVal := models.Rekord{}
@@ -559,6 +590,7 @@ func (t *typeFlag) Set(s string) error {
 		"intoto":  {},
 		"rfc3161": {},
 		"alpine":  {},
+		"gitpush": {},
 	}
 	if _, ok := set[s]; ok {
 		t.value = s

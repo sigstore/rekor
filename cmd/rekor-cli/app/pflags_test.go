@@ -70,6 +70,8 @@ func TestArtifactPFlags(t *testing.T) {
 				file, err = ioutil.ReadFile("../../../tests/test_alpine.pub")
 			case "/alpineEntry":
 				file, err = ioutil.ReadFile("../../../tests/alpine.json")
+			case "/gitpushEntry":
+				file, err = ioutil.ReadFile("../../../tests/git_push.json")
 			case "/not_found":
 				err = errors.New("file not found")
 			}
@@ -335,6 +337,13 @@ func TestArtifactPFlags(t *testing.T) {
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
+		{
+			caseDesc:              "valid gitpush URL",
+			entry:                 testServer.URL + "/gitpushEntry",
+			typeStr:               "gitpush",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -401,6 +410,8 @@ func TestArtifactPFlags(t *testing.T) {
 					createFn = CreateRFC3161FromPFlags
 				case "alpine":
 					createFn = CreateAlpineFromPFlags
+				case "gitpush":
+					createFn = CreateGitpushFromPFlags
 				default:
 					t.Fatalf("type %v not implemented", tc.typeStr)
 				}

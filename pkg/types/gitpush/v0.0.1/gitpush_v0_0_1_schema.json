@@ -1,0 +1,41 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.sigstore.dev/types/gitpush/gitpush_v0_0_1_schema.json",
+    "title": "Git push certificates v0.0.1 Schema",
+    "description": "Schema for Git push certificate object",
+    "type": "object",
+    "properties": {
+        "certificate_version": {
+            "description": "Git push certificate version",
+            "type": "string"
+        },
+        "pusher": {
+            "description": "GPG key identifier, short keyid or human readable",
+            "type": "string"
+        },
+        "pushee": {
+            "description": "Git repository URL",
+            "type": "string"
+        },
+        "nonce": {
+            "description": "Nonce to prevent replay attacks",
+            "type": "string"
+        },
+        "protocol": {
+            "description": "Protocol data",
+            "type": "string"
+        },
+        "signature": {
+            "description": "Signature data",
+            "type": "string"
+        }
+    },
+    "required": [
+        "certificate_version",
+        "pusher",
+        "pushee",
+        "nonce",
+        "protocol",
+        "signature"
+    ]
+}
