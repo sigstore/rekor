@@ -21,7 +21,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/pem"
 	"fmt"
 	"time"
 
@@ -36,7 +35,9 @@ import (
 	pki "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/rekor/pkg/storage"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
@@ -94,7 +95,7 @@ func NewAPI() (*API, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "getting new signer")
 	}
-	pk, err := rekorSigner.PublicKey(ctx)
+	pk, err := rekorSigner.PublicKey(options.WithContext(ctx))
 	if err != nil {
 		return nil, errors.Wrap(err, "getting public key")
 	}
@@ -104,10 +105,7 @@ func NewAPI() (*API, error) {
 	}
 	pubkeyHashBytes := sha256.Sum256(b)
 
-	pubkey := pem.EncodeToMemory(&pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: b,
-	})
+	pubkey := cryptoutils.PEMEncode(cryptoutils.PublicKeyPEMType, b)
 
 	verifier, err := client.NewLogVerifierFromTree(t)
 	if err != nil {

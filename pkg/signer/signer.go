@@ -21,14 +21,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sigstore/sigstore/pkg/kms/gcp"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 )
 
 func New(ctx context.Context, signer string) (signature.Signer, error) {
 	switch {
 	case strings.HasPrefix(signer, gcp.ReferenceScheme):
-		return gcp.NewGCP(ctx, signer)
+		return gcp.LoadSignerVerifier(ctx, signer)
 	case signer == MemoryScheme:
 		return NewMemory()
 	default:

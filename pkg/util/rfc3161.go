@@ -16,6 +16,7 @@
 package util
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/sha256"
@@ -30,6 +31,7 @@ import (
 	"github.com/sassoftware/relic/lib/pkcs9"
 	"github.com/sassoftware/relic/lib/x509tools"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 type GeneralName struct {
@@ -217,7 +219,7 @@ func CreateRfc3161Response(ctx context.Context, req pkcs9.TimeStampReq, certChai
 		return nil, err
 	}
 	// Get signature.
-	signature, _, err := signer.Sign(ctx, attrBytes)
+	signature, err := signer.SignMessage(bytes.NewReader(attrBytes), options.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}

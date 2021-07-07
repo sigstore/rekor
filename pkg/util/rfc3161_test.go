@@ -29,6 +29,7 @@ import (
 	"github.com/sassoftware/relic/lib/pkcs9"
 	"github.com/sassoftware/relic/lib/x509tools"
 	"github.com/sigstore/rekor/pkg/signer"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func TestCreateTimestampRequest(t *testing.T) {
@@ -131,7 +132,7 @@ func TestCreateRFC3161Response(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	pk, err := mem.PublicKey(ctx)
+	pk, err := mem.PublicKey(options.WithContext(ctx))
 	if err != nil {
 		t.Fatal(err)
 	}

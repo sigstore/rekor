@@ -20,6 +20,7 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -51,6 +52,9 @@ import (
 	"github.com/sigstore/rekor/pkg/signer"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/util"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func getUUIDFromUploadOutput(t *testing.T, out string) string {
@@ -549,23 +553,18 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	signature, _, err := s.Sign(ctx, payload)
+	sig, err := s.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
 	if err != nil {
 		t.Fatal(err)
 	}
-	pubkey, err := s.PublicKey(ctx)
+	pubkey, err := s.PublicKey(options.WithContext(ctx))
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := x509.MarshalPKIXPublicKey(pubkey)
+	pemBytes, err := cryptoutils.MarshalPublicKeyToPEM(pubkey)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	pemBytes := pem.EncodeToMemory(&pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: b,
-	})
 
 	// submit our newly signed payload to rekor
 	rekorClient, err := client.GetRekorClient("http://localhost:3000")
@@ -579,7 +578,7 @@ func TestSignedEntryTimestamp(t *testing.T) {
 				Content: strfmt.Base64(payload),
 			},
 			Signature: &models.RekordV001SchemaSignature{
-				Content: strfmt.Base64(signature),
+				Content: strfmt.Base64(sig),
 				Format:  models.RekordV001SchemaSignatureFormatX509,
 				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 					Content: strfmt.Base64(pemBytes),
@@ -601,7 +600,7 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	logEntry := extractLogEntry(t, resp.GetPayload())
 
 	// verify the signature against the log entry (without the signature)
-	sig := logEntry.Verification.SignedEntryTimestamp
+	timestampSig := logEntry.Verification.SignedEntryTimestamp
 	logEntry.Verification = nil
 	payload, err = logEntry.MarshalBinary()
 	if err != nil {
@@ -617,9 +616,11 @@ func TestSignedEntryTimestamp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// verify the signature against the public key
-	h := sha256.Sum256(canonicalized)
-	if !ecdsa.VerifyASN1(rekorPubKey, h[:], []byte(sig)) {
+	verifier, err := signature.LoadVerifier(rekorPubKey, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := verifier.VerifySignature(bytes.NewReader(timestampSig), bytes.NewReader(canonicalized), options.WithContext(ctx)); err != nil {
 		t.Fatal("unable to verify")
 	}
 }

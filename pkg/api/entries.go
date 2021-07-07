@@ -16,6 +16,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -40,6 +41,7 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEntryAnon) ([]byte, error) {
@@ -51,7 +53,7 @@ func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEnt
 	if err != nil {
 		return nil, fmt.Errorf("canonicalizing error: %v", err)
 	}
-	signature, _, err := signer.Sign(ctx, canonicalized)
+	signature, err := signer.SignMessage(bytes.NewReader(canonicalized), options.WithContext(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("signing error: %v", err)
 	}
