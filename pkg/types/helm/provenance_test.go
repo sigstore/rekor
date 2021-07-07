@@ -16,9 +16,11 @@
 package helm
 
 import (
+	"bytes"
 	"os"
 	"testing"
 
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pgp"
 )
 
@@ -28,7 +30,7 @@ func TestProvenance(t *testing.T) {
 		t.Fatalf("could not open provenance file %v", err)
 	}
 
-	provenance := Provedance{}
+	provenance := Provenance{}
 	err = provenance.Unmarshal(inputProvenance)
 
 	if err != nil {
@@ -55,13 +57,14 @@ func TestProvenance(t *testing.T) {
 		t.Fatalf("failed to parse public key: %v", err)
 	}
 
-	keyring, err := publicKey.KeyRing()
+	artifactFactory := pki.NewArtifactFactory("pgp")
+	sig, err := artifactFactory.NewSignature(provenance.Block.ArmoredSignature.Body)
 
 	if err != nil {
-		t.Fatalf("error obtaining keyring: %v", err)
+		t.Fatalf("Failed to create signature %v", err)
 	}
 
-	err = provenance.VerifySignature(keyring, provenance.ArmoredSignature.Body)
+	err = sig.Verify(bytes.NewBuffer(provenance.Block.Bytes), publicKey)
 
 	if err != nil {
 		t.Fatalf("Failed to verify signature %v", err)

@@ -43,10 +43,6 @@ const (
 	APIVERSION = "0.0.1"
 )
 
-var (
-	SHA256 = "sha256"
-)
-
 func init() {
 	if err := helm.VersionMap.SetEntryFactory(APIVERSION, NewEntry); err != nil {
 		log.Logger.Panic(err)
@@ -58,7 +54,7 @@ type V001Entry struct {
 	fetchedExternalEntities bool
 	keyObj                  pki.PublicKey
 	sigObj                  pki.Signature
-	provenanceObj           *helm.Provedance
+	provenanceObj           *helm.Provenance
 }
 
 func (v V001Entry) APIVersion() string {
@@ -213,7 +209,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 
 	g.Go(func() error {
 
-		provenance := helm.Provedance{}
+		provenance := helm.Provenance{}
 		if err := provenance.Unmarshal(provenanceR); err != nil {
 			return closePipesOnError(err)
 		}
@@ -223,27 +219,19 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 			return closePipesOnError(errors.New("error processing public key"))
 		}
 
-		keyring, err := key.KeyRing()
+		// Set signature
+		sig, err := artifactFactory.NewSignature(provenance.Block.ArmoredSignature.Body)
 
 		if err != nil {
-			return closePipesOnError(errors.New("error obtaining keyring"))
-		}
-
-		// Make a copy of the reader so that it can be read multiple times
-		var buf bytes.Buffer
-		tee := io.TeeReader(provenance.ArmoredSignature.Body, &buf)
-
-		if err := provenance.VerifySignature(keyring, tee); err != nil {
 			return closePipesOnError(err)
 		}
 
-		// Set signature
-		v.sigObj, err = artifactFactory.NewSignature(&buf)
-
-		if err != nil {
-			return errors.Wrap(err, "Error producing signature")
+		// Verify signature
+		if err := sig.Verify(bytes.NewReader(provenance.Block.Bytes), key); err != nil {
+			return closePipesOnError(err)
 		}
 
+		v.sigObj = sig
 		v.provenanceObj = &provenance
 
 		select {
@@ -294,8 +282,10 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 
+	sha256 := models.AlpineV001SchemaPackageHashAlgorithmSha256
+
 	canonicalEntry.Chart.Hash = &models.HelmV001SchemaChartHash{}
-	canonicalEntry.Chart.Hash.Algorithm = &SHA256
+	canonicalEntry.Chart.Hash.Algorithm = &sha256
 	canonicalEntry.Chart.Hash.Value = &chartHash
 
 	canonicalEntry.Chart.Provenance = &models.HelmV001SchemaChartProvenance{}

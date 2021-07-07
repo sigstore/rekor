@@ -195,7 +195,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			expectCanonicalizeSuccess: false,
 		},
 		{
-			caseDesc: "provenance content with invalid public key",
+			caseDesc: "provenance content with valid public key",
 			entry: V001Entry{
 				HelmObj: models.HelmV001Schema{
 					PublicKey: &models.HelmV001SchemaPublicKey{

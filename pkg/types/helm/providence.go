@@ -23,16 +23,13 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/openpgp/clearsign"
 )
 
-type Provedance struct {
-	ChartMetadata    map[string]string
-	SumCollection    *SumCollection
-	ArmoredSignature *armor.Block
-	block            *clearsign.Block
+type Provenance struct {
+	ChartMetadata map[string]string
+	SumCollection *SumCollection
+	Block         *clearsign.Block
 }
 
 type SumCollection struct {
@@ -40,20 +37,20 @@ type SumCollection struct {
 	Images map[string]string `json:"images,omitempty"`
 }
 
-func (p *Provedance) Unmarshal(reader io.Reader) error {
+func (p *Provenance) Unmarshal(reader io.Reader) error {
 
 	buf := &bytes.Buffer{}
-	_, err := buf.ReadFrom(reader)
+	read, err := buf.ReadFrom(reader)
 
 	if err != nil {
 		return errors.New("Failed to read from buffer")
 	}
 
-	rawProvenanceFile := buf.Bytes()
-
-	if len(rawProvenanceFile) == 0 {
+	if read == 0 {
 		return errors.New("Provenance file contains no content")
 	}
+
+	rawProvenanceFile := buf.Bytes()
 
 	block, _ := clearsign.Decode(rawProvenanceFile)
 
@@ -65,8 +62,7 @@ func (p *Provedance) Unmarshal(reader io.Reader) error {
 		return errors.New("Unable to locate armored signature in provenance file")
 	}
 
-	p.block = block
-	p.ArmoredSignature = block.ArmoredSignature
+	p.Block = block
 
 	err = p.parseMessageBlock(block.Plaintext)
 
@@ -78,7 +74,7 @@ func (p *Provedance) Unmarshal(reader io.Reader) error {
 
 }
 
-func (p *Provedance) parseMessageBlock(data []byte) error {
+func (p *Provenance) parseMessageBlock(data []byte) error {
 
 	parts := bytes.Split(data, []byte("\n...\n"))
 	if len(parts) < 2 {
@@ -98,7 +94,7 @@ func (p *Provedance) parseMessageBlock(data []byte) error {
 	return nil
 }
 
-func (p *Provedance) GetChartHash() (string, error) {
+func (p *Provenance) GetChartHash() (string, error) {
 
 	if p.SumCollection == nil || p.SumCollection.Files == nil {
 		return "", errors.New("Unable to locate chart hash")
@@ -120,13 +116,5 @@ func (p *Provedance) GetChartHash() (string, error) {
 
 	// Return error if no keys found
 	return "", errors.New("No checksums found")
-
-}
-
-func (p *Provedance) VerifySignature(keyring openpgp.KeyRing, armoredSignatureBody io.Reader) error {
-
-	_, err := openpgp.CheckDetachedSignature(keyring, bytes.NewBuffer(p.block.Bytes), armoredSignatureBody)
-
-	return err
 
 }
