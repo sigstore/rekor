@@ -272,8 +272,9 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 		},
 	} {
 		t.Run(string(test.c.Ecosystem), func(t *testing.T) {
+			text, _ := test.c.MarshalText()
 			sc := &SignedNote{
-				Note: &test.c,
+				Note: string(text),
 			}
 			_, err := sc.Sign(test.identity, test.signer, test.opts)
 			if (err != nil) != test.wantSignErr {
@@ -294,8 +295,9 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error during marshalling: %v", err)
 				}
+				text, _ = test.c.MarshalText()
 				sc2 := &SignedNote{
-					Note: &test.c,
+					Note: string(text),
 				}
 				if err := sc2.UnmarshalText(marshalledSc); err != nil {
 					t.Fatalf("error unmarshalling just marshalled object %v\n%v", err, string(marshalledSc))
@@ -310,76 +312,76 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 
 func TestInvalidSigVerification(t *testing.T) {
 	for _, test := range []struct {
-		sc             SignedNote
+		checkpoint     Checkpoint
+		s              []note.Signature
 		pubKey         crypto.PublicKey
 		expectedResult bool
 	}{
 		{
-			sc: SignedNote{
-				Note: &Checkpoint{
-					Ecosystem: "Log Checkpoint v0",
-					Size:      123,
-					Hash:      []byte("bananas"),
+			checkpoint: Checkpoint{
+				Ecosystem: "Log Checkpoint v0",
+				Size:      123,
+				Hash:      []byte("bananas"),
+			},
+			s:              []note.Signature{},
+			expectedResult: false,
+		},
+		{
+
+			checkpoint: Checkpoint{
+				Ecosystem: "Log Checkpoint v0",
+				Size:      123,
+				Hash:      []byte("bananas"),
+			},
+			s: []note.Signature{
+				{
+					Name:   "something",
+					Hash:   1234,
+					Base64: "not_base 64 string",
 				},
-				Signatures: []note.Signature{},
+			},
+
+			expectedResult: false,
+		},
+		{
+			checkpoint: Checkpoint{
+				Ecosystem: "Log Checkpoint v0",
+				Size:      123,
+				Hash:      []byte("bananas"),
+			},
+			s: []note.Signature{
+				{
+					Name:   "someone",
+					Hash:   142,
+					Base64: "bm90IGEgc2ln", // valid base64, not a valid signature
+				},
 			},
 			expectedResult: false,
 		},
 		{
-			sc: SignedNote{
-				Note: &Checkpoint{
-					Ecosystem: "Log Checkpoint v0",
-					Size:      123,
-					Hash:      []byte("bananas"),
-				},
-				Signatures: []note.Signature{
-					{
-						Name:   "something",
-						Hash:   1234,
-						Base64: "not_base 64 string",
-					},
-				},
+			checkpoint: Checkpoint{
+				Ecosystem: "Log Checkpoint Ed25519 v0",
+				Size:      123,
+				Hash:      []byte("bananas"),
 			},
-			expectedResult: false,
-		},
-		{
-			sc: SignedNote{
-				Note: &Checkpoint{
-					Ecosystem: "Log Checkpoint v0",
-					Size:      123,
-					Hash:      []byte("bananas"),
-				},
-				Signatures: []note.Signature{
-					{
-						Name:   "someone",
-						Hash:   142,
-						Base64: "bm90IGEgc2ln", // valid base64, not a valid signature
-					},
-				},
-			},
-			expectedResult: false,
-		},
-		{
-			sc: SignedNote{
-				Note: &Checkpoint{
-					Ecosystem: "Log Checkpoint Ed25519 v0",
-					Size:      123,
-					Hash:      []byte("bananas"),
-				},
-				Signatures: []note.Signature{
-					{
-						Name:   "someone",
-						Hash:   1390313051,
-						Base64: "pOhM+S/mYjEYtQsOF4lL8o/dR+nbjoz5Cvg/n486KIismpVq0s4wxBaakmryI7zThjWAqRUyECPL3WSEcVDEBQ==",
-					},
+			s: []note.Signature{
+				{
+					Name:   "someone",
+					Hash:   1390313051,
+					Base64: "pOhM+S/mYjEYtQsOF4lL8o/dR+nbjoz5Cvg/n486KIismpVq0s4wxBaakmryI7zThjWAqRUyECPL3WSEcVDEBQ==",
 				},
 			},
 			pubKey:         nil, // valid input, invalid key
 			expectedResult: false,
 		},
 	} {
-		t.Run(string(test.sc.Note.(*Checkpoint).Ecosystem), func(t *testing.T) {
-			result := test.sc.Verify(test.pubKey)
+		t.Run(string(test.checkpoint.Ecosystem), func(t *testing.T) {
+			text, _ := test.checkpoint.MarshalText()
+			sc := SignedNote{
+				Note:       string(text),
+				Signatures: test.s,
+			}
+			result := sc.Verify(test.pubKey)
 			if result != test.expectedResult {
 				t.Fatal("verification test generated unexpected result")
 			}

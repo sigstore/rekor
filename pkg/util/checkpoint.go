@@ -99,7 +99,19 @@ func (c *Checkpoint) UnmarshalText(data []byte) error {
 }
 
 type RekorSTH struct {
+	Checkpoint
 	SignedNote
+}
+
+func CreateSTH(c Checkpoint) (*RekorSTH, error) {
+	text, err := c.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+	return &RekorSTH{
+		Checkpoint: c,
+		SignedNote: SignedNote{Note: string(text)},
+	}, nil
 }
 
 func CheckpointValidator(strToValidate string) bool {
@@ -108,27 +120,40 @@ func CheckpointValidator(strToValidate string) bool {
 }
 
 func SignedCheckpointValidator(strToValidate string) bool {
-	c := SignedNote{
-		Note: &Checkpoint{},
+	s := SignedNote{}
+	if err := s.UnmarshalText([]byte(strToValidate)); err != nil {
+		return false
 	}
-	return c.UnmarshalText([]byte(strToValidate)) == nil
+	c := &Checkpoint{}
+	return c.UnmarshalText([]byte(s.Note)) == nil
+}
+
+func (r *RekorSTH) UnmarshalText(data []byte) error {
+	s := SignedNote{}
+	if err := s.UnmarshalText([]byte(data)); err != nil {
+		return errors.Wrap(err, "unmarshalling signed note")
+	}
+	c := Checkpoint{}
+	if err := c.UnmarshalText([]byte(s.Note)); err != nil {
+		return errors.Wrap(err, "unmarshalling checkpoint")
+	}
+	*r = RekorSTH{Checkpoint: c, SignedNote: s}
+	return nil
 }
 
 func (r *RekorSTH) SetTimestamp(timestamp uint64) {
 	var ts uint64
-	c := r.SignedNote.Note.(*Checkpoint)
-	for i, val := range c.OtherContent {
+	for i, val := range r.OtherContent {
 		if n, _ := fmt.Fscanf(strings.NewReader(val), "Timestamp: %d", &ts); n == 1 {
-			c.OtherContent = append(c.OtherContent[:i], c.OtherContent[i+1:]...)
+			r.OtherContent = append(r.OtherContent[:i], r.OtherContent[i+1:]...)
 		}
 	}
-	c.OtherContent = append(c.OtherContent, fmt.Sprintf("Timestamp: %d", timestamp))
+	r.OtherContent = append(r.OtherContent, fmt.Sprintf("Timestamp: %d", timestamp))
 }
 
 func (r *RekorSTH) GetTimestamp() uint64 {
 	var ts uint64
-	c := r.SignedNote.Note.(*Checkpoint)
-	for _, val := range c.OtherContent {
+	for _, val := range r.OtherContent {
 		if n, _ := fmt.Fscanf(strings.NewReader(val), "Timestamp: %d", &ts); n == 1 {
 			break
 		}
@@ -137,6 +162,5 @@ func (r *RekorSTH) GetTimestamp() uint64 {
 }
 
 func RekorSTHValidator(strToValidate string) bool {
-	r := RekorSTH{}
-	return r.UnmarshalText([]byte(strToValidate)) == nil
+	return SignedCheckpointValidator(strToValidate)
 }

@@ -52,21 +52,19 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	hashString := hex.EncodeToString(root.RootHash)
 	treeSize := int64(root.TreeSize)
 
-	sth := util.RekorSTH{
-		SignedNote: util.SignedNote{
-			Note: &util.Checkpoint{
-				Ecosystem: "Rekor",
-				Size:      root.TreeSize,
-				Hash:      root.RootHash,
-			},
-		},
+	sth, err := util.CreateSTH(util.Checkpoint{
+		Ecosystem: "Rekor",
+		Size:      root.TreeSize,
+		Hash:      root.RootHash,
+	})
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("marshalling error: %w", err), sthGenerateError)
 	}
 	sth.SetTimestamp(uint64(time.Now().UnixNano()))
 	// TODO: once api.signer implements crypto.Signer, switch to using Sign() API on Checkpoint
 
 	// sign the log root ourselves to get the log root signature
-	cpString, _ := sth.Note.MarshalText()
-	sig, _, err := api.signer.Sign(params.HTTPRequest.Context(), []byte(cpString))
+	sig, _, err := api.signer.Sign(params.HTTPRequest.Context(), []byte(sth.Note))
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %w", err), signingError)
 	}
@@ -77,7 +75,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 		Base64: base64.StdEncoding.EncodeToString(sig),
 	})
 
-	scBytes, err := sth.MarshalText()
+	scBytes, err := sth.SignedNote.MarshalText()
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("marshalling error: %w", err), sthGenerateError)
 	}

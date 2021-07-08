@@ -107,10 +107,10 @@ var watchCmd = &cobra.Command{
 				log.Logger.Warnf("error verifiying tree: %s", err)
 				continue
 			}
-			log.Logger.Infof("Found and verified state at %d", lr.VerifiedLogRoot.Note.(*util.Checkpoint).Size)
-			if last != nil && last.VerifiedLogRoot.Note.(*util.Checkpoint).Size == lr.VerifiedLogRoot.Note.(*util.Checkpoint).Size {
+			log.Logger.Infof("Found and verified state at %d", lr.VerifiedLogRoot.Size)
+			if last != nil && last.VerifiedLogRoot.Size == lr.VerifiedLogRoot.Size {
 				log.Logger.Infof("Last tree size is the same as the current one: %d %d",
-					last.VerifiedLogRoot.Note.(*util.Checkpoint).Size, lr.VerifiedLogRoot.Note.(*util.Checkpoint).Size)
+					last.VerifiedLogRoot.Size, lr.VerifiedLogRoot.Size)
 				// If it's the same, it shouldn't have changed but we'll still upload anyway
 				// in case that failed.
 			}
@@ -154,7 +154,7 @@ func uploadToBlobStorage(ctx context.Context, bucket *blob.Bucket, lr *SignedAnd
 		return err
 	}
 
-	objName := fmt.Sprintf("sth-%d.json", lr.VerifiedLogRoot.Note.(*util.Checkpoint).Size)
+	objName := fmt.Sprintf("sth-%d.json", lr.VerifiedLogRoot.Size)
 	w, err := bucket.NewWriter(ctx, objName, nil)
 	if err != nil {
 		return err

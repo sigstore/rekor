@@ -34,17 +34,9 @@ import (
 	"golang.org/x/mod/sumdb/note"
 )
 
-// Interface for SignedNotes
-
-type Note interface {
-	UnmarshalText(data []byte) error
-	MarshalText() ([]byte, error)
-	String() string
-}
-
 type SignedNote struct {
-	// A Note to sign.
-	Note
+	// Textual representation of a note to sign.
+	Note string
 	// Signatures are one or more signature lines covering the payload
 	Signatures []note.Signature
 }
@@ -57,7 +49,7 @@ func (s *SignedNote) Sign(identity string, signer crypto.Signer, opts crypto.Sig
 		hf = opts.HashFunc()
 	}
 
-	input, _ := s.Note.MarshalText()
+	input := []byte(s.Note)
 	var digest []byte
 	if hf != crypto.Hash(0) {
 		hasher := hf.New()
@@ -67,7 +59,7 @@ func (s *SignedNote) Sign(identity string, signer crypto.Signer, opts crypto.Sig
 		}
 		digest = hasher.Sum(nil)
 	} else {
-		digest, _ = s.Note.MarshalText()
+		digest = input
 	}
 
 	sig, err := signer.Sign(rand.Reader, digest, opts)
@@ -98,7 +90,7 @@ func (s SignedNote) Verify(public crypto.PublicKey) bool {
 		return false
 	}
 
-	msg, _ := s.Note.MarshalText()
+	msg := []byte(s.Note)
 
 	//TODO: generalize this
 	digest := sha256.Sum256(msg)
@@ -136,7 +128,7 @@ func (s SignedNote) MarshalText() ([]byte, error) {
 // String returns the String representation of the SignedNote
 func (s SignedNote) String() string {
 	var b strings.Builder
-	b.WriteString(s.Note.String())
+	b.WriteString(s.Note)
 	b.WriteRune('\n')
 	for _, sig := range s.Signatures {
 		var hbuf [4]byte
@@ -162,49 +154,50 @@ func (s SignedNote) String() string {
 //   hint to the public key; it is a big-endian encoded uint32 representing the first
 //   4 bytes of the SHA256 hash of the public key
 func (s *SignedNote) UnmarshalText(data []byte) error {
-	sc := SignedNote{
-		Note: &Checkpoint{},
+	sigSplit := []byte("\n\n")
+	// Must end with signature block preceded by blank line.
+	split := bytes.LastIndex(data, sigSplit)
+	if split < 0 {
+		return errors.New("malformed note")
+	}
+	text, data := data[:split+1], data[split+2:]
+	if len(data) == 0 || data[len(data)-1] != '\n' {
+		return errors.New("malformed note")
 	}
 
-	if err := sc.Note.UnmarshalText(data); err != nil {
-		return errors.Wrap(err, "parsing checkpoint portion")
+	sn := SignedNote{
+		Note: string(text),
 	}
 
 	b := bufio.NewScanner(bytes.NewReader(data))
-	var pastNote bool
 	for b.Scan() {
-		if len(b.Text()) == 0 {
-			pastNote = true
-			continue
+		var name, signature string
+		if _, err := fmt.Fscanf(strings.NewReader(b.Text()), "\u2014 %s %s\n", &name, &signature); err != nil {
+			return errors.Wrap(err, "parsing signature")
 		}
-		if pastNote {
-			var name, signature string
-			if _, err := fmt.Fscanf(strings.NewReader(b.Text()), "\u2014 %s %s\n", &name, &signature); err != nil {
-				return errors.Wrap(err, "parsing signature")
-			}
 
-			sigBytes, err := base64.StdEncoding.DecodeString(signature)
-			if err != nil {
-				return errors.Wrap(err, "decoding signature")
-			}
-			if len(sigBytes) < 5 {
-				return errors.New("signature is too small")
-			}
-
-			sig := note.Signature{
-				Name:   name,
-				Hash:   binary.BigEndian.Uint32(sigBytes[0:4]),
-				Base64: base64.StdEncoding.EncodeToString(sigBytes[4:]),
-			}
-			sc.Signatures = append(sc.Signatures, sig)
+		sigBytes, err := base64.StdEncoding.DecodeString(signature)
+		if err != nil {
+			return errors.Wrap(err, "decoding signature")
 		}
+		if len(sigBytes) < 5 {
+			return errors.New("signature is too small")
+		}
+
+		sig := note.Signature{
+			Name:   name,
+			Hash:   binary.BigEndian.Uint32(sigBytes[0:4]),
+			Base64: base64.StdEncoding.EncodeToString(sigBytes[4:]),
+		}
+		sn.Signatures = append(sn.Signatures, sig)
+
 	}
-	if len(sc.Signatures) == 0 {
+	if len(sn.Signatures) == 0 {
 		return errors.New("no signatures found in input")
 	}
 
 	// copy sc to s
-	*s = sc
+	*s = sn
 	return nil
 }
 
