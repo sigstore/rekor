@@ -17,11 +17,14 @@ limitations under the License.
 package signer
 
 import (
+	"bytes"
 	"context"
-	"crypto/ecdsa"
-	"crypto/sha256"
+	"crypto"
 	"crypto/x509"
 	"testing"
+
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func TestMemory(t *testing.T) {
@@ -34,36 +37,39 @@ func TestMemory(t *testing.T) {
 	payload := []byte("payload")
 
 	// sign a payload
-	signature, _, err := m.Sign(ctx, payload)
+	sig, err := m.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
 	if err != nil {
 		t.Fatalf("signing payload: %v", err)
 	}
 
 	// verify the signature against public key
-	pubKey, err := m.PublicKey(ctx)
+	pubKey, err := m.PublicKey(options.WithContext(ctx))
 	if err != nil {
 		t.Fatalf("public key: %v", err)
 	}
 
-	pk, ok := pubKey.(*ecdsa.PublicKey)
-	if !ok {
-		t.Fatalf("ecdsa public key: %v", err)
+	verifier, err := signature.LoadVerifier(pubKey, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("initializing verifier: %v", err)
 	}
 
-	h := sha256.Sum256(payload)
-
-	if !ecdsa.VerifyASN1(pk, h[:], signature) {
-		t.Fatalf("unable to verify signature")
+	if err := verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(payload), options.WithContext(ctx)); err != nil {
+		t.Fatalf("verification failed: %v", err)
 	}
 
 	// verify signature using the cert's public key
-	certChain, err := NewTimestampingCertWithSelfSignedCA(pk)
-	pkCert, ok := certChain[0].PublicKey.(*ecdsa.PublicKey)
-	if !ok {
-		t.Fatalf("cert ecdsa public key: %v", err)
+	certChain, err := NewTimestampingCertWithSelfSignedCA(pubKey)
+	if err != nil {
+		t.Fatalf("generating timestamping cert: %v", err)
 	}
-	if !ecdsa.VerifyASN1(pkCert, h[:], signature) {
-		t.Fatalf("unable to verify signature")
+	pkCert := certChain[0].PublicKey
+
+	verifier, err = signature.LoadVerifier(pkCert, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("initializing cert pub key verifier: %v", err)
+	}
+	if err := verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(payload), options.WithContext(ctx)); err != nil {
+		t.Fatalf("verification failed: %v", err)
 	}
 	// verify that the cert chain is configured for timestamping
 	roots := x509.NewCertPool()

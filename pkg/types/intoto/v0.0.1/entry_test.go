@@ -16,6 +16,7 @@
 package intoto
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -31,6 +32,7 @@ import (
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/in-toto/in-toto-golang/pkg/ssl"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"go.uber.org/goleak"
 )
 
@@ -52,9 +54,11 @@ func p(b []byte) *strfmt.Base64 {
 
 func envelope(t *testing.T, k *ecdsa.PrivateKey, payload, payloadType string) string {
 
-	signer, err := in_toto.NewSSLSigner(&verifier{
-		signer: k,
-	})
+	s, err := signature.LoadECDSASigner(k, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signer, err := in_toto.NewSSLSigner(&verifier{s: s})
 	if err != nil {
 		t.Fatal(err)
 	}

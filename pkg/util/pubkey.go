@@ -18,12 +18,11 @@ package util
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/x509"
-	"encoding/pem"
-	"errors"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
 func PublicKey(ctx context.Context, c *client.Rekor) (*ecdsa.PublicKey, error) {
@@ -31,21 +30,15 @@ func PublicKey(ctx context.Context, c *client.Rekor) (*ecdsa.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	pubKey := resp.GetPayload()
 
 	// marshal the pubkey
-	p, _ := pem.Decode([]byte(pubKey))
-	if p == nil {
-		return nil, errors.New("public key shouldn't be nil")
-	}
-
-	decoded, err := x509.ParsePKIXPublicKey(p.Bytes)
+	pubKey, err := cryptoutils.UnmarshalPEMToPublicKey([]byte(resp.GetPayload()))
 	if err != nil {
 		return nil, err
 	}
-	ed, ok := decoded.(*ecdsa.PublicKey)
+	ed, ok := pubKey.(*ecdsa.PublicKey)
 	if !ok {
-		return nil, err
+		return nil, errors.New("public key retrieved from Rekor is not an ECDSA key")
 	}
 	return ed, nil
 }

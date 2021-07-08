@@ -16,6 +16,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
@@ -32,6 +33,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/sigstore/rekor/pkg/util"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // GetLogInfoHandler returns the current size of the tree and the STH
@@ -62,9 +64,24 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	}
 	sth.SetTimestamp(uint64(time.Now().UnixNano()))
 	// TODO: once api.signer implements crypto.Signer, switch to using Sign() API on Checkpoint
+	// var opts crypto.SignerOpts
+	// cs, ok := api.signer.(crypto.Signer)
+	// if !ok {
+	// 	kmsSigner, ok := api.signer.(kms.SignerVerifier)
+	// 	if !ok {
+	// 		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to cast to crypto.Signer"), signingError)
+	// 	}
+	// 	var err error
+	// 	cs, opts, err = kmsSigner.CryptoSigner(params.HTTPRequest.Context(), nil)
+	// 	if err != nil {
+	// 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("unable to obtain crypto.Signer: %v", err), signingError)
+	// 	}
+	// }
+	// sth.Checkpoint.Sign(viper.GetString("rekor_server.hostname"), cs, opts)
 
 	// sign the log root ourselves to get the log root signature
-	sig, _, err := api.signer.Sign(params.HTTPRequest.Context(), []byte(sth.Note))
+	cpString, _ := sth.Checkpoint.MarshalText()
+	sig, err := api.signer.SignMessage(bytes.NewReader(cpString), options.WithContext(params.HTTPRequest.Context()))
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %w", err), signingError)
 	}

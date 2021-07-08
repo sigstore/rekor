@@ -19,17 +19,14 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
 	"crypto/x509"
-	"encoding/pem"
 	"strings"
 	"testing"
 
 	"github.com/sigstore/rekor/pkg/signer"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // Generated with:
@@ -82,27 +79,17 @@ MCowBQYDK2VwAyEAizWek2gKgMM+bad4rVJ5nc9NsbNOba0A0BNfzOgklRs=
 -----END PUBLIC KEY-----`
 
 func signData(t *testing.T, b []byte, pkey string) []byte {
-	// Get a private key object
-	p, _ := pem.Decode([]byte(pkey))
-	if p.Type != "PRIVATE KEY" {
-		t.Fatalf("expected private key, found object of type %s", p.Type)
+
+	priv, err := cryptoutils.UnmarshalPEMToPrivateKey([]byte(pkey), cryptoutils.SkipPassword)
+	if err != nil {
+		t.Fatal(err)
 	}
-	pk, err := x509.ParsePKCS8PrivateKey(p.Bytes)
+	signer, err := signature.LoadSigner(priv, crypto.SHA256)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	h := sha256.Sum256(b)
-	var signature []byte
-	switch k := pk.(type) {
-	case *rsa.PrivateKey:
-		signature, err = rsa.SignPKCS1v15(rand.Reader, k, crypto.SHA256, h[:])
-	case *ecdsa.PrivateKey:
-		signature, err = ecdsa.SignASN1(rand.Reader, k, h[:])
-	case ed25519.PrivateKey:
-		signature = ed25519.Sign(k, b)
-	}
-
+	signature, err := signer.SignMessage(bytes.NewReader(b))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +211,7 @@ func TestCertChain_Verify(t *testing.T) {
 	}
 	// A properly created cert chain should encode to PEM OK.
 	ctx := context.Background()
-	pk, err := mem.PublicKey(ctx)
+	pk, err := mem.PublicKey(options.WithContext(ctx))
 	if err != nil {
 		t.Fatal(err)
 	}
