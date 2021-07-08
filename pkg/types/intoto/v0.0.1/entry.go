@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -34,8 +33,12 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
+	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/intoto"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 const (
@@ -142,7 +145,12 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 // Validate performs cross-field validation for fields in object
 func (v *V001Entry) Validate() error {
 	// TODO handle multiple
-	sslVerifier, err := ssl.NewEnvelopeSigner(&verifier{pub: v.keyObj})
+	pk := v.keyObj.(*x509.PublicKey)
+	vfr, err := signature.LoadVerifier(pk.CryptoPubKey(), crypto.SHA256)
+	if err != nil {
+		return err
+	}
+	sslVerifier, err := ssl.NewEnvelopeSigner(&verifier{v: vfr})
 	if err != nil {
 		return err
 	}
@@ -166,30 +174,33 @@ func (v *V001Entry) Attestation() (string, []byte) {
 }
 
 type verifier struct {
-	pub    pki.PublicKey
-	signer crypto.Signer
+	s signature.Signer
+	v signature.Verifier
 }
 
-func (v *verifier) Sign(d []byte) ([]byte, string, error) {
-	if v.signer == nil {
+func (v *verifier) Sign(data []byte) (sig []byte, pubKey string, err error) {
+	if v.s == nil {
 		return nil, "", errors.New("nil signer")
 	}
-	h := sha256.Sum256(d)
-	sig, err := v.signer.Sign(rand.Reader, h[:], crypto.SHA256)
+	sig, err = v.s.SignMessage(bytes.NewReader(data), options.WithCryptoSignerOpts(crypto.SHA256))
 	if err != nil {
 		return nil, "", err
 	}
-	return sig, "", nil
+	pk, err := v.s.PublicKey()
+	if err != nil {
+		return nil, "", err
+	}
+	pubKeyBytes, err := cryptoutils.MarshalPublicKeyToPEM(pk)
+	if err != nil {
+		return nil, "", err
+	}
+	pubKey = string(pubKeyBytes)
+	return
 }
 
 func (v *verifier) Verify(keyID string, data, sig []byte) error {
-	af := pki.NewArtifactFactory("x509")
-	s, err := af.NewSignature(bytes.NewReader(sig))
-	if err != nil {
-		return err
+	if v.v == nil {
+		return errors.New("nil verifier")
 	}
-	if err := s.Verify(bytes.NewReader(data), v.pub); err != nil {
-		return err
-	}
-	return nil
+	return v.v.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data))
 }

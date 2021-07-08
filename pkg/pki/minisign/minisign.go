@@ -17,14 +17,13 @@ package minisign
 
 import (
 	"bytes"
-	"crypto/ed25519"
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 
 	minisign "github.com/jedisct1/go-minisign"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 // Signature Signature that follows the minisign standard; supports both minisign and signify generated signatures
@@ -99,16 +98,11 @@ func (s Signature) Verify(r io.Reader, k interface{}) error {
 		return fmt.Errorf("minisign public key has not been initialized")
 	}
 
-	msg, err := ioutil.ReadAll(r)
+	verifier, err := signature.LoadED25519Verifier(key.key.PublicKey[:])
 	if err != nil {
-		return fmt.Errorf("error reading message to verify signature: %w", err)
+		return err
 	}
-
-	if !ed25519.Verify(ed25519.PublicKey(key.key.PublicKey[:]), msg, s.signature.Signature[:]) {
-		return fmt.Errorf("verification of signed message failed")
-	}
-
-	return nil
+	return verifier.VerifySignature(bytes.NewReader(s.signature.Signature[:]), r)
 }
 
 // PublicKey Public Key that follows the minisign standard; supports signify and minisign public keys

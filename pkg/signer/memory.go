@@ -106,11 +106,11 @@ func NewTimestampingCertWithSelfSignedCA(pub crypto.PublicKey) ([]*x509.Certific
 
 func NewMemory() (*Memory, error) {
 	// generate a keypair
-	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
 	if err != nil {
-		return nil, errors.Wrap(err, "generating private key")
+		return nil, err
 	}
 	return &Memory{
-		ECDSASignerVerifier: signature.NewECDSASignerVerifier(privKey, crypto.SHA256),
+		ECDSASignerVerifier: *sv,
 	}, nil
 }
