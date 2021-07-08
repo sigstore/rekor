@@ -39,7 +39,7 @@ type Checkpoint struct {
 }
 
 // String returns the String representation of the Checkpoint
-func (c *Checkpoint) String() string {
+func (c Checkpoint) String() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s\n%d\n%s\n", c.Ecosystem, c.Size, base64.StdEncoding.EncodeToString(c.Hash))
 	for _, line := range c.OtherContent {
@@ -49,7 +49,7 @@ func (c *Checkpoint) String() string {
 }
 
 // MarshalText returns the common format representation of this Checkpoint.
-func (c *Checkpoint) MarshalText() ([]byte, error) {
+func (c Checkpoint) MarshalText() ([]byte, error) {
 	return []byte(c.String()), nil
 }
 
@@ -114,11 +114,6 @@ func CreateSTH(c Checkpoint) (*RekorSTH, error) {
 	}, nil
 }
 
-func CheckpointValidator(strToValidate string) bool {
-	c := &Checkpoint{}
-	return c.UnmarshalText([]byte(strToValidate)) == nil
-}
-
 func SignedCheckpointValidator(strToValidate string) bool {
 	s := SignedNote{}
 	if err := s.UnmarshalText([]byte(strToValidate)); err != nil {
@@ -126,6 +121,11 @@ func SignedCheckpointValidator(strToValidate string) bool {
 	}
 	c := &Checkpoint{}
 	return c.UnmarshalText([]byte(s.Note)) == nil
+}
+
+func CheckpointValidator(strToValidate string) bool {
+	c := &Checkpoint{}
+	return c.UnmarshalText([]byte(strToValidate)) == nil
 }
 
 func (r *RekorSTH) UnmarshalText(data []byte) error {
