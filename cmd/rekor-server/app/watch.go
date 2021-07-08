@@ -134,7 +134,7 @@ func doCheck(c *genclient.Rekor, pub crypto.PublicKey) (*SignedAndUnsignedLogRoo
 	if err != nil {
 		return nil, errors.Wrap(err, "getting log info")
 	}
-	sth := util.RekorSTH{}
+	sth := util.SignedCheckpoint{}
 	if err := sth.UnmarshalText([]byte(*li.Payload.SignedTreeHead)); err != nil {
 		return nil, errors.Wrap(err, "unmarshalling tree head")
 	}
@@ -168,5 +168,5 @@ func uploadToBlobStorage(ctx context.Context, bucket *blob.Bucket, lr *SignedAnd
 
 // For JSON marshalling
 type SignedAndUnsignedLogRoot struct {
-	VerifiedLogRoot *util.RekorSTH
+	VerifiedLogRoot *util.SignedCheckpoint
 }

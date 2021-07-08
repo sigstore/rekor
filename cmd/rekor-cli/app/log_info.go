@@ -72,7 +72,7 @@ var logInfoCmd = &cobra.Command{
 
 		logInfo := result.GetPayload()
 
-		sth := util.RekorSTH{}
+		sth := util.SignedCheckpoint{}
 		if err := sth.UnmarshalText([]byte(*logInfo.SignedTreeHead)); err != nil {
 			return nil, err
 		}

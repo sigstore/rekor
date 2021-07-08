@@ -52,7 +52,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	hashString := hex.EncodeToString(root.RootHash)
 	treeSize := int64(root.TreeSize)
 
-	sth, err := util.CreateSTH(util.Checkpoint{
+	sth, err := util.CreateSignedCheckpoint(util.Checkpoint{
 		Ecosystem: "Rekor",
 		Size:      root.TreeSize,
 		Hash:      root.RootHash,

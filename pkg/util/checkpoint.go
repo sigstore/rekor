@@ -98,17 +98,17 @@ func (c *Checkpoint) UnmarshalText(data []byte) error {
 	return nil
 }
 
-type RekorSTH struct {
+type SignedCheckpoint struct {
 	Checkpoint
 	SignedNote
 }
 
-func CreateSTH(c Checkpoint) (*RekorSTH, error) {
+func CreateSignedCheckpoint(c Checkpoint) (*SignedCheckpoint, error) {
 	text, err := c.MarshalText()
 	if err != nil {
 		return nil, err
 	}
-	return &RekorSTH{
+	return &SignedCheckpoint{
 		Checkpoint: c,
 		SignedNote: SignedNote{Note: string(text)},
 	}, nil
@@ -128,7 +128,7 @@ func CheckpointValidator(strToValidate string) bool {
 	return c.UnmarshalText([]byte(strToValidate)) == nil
 }
 
-func (r *RekorSTH) UnmarshalText(data []byte) error {
+func (r *SignedCheckpoint) UnmarshalText(data []byte) error {
 	s := SignedNote{}
 	if err := s.UnmarshalText([]byte(data)); err != nil {
 		return errors.Wrap(err, "unmarshalling signed note")
@@ -137,11 +137,11 @@ func (r *RekorSTH) UnmarshalText(data []byte) error {
 	if err := c.UnmarshalText([]byte(s.Note)); err != nil {
 		return errors.Wrap(err, "unmarshalling checkpoint")
 	}
-	*r = RekorSTH{Checkpoint: c, SignedNote: s}
+	*r = SignedCheckpoint{Checkpoint: c, SignedNote: s}
 	return nil
 }
 
-func (r *RekorSTH) SetTimestamp(timestamp uint64) {
+func (r *SignedCheckpoint) SetTimestamp(timestamp uint64) {
 	var ts uint64
 	for i, val := range r.OtherContent {
 		if n, _ := fmt.Fscanf(strings.NewReader(val), "Timestamp: %d", &ts); n == 1 {
@@ -151,7 +151,7 @@ func (r *RekorSTH) SetTimestamp(timestamp uint64) {
 	r.OtherContent = append(r.OtherContent, fmt.Sprintf("Timestamp: %d", timestamp))
 }
 
-func (r *RekorSTH) GetTimestamp() uint64 {
+func (r *SignedCheckpoint) GetTimestamp() uint64 {
 	var ts uint64
 	for _, val := range r.OtherContent {
 		if n, _ := fmt.Fscanf(strings.NewReader(val), "Timestamp: %d", &ts); n == 1 {
@@ -159,8 +159,4 @@ func (r *RekorSTH) GetTimestamp() uint64 {
 		}
 	}
 	return ts
-}
-
-func RekorSTHValidator(strToValidate string) bool {
-	return SignedCheckpointValidator(strToValidate)
 }
