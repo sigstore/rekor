@@ -651,6 +651,31 @@ func init() {
         }
       ]
     },
+    "helm": {
+      "description": "Helm chart",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "type": "object",
+              "$ref": "pkg/types/helm/helm_schema.json"
+            }
+          }
+        }
+      ]
+    },
     "intoto": {
       "description": "Intoto object",
       "type": "object",
@@ -1386,6 +1411,183 @@ func init() {
         },
         "message": {
           "type": "string"
+        }
+      }
+    },
+    "HelmV001SchemaChart": {
+      "description": "Information about the Helm chart associated with the entry",
+      "type": "object",
+      "required": [
+        "provenance"
+      ],
+      "properties": {
+        "hash": {
+          "description": "Specifies the hash algorithm and value for the chart",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value": {
+              "description": "The hash value for the chart",
+              "type": "string"
+            }
+          }
+        },
+        "provenance": {
+          "description": "The provenance entry associated with the signed Helm Chart",
+          "type": "object",
+          "oneOf": [
+            {
+              "required": [
+                "url"
+              ]
+            },
+            {
+              "required": [
+                "content"
+              ]
+            }
+          ],
+          "properties": {
+            "content": {
+              "description": "Specifies the content of the provenance file inline within the document",
+              "type": "string",
+              "format": "byte"
+            },
+            "signature": {
+              "description": "Information about the included signature in the provenance file",
+              "type": "object",
+              "required": [
+                "content"
+              ],
+              "properties": {
+                "content": {
+                  "description": "Specifies the signature embedded within the provenance file ",
+                  "type": "string",
+                  "format": "byte"
+                }
+              }
+            },
+            "url": {
+              "description": "Specifies the location of the provenance file",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        }
+      }
+    },
+    "HelmV001SchemaChartHash": {
+      "description": "Specifies the hash algorithm and value for the chart",
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "The hashing function used to compute the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value": {
+          "description": "The hash value for the chart",
+          "type": "string"
+        }
+      }
+    },
+    "HelmV001SchemaChartProvenance": {
+      "description": "The provenance entry associated with the signed Helm Chart",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "content"
+          ]
+        }
+      ],
+      "properties": {
+        "content": {
+          "description": "Specifies the content of the provenance file inline within the document",
+          "type": "string",
+          "format": "byte"
+        },
+        "signature": {
+          "description": "Information about the included signature in the provenance file",
+          "type": "object",
+          "required": [
+            "content"
+          ],
+          "properties": {
+            "content": {
+              "description": "Specifies the signature embedded within the provenance file ",
+              "type": "string",
+              "format": "byte"
+            }
+          }
+        },
+        "url": {
+          "description": "Specifies the location of the provenance file",
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "HelmV001SchemaChartProvenanceSignature": {
+      "description": "Information about the included signature in the provenance file",
+      "type": "object",
+      "required": [
+        "content"
+      ],
+      "properties": {
+        "content": {
+          "description": "Specifies the signature embedded within the provenance file ",
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "HelmV001SchemaPublicKey": {
+      "description": "The public key that can verify the package signature",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "content"
+          ]
+        }
+      ],
+      "properties": {
+        "content": {
+          "description": "Specifies the content of the public key inline within the document",
+          "type": "string",
+          "format": "byte"
+        },
+        "url": {
+          "description": "Specifies the location of the public key",
+          "type": "string",
+          "format": "uri"
         }
       }
     },
@@ -2198,6 +2400,160 @@ func init() {
       },
       "$schema": "http://json-schema.org/draft-07/schema",
       "$id": "http://rekor.sigstore.dev/types/alpine/alpine_v0_0_1_schema.json"
+    },
+    "helm": {
+      "description": "Helm chart",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "$ref": "#/definitions/helmSchema"
+            }
+          }
+        }
+      ]
+    },
+    "helmSchema": {
+      "description": "Schema for Helm objects",
+      "type": "object",
+      "title": "Helm Schema",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/helmV001Schema"
+        }
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/helm/helm_schema.json"
+    },
+    "helmV001Schema": {
+      "description": "Schema for Helm object",
+      "type": "object",
+      "title": "Helm v0.0.1 Schema",
+      "required": [
+        "publicKey",
+        "chart"
+      ],
+      "properties": {
+        "chart": {
+          "description": "Information about the Helm chart associated with the entry",
+          "type": "object",
+          "required": [
+            "provenance"
+          ],
+          "properties": {
+            "hash": {
+              "description": "Specifies the hash algorithm and value for the chart",
+              "type": "object",
+              "required": [
+                "algorithm",
+                "value"
+              ],
+              "properties": {
+                "algorithm": {
+                  "description": "The hashing function used to compute the hash value",
+                  "type": "string",
+                  "enum": [
+                    "sha256"
+                  ]
+                },
+                "value": {
+                  "description": "The hash value for the chart",
+                  "type": "string"
+                }
+              }
+            },
+            "provenance": {
+              "description": "The provenance entry associated with the signed Helm Chart",
+              "type": "object",
+              "oneOf": [
+                {
+                  "required": [
+                    "url"
+                  ]
+                },
+                {
+                  "required": [
+                    "content"
+                  ]
+                }
+              ],
+              "properties": {
+                "content": {
+                  "description": "Specifies the content of the provenance file inline within the document",
+                  "type": "string",
+                  "format": "byte"
+                },
+                "signature": {
+                  "description": "Information about the included signature in the provenance file",
+                  "type": "object",
+                  "required": [
+                    "content"
+                  ],
+                  "properties": {
+                    "content": {
+                      "description": "Specifies the signature embedded within the provenance file ",
+                      "type": "string",
+                      "format": "byte"
+                    }
+                  }
+                },
+                "url": {
+                  "description": "Specifies the location of the provenance file",
+                  "type": "string",
+                  "format": "uri"
+                }
+              }
+            }
+          }
+        },
+        "extraData": {
+          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
+          "type": "object",
+          "additionalProperties": true
+        },
+        "publicKey": {
+          "description": "The public key that can verify the package signature",
+          "type": "object",
+          "oneOf": [
+            {
+              "required": [
+                "url"
+              ]
+            },
+            {
+              "required": [
+                "content"
+              ]
+            }
+          ],
+          "properties": {
+            "content": {
+              "description": "Specifies the content of the public key inline within the document",
+              "type": "string",
+              "format": "byte"
+            },
+            "url": {
+              "description": "Specifies the location of the public key",
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/helm/helm_v0_0_1_schema.json"
     },
     "intoto": {
       "description": "Intoto object",

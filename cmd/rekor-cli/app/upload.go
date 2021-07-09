@@ -106,6 +106,11 @@ var uploadCmd = &cobra.Command{
 			if err != nil {
 				return nil, err
 			}
+		case "helm":
+			entry, err = CreateHelmFromPFlags()
+			if err != nil {
+				return nil, err
+			}
 		default:
 			return nil, errors.New("unknown type specified")
 		}
