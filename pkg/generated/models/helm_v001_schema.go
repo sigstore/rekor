@@ -46,7 +46,8 @@ type HelmV001Schema struct {
 	ExtraData interface{} `json:"extraData,omitempty"`
 
 	// public key
-	PublicKey *HelmV001SchemaPublicKey `json:"publicKey,omitempty"`
+	// Required: true
+	PublicKey *HelmV001SchemaPublicKey `json:"publicKey"`
 }
 
 // Validate validates this helm v001 schema
@@ -86,8 +87,9 @@ func (m *HelmV001Schema) validateChart(formats strfmt.Registry) error {
 }
 
 func (m *HelmV001Schema) validatePublicKey(formats strfmt.Registry) error {
-	if swag.IsZero(m.PublicKey) { // not required
-		return nil
+
+	if err := validate.Required("publicKey", "body", m.PublicKey); err != nil {
+		return err
 	}
 
 	if m.PublicKey != nil {

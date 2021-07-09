@@ -2442,7 +2442,7 @@ func init() {
       "type": "object",
       "title": "Helm v0.0.1 Schema",
       "required": [
-        "signature",
+        "publicKey",
         "chart"
       ],
       "properties": {
