@@ -20,10 +20,12 @@ import (
 	"context"
 	"crypto"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 
+	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/in-toto/in-toto-golang/pkg/ssl"
 	"github.com/spf13/viper"
 
@@ -69,9 +71,37 @@ func (v V001Entry) IndexKeys() []string {
 	var result []string
 
 	h := sha256.Sum256([]byte(v.env.Payload))
-	payloadKey := "sha256:" + string(h[:])
+	payloadKey := "sha256:" + hex.EncodeToString(h[:])
 	result = append(result, payloadKey)
+
+	switch v.env.PayloadType {
+	case in_toto.PayloadType:
+		statement, err := parseStatement(v.env.Payload)
+		if err != nil {
+			log.Logger.Info("invalid id in_toto Statement")
+			return result
+		}
+		for _, s := range statement.Subject {
+			for alg, ds := range s.Digest {
+				result = append(result, alg+":"+ds)
+			}
+		}
+	default:
+		log.Logger.Infof("Unknown in_toto Statement Type: %s", v.env.PayloadType)
+	}
 	return result
+}
+
+func parseStatement(p string) (*in_toto.Statement, error) {
+	ps := in_toto.Statement{}
+	payload, err := base64.StdEncoding.DecodeString(p)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(payload, &ps); err != nil {
+		return nil, err
+	}
+	return &ps, nil
 }
 
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
@@ -153,6 +183,10 @@ func (v *V001Entry) Validate() error {
 	sslVerifier, err := ssl.NewEnvelopeSigner(&verifier{v: vfr})
 	if err != nil {
 		return err
+	}
+
+	if v.IntotoObj.Content.Envelope == "" {
+		return nil
 	}
 
 	if err := json.Unmarshal([]byte(v.IntotoObj.Content.Envelope), &v.env); err != nil {
