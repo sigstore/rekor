@@ -176,6 +176,11 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 func (v *V001Entry) Validate() error {
 	// TODO handle multiple
 	pk := v.keyObj.(*x509.PublicKey)
+
+	// This also gets called in the CLI, where we won't have this data
+	if v.IntotoObj.Content.Envelope == "" {
+		return nil
+	}
 	vfr, err := signature.LoadVerifier(pk.CryptoPubKey(), crypto.SHA256)
 	if err != nil {
 		return err

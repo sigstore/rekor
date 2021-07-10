@@ -430,6 +430,15 @@ definitions:
           additionalProperties: true
         integratedTime:
           type: integer
+        attestation:
+          type: object
+          properties:
+            data:
+              format: byte
+            mediaType:
+              format: string
+
+          format: byte
         verification:
           type: object
           properties:

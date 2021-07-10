@@ -492,6 +492,18 @@ func init() {
           "integratedTime"
         ],
         "properties": {
+          "attestation": {
+            "type": "object",
+            "format": "byte",
+            "properties": {
+              "data": {
+                "format": "byte"
+              },
+              "mediaType": {
+                "format": "string"
+              }
+            }
+          },
           "body": {
             "type": "object",
             "additionalProperties": true
@@ -1805,6 +1817,18 @@ func init() {
         "integratedTime"
       ],
       "properties": {
+        "attestation": {
+          "type": "object",
+          "format": "byte",
+          "properties": {
+            "data": {
+              "format": "byte"
+            },
+            "mediaType": {
+              "format": "string"
+            }
+          }
+        },
         "body": {
           "type": "object",
           "additionalProperties": true
@@ -1833,6 +1857,18 @@ func init() {
               "format": "byte"
             }
           }
+        }
+      }
+    },
+    "LogEntryAnonAttestation": {
+      "type": "object",
+      "format": "byte",
+      "properties": {
+        "data": {
+          "format": "byte"
+        },
+        "mediaType": {
+          "format": "string"
         }
       }
     },
