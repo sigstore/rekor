@@ -20,7 +20,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"fmt"
-	"os"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/swag"
@@ -54,16 +53,15 @@ func (u *uploadCmdOutput) String() string {
 var uploadCmd = &cobra.Command{
 	Use:   "upload",
 	Short: "Upload an artifact to Rekor",
-	PreRun: func(cmd *cobra.Command, args []string) {
+	PreRunE: func(cmd *cobra.Command, args []string) error {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			log.Logger.Fatal("Error initializing cmd line args: ", err)
+			return err
 		}
 		if err := validateArtifactPFlags(false, false); err != nil {
-			log.Logger.Error(err)
-			_ = cmd.Help()
-			os.Exit(1)
+			return err
 		}
+		return nil
 	},
 	Long: `This command takes the public key, signature and URL of the release artifact and uploads it to the rekor server.`,
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
