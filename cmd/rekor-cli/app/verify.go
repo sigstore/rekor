@@ -79,7 +79,6 @@ var verifyCmd = &cobra.Command{
 			return fmt.Errorf("error initializing cmd line args: %s", err)
 		}
 		if err := validateArtifactPFlags(true, true); err != nil {
-			_ = cmd.Help()
 			return err
 		}
 		return nil

@@ -197,7 +197,6 @@ var timestampCmd = &cobra.Command{
 		}
 		if err := validateTimestampFlags(); err != nil {
 			log.Logger.Error(err)
-			_ = cmd.Help()
 			return err
 		}
 		return nil
