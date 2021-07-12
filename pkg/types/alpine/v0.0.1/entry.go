@@ -35,7 +35,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
-	pkifactory "github.com/sigstore/rekor/pkg/pki/factory"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/alpine"
@@ -161,7 +160,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	if v.AlpineModel.Package.Hash != nil && v.AlpineModel.Package.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.AlpineModel.Package.Hash.Value)
 	}
-	artifactFactory, _ := pkifactory.NewArtifactFactory(pkifactory.X509)
+	artifactFactory, _ := pki.NewArtifactFactory(pki.X509)
 
 	g.Go(func() error {
 		defer hashW.Close()

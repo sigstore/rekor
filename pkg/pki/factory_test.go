@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package factory
+package pki
 
 import (
 	"os"
@@ -40,48 +40,48 @@ func TestFactoryNewKey(t *testing.T) {
 		{
 			name:              "valid pgp",
 			format:            "pgp",
-			keyFile:           "../pgp/testdata/valid_armored_public.pgp",
-			sigFile:           "../pgp/testdata/hello_world.txt.asc.sig",
+			keyFile:           "pgp/testdata/valid_armored_public.pgp",
+			sigFile:           "pgp/testdata/hello_world.txt.asc.sig",
 			expectSuccess:     true,
 			expectValidFormat: true,
 		},
 		{
 			name:              "valid minisign",
 			format:            "minisign",
-			keyFile:           "../minisign/testdata/minisign.pub",
-			sigFile:           "../minisign/testdata/hello_world.txt.minisig",
+			keyFile:           "minisign/testdata/minisign.pub",
+			sigFile:           "minisign/testdata/hello_world.txt.minisig",
 			expectSuccess:     true,
 			expectValidFormat: true,
 		},
 		{
 			name:              "valid x509",
 			format:            "x509",
-			keyFile:           "../x509/testdata/ec.pub",
-			sigFile:           "../x509/testdata/hello_world.txt.sig",
+			keyFile:           "x509/testdata/ec.pub",
+			sigFile:           "x509/testdata/hello_world.txt.sig",
 			expectSuccess:     true,
 			expectValidFormat: true,
 		},
 		{
 			name:              "valid ssh",
 			format:            "ssh",
-			keyFile:           "../ssh/testdata/id_rsa.pub",
-			sigFile:           "../ssh/testdata/hello_world.txt.sig",
+			keyFile:           "ssh/testdata/id_rsa.pub",
+			sigFile:           "ssh/testdata/hello_world.txt.sig",
 			expectSuccess:     true,
 			expectValidFormat: true,
 		},
 		{
 			name:              "invalid ssh signature",
 			format:            "ssh",
-			keyFile:           "../ssh/testdata/id_rsa.pub",
-			sigFile:           "../ssh/testdata/hello_world.txt",
+			keyFile:           "ssh/testdata/id_rsa.pub",
+			sigFile:           "ssh/testdata/hello_world.txt",
 			expectSuccess:     false,
 			expectValidFormat: true,
 		},
 		{
 			name:              "invalid ssh key",
 			format:            "ssh",
-			keyFile:           "../ssh/testdata/hello_world.txt",
-			sigFile:           "../ssh/testdata/hello_world.txt.sig",
+			keyFile:           "ssh/testdata/hello_world.txt",
+			sigFile:           "ssh/testdata/hello_world.txt.sig",
 			expectSuccess:     false,
 			expectValidFormat: true,
 		},
@@ -95,7 +95,7 @@ func TestFactoryNewKey(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			factory, err := NewArtifactFactory(PKIFormat(tc.format))
+			factory, err := NewArtifactFactory(Format(tc.format))
 			if tc.expectValidFormat != (err == nil) {
 				t.Fatalf("unexpected error initializing factory for %v", tc.format)
 			}

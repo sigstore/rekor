@@ -38,7 +38,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
-	pkifactory "github.com/sigstore/rekor/pkg/pki/factory"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/intoto"
@@ -125,7 +124,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	// Only support x509 signatures for intoto attestations
-	af, err := pkifactory.NewArtifactFactory(pkifactory.X509)
+	af, err := pki.NewArtifactFactory(pki.X509)
 	if err != nil {
 		return err
 	}

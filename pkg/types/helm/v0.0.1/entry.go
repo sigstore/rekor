@@ -34,7 +34,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
-	"github.com/sigstore/rekor/pkg/pki/factory"
 	"github.com/sigstore/rekor/pkg/pki/pgp"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/helm"
@@ -147,7 +146,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		return err
 	}
 
-	artifactFactory, err := factory.NewArtifactFactory(factory.PGP)
+	artifactFactory, err := pki.NewArtifactFactory(pki.PGP)
 	if err != nil {
 		return err
 	}

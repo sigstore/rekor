@@ -20,7 +20,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/sigstore/rekor/pkg/pki/factory"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pgp"
 )
 
@@ -57,7 +57,7 @@ func TestProvenance(t *testing.T) {
 		t.Fatalf("failed to parse public key: %v", err)
 	}
 
-	artifactFactory, err := factory.NewArtifactFactory(factory.PGP)
+	artifactFactory, err := pki.NewArtifactFactory(pki.PGP)
 	if err != nil {
 		t.Fatalf("Failed to create PGP pki factory %v", err)
 	}

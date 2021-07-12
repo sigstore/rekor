@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	minisign "github.com/jedisct1/go-minisign"
-	"github.com/sigstore/rekor/pkg/pki"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -33,7 +32,7 @@ type Signature struct {
 }
 
 // NewSignature creates and validates a minisign signature object
-func NewSignature(r io.Reader) (pki.Signature, error) {
+func NewSignature(r io.Reader) (*Signature, error) {
 	var s Signature
 	var inputBuffer bytes.Buffer
 
@@ -86,7 +85,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(r io.Reader, k pki.PublicKey) error {
+func (s Signature) Verify(r io.Reader, k interface{}) error {
 	if s.signature == nil {
 		return fmt.Errorf("minisign signature has not been initialized")
 	}
@@ -112,7 +111,7 @@ type PublicKey struct {
 }
 
 // NewPublicKey implements the pki.PublicKey interface
-func NewPublicKey(r io.Reader) (pki.PublicKey, error) {
+func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	var k PublicKey
 	var inputBuffer bytes.Buffer
 

@@ -28,7 +28,6 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator"
-	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
@@ -41,7 +40,7 @@ type Signature struct {
 }
 
 // NewSignature creates and validates an x509 signature object
-func NewSignature(r io.Reader) (pki.Signature, error) {
+func NewSignature(r io.Reader) (*Signature, error) {
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -57,7 +56,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(r io.Reader, k pki.PublicKey) error {
+func (s Signature) Verify(r io.Reader, k interface{}) error {
 	if len(s.signature) == 0 {
 		//lint:ignore ST1005 X509 is proper use of term
 		return fmt.Errorf("X509 signature has not been initialized")
@@ -92,7 +91,7 @@ type cert struct {
 }
 
 // NewPublicKey implements the pki.PublicKey interface
-func NewPublicKey(r io.Reader) (pki.PublicKey, error) {
+func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	rawPub, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err

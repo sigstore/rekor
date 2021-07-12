@@ -44,7 +44,7 @@ func TestAlpinePackage(t *testing.T) {
 		t.Fatalf("failed to parse public key: %v", err)
 	}
 
-	if err = p.VerifySignature(pub.(*x509.PublicKey).CryptoPubKey()); err != nil {
+	if err = p.VerifySignature(pub.CryptoPubKey()); err != nil {
 		t.Fatalf("signature verification failed: %v", err)
 	}
 }

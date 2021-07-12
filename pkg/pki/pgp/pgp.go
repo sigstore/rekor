@@ -25,7 +25,6 @@ import (
 	"net/http"
 
 	"github.com/go-playground/validator"
-	"github.com/sigstore/rekor/pkg/pki"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/openpgp/packet"
@@ -38,7 +37,7 @@ type Signature struct {
 }
 
 // NewSignature creates and validates a PGP signature object
-func NewSignature(r io.Reader) (pki.Signature, error) {
+func NewSignature(r io.Reader) (*Signature, error) {
 	var s Signature
 	var inputBuffer bytes.Buffer
 
@@ -81,7 +80,7 @@ func NewSignature(r io.Reader) (pki.Signature, error) {
 }
 
 // FetchSignature implements pki.Signature interface
-func FetchSignature(ctx context.Context, url string) (pki.Signature, error) {
+func FetchSignature(ctx context.Context, url string) (*Signature, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error initializing fetch for PGP signature: %w", err)
@@ -131,7 +130,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(r io.Reader, k pki.PublicKey) error {
+func (s Signature) Verify(r io.Reader, k interface{}) error {
 	if len(s.signature) == 0 {
 		return fmt.Errorf("PGP signature has not been initialized")
 	}
@@ -162,7 +161,7 @@ type PublicKey struct {
 }
 
 // NewPublicKey implements the pki.PublicKey interface
-func NewPublicKey(r io.Reader) (pki.PublicKey, error) {
+func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	var k PublicKey
 	var inputBuffer bytes.Buffer
 
@@ -222,7 +221,7 @@ func NewPublicKey(r io.Reader) (pki.PublicKey, error) {
 }
 
 // FetchPublicKey implements pki.PublicKey interface
-func FetchPublicKey(ctx context.Context, url string) (pki.PublicKey, error) {
+func FetchPublicKey(ctx context.Context, url string) (*PublicKey, error) {
 	//TODO: detect if url is hkp and adjust accordingly
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {

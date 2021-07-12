@@ -21,7 +21,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/sigstore/rekor/pkg/pki/factory"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -62,7 +62,7 @@ func addArtifactPFlags(cmd *cobra.Command) error {
 		},
 		"pki-format": {
 			pkiFormatFlag,
-			fmt.Sprintf("format of the signature and/or public key; options = %v", factory.SupportedFormats()),
+			fmt.Sprintf("format of the signature and/or public key; options = %v", pki.SupportedFormats()),
 			false,
 		},
 		"public-key": {

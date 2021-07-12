@@ -21,11 +21,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/spf13/pflag"
 
 	"github.com/go-playground/validator"
 	"github.com/pkg/errors"
-	pkifactory "github.com/sigstore/rekor/pkg/pki/factory"
 )
 
 type FlagType string
@@ -69,7 +69,7 @@ func initializePFlagMap() {
 		},
 		pkiFormatFlag: func() pflag.Value {
 			// this ensures a PKI implementation exists for the requested format
-			return valueFactory(pkiFormatFlag, validateString(fmt.Sprintf("required,oneof=%v", strings.Join(pkifactory.SupportedFormats(), " "))), "pgp")
+			return valueFactory(pkiFormatFlag, validateString(fmt.Sprintf("required,oneof=%v", strings.Join(pki.SupportedFormats(), " "))), "pgp")
 		},
 		typeFlag: func() pflag.Value {
 			// this ensures the type of the log entry matches a type supported in the CLI
