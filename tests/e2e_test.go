@@ -20,6 +20,7 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -43,14 +44,17 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/in-toto/in-toto-golang/pkg/ssl"
-	"github.com/sigstore/rekor/cmd/rekor-cli/app"
-	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/client"
+	genclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/timestamp"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/signer"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/util"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func getUUIDFromUploadOutput(t *testing.T, out string) string {
@@ -160,6 +164,14 @@ func TestLogInfo(t *testing.T) {
 	outputContains(t, out, "Verification Successful!")
 }
 
+type getOut struct {
+	Attestation     []byte
+	AttestationType string
+	Body            interface{}
+	LogIndex        int
+	IntegratedTime  int64
+}
+
 func TestGet(t *testing.T) {
 	// Create something and add it to the log
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
@@ -180,11 +192,7 @@ func TestGet(t *testing.T) {
 	out = runCli(t, "get", "--format=json", "--uuid", uuid)
 
 	// The output here should be in JSON with this structure:
-	g := struct {
-		Body           interface{}
-		LogIndex       int
-		IntegratedTime int64
-	}{}
+	g := getOut{}
 	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Error(err)
 	}
@@ -377,24 +385,18 @@ func TestIntoto(t *testing.T) {
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromUploadOutput(t, out)
 
-	// The atteestation should be stored at /var/run/attestations/$uuid
-	cmd := exec.Command("docker", "run", "-v", "/var/run/attestations:/var/run/attestations", "alpine", "cat", "/var/run/attestations/"+uuid)
-	b64, err := cmd.Output()
-	if err != nil {
-		t.Fatal(string(b64), err)
-	}
-	t.Logf("Read file contents: %s", string(b64))
-
-	attStr, err := base64.StdEncoding.DecodeString(string(b64))
-	if err != nil {
+	out = runCli(t, "get", "--uuid", uuid, "--format=json")
+	g := getOut{}
+	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Fatal(err)
 	}
-	stored := in_toto.ProvenanceStatement{}
-	if err := json.Unmarshal([]byte(attStr), &stored); err != nil {
-		t.Error(err)
-	}
+	// The atteestation should be stored at /var/run/attestations/$uuid
 
-	if diff := cmp.Diff(it, stored); diff != "" {
+	got := in_toto.ProvenanceStatement{}
+	if err := json.Unmarshal(g.Attestation, &got); err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(it, got); diff != "" {
 		t.Errorf("diff: %s", diff)
 	}
 
@@ -549,26 +551,21 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	signature, _, err := s.Sign(ctx, payload)
+	sig, err := s.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
 	if err != nil {
 		t.Fatal(err)
 	}
-	pubkey, err := s.PublicKey(ctx)
+	pubkey, err := s.PublicKey(options.WithContext(ctx))
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := x509.MarshalPKIXPublicKey(pubkey)
+	pemBytes, err := cryptoutils.MarshalPublicKeyToPEM(pubkey)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	pemBytes := pem.EncodeToMemory(&pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: b,
-	})
 
 	// submit our newly signed payload to rekor
-	rekorClient, err := app.GetRekorClient("http://localhost:3000")
+	rekorClient, err := client.GetRekorClient("http://localhost:3000")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -579,7 +576,7 @@ func TestSignedEntryTimestamp(t *testing.T) {
 				Content: strfmt.Base64(payload),
 			},
 			Signature: &models.RekordV001SchemaSignature{
-				Content: strfmt.Base64(signature),
+				Content: strfmt.Base64(sig),
 				Format:  models.RekordV001SchemaSignatureFormatX509,
 				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 					Content: strfmt.Base64(pemBytes),
@@ -601,7 +598,7 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	logEntry := extractLogEntry(t, resp.GetPayload())
 
 	// verify the signature against the log entry (without the signature)
-	sig := logEntry.Verification.SignedEntryTimestamp
+	timestampSig := logEntry.Verification.SignedEntryTimestamp
 	logEntry.Verification = nil
 	payload, err = logEntry.MarshalBinary()
 	if err != nil {
@@ -617,9 +614,11 @@ func TestSignedEntryTimestamp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// verify the signature against the public key
-	h := sha256.Sum256(canonicalized)
-	if !ecdsa.VerifyASN1(rekorPubKey, h[:], []byte(sig)) {
+	verifier, err := signature.LoadVerifier(rekorPubKey, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := verifier.VerifySignature(bytes.NewReader(timestampSig), bytes.NewReader(canonicalized), options.WithContext(ctx)); err != nil {
 		t.Fatal("unable to verify")
 	}
 }
@@ -639,7 +638,7 @@ func TestTimestampResponseCLI(t *testing.T) {
 	out := runCli(t, "timestamp", "--artifact", filePath, "--out", responsePath)
 	outputContains(t, out, "Wrote timestamp response to")
 
-	rekorClient, err := app.GetRekorClient("http://localhost:3000")
+	rekorClient, err := client.GetRekorClient("http://localhost:3000")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -696,7 +695,7 @@ func TestGetNonExistantUUID(t *testing.T) {
 	outputContains(t, out, "404")
 }
 
-func rekorTimestampCertChain(t *testing.T, ctx context.Context, c *client.Rekor) []*x509.Certificate {
+func rekorTimestampCertChain(t *testing.T, ctx context.Context, c *genclient.Rekor) []*x509.Certificate {
 	resp, err := c.Timestamp.GetTimestampCertChain(&timestamp.GetTimestampCertChainParams{Context: ctx})
 	if err != nil {
 		t.Fatal(err)

@@ -32,6 +32,7 @@ import (
 
 type AttestationStorage interface {
 	StoreAttestation(ctx context.Context, key string, attestationType string, attestation []byte) error
+	FetchAttestation(ctx context.Context, key string) ([]byte, string, error)
 }
 
 func NewAttestationStorage() (AttestationStorage, error) {
@@ -64,4 +65,25 @@ func (b *Blob) StoreAttestation(ctx context.Context, key, attestationType string
 		return err
 	}
 	return w.Close()
+}
+
+func (b *Blob) FetchAttestation(ctx context.Context, key string) ([]byte, string, error) {
+	log.Logger.Infof("fetching attestation %s", key)
+	exists, err := b.bucket.Exists(ctx, key)
+	if err != nil {
+		return nil, "", err
+	}
+	if !exists {
+		return nil, "", nil
+	}
+	att, err := b.bucket.Attributes(ctx, key)
+	if err != nil {
+		return nil, "", err
+	}
+
+	data, err := b.bucket.ReadAll(ctx, key)
+	if err != nil {
+		return nil, "", err
+	}
+	return data, att.ContentType, nil
 }

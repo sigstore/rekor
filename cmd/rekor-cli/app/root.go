@@ -17,23 +17,18 @@ package app
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
 
-	"github.com/go-openapi/runtime"
-	httptransport "github.com/go-openapi/runtime/client"
-	"github.com/go-openapi/strfmt"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/log"
-	"github.com/sigstore/rekor/pkg/util"
 
 	// these imports are to call the packages' init methods
 	_ "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/helm/v0.0.1"
 	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	_ "github.com/sigstore/rekor/pkg/types/jar/v0.0.1"
 	_ "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
@@ -118,27 +113,4 @@ func initConfig(cmd *cobra.Command) error {
 	}
 
 	return nil
-}
-
-func GetRekorClient(rekorServerURL string) (*client.Rekor, error) {
-	url, err := url.Parse(rekorServerURL)
-	if err != nil {
-		return nil, err
-	}
-
-	rt := httptransport.New(url.Host, client.DefaultBasePath, []string{url.Scheme})
-	rt.Consumers["application/yaml"] = util.YamlConsumer()
-	rt.Consumers["application/x-pem-file"] = runtime.TextConsumer()
-	rt.Consumers["application/pem-certificate-chain"] = runtime.TextConsumer()
-	rt.Producers["application/yaml"] = util.YamlProducer()
-	rt.Producers["application/timestamp-query"] = runtime.ByteStreamProducer()
-	rt.Consumers["application/timestamp-reply"] = runtime.ByteStreamConsumer()
-
-	if viper.GetString("api-key") != "" {
-		rt.DefaultAuthentication = httptransport.APIKeyAuth("apiKey", "query", viper.GetString("api-key"))
-	}
-
-	registry := strfmt.Default
-	registry.Add("signedCheckpoint", &util.SignedCheckpoint{}, util.SignedCheckpointValidator)
-	return client.New(rt, registry), nil
 }

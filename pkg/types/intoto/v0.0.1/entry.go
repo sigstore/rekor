@@ -19,8 +19,8 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -28,6 +28,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/in-toto/in-toto-golang/pkg/ssl"
 	"github.com/spf13/viper"
 
@@ -38,8 +39,12 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
 	pkifactory "github.com/sigstore/rekor/pkg/pki/factory"
+	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/intoto"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 const (
@@ -70,9 +75,37 @@ func (v V001Entry) IndexKeys() []string {
 	var result []string
 
 	h := sha256.Sum256([]byte(v.env.Payload))
-	payloadKey := "sha256:" + string(h[:])
+	payloadKey := "sha256:" + hex.EncodeToString(h[:])
 	result = append(result, payloadKey)
+
+	switch v.env.PayloadType {
+	case in_toto.PayloadType:
+		statement, err := parseStatement(v.env.Payload)
+		if err != nil {
+			log.Logger.Info("invalid id in_toto Statement")
+			return result
+		}
+		for _, s := range statement.Subject {
+			for alg, ds := range s.Digest {
+				result = append(result, alg+":"+ds)
+			}
+		}
+	default:
+		log.Logger.Infof("Unknown in_toto Statement Type: %s", v.env.PayloadType)
+	}
 	return result
+}
+
+func parseStatement(p string) (*in_toto.Statement, error) {
+	ps := in_toto.Statement{}
+	payload, err := base64.StdEncoding.DecodeString(p)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(payload, &ps); err != nil {
+		return nil, err
+	}
+	return &ps, nil
 }
 
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
@@ -150,9 +183,23 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 // Validate performs cross-field validation for fields in object
 func (v *V001Entry) Validate() error {
 	// TODO handle multiple
-	sslVerifier, err := ssl.NewEnvelopeSigner(&verifier{pub: v.keyObj})
+	pk := v.keyObj.(*x509.PublicKey)
+
+	// This also gets called in the CLI, where we won't have this data
+	if v.IntotoObj.Content.Envelope == "" {
+		return nil
+	}
+	vfr, err := signature.LoadVerifier(pk.CryptoPubKey(), crypto.SHA256)
 	if err != nil {
 		return err
+	}
+	sslVerifier, err := ssl.NewEnvelopeSigner(&verifier{v: vfr})
+	if err != nil {
+		return err
+	}
+
+	if v.IntotoObj.Content.Envelope == "" {
+		return nil
 	}
 
 	if err := json.Unmarshal([]byte(v.IntotoObj.Content.Envelope), &v.env); err != nil {
@@ -174,36 +221,35 @@ func (v *V001Entry) Attestation() (string, []byte) {
 }
 
 type verifier struct {
-	pub    pki.PublicKey
-	signer crypto.Signer
+	s signature.Signer
+	v signature.Verifier
 }
 
-func (v *verifier) Sign(d []byte) ([]byte, string, error) {
-	if v.signer == nil {
+func (v *verifier) Sign(data []byte) (sig []byte, pubKey string, err error) {
+	if v.s == nil {
 		return nil, "", errors.New("nil signer")
 	}
-	h := sha256.Sum256(d)
-	sig, err := v.signer.Sign(rand.Reader, h[:], crypto.SHA256)
+	sig, err = v.s.SignMessage(bytes.NewReader(data), options.WithCryptoSignerOpts(crypto.SHA256))
 	if err != nil {
 		return nil, "", err
 	}
-	return sig, "", nil
+	pk, err := v.s.PublicKey()
+	if err != nil {
+		return nil, "", err
+	}
+	pubKeyBytes, err := cryptoutils.MarshalPublicKeyToPEM(pk)
+	if err != nil {
+		return nil, "", err
+	}
+	pubKey = string(pubKeyBytes)
+	return
 }
 
 func (v *verifier) Verify(keyID string, data, sig []byte) error {
-	af, err := pkifactory.NewArtifactFactory(pkifactory.X509)
-	if err != nil {
-		return err
+	if v.v == nil {
+		return errors.New("nil verifier")
 	}
-
-	s, err := af.NewSignature(bytes.NewReader(sig))
-	if err != nil {
-		return err
-	}
-	if err := s.Verify(bytes.NewReader(data), v.pub); err != nil {
-		return err
-	}
-	return nil
+	return v.v.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data))
 }
 
 func (v V001Entry) CreateFromPFlags(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {

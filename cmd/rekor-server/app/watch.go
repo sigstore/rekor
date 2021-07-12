@@ -34,8 +34,8 @@ import (
 	"github.com/spf13/viper"
 	"gocloud.dev/blob"
 
-	"github.com/sigstore/rekor/cmd/rekor-cli/app"
-	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/client"
+	genclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
 )
@@ -66,7 +66,7 @@ var watchCmd = &cobra.Command{
 		port := viper.GetUint("rekor_server.port")
 		interval := viper.GetDuration("interval")
 		url := fmt.Sprintf("http://%s:%d", host, port)
-		c, err := app.GetRekorClient(url)
+		c, err := client.GetRekorClient(url)
 		if err != nil {
 			return err
 		}
@@ -129,7 +129,7 @@ func init() {
 	rootCmd.AddCommand(watchCmd)
 }
 
-func doCheck(c *client.Rekor, pub crypto.PublicKey) (*SignedAndUnsignedLogRoot, error) {
+func doCheck(c *genclient.Rekor, pub crypto.PublicKey) (*SignedAndUnsignedLogRoot, error) {
 	li, err := c.Tlog.GetLogInfo(nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting log info")

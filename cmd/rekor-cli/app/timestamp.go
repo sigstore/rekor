@@ -31,6 +31,7 @@ import (
 	"github.com/sassoftware/relic/lib/pkcs9"
 	"github.com/sassoftware/relic/lib/x509tools"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
+	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client/timestamp"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
@@ -132,14 +133,13 @@ var timestampCmd = &cobra.Command{
 			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
 		}
 		if err := validateTimestampFlags(); err != nil {
-			log.CliLogger.Error(err)
-			_ = cmd.Help()
+			log.Logger.Error(err)
 			return err
 		}
 		return nil
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
-		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
+		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			return nil, err
 		}

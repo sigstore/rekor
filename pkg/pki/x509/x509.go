@@ -18,10 +18,6 @@ package x509
 import (
 	"bytes"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/rsa"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/pem"
@@ -33,6 +29,8 @@ import (
 
 	"github.com/go-playground/validator"
 	"github.com/sigstore/rekor/pkg/pki"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
 
 // EmailAddressOID defined by https://oidref.com/1.2.840.113549.1.9.1
@@ -65,14 +63,6 @@ func (s Signature) Verify(r io.Reader, k pki.PublicKey) error {
 		return fmt.Errorf("X509 signature has not been initialized")
 	}
 
-	hasher := sha256.New()
-	tee := io.TeeReader(r, hasher)
-	message, err := ioutil.ReadAll(tee)
-	if err != nil {
-		return err
-	}
-	hash := hasher.Sum(nil)
-
 	key, ok := k.(*PublicKey)
 	if !ok {
 		return fmt.Errorf("invalid public key type for: %v", k)
@@ -83,22 +73,11 @@ func (s Signature) Verify(r io.Reader, k pki.PublicKey) error {
 		p = key.cert.c.PublicKey
 	}
 
-	switch pub := p.(type) {
-	case *rsa.PublicKey:
-		return rsa.VerifyPKCS1v15(pub, crypto.SHA256, hash, s.signature)
-	case ed25519.PublicKey:
-		if ed25519.Verify(pub, message, s.signature) {
-			return nil
-		}
-		return errors.New("supplied signature does not match key")
-	case *ecdsa.PublicKey:
-		if ecdsa.VerifyASN1(pub, hash, s.signature) {
-			return nil
-		}
-		return errors.New("supplied signature does not match key")
-	default:
-		return fmt.Errorf("invalid public key type: %T", pub)
+	verifier, err := sigsig.LoadVerifier(p, crypto.SHA256)
+	if err != nil {
+		return err
 	}
+	return verifier.VerifySignature(bytes.NewReader(s.signature), r)
 }
 
 // PublicKey Public Key that follows the x509 standard
@@ -125,13 +104,13 @@ func NewPublicKey(r io.Reader) (pki.PublicKey, error) {
 	}
 
 	switch block.Type {
-	case "PUBLIC KEY":
+	case string(cryptoutils.PublicKeyPEMType):
 		key, err := x509.ParsePKIXPublicKey(block.Bytes)
 		if err != nil {
 			return nil, err
 		}
 		return &PublicKey{key: key}, nil
-	case "CERTIFICATE":
+	case string(cryptoutils.CertificatePEMType):
 		c, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
 			return nil, err
@@ -146,34 +125,18 @@ func NewPublicKey(r io.Reader) (pki.PublicKey, error) {
 }
 
 // CanonicalValue implements the pki.PublicKey interface
-func (k PublicKey) CanonicalValue() ([]byte, error) {
+func (k PublicKey) CanonicalValue() (encoded []byte, err error) {
 
-	var p pem.Block
 	switch {
 	case k.key != nil:
-		b, err := x509.MarshalPKIXPublicKey(k.key)
-		if err != nil {
-			return nil, err
-		}
-
-		p = pem.Block{
-			Type:  "PUBLIC KEY",
-			Bytes: b,
-		}
+		encoded, err = cryptoutils.MarshalPublicKeyToPEM(k.key)
 	case k.cert != nil:
-		p = pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: k.cert.b,
-		}
+		encoded, err = cryptoutils.MarshalCertificateToPEM(k.cert.c)
 	default:
-		return nil, fmt.Errorf("x509 public key has not been initialized")
+		err = fmt.Errorf("x509 public key has not been initialized")
 	}
 
-	var buf bytes.Buffer
-	if err := pem.Encode(&buf, &p); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return
 }
 
 func (k PublicKey) CryptoPubKey() crypto.PublicKey {

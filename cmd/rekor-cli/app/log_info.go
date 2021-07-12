@@ -31,6 +31,7 @@ import (
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/state"
+	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client/tlog"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
@@ -59,7 +60,7 @@ var logInfoCmd = &cobra.Command{
 	Long:  `Prints info about the transparency log`,
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		serverURL := viper.GetString("rekor_server")
-		rekorClient, err := GetRekorClient(serverURL)
+		rekorClient, err := client.GetRekorClient(serverURL)
 		if err != nil {
 			return nil, err
 		}

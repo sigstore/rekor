@@ -1,0 +1,118 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.sigstore.dev/types/helm/helm_v0_0_1_schema.json",
+    "title": "Helm v0.0.1 Schema",
+    "description": "Schema for Helm object",
+    "type": "object",
+    "properties": {
+        "publicKey": {
+            "description": "The public key that can verify the package signature",
+            "type": "object",
+            "properties": {
+                "url": {
+                    "description": "Specifies the location of the public key",
+                    "type": "string",
+                    "format": "uri"
+                },
+                "content": {
+                    "description": "Specifies the content of the public key inline within the document",
+                    "type": "string",
+                    "format": "byte"
+                }
+            },
+            "oneOf": [
+                {
+                    "required": [
+                        "url"
+                    ]
+                },
+                {
+                    "required": [
+                        "content"
+                    ]
+                }
+            ]
+        },
+        "chart": {
+            "description": "Information about the Helm chart associated with the entry",
+            "type": "object",
+            "properties": {
+                "hash": {
+                    "description": "Specifies the hash algorithm and value for the chart",
+                    "type": "object",
+                    "properties": {
+                        "algorithm": {
+                            "description": "The hashing function used to compute the hash value",
+                            "type": "string",
+                            "enum": [
+                                "sha256"
+                            ]
+                        },
+                        "value": {
+                            "description": "The hash value for the chart",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "algorithm",
+                        "value"
+                    ]
+                },
+                "provenance": {
+                    "description": "The provenance entry associated with the signed Helm Chart",
+                    "type": "object",
+                    "properties": {
+                        "signature": {
+                            "description": "Information about the included signature in the provenance file",
+                            "type": "object",
+                            "properties": {
+                                "content": {
+                                    "description": "Specifies the signature embedded within the provenance file ",
+                                    "type": "string",
+                                    "format": "byte"
+                                }
+                            },
+                            "required": [
+                                "content"
+                            ]
+                        },
+                        "url": {
+                            "description": "Specifies the location of the provenance file",
+                            "type": "string",
+                            "format": "uri"
+                        },
+                        "content": {
+                            "description": "Specifies the content of the provenance file inline within the document",
+                            "type": "string",
+                            "format": "byte"
+                        }
+                    },
+                    "oneOf": [
+                        {
+                            "required": [
+                                "url"
+                            ]
+                        },
+                        {
+                            "required": [
+                                "content"
+                            ]
+                        }
+                    ]
+                }
+            },
+            "required": [
+                "provenance"
+            ]
+        },
+        "extraData": {
+            "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
+            "type": "object",
+            "additionalProperties": true
+        }
+    },
+    "required": [
+        "publicKey",
+        "chart"
+    ]
+}

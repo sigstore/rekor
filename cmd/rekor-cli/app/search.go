@@ -33,6 +33,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
+	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client/index"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -102,7 +103,7 @@ var searchCmd = &cobra.Command{
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		log := log.CliLogger
-		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
+		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			return nil, err
 		}

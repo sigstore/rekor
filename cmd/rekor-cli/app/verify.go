@@ -28,6 +28,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
+	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -79,14 +80,12 @@ var verifyCmd = &cobra.Command{
 			return fmt.Errorf("error initializing cmd line args: %s", err)
 		}
 		if err := validateArtifactPFlags(true, true); err != nil {
-			log.CliLogger.Error(err)
-			_ = cmd.Help()
 			return err
 		}
 		return nil
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
-		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
+		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			return nil, err
 		}

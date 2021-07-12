@@ -21,8 +21,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/rsa"
 	"crypto/sha1" // #nosec G505
 	"crypto/sha256"
 	"encoding/hex"
@@ -33,6 +31,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	"gopkg.in/ini.v1"
 )
 
@@ -217,17 +217,11 @@ func (p Package) VerifySignature(pub crypto.PublicKey) error {
 		return errors.New("no digest value for data.tar.gz known")
 	}
 
-	switch pk := pub.(type) {
-	case *rsa.PublicKey:
-		return rsa.VerifyPKCS1v15(pk, crypto.SHA1, p.controlSHA1Digest, p.Signature)
-	case *ecdsa.PublicKey:
-		if !ecdsa.VerifyASN1(pk, p.controlSHA1Digest, p.Signature) {
-			return errors.New("failed to verify ECDSA signature")
-		}
-	default:
-		return errors.New("unknown key algorithm")
+	verifier, err := signature.LoadVerifier(pub, crypto.SHA1)
+	if err != nil {
+		return err
 	}
-	return nil
+	return verifier.VerifySignature(bytes.NewReader(p.Signature), nil, options.WithDigest(p.controlSHA1Digest), options.WithCryptoSignerOpts(crypto.SHA1))
 }
 
 // parsePkginfo parses the .PKGINFO file which is in a

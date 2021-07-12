@@ -24,6 +24,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
+	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client/tlog"
 )
 
@@ -71,7 +72,7 @@ var logProofCmd = &cobra.Command{
 		return nil
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
-		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
+		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			return nil, err
 		}

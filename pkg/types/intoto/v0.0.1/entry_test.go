@@ -16,11 +16,14 @@
 package intoto
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -31,6 +34,7 @@ import (
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/in-toto/in-toto-golang/pkg/ssl"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"go.uber.org/goleak"
 )
 
@@ -52,9 +56,11 @@ func p(b []byte) *strfmt.Base64 {
 
 func envelope(t *testing.T, k *ecdsa.PrivateKey, payload, payloadType string) string {
 
-	signer, err := in_toto.NewSSLSigner(&verifier{
-		signer: k,
-	})
+	s, err := signature.LoadECDSASigner(k, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signer, err := in_toto.NewSSLSigner(&verifier{s: s})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,13 +175,70 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				}
 				keys := v.IndexKeys()
 				h := sha256.Sum256([]byte(v.env.Payload))
-				if keys[0] != "sha256:"+string(h[:]) {
-					return fmt.Errorf("expected index key: %s, got %s", h[:], keys[0])
+				sha := "sha256:" + hex.EncodeToString(h[:])
+				if keys[0] != sha {
+					return fmt.Errorf("expected index key: %s, got %s", sha, keys[0])
 				}
 				return nil
 			}
 			if err := uv(); (err != nil) != tt.wantErr {
 				t.Errorf("V001Entry.Unmarshal() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestV001Entry_IndexKeys(t *testing.T) {
+
+	tests := []struct {
+		name      string
+		statement in_toto.Statement
+		want      []string
+	}{
+		{
+			name: "standard",
+			want: []string{},
+			statement: in_toto.Statement{
+				Predicate: "hello",
+			},
+		},
+		{
+			name: "subject",
+			want: []string{"sha256:foo"},
+			statement: in_toto.Statement{
+				StatementHeader: in_toto.StatementHeader{
+					Subject: []in_toto.Subject{
+						{
+							Name: "foo",
+							Digest: map[string]string{
+								"sha256": "foo",
+							},
+						},
+					},
+				},
+				Predicate: "hello",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, err := json.Marshal(tt.statement)
+			if err != nil {
+				t.Fatal(err)
+			}
+			payload := base64.StdEncoding.EncodeToString(b)
+			v := V001Entry{
+				env: ssl.Envelope{
+					Payload:     payload,
+					PayloadType: in_toto.PayloadType,
+				},
+			}
+			sha := sha256.Sum256([]byte(payload))
+			// Always start with the hash
+			want := []string{"sha256:" + hex.EncodeToString(sha[:])}
+			want = append(want, tt.want...)
+			if got := v.IndexKeys(); !reflect.DeepEqual(got, want) {
+				t.Errorf("V001Entry.IndexKeys() = %v, want %v", got, tt.want)
 			}
 		})
 	}

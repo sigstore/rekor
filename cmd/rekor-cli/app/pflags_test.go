@@ -71,6 +71,8 @@ func TestArtifactPFlags(t *testing.T) {
 				file, err = ioutil.ReadFile("../../../tests/test_alpine.pub")
 			case "/alpineEntry":
 				file, err = ioutil.ReadFile("../../../tests/alpine.json")
+			case "/helmEntry":
+				file, err = ioutil.ReadFile("../../../tests/helm.json")
 			case "/not_found":
 				err = errors.New("file not found")
 			}
@@ -124,6 +126,14 @@ func TestArtifactPFlags(t *testing.T) {
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
+		{
+			caseDesc:              "valid helm URL",
+			entry:                 testServer.URL + "/helmEntry",
+			typeStr:               "helm",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+
 		{
 			caseDesc:              "valid rpm file, wrong type",
 			typeStr:               "rekord",

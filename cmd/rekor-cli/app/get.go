@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
+	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -37,15 +38,22 @@ import (
 )
 
 type getCmdOutput struct {
-	Body           interface{}
-	LogIndex       int
-	IntegratedTime int64
-	UUID           string
-	LogID          string
+	Attestation     string
+	AttestationType string
+	Body            interface{}
+	LogIndex        int
+	IntegratedTime  int64
+	UUID            string
+	LogID           string
 }
 
 func (g *getCmdOutput) String() string {
 	s := fmt.Sprintf("LogID: %v\n", g.LogID)
+
+	if g.Attestation != "" {
+		s += fmt.Sprintf("Attestation: %s\n", g.Attestation)
+	}
+
 	s += fmt.Sprintf("Index: %d\n", g.LogIndex)
 	dt := time.Unix(g.IntegratedTime, 0).UTC().Format(time.RFC3339)
 	s += fmt.Sprintf("IntegratedTime: %s\n", dt)
@@ -70,7 +78,7 @@ var getCmd = &cobra.Command{
 		}
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
-		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
+		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			return nil, err
 		}
@@ -140,11 +148,13 @@ func parseEntry(uuid string, e models.LogEntryAnon) (interface{}, error) {
 	}
 
 	obj := getCmdOutput{
-		Body:           eimpl,
-		UUID:           uuid,
-		IntegratedTime: *e.IntegratedTime,
-		LogIndex:       int(*e.LogIndex),
-		LogID:          *e.LogID,
+		Attestation:     string(e.Attestation.Data),
+		AttestationType: e.Attestation.MediaType,
+		Body:            eimpl,
+		UUID:            uuid,
+		IntegratedTime:  *e.IntegratedTime,
+		LogIndex:        int(*e.LogIndex),
+		LogID:           *e.LogID,
 	}
 
 	return &obj, nil

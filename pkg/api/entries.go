@@ -16,6 +16,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -40,6 +41,7 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEntryAnon) ([]byte, error) {
@@ -51,7 +53,7 @@ func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEnt
 	if err != nil {
 		return nil, fmt.Errorf("canonicalizing error: %v", err)
 	}
-	signature, _, err := signer.Sign(ctx, canonicalized)
+	signature, err := signer.SignMessage(bytes.NewReader(canonicalized), options.WithContext(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("signing error: %v", err)
 	}
@@ -90,13 +92,26 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 		Hashes:   hashes,
 	}
 
+	uuid := hex.EncodeToString(leaf.MerkleLeafHash)
+	if viper.GetBool("enable_attestation_storage") {
+		att, typ, err := storageClient.FetchAttestation(ctx, uuid)
+		if err != nil {
+			log.Logger.Errorf("error fetching attestation: %s %s", uuid, err)
+		} else {
+			logEntryAnon.Attestation = &models.LogEntryAnonAttestation{
+				Data:      att,
+				MediaType: typ,
+			}
+		}
+	}
+
 	logEntryAnon.Verification = &models.LogEntryAnonVerification{
 		InclusionProof:       &inclusionProof,
 		SignedEntryTimestamp: strfmt.Base64(signature),
 	}
 
 	return models.LogEntry{
-		hex.EncodeToString(leaf.MerkleLeafHash): logEntryAnon}, nil
+		uuid: logEntryAnon}, nil
 }
 
 // GetLogEntryAndProofByIndexHandler returns the entry and inclusion proof for a specified log index

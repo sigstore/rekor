@@ -24,7 +24,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
@@ -34,7 +33,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
-	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/client"
+	genclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -59,21 +59,20 @@ func (u *uploadCmdOutput) String() string {
 var uploadCmd = &cobra.Command{
 	Use:   "upload",
 	Short: "Upload an artifact to Rekor",
-	PreRun: func(cmd *cobra.Command, args []string) {
+	PreRunE: func(cmd *cobra.Command, args []string) error {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
+			return err
 		}
 		if err := validateArtifactPFlags(false, false); err != nil {
-			log.CliLogger.Error(err)
-			_ = cmd.Help()
-			os.Exit(1)
+			return err
 		}
+		return nil
 	},
 	Long: `This command takes the public key, signature and URL of the release artifact and uploads it to the rekor server.`,
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		ctx := context.Background()
-		rekorClient, err := GetRekorClient(viper.GetString("rekor_server"))
+		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			return nil, err
 		}
@@ -151,7 +150,7 @@ var uploadCmd = &cobra.Command{
 	}),
 }
 
-func verifyLogEntry(ctx context.Context, rekorClient *client.Rekor, logEntry models.LogEntryAnon) (bool, error) {
+func verifyLogEntry(ctx context.Context, rekorClient *genclient.Rekor, logEntry models.LogEntryAnon) (bool, error) {
 	if logEntry.Verification == nil {
 		return false, nil
 	}
