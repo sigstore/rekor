@@ -164,6 +164,14 @@ func TestLogInfo(t *testing.T) {
 	outputContains(t, out, "Verification Successful!")
 }
 
+type getOut struct {
+	Attestation     []byte
+	AttestationType string
+	Body            interface{}
+	LogIndex        int
+	IntegratedTime  int64
+}
+
 func TestGet(t *testing.T) {
 	// Create something and add it to the log
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
@@ -184,11 +192,7 @@ func TestGet(t *testing.T) {
 	out = runCli(t, "get", "--format=json", "--uuid", uuid)
 
 	// The output here should be in JSON with this structure:
-	g := struct {
-		Body           interface{}
-		LogIndex       int
-		IntegratedTime int64
-	}{}
+	g := getOut{}
 	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Error(err)
 	}
@@ -381,24 +385,18 @@ func TestIntoto(t *testing.T) {
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromUploadOutput(t, out)
 
-	// The atteestation should be stored at /var/run/attestations/$uuid
-	cmd := exec.Command("docker", "run", "-v", "/var/run/attestations:/var/run/attestations", "alpine", "cat", "/var/run/attestations/"+uuid)
-	b64, err := cmd.Output()
-	if err != nil {
-		t.Fatal(string(b64), err)
-	}
-	t.Logf("Read file contents: %s", string(b64))
-
-	attStr, err := base64.StdEncoding.DecodeString(string(b64))
-	if err != nil {
+	out = runCli(t, "get", "--uuid", uuid, "--format=json")
+	g := getOut{}
+	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Fatal(err)
 	}
-	stored := in_toto.ProvenanceStatement{}
-	if err := json.Unmarshal([]byte(attStr), &stored); err != nil {
-		t.Error(err)
-	}
+	// The atteestation should be stored at /var/run/attestations/$uuid
 
-	if diff := cmp.Diff(it, stored); diff != "" {
+	got := in_toto.ProvenanceStatement{}
+	if err := json.Unmarshal(g.Attestation, &got); err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(it, got); diff != "" {
 		t.Errorf("diff: %s", diff)
 	}
 
