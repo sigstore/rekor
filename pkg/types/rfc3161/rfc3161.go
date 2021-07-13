@@ -65,7 +65,7 @@ func (btt *BaseTimestampType) CreateProposedEntry(ctx context.Context, version s
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching RFC3161 version implementation")
 	}
-	return ei.CreateFromPFlags(ctx, props)
+	return ei.CreateFromArtifactProperties(ctx, props)
 }
 
 func (btt BaseTimestampType) DefaultVersion() string {

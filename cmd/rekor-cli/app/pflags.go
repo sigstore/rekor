@@ -149,8 +149,8 @@ func (b *baseValue) Set(s string) error {
 	return nil
 }
 
-// IsURL returns true if the supplied value is a valid URL and false otherwise
-func IsURL(v string) bool {
+// isURL returns true if the supplied value is a valid URL and false otherwise
+func isURL(v string) bool {
 	valGen := pflagValueFuncMap[urlFlag]
 	return valGen().Set(v) == nil
 }

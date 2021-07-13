@@ -119,7 +119,7 @@ var searchCmd = &cobra.Command{
 
 			hasher := sha256.New()
 			var tee io.Reader
-			if IsURL(artifactStr) {
+			if isURL(artifactStr) {
 				/* #nosec G107 */
 				resp, err := http.Get(artifactStr)
 				if err != nil {
@@ -165,7 +165,7 @@ var searchCmd = &cobra.Command{
 				return nil, fmt.Errorf("unknown pki-format %v", pkiFormat)
 			}
 			publicKeyStr := viper.GetString("public-key")
-			if IsURL(publicKeyStr) {
+			if isURL(publicKeyStr) {
 				params.Query.PublicKey.URL = strfmt.URI(publicKeyStr)
 			} else {
 				keyBytes, err := ioutil.ReadFile(filepath.Clean(publicKeyStr))

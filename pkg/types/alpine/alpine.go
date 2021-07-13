@@ -65,7 +65,7 @@ func (bat *BaseAlpineType) CreateProposedEntry(ctx context.Context, version stri
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching Intoto version implementation")
 	}
-	return ei.CreateFromPFlags(ctx, props)
+	return ei.CreateFromArtifactProperties(ctx, props)
 }
 
 func (bat BaseAlpineType) DefaultVersion() string {

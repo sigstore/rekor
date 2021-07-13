@@ -65,7 +65,7 @@ func (brt *BaseRPMType) CreateProposedEntry(ctx context.Context, version string,
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching RPM version implementation")
 	}
-	return ei.CreateFromPFlags(ctx, props)
+	return ei.CreateFromArtifactProperties(ctx, props)
 }
 
 func (brt BaseRPMType) DefaultVersion() string {

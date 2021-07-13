@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// addFlagToCmd adds the
+// addFlagToCmd adds the specified command of a specified type to the command's flag set
 func addFlagToCmd(cmd *cobra.Command, required bool, flagType FlagType, flag, desc string) error {
 	cmd.Flags().Var(NewFlagValue(flagType, ""), flag, desc)
 	if required {
@@ -36,10 +36,12 @@ func addFlagToCmd(cmd *cobra.Command, required bool, flagType FlagType, flag, de
 	return nil
 }
 
+// addLogIndexFlag adds the "log-index" command to the command's flag set
 func addLogIndexFlag(cmd *cobra.Command, required bool) error {
 	return addFlagToCmd(cmd, required, logIndexFlag, "log-index", "the index of the entry in the transparency log")
 }
 
+// addUUIDPFlags adds the "uuid" command to the command's flag set
 func addUUIDPFlags(cmd *cobra.Command, required bool) error {
 	return addFlagToCmd(cmd, required, uuidFlag, "uuid", "UUID of entry in transparency log (if known)")
 }
@@ -122,7 +124,7 @@ func CreatePropsFromPflags() *types.ArtifactProperties {
 
 	artifactString := viper.GetString("artifact")
 	if artifactString != "" {
-		if IsURL(artifactString) {
+		if isURL(artifactString) {
 			props.ArtifactPath, _ = url.Parse(artifactString)
 		} else {
 			props.ArtifactPath = &url.URL{Path: artifactString}
@@ -133,7 +135,7 @@ func CreatePropsFromPflags() *types.ArtifactProperties {
 
 	signatureString := viper.GetString("signature")
 	if signatureString != "" {
-		if IsURL(signatureString) {
+		if isURL(signatureString) {
 			props.SignaturePath, _ = url.Parse(signatureString)
 		} else {
 			props.SignaturePath = &url.URL{Path: signatureString}
@@ -142,7 +144,7 @@ func CreatePropsFromPflags() *types.ArtifactProperties {
 
 	publicKeyString := viper.GetString("public-key")
 	if publicKeyString != "" {
-		if IsURL(publicKeyString) {
+		if isURL(publicKeyString) {
 			props.PublicKeyPath, _ = url.Parse(publicKeyString)
 		} else {
 			props.PublicKeyPath = &url.URL{Path: publicKeyString}

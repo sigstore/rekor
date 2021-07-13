@@ -65,7 +65,7 @@ func (bjt *BaseJARType) CreateProposedEntry(ctx context.Context, version string,
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching JAR version implementation")
 	}
-	return ei.CreateFromPFlags(ctx, props)
+	return ei.CreateFromArtifactProperties(ctx, props)
 }
 
 func (bjt BaseJARType) DefaultVersion() string {

@@ -251,7 +251,7 @@ func (v *verifier) Verify(keyID string, data, sig []byte) error {
 	return v.v.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data))
 }
 
-func (v V001Entry) CreateFromPFlags(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	returnVal := models.Intoto{}
 
 	var err error

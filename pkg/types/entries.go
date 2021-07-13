@@ -37,7 +37,7 @@ type EntryImpl interface {
 	Unmarshal(e models.ProposedEntry) error           // unmarshal the abstract entry into the specific struct for this versioned type
 	Validate() error                                  // performs any cross-field validation that is not expressed in the OpenAPI spec
 	Attestation() (string, []byte)
-	CreateFromPFlags(context.Context, ArtifactProperties) (models.ProposedEntry, error)
+	CreateFromArtifactProperties(context.Context, ArtifactProperties) (models.ProposedEntry, error)
 }
 
 // EntryFactory describes a factory function that can generate structs for a specific versioned type

@@ -65,7 +65,7 @@ func (it *BaseHelmType) CreateProposedEntry(ctx context.Context, version string,
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching Rekord version implementation")
 	}
-	return ei.CreateFromPFlags(ctx, props)
+	return ei.CreateFromArtifactProperties(ctx, props)
 }
 
 func (it BaseHelmType) DefaultVersion() string {

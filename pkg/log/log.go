@@ -54,7 +54,7 @@ var CliLogger = createCliLogger()
 func createCliLogger() *zap.SugaredLogger {
 	cfg := zap.NewDevelopmentConfig()
 	cfg.EncoderConfig.TimeKey = ""
-	// cfg.EncoderConfig.LevelKey = ""
+	cfg.EncoderConfig.LevelKey = ""
 	cfg.DisableCaller = true
 	cfg.DisableStacktrace = true
 	logger, err := cfg.Build()

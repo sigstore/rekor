@@ -363,7 +363,7 @@ func (v V001Entry) Attestation() (string, []byte) {
 	return "", nil
 }
 
-func (v V001Entry) CreateFromPFlags(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	returnVal := models.Rpm{}
 	re := V001Entry{}
 

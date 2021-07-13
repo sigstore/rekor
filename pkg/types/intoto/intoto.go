@@ -65,7 +65,7 @@ func (it *BaseIntotoType) CreateProposedEntry(ctx context.Context, version strin
 	if err != nil {
 		return nil, errors.Wrap(err, "fetching Intoto version implementation")
 	}
-	return ei.CreateFromPFlags(ctx, props)
+	return ei.CreateFromArtifactProperties(ctx, props)
 }
 
 func (it BaseIntotoType) DefaultVersion() string {
