@@ -31,11 +31,8 @@ import (
 type EntryImpl interface {
 	APIVersion() string                               // the supported versions for this implementation
 	IndexKeys() []string                              // the keys that should be added to the external index for this entry
-	Canonicalize(ctx context.Context) ([]byte, error) // generate the canonical entry to be put into the tlog
-	FetchExternalEntities(ctx context.Context) error  // gather all external content required to process the entry
-	HasExternalEntities() bool                        // indicates whether there is a need fetch any additional external content required to process the entry
+	Canonicalize(ctx context.Context) ([]byte, error) // marshal the canonical entry to be put into the tlog
 	Unmarshal(e models.ProposedEntry) error           // unmarshal the abstract entry into the specific struct for this versioned type
-	Validate() error                                  // performs any cross-field validation that is not expressed in the OpenAPI spec
 	Attestation() (string, []byte)
 	CreateFromArtifactProperties(context.Context, ArtifactProperties) (models.ProposedEntry, error)
 }

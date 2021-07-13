@@ -16,6 +16,7 @@
 package rpm
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -26,11 +27,13 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"go.uber.org/goleak"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/types"
 )
 
 func TestMain(m *testing.M) {
@@ -363,7 +366,7 @@ func TestCrossFieldValidation(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if err := tc.entry.Validate(); (err == nil) != tc.expectUnmarshalSuccess {
+		if err := tc.entry.validate(); (err == nil) != tc.expectUnmarshalSuccess {
 			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
 		}
 
@@ -377,7 +380,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			if err := v.Unmarshal(&r); err != nil {
 				return err
 			}
-			return v.Validate()
+			return v.validate()
 		}
 		if err := unmarshalAndValidate(); (err == nil) != tc.expectUnmarshalSuccess {
 			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
@@ -387,8 +390,18 @@ func TestCrossFieldValidation(t *testing.T) {
 			t.Errorf("unexpected result from HasExternalEntities for '%v'", tc.caseDesc)
 		}
 
-		if _, err := tc.entry.Canonicalize(context.TODO()); (err == nil) != tc.expectCanonicalizeSuccess {
+		b, err := v.Canonicalize(context.TODO())
+		if (err == nil) != tc.expectCanonicalizeSuccess {
 			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
+		}
+		if b != nil {
+			pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
+			if err != nil {
+				t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
+			}
+			if _, err := types.NewEntry(pe); err != nil {
+				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+			}
 		}
 	}
 }

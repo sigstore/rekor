@@ -134,15 +134,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
-	return v.Validate()
-}
-
-func (v V001Entry) HasExternalEntities() bool {
-	return false
-}
-
-func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
-	return nil
+	return v.validate()
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
@@ -179,8 +171,8 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	return bytes, nil
 }
 
-// Validate performs cross-field validation for fields in object
-func (v *V001Entry) Validate() error {
+// validate performs cross-field validation for fields in object
+func (v *V001Entry) validate() error {
 	// TODO handle multiple
 	pk := v.keyObj.(*x509.PublicKey)
 

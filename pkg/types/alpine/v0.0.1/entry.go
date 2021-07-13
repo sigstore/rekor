@@ -69,8 +69,8 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() []string {
 	var result []string
 
-	if v.HasExternalEntities() {
-		if err := v.FetchExternalEntities(context.Background()); err != nil {
+	if v.hasExternalEntities() {
+		if err := v.fetchExternalEntities(context.Background()); err != nil {
 			log.Logger.Error(err)
 			return result
 		}
@@ -108,11 +108,11 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	if err := v.AlpineModel.Validate(strfmt.Default); err != nil {
 		return err
 	}
-	return nil
 
+	return v.validate()
 }
 
-func (v V001Entry) HasExternalEntities() bool {
+func (v V001Entry) hasExternalEntities() bool {
 	if v.fetchedExternalEntities {
 		return false
 	}
@@ -126,12 +126,12 @@ func (v V001Entry) HasExternalEntities() bool {
 	return false
 }
 
-func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
+func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	if v.fetchedExternalEntities {
 		return nil
 	}
 
-	if err := v.Validate(); err != nil {
+	if err := v.validate(); err != nil {
 		return err
 	}
 
@@ -269,7 +269,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
-	if err := v.FetchExternalEntities(ctx); err != nil {
+	if err := v.fetchExternalEntities(ctx); err != nil {
 		return nil, err
 	}
 	if v.keyObj == nil {
@@ -308,8 +308,8 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	return json.Marshal(&apk)
 }
 
-// Validate performs cross-field validation for fields in object
-func (v V001Entry) Validate() error {
+// validate performs cross-field validation for fields in object
+func (v V001Entry) validate() error {
 	key := v.AlpineModel.PublicKey
 	if key == nil {
 		return errors.New("missing public key")
@@ -323,15 +323,13 @@ func (v V001Entry) Validate() error {
 		return errors.New("missing package")
 	}
 
-	if len(pkg.Content) == 0 && pkg.URL.String() == "" {
-		return errors.New("one of 'content' or 'url' must be specified for package")
-	}
-
 	hash := pkg.Hash
 	if hash != nil {
 		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
 			return errors.New("invalid value for hash")
 		}
+	} else if len(pkg.Content) == 0 && pkg.URL.String() == "" {
+		return errors.New("one of 'content' or 'url' must be specified for package")
 	}
 
 	return nil
@@ -387,12 +385,12 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		re.AlpineModel.PublicKey.Content = strfmt.Base64(publicKeyBytes)
 	}
 
-	if err := re.Validate(); err != nil {
+	if err := re.validate(); err != nil {
 		return nil, err
 	}
 
-	if re.HasExternalEntities() {
-		if err := re.FetchExternalEntities(ctx); err != nil {
+	if re.hasExternalEntities() {
+		if err := re.fetchExternalEntities(ctx); err != nil {
 			return nil, fmt.Errorf("error retrieving external entities: %v", err)
 		}
 	}
