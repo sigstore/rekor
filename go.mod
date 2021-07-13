@@ -19,7 +19,7 @@ require (
 	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/google/go-cmp v0.5.6
 	github.com/google/rpmpack v0.0.0-20210107155803-d6befbf05148
-	github.com/google/trillian v1.3.14-0.20210413093047-5e12fb368c8f
+	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
 	github.com/in-toto/in-toto-golang v0.2.1-0.20210627200632-886210ae2ab9
 	github.com/jedisct1/go-minisign v0.0.0-20210106175330-e54e81d562c7
 	github.com/mediocregopher/radix/v4 v4.0.0-beta.1
@@ -41,7 +41,7 @@ require (
 	golang.org/x/mod v0.4.2
 	golang.org/x/net v0.0.0-20210505214959-0714010a04ed
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c
+	google.golang.org/genproto v0.0.0-20210624195500-8bfb893ecb84
 	google.golang.org/grpc v1.39.0
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/ini.v1 v1.62.0
