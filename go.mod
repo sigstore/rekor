@@ -3,10 +3,13 @@ module github.com/sigstore/rekor
 go 1.16
 
 require (
+	cloud.google.com/go/storage v1.16.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/cavaliercoder/badio v0.0.0-20160213150051-ce5280129e9e // indirect
 	github.com/cavaliercoder/go-rpm v0.0.0-20200122174316-8cb9fd9c31a8
 	github.com/cyberphone/json-canonicalization v0.0.0-20210303052042-6bc126869bf4
+	github.com/danieljoos/wincred v1.1.1 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-openapi/errors v0.20.0
@@ -17,31 +20,41 @@ require (
 	github.com/go-openapi/swag v0.19.15
 	github.com/go-openapi/validate v0.20.2
 	github.com/go-playground/validator v9.31.0+incompatible
+	github.com/golang/glog v0.0.0-20210429001901-424d2337a529 // indirect
 	github.com/google/go-cmp v0.5.6
-	github.com/google/rpmpack v0.0.0-20210107155803-d6befbf05148
+	github.com/google/rpmpack v0.0.0-20210518075352-dc539ef4f2ea
 	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
 	github.com/in-toto/in-toto-golang v0.2.1-0.20210627200632-886210ae2ab9
-	github.com/jedisct1/go-minisign v0.0.0-20210106175330-e54e81d562c7
+	github.com/jedisct1/go-minisign v0.0.0-20210703085342-c1f07ee84431
+	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mediocregopher/radix/v4 v4.0.0-beta.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/common v0.29.0 // indirect
+	github.com/prometheus/procfs v0.7.0 // indirect
 	github.com/rs/cors v1.8.0
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
-	github.com/sigstore/sigstore v0.0.0-20210707163508-5b6fffda16e4
+	github.com/sigstore/sigstore v0.0.0-20210713222344-1fee53516622
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
+	github.com/tilinna/clock v1.1.0 // indirect
+	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/urfave/negroni v1.0.0
+	github.com/zalando/go-keyring v0.1.1 // indirect
+	go.uber.org/atomic v1.8.0 // indirect
 	go.uber.org/goleak v1.1.10
+	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.18.1
 	gocloud.dev v0.23.0
-	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf
+	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/mod v0.4.2
-	golang.org/x/net v0.0.0-20210505214959-0714010a04ed
+	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/genproto v0.0.0-20210624195500-8bfb893ecb84
+	golang.org/x/tools v0.1.5 // indirect
+	google.golang.org/genproto v0.0.0-20210713002101-d411969a0d9a
 	google.golang.org/grpc v1.39.0
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/ini.v1 v1.62.0
