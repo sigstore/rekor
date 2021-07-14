@@ -111,6 +111,7 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 			}
 			return resp
 		default:
+			logMsg(params.HTTPRequest)
 			return entries.NewCreateLogEntryDefault(code).WithPayload(errorMsg(message, code))
 		}
 	case entries.SearchLogQueryParams:

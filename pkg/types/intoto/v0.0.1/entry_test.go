@@ -170,7 +170,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				if err := v.Unmarshal(it); err != nil {
 					return err
 				}
-				if err := v.Validate(); err != nil {
+				if err := v.validate(); err != nil {
 					return err
 				}
 				keys := v.IndexKeys()

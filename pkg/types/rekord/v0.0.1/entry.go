@@ -108,7 +108,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 	// cross field validation
-	return nil
+	return v.validate()
 
 }
 
@@ -134,7 +134,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		return nil
 	}
 
-	if err := v.Validate(); err != nil {
+	if err := v.validate(); err != nil {
 		return err
 	}
 
@@ -347,9 +347,8 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	return bytes, nil
 }
 
-// Validate performs cross-field validation for fields in object
-func (v V001Entry) Validate() error {
-
+// validate performs cross-field validation for fields in object
+func (v V001Entry) validate() error {
 	sig := v.RekordObj.Signature
 	if sig == nil {
 		return errors.New("missing signature")
@@ -371,15 +370,13 @@ func (v V001Entry) Validate() error {
 		return errors.New("missing data")
 	}
 
-	if len(data.Content) == 0 && data.URL.String() == "" {
-		return errors.New("one of 'content' or 'url' must be specified for data")
-	}
-
 	hash := data.Hash
 	if hash != nil {
 		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
 			return errors.New("invalid value for hash")
 		}
+	} else if len(data.Content) == 0 && data.URL.String() == "" {
+		return errors.New("one of 'content' or 'url' must be specified for data")
 	}
 
 	return nil
@@ -469,7 +466,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		re.RekordObj.Signature.PublicKey.Content = strfmt.Base64(publicKeyBytes)
 	}
 
-	if err := re.Validate(); err != nil {
+	if err := re.validate(); err != nil {
 		return nil, err
 	}
 

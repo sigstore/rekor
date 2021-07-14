@@ -70,8 +70,8 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() []string {
 	var result []string
 
-	if v.HasExternalEntities() {
-		if err := v.FetchExternalEntities(context.Background()); err != nil {
+	if v.hasExternalEntities() {
+		if err := v.fetchExternalEntities(context.Background()); err != nil {
 			log.Logger.Error(err)
 			return result
 		}
@@ -115,13 +115,12 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	if err := v.HelmObj.Validate(strfmt.Default); err != nil {
 		return err
 	}
-	// cross field validation
-	return nil
 
+	// cross field validation
+	return v.validate()
 }
 
-func (v V001Entry) HasExternalEntities() bool {
-
+func (v V001Entry) hasExternalEntities() bool {
 	if v.fetchedExternalEntities {
 		return false
 	}
@@ -136,13 +135,12 @@ func (v V001Entry) HasExternalEntities() bool {
 	return false
 }
 
-func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
-
+func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	if v.fetchedExternalEntities {
 		return nil
 	}
 
-	if err := v.Validate(); err != nil {
+	if err := v.validate(); err != nil {
 		return err
 	}
 
@@ -257,8 +255,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
-
-	if err := v.FetchExternalEntities(ctx); err != nil {
+	if err := v.fetchExternalEntities(ctx); err != nil {
 		return nil, err
 	}
 
@@ -317,8 +314,8 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 }
 
-// Validate performs cross-field validation for fields in object
-func (v V001Entry) Validate() error {
+// validate performs cross-field validation for fields in object
+func (v V001Entry) validate() error {
 
 	key := v.HelmObj.PublicKey
 
@@ -342,8 +339,10 @@ func (v V001Entry) Validate() error {
 		return errors.New("missing provenance")
 	}
 
-	if len(provenance.Content) == 0 && provenance.URL.String() == "" {
-		return errors.New("one of 'content' or 'url' must be specified for provenance")
+	if provenance.Signature == nil || provenance.Signature.Content == nil {
+		if len(provenance.Content) == 0 && provenance.URL.String() == "" {
+			return errors.New("one of 'content' or 'url' must be specified for provenance")
+		}
 	}
 
 	return nil
@@ -395,12 +394,12 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		re.HelmObj.PublicKey.Content = strfmt.Base64(publicKeyBytes)
 	}
 
-	if err := re.Validate(); err != nil {
+	if err := re.validate(); err != nil {
 		return nil, err
 	}
 
-	if re.HasExternalEntities() {
-		if err := re.FetchExternalEntities(ctx); err != nil {
+	if re.hasExternalEntities() {
+		if err := re.fetchExternalEntities(ctx); err != nil {
 			return nil, fmt.Errorf("error retrieving external entities: %v", err)
 		}
 	}
