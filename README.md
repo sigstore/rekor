@@ -35,6 +35,10 @@ Please reach out via the [mailing list](https://groups.google.com/g/sigstore-dev
 If you have production use-cases in mind, again - please reach out over email via the [mailing list](https://groups.google.com/g/sigstore-dev).
 We are interested in helping on board you!
 
+### Usage
+
+For examples of uploading signatures for all the supported types to rekor, see [the types documentation](types.md).
+
 ### Auditing the Instance
 
 We run a job to publish the latest Signed Tree Hashes on GCS.
