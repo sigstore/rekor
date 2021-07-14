@@ -31,8 +31,6 @@ import (
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
-	"github.com/google/trillian/crypto/keyspb"
-	"github.com/google/trillian/crypto/sigpb"
 	"github.com/google/trillian/types"
 )
 
@@ -324,16 +322,9 @@ func createAndInitTree(ctx context.Context, adminClient trillian.TrillianAdminCl
 	// Otherwise create and initialize one
 	t, err := adminClient.CreateTree(ctx, &trillian.CreateTreeRequest{
 		Tree: &trillian.Tree{
-			TreeType:           trillian.TreeType_LOG,
-			HashAlgorithm:      sigpb.DigitallySigned_SHA256,
-			SignatureAlgorithm: sigpb.DigitallySigned_ECDSA,
-			TreeState:          trillian.TreeState_ACTIVE,
-			MaxRootDuration:    durationpb.New(time.Hour),
-		},
-		KeySpec: &keyspb.Specification{
-			Params: &keyspb.Specification_EcdsaParams{
-				EcdsaParams: &keyspb.Specification_ECDSA{},
-			},
+			TreeType:        trillian.TreeType_LOG,
+			TreeState:       trillian.TreeState_ACTIVE,
+			MaxRootDuration: durationpb.New(time.Hour),
 		},
 	})
 	if err != nil {
