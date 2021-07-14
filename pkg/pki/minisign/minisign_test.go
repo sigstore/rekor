@@ -301,8 +301,4 @@ func TestVerifySignature(t *testing.T) {
 	if err := validSig.Verify(bytes.NewReader([]byte("irrelevant")), &emptyKey); err == nil {
 		t.Errorf("expected error when using empty key to verify")
 	}
-
-	if err := validSig.Verify(bytes.NewReader([]byte("irrelevant")), sigFile); err == nil {
-		t.Errorf("expected error when using non key to verify")
-	}
 }

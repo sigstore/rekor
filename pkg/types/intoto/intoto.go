@@ -16,8 +16,9 @@
 package intoto
 
 import (
-	"errors"
+	"context"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 )
@@ -54,4 +55,19 @@ func (it BaseIntotoType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImp
 	}
 
 	return it.VersionedUnmarshal(in, *in.APIVersion)
+}
+
+func (it *BaseIntotoType) CreateProposedEntry(ctx context.Context, version string, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	if version == "" {
+		version = it.DefaultVersion()
+	}
+	ei, err := it.VersionedUnmarshal(nil, version)
+	if err != nil {
+		return nil, errors.Wrap(err, "fetching Intoto version implementation")
+	}
+	return ei.CreateFromArtifactProperties(ctx, props)
+}
+
+func (it BaseIntotoType) DefaultVersion() string {
+	return "0.0.1"
 }

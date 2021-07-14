@@ -16,6 +16,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -25,7 +26,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/types"
 )
 
 func TestArtifactPFlags(t *testing.T) {
@@ -348,6 +349,7 @@ func TestArtifactPFlags(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		initializePFlagMap()
 		var blankCmd = &cobra.Command{}
 		if err := addArtifactPFlags(blankCmd); err != nil {
 			t.Fatalf("unexpected error adding flags in '%v': %v", tc.caseDesc, err)
@@ -396,27 +398,13 @@ func TestArtifactPFlags(t *testing.T) {
 				t.Errorf("unexpected result validating '%v': %v", tc.caseDesc, err)
 				continue
 			}
-			if !tc.uuidRequired && !tc.logIndexRequired {
-				var createFn func() (models.ProposedEntry, error)
-				switch tc.typeStr {
-				case "", "rekord":
-					createFn = CreateRekordFromPFlags
-				case "rpm":
-					createFn = CreateRpmFromPFlags
-				case "jar":
-					createFn = CreateJarFromPFlags
-				case "intoto":
-					createFn = CreateIntotoFromPFlags
-				case "rfc3161":
-					createFn = CreateRFC3161FromPFlags
-				case "alpine":
-					createFn = CreateAlpineFromPFlags
-				case "helm":
-					createFn = CreateHelmFromPFlags
-				default:
-					t.Fatalf("type %v not implemented", tc.typeStr)
+			if !tc.uuidRequired && !tc.logIndexRequired && tc.entry == "" {
+				typeStr, versionStr, err := ParseTypeFlag(viper.GetString("type"))
+				if err != nil {
+					t.Errorf("error parsing typeStr: %v", err)
 				}
-				if _, err := createFn(); err != nil {
+				props := CreatePropsFromPflags()
+				if _, err := types.NewProposedEntry(context.Background(), typeStr, versionStr, *props); err != nil {
 					t.Errorf("unexpected result in '%v' building entry: %v", tc.caseDesc, err)
 				}
 			}
@@ -577,7 +565,7 @@ func TestSearchPFlags(t *testing.T) {
 			caseDesc:              "invalid email",
 			email:                 "SignaMeseCat",
 			expectParseSuccess:    false,
-			expectValidateSuccess: true,
+			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "no flags when either artifact, sha, public key, or email are needed",
@@ -587,6 +575,7 @@ func TestSearchPFlags(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		initializePFlagMap()
 		var blankCmd = &cobra.Command{}
 		if err := addSearchPFlags(blankCmd); err != nil {
 			t.Fatalf("unexpected error adding flags in '%v': %v", tc.caseDesc, err)

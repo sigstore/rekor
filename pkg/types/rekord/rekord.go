@@ -16,8 +16,9 @@
 package rekord
 
 import (
-	"errors"
+	"context"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 )
@@ -54,4 +55,19 @@ func (rt BaseRekordType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImp
 	}
 
 	return rt.VersionedUnmarshal(rekord, *rekord.APIVersion)
+}
+
+func (rt *BaseRekordType) CreateProposedEntry(ctx context.Context, version string, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	if version == "" {
+		version = rt.DefaultVersion()
+	}
+	ei, err := rt.VersionedUnmarshal(nil, version)
+	if err != nil {
+		return nil, errors.Wrap(err, "fetching Rekord version implementation")
+	}
+	return ei.CreateFromArtifactProperties(ctx, props)
+}
+
+func (rt BaseRekordType) DefaultVersion() string {
+	return "0.0.1"
 }

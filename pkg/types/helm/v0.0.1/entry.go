@@ -23,6 +23,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -144,6 +146,11 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		return err
 	}
 
+	artifactFactory, err := pki.NewArtifactFactory(pki.PGP)
+	if err != nil {
+		return err
+	}
+
 	g, ctx := errgroup.WithContext(ctx)
 
 	provenanceR, provenanceW := io.Pipe()
@@ -163,8 +170,6 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		}
 		return err
 	}
-
-	artifactFactory := pki.NewArtifactFactory("pgp")
 
 	g.Go(func() error {
 		defer provenanceW.Close()
@@ -346,4 +351,62 @@ func (v V001Entry) Validate() error {
 
 func (v V001Entry) Attestation() (string, []byte) {
 	return "", nil
+}
+
+func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	//TODO: how to select version of item to create
+	returnVal := models.Helm{}
+	re := V001Entry{}
+
+	// we will need provenance file and public-key
+	re.HelmObj = models.HelmV001Schema{}
+	re.HelmObj.Chart = &models.HelmV001SchemaChart{}
+	re.HelmObj.Chart.Provenance = &models.HelmV001SchemaChartProvenance{}
+
+	var err error
+	artifactBytes := props.ArtifactBytes
+	if artifactBytes == nil {
+		if props.ArtifactPath.IsAbs() {
+			re.HelmObj.Chart.Provenance.URL = strfmt.URI(props.ArtifactPath.String())
+		} else {
+			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading artifact file: %w", err)
+			}
+			re.HelmObj.Chart.Provenance.Content = strfmt.Base64(artifactBytes)
+		}
+	} else {
+		re.HelmObj.Chart.Provenance.Content = strfmt.Base64(artifactBytes)
+	}
+
+	re.HelmObj.PublicKey = &models.HelmV001SchemaPublicKey{}
+	publicKeyBytes := props.PublicKeyBytes
+	if publicKeyBytes == nil {
+		if props.PublicKeyPath.IsAbs() {
+			re.HelmObj.PublicKey.URL = strfmt.URI(props.PublicKeyPath.String())
+		} else {
+			publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading public key file: %w", err)
+			}
+			re.HelmObj.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+		}
+	} else {
+		re.HelmObj.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+	}
+
+	if err := re.Validate(); err != nil {
+		return nil, err
+	}
+
+	if re.HasExternalEntities() {
+		if err := re.FetchExternalEntities(ctx); err != nil {
+			return nil, fmt.Errorf("error retrieving external entities: %v", err)
+		}
+	}
+
+	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.Spec = re.HelmObj
+
+	return &returnVal, nil
 }

@@ -57,9 +57,12 @@ func TestProvenance(t *testing.T) {
 		t.Fatalf("failed to parse public key: %v", err)
 	}
 
-	artifactFactory := pki.NewArtifactFactory("pgp")
-	sig, err := artifactFactory.NewSignature(provenance.Block.ArmoredSignature.Body)
+	artifactFactory, err := pki.NewArtifactFactory(pki.PGP)
+	if err != nil {
+		t.Fatalf("Failed to create PGP pki factory %v", err)
+	}
 
+	sig, err := artifactFactory.NewSignature(provenance.Block.ArmoredSignature.Body)
 	if err != nil {
 		t.Fatalf("Failed to create signature %v", err)
 	}

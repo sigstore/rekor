@@ -29,7 +29,7 @@ import (
 
 	"github.com/go-playground/validator"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/signature"
+	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
 
 // EmailAddressOID defined by https://oidref.com/1.2.840.113549.1.9.1
@@ -72,7 +72,7 @@ func (s Signature) Verify(r io.Reader, k interface{}) error {
 		p = key.cert.c.PublicKey
 	}
 
-	verifier, err := signature.LoadVerifier(p, crypto.SHA256)
+	verifier, err := sigsig.LoadVerifier(p, crypto.SHA256)
 	if err != nil {
 		return err
 	}

@@ -126,7 +126,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			hasExtEntities:               false,
 			expectUnmarshalSuccess:       false,
 			expectCanonicalizeSuccess:    true,
-			expectValidationErrorMessage: "Tsr status not granted: 2",
+			expectValidationErrorMessage: "tsr status not granted: 2",
 		},
 		{
 			caseDesc: "invalid obj - bad content type",
@@ -140,7 +140,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			hasExtEntities:               false,
 			expectUnmarshalSuccess:       false,
 			expectCanonicalizeSuccess:    true,
-			expectValidationErrorMessage: "Tsr wrong content type: 0.0.0.0.42",
+			expectValidationErrorMessage: "tsr wrong content type: 0.0.0.0.42",
 		},
 		{
 			caseDesc: "invalid obj - bad content",
@@ -154,7 +154,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			hasExtEntities:               false,
 			expectUnmarshalSuccess:       false,
 			expectCanonicalizeSuccess:    true,
-			expectValidationErrorMessage: "Tsr verification error",
+			expectValidationErrorMessage: "tsr verification error",
 		},
 		{
 			caseDesc: "valid obj with extra data",

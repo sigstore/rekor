@@ -16,8 +16,9 @@
 package jar
 
 import (
-	"errors"
+	"context"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 )
@@ -54,4 +55,19 @@ func (bjt *BaseJARType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl
 	}
 
 	return bjt.VersionedUnmarshal(jar, *jar.APIVersion)
+}
+
+func (bjt *BaseJARType) CreateProposedEntry(ctx context.Context, version string, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	if version == "" {
+		version = bjt.DefaultVersion()
+	}
+	ei, err := bjt.VersionedUnmarshal(nil, version)
+	if err != nil {
+		return nil, errors.Wrap(err, "fetching JAR version implementation")
+	}
+	return ei.CreateFromArtifactProperties(ctx, props)
+}
+
+func (bjt BaseJARType) DefaultVersion() string {
+	return "0.0.1"
 }

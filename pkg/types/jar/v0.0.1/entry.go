@@ -27,6 +27,7 @@ import (
 	"io"
 	"io/ioutil"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/sigstore/rekor/pkg/log"
@@ -178,7 +179,10 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	}
 	v.jarObj = jarObj[0]
 
-	af := pki.NewArtifactFactory("pkcs7")
+	af, err := pki.NewArtifactFactory(pki.PKCS7)
+	if err != nil {
+		return err
+	}
 	// we need to find and extract the PKCS7 bundle from the JAR file manually
 	sigPKCS7, err := extractPKCS7SignatureFromJAR(zipReader)
 	if err != nil {
@@ -315,4 +319,54 @@ func extractPKCS7SignatureFromJAR(inz *zip.Reader) ([]byte, error) {
 
 func (v V001Entry) Attestation() (string, []byte) {
 	return "", nil
+}
+
+func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	returnVal := models.Jar{}
+	re := V001Entry{}
+
+	// we will need only the artifact; public-key & signature are embedded in JAR
+	re.JARModel = models.JarV001Schema{}
+	re.JARModel.Archive = &models.JarV001SchemaArchive{}
+
+	var err error
+	artifactBytes := props.ArtifactBytes
+	if artifactBytes == nil {
+		if props.ArtifactPath == nil {
+			return nil, errors.New("path to JAR archive (file or URL) must be specified")
+		}
+		if props.ArtifactPath.IsAbs() {
+			re.JARModel.Archive.URL = strfmt.URI(props.ArtifactPath.String())
+			if props.ArtifactHash != "" {
+				re.JARModel.Archive.Hash = &models.JarV001SchemaArchiveHash{
+					Algorithm: swag.String(models.JarV001SchemaArchiveHashAlgorithmSha256),
+					Value:     swag.String(props.ArtifactHash),
+				}
+			}
+		} else {
+			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading JAR file: %w", err)
+			}
+			//TODO: ensure this is a valid JAR file; look for META-INF/MANIFEST.MF?
+			re.JARModel.Archive.Content = strfmt.Base64(artifactBytes)
+		}
+	} else {
+		re.JARModel.Archive.Content = strfmt.Base64(artifactBytes)
+	}
+
+	if err := re.Validate(); err != nil {
+		return nil, err
+	}
+
+	if re.HasExternalEntities() {
+		if err := re.FetchExternalEntities(ctx); err != nil {
+			return nil, fmt.Errorf("error retrieving external entities: %v", err)
+		}
+	}
+
+	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.Spec = re.JARModel
+
+	return &returnVal, nil
 }

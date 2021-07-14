@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
 
 	"github.com/mitchellh/mapstructure"
@@ -36,10 +37,22 @@ type EntryImpl interface {
 	Unmarshal(e models.ProposedEntry) error           // unmarshal the abstract entry into the specific struct for this versioned type
 	Validate() error                                  // performs any cross-field validation that is not expressed in the OpenAPI spec
 	Attestation() (string, []byte)
+	CreateFromArtifactProperties(context.Context, ArtifactProperties) (models.ProposedEntry, error)
 }
 
 // EntryFactory describes a factory function that can generate structs for a specific versioned type
 type EntryFactory func() EntryImpl
+
+func NewProposedEntry(ctx context.Context, kind, version string, props ArtifactProperties) (models.ProposedEntry, error) {
+	if tf, found := TypeMap.Load(kind); found {
+		t := tf.(func() TypeImpl)()
+		if t == nil {
+			return nil, fmt.Errorf("error generating object for kind '%v'", kind)
+		}
+		return t.CreateProposedEntry(ctx, version, props)
+	}
+	return nil, fmt.Errorf("could not create entry for kind '%v'", kind)
+}
 
 // NewEntry returns the specific instance for the type and version specified in the doc
 func NewEntry(pe models.ProposedEntry) (EntryImpl, error) {
@@ -87,4 +100,17 @@ func DecodeEntry(input, output interface{}) error {
 	}
 
 	return dec.Decode(input)
+}
+
+// ArtifactProperties provide a consistent struct for passing values from
+// CLI flags to the type+version specific CreateProposeEntry() methods
+type ArtifactProperties struct {
+	ArtifactPath   *url.URL
+	ArtifactHash   string
+	ArtifactBytes  []byte
+	SignaturePath  *url.URL
+	SignatureBytes []byte
+	PublicKeyPath  *url.URL
+	PublicKeyBytes []byte
+	PKIFormat      string
 }

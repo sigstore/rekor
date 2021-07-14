@@ -24,6 +24,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/in-toto/in-toto-golang/pkg/ssl"
@@ -121,7 +124,11 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	// Only support x509 signatures for intoto attestations
-	af := pki.NewArtifactFactory("x509")
+	af, err := pki.NewArtifactFactory(pki.X509)
+	if err != nil {
+		return err
+	}
+
 	v.keyObj, err = af.NewPublicKey(bytes.NewReader(*v.IntotoObj.PublicKey))
 	if err != nil {
 		return err
@@ -242,4 +249,48 @@ func (v *verifier) Verify(keyID string, data, sig []byte) error {
 		return errors.New("nil verifier")
 	}
 	return v.v.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data))
+}
+
+func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	returnVal := models.Intoto{}
+
+	var err error
+	artifactBytes := props.ArtifactBytes
+	if artifactBytes == nil {
+		if props.ArtifactPath == nil {
+			return nil, errors.New("path to artifact file must be specified")
+		}
+		if props.ArtifactPath.IsAbs() {
+			return nil, errors.New("intoto envelopes cannot be fetched over HTTP(S)")
+		}
+		artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+		if err != nil {
+			return nil, err
+		}
+	}
+	publicKeyBytes := props.PublicKeyBytes
+	if publicKeyBytes == nil {
+		if props.PublicKeyPath == nil {
+			return nil, errors.New("public key must be provided to verify signature")
+		}
+		publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
+		if err != nil {
+			return nil, fmt.Errorf("error reading public key file: %w", err)
+		}
+	}
+	kb := strfmt.Base64(publicKeyBytes)
+
+	re := V001Entry{
+		IntotoObj: models.IntotoV001Schema{
+			Content: &models.IntotoV001SchemaContent{
+				Envelope: string(artifactBytes),
+			},
+			PublicKey: &kb,
+		},
+	}
+
+	returnVal.Spec = re.IntotoObj
+	returnVal.APIVersion = swag.String(re.APIVersion())
+
+	return &returnVal, nil
 }

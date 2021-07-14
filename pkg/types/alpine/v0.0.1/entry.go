@@ -23,6 +23,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	"github.com/asaskevich/govalidator"
@@ -158,7 +160,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	if v.AlpineModel.Package.Hash != nil && v.AlpineModel.Package.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.AlpineModel.Package.Hash.Value)
 	}
-	artifactFactory := pki.NewArtifactFactory("x509")
+	artifactFactory, _ := pki.NewArtifactFactory(pki.X509)
 
 	g.Go(func() error {
 		defer hashW.Close()
@@ -337,4 +339,66 @@ func (v V001Entry) Validate() error {
 
 func (v V001Entry) Attestation() (string, []byte) {
 	return "", nil
+}
+
+func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	returnVal := models.Alpine{}
+	re := V001Entry{}
+
+	// we will need artifact, public-key, signature
+	re.AlpineModel = models.AlpineV001Schema{}
+	re.AlpineModel.Package = &models.AlpineV001SchemaPackage{}
+
+	var err error
+	artifactBytes := props.ArtifactBytes
+	if artifactBytes == nil {
+		if props.ArtifactPath.IsAbs() {
+			re.AlpineModel.Package.URL = strfmt.URI(props.ArtifactPath.String())
+			if props.ArtifactHash != "" {
+				re.AlpineModel.Package.Hash = &models.AlpineV001SchemaPackageHash{
+					Algorithm: swag.String(models.AlpineV001SchemaPackageHashAlgorithmSha256),
+					Value:     swag.String(props.ArtifactHash),
+				}
+			}
+		} else {
+			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading artifact file: %w", err)
+			}
+			re.AlpineModel.Package.Content = strfmt.Base64(artifactBytes)
+		}
+	} else {
+		re.AlpineModel.Package.Content = strfmt.Base64(artifactBytes)
+	}
+
+	re.AlpineModel.PublicKey = &models.AlpineV001SchemaPublicKey{}
+	publicKeyBytes := props.PublicKeyBytes
+	if publicKeyBytes == nil {
+		if props.PublicKeyPath.IsAbs() {
+			re.AlpineModel.PublicKey.URL = strfmt.URI(props.PublicKeyPath.String())
+		} else {
+			publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading public key file: %w", err)
+			}
+			re.AlpineModel.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+		}
+	} else {
+		re.AlpineModel.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+	}
+
+	if err := re.Validate(); err != nil {
+		return nil, err
+	}
+
+	if re.HasExternalEntities() {
+		if err := re.FetchExternalEntities(ctx); err != nil {
+			return nil, fmt.Errorf("error retrieving external entities: %v", err)
+		}
+	}
+
+	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.Spec = re.AlpineModel
+
+	return &returnVal, nil
 }
