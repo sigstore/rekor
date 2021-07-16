@@ -16,16 +16,24 @@
 package app
 
 import (
-	"errors"
 	"fmt"
-	"net/url"
-	"os"
 	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+
+	"github.com/sigstore/rekor/pkg/log"
+
+	// these imports are to call the packages' init methods
+	_ "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/helm/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/jar/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/rfc3161/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/rpm/v0.0.1"
 )
 
 var rootCmd = &cobra.Command{
@@ -40,24 +48,23 @@ var rootCmd = &cobra.Command{
 // Execute runs the base CLI
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.CliLogger.Fatal(err)
 	}
 }
 
 func init() {
+	initializePFlagMap()
 	rootCmd.PersistentFlags().String("config", "", "config file (default is $HOME/.rekor.yaml)")
 	rootCmd.PersistentFlags().Bool("store_tree_state", true, "whether to store tree state in between invocations for additional verification")
 
-	rootCmd.PersistentFlags().Var(&urlFlag{url: "https://rekor.sigstore.dev"}, "rekor_server", "Server address:port")
-	rootCmd.PersistentFlags().Var(&formatFlag{format: "default"}, "format", "Command output format")
+	rootCmd.PersistentFlags().Var(NewFlagValue(urlFlag, "https://rekor.sigstore.dev"), "rekor_server", "Server address:port")
+	rootCmd.PersistentFlags().Var(NewFlagValue(formatFlag, "default"), "format", "Command output format")
 
 	rootCmd.PersistentFlags().String("api-key", "", "API key for rekor.sigstore.dev")
 
 	// these are bound here and not in PreRun so that all child commands can use them
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.CliLogger.Fatal(err)
 	}
 }
 
@@ -102,64 +109,8 @@ func initConfig(cmd *cobra.Command) error {
 			return err
 		}
 	} else if viper.GetString("format") == "default" {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		log.CliLogger.Infof("Using config file:", viper.ConfigFileUsed())
 	}
 
 	return nil
-}
-
-type urlFlag struct {
-	url string
-}
-
-func (u *urlFlag) String() string {
-	return u.url
-}
-
-func (u *urlFlag) Set(s string) error {
-	if s == "" {
-		return errors.New("flag must be specified")
-	}
-	url, err := url.Parse(s)
-	if err != nil {
-		return fmt.Errorf("malformed URL: %w", err)
-	}
-	if !url.IsAbs() {
-		return fmt.Errorf("URL must be absolute, got %s", s)
-	}
-	lowercaseScheme := strings.ToLower(url.Scheme)
-	if lowercaseScheme != "http" && lowercaseScheme != "https" {
-		return fmt.Errorf("URL must be a valid HTTP or HTTPS URL, got %s", s)
-	}
-	u.url = s
-	return nil
-}
-
-func (u *urlFlag) Type() string {
-	return "url"
-}
-
-type formatFlag struct {
-	format string
-}
-
-func (f *formatFlag) String() string {
-	return f.format
-}
-
-func (f *formatFlag) Set(s string) error {
-	choices := map[string]struct{}{"default": {}, "json": {}}
-	if s == "" {
-		f.format = "default"
-		return nil
-	}
-	if _, ok := choices[s]; ok {
-		f.format = s
-		return nil
-	}
-	return fmt.Errorf("invalid flag value: %s, valid values are [default, json]", s)
-}
-
-func (f *formatFlag) Type() string {
-	return "format"
 }

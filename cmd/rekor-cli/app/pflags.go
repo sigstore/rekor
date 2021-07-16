@@ -16,711 +16,223 @@
 package app
 
 import (
-	"context"
-	"encoding/hex"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"os"
-	"path/filepath"
+	"log"
 	"strconv"
 	"strings"
 
-	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"github.com/sigstore/rekor/pkg/pki"
+	"github.com/spf13/pflag"
 
 	"github.com/go-playground/validator"
-	"github.com/sigstore/rekor/pkg/generated/models"
-	alpine_v001 "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
-	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
-	jar_v001 "github.com/sigstore/rekor/pkg/types/jar/v0.0.1"
-	rekord_v001 "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
-	rfc3161_v001 "github.com/sigstore/rekor/pkg/types/rfc3161/v0.0.1"
-	rpm_v001 "github.com/sigstore/rekor/pkg/types/rpm/v0.0.1"
+	"github.com/pkg/errors"
 )
 
-func addSearchPFlags(cmd *cobra.Command) error {
-	cmd.Flags().Var(&pkiFormatFlag{value: "pgp"}, "pki-format", "format of the signature and/or public key")
+type FlagType string
 
-	cmd.Flags().Var(&fileOrURLFlag{}, "public-key", "path or URL to public key file")
+const (
+	uuidFlag      FlagType = "uuid"
+	shaFlag       FlagType = "sha"
+	emailFlag     FlagType = "email"
+	logIndexFlag  FlagType = "logIndex"
+	pkiFormatFlag FlagType = "pkiFormat"
+	typeFlag      FlagType = "type"
+	fileFlag      FlagType = "file"
+	urlFlag       FlagType = "url"
+	fileOrURLFlag FlagType = "fileOrURL"
+	oidFlag       FlagType = "oid"
+	formatFlag    FlagType = "format"
+)
 
-	cmd.Flags().Var(&fileOrURLFlag{}, "artifact", "path or URL to artifact file")
+type newPFlagValueFunc func() pflag.Value
 
-	cmd.Flags().Var(&shaFlag{}, "sha", "the SHA256 sum of the artifact")
+var pflagValueFuncMap map[FlagType]newPFlagValueFunc
 
-	cmd.Flags().Var(&emailFlag{}, "email", "email associated with the public key's subject")
-	return nil
-}
-
-func validateSearchPFlags() error {
-	artifactStr := viper.GetString("artifact")
-
-	publicKey := viper.GetString("public-key")
-	sha := viper.GetString("sha")
-	email := viper.GetString("email")
-
-	if artifactStr == "" && publicKey == "" && sha == "" && email == "" {
-		return errors.New("either 'sha' or 'artifact' or 'public-key' or 'email' must be specified")
-	}
-	if publicKey != "" {
-		if viper.GetString("pki-format") == "" {
-			return errors.New("pki-format must be specified if searching by public-key")
-		}
-	}
-	return nil
-}
-
-func addArtifactPFlags(cmd *cobra.Command) error {
-	cmd.Flags().Var(&fileOrURLFlag{}, "signature", "path or URL to detached signature file")
-	cmd.Flags().Var(&typeFlag{value: "rekord"}, "type", "type of entry")
-	cmd.Flags().Var(&pkiFormatFlag{value: "pgp"}, "pki-format", "format of the signature and/or public key")
-
-	cmd.Flags().Var(&fileOrURLFlag{}, "public-key", "path or URL to public key file")
-
-	cmd.Flags().Var(&fileOrURLFlag{}, "artifact", "path or URL to artifact file")
-	cmd.Flags().Var(&uuidFlag{}, "artifact-hash", "hex encoded SHA256 hash of artifact (when using URL)")
-
-	cmd.Flags().Var(&fileOrURLFlag{}, "entry", "path or URL to pre-formatted entry file")
-
-	return nil
-}
-
-func validateArtifactPFlags(uuidValid, indexValid bool) error {
-	uuidGiven := false
-	if uuidValid {
-		uuid := uuidFlag{}
-		uuidStr := viper.GetString("uuid")
-
-		if uuidStr != "" {
-			if err := uuid.Set(uuidStr); err != nil {
-				return err
-			}
-			uuidGiven = true
-		}
-	}
-	indexGiven := false
-	if indexValid {
-		logIndex := logIndexFlag{}
-		logIndexStr := viper.GetString("log-index")
-
-		if logIndexStr != "" {
-			if err := logIndex.Set(logIndexStr); err != nil {
-				return err
-			}
-			indexGiven = true
-		}
-	}
-	// we will need artifact, public-key, signature
-	typeStr := viper.GetString("type")
-	entry := viper.GetString("entry")
-
-	artifact := fileOrURLFlag{}
-	artifactStr := viper.GetString("artifact")
-	if artifactStr != "" {
-		if err := artifact.Set(artifactStr); err != nil {
-			return err
-		}
-	}
-
-	signature := viper.GetString("signature")
-	publicKey := viper.GetString("public-key")
-
-	if entry == "" && artifact.String() == "" {
-		if (uuidGiven && uuidValid) || (indexGiven && indexValid) {
-			return nil
-		}
-		return errors.New("either 'entry' or 'artifact' must be specified")
-	}
-
-	if entry == "" {
-		if signature == "" && typeStr == "rekord" {
-			return errors.New("--signature is required when --artifact is used")
-		}
-		if publicKey == "" && typeStr != "jar" && typeStr != "rfc3161" {
-			return errors.New("--public-key is required when --artifact is used")
-		}
-	}
-
-	return nil
-}
-
-func CreateJarFromPFlags() (models.ProposedEntry, error) {
-	//TODO: how to select version of item to create
-	returnVal := models.Jar{}
-	re := new(jar_v001.V001Entry)
-
-	jar := viper.GetString("entry")
-	if jar != "" {
-		var jarBytes []byte
-		jarURL, err := url.Parse(jar)
-		if err == nil && jarURL.IsAbs() {
-			/* #nosec G107 */
-			jarResp, err := http.Get(jar)
-			if err != nil {
-				return nil, fmt.Errorf("error fetching 'jar': %w", err)
-			}
-			defer jarResp.Body.Close()
-			jarBytes, err = ioutil.ReadAll(jarResp.Body)
-			if err != nil {
-				return nil, fmt.Errorf("error fetching 'jar': %w", err)
-			}
-		} else {
-			jarBytes, err = ioutil.ReadFile(filepath.Clean(jar))
-			if err != nil {
-				return nil, fmt.Errorf("error processing 'jar' file: %w", err)
-			}
-		}
-		if err := json.Unmarshal(jarBytes, &returnVal); err != nil {
-			return nil, fmt.Errorf("error parsing jar file: %w", err)
-		}
-	} else {
-		// we will need only the artifact; public-key & signature are embedded in JAR
-		re.JARModel = models.JarV001Schema{}
-		re.JARModel.Archive = &models.JarV001SchemaArchive{}
-
-		artifact := viper.GetString("artifact")
-		dataURL, err := url.Parse(artifact)
-		if err == nil && dataURL.IsAbs() {
-			re.JARModel.Archive.URL = strfmt.URI(artifact)
-			re.JARModel.Archive.Hash = &models.JarV001SchemaArchiveHash{
-				Algorithm: swag.String(models.JarV001SchemaArchiveHashAlgorithmSha256),
-				Value:     swag.String(viper.GetString("artifact-hash")),
-			}
-		} else {
-			artifactBytes, err := ioutil.ReadFile(filepath.Clean(artifact))
-			if err != nil {
-				return nil, fmt.Errorf("error reading artifact file: %w", err)
-			}
-
-			//TODO: ensure this is a valid JAR file; look for META-INF/MANIFEST.MF?
-			re.JARModel.Archive.Content = strfmt.Base64(artifactBytes)
-		}
-
-		if err := re.Validate(); err != nil {
-			return nil, err
-		}
-
-		if re.HasExternalEntities() {
-			if err := re.FetchExternalEntities(context.Background()); err != nil {
-				return nil, fmt.Errorf("error retrieving external entities: %v", err)
-			}
-		}
-
-		returnVal.APIVersion = swag.String(re.APIVersion())
-		returnVal.Spec = re.JARModel
-	}
-
-	return &returnVal, nil
-}
-
-func CreateIntotoFromPFlags() (models.ProposedEntry, error) {
-	//TODO: how to select version of item to create
-	returnVal := models.Intoto{}
-
-	intoto := viper.GetString("artifact")
-	b, err := ioutil.ReadFile(filepath.Clean(intoto))
-	if err != nil {
-		return nil, err
-	}
-	publicKey := viper.GetString("public-key")
-	keyBytes, err := ioutil.ReadFile(filepath.Clean(publicKey))
-	if err != nil {
-		return nil, fmt.Errorf("error reading public key file: %w", err)
-	}
-	kb := strfmt.Base64(keyBytes)
-
-	re := intoto_v001.V001Entry{
-		IntotoObj: models.IntotoV001Schema{
-			Content: &models.IntotoV001SchemaContent{
-				Envelope: string(b),
-			},
-			PublicKey: &kb,
+// TODO: unit tests for all of this
+func initializePFlagMap() {
+	pflagValueFuncMap = map[FlagType]newPFlagValueFunc{
+		uuidFlag: func() pflag.Value {
+			// this corresponds to the merkle leaf hash of entries, which is represented by a 64 character hexadecimal string
+			return valueFactory(uuidFlag, validateString("required,len=64,hexadecimal"), "")
+		},
+		shaFlag: func() pflag.Value {
+			// this validates a valid sha256 checksum which is optionally prefixed with 'sha256:'
+			return valueFactory(shaFlag, validateSHA256Value, "")
+		},
+		emailFlag: func() pflag.Value {
+			// this validates an email address
+			return valueFactory(emailFlag, validateString("required,email"), "")
+		},
+		logIndexFlag: func() pflag.Value {
+			// this checks for a valid integer >= 0
+			return valueFactory(logIndexFlag, validateLogIndex, "")
+		},
+		pkiFormatFlag: func() pflag.Value {
+			// this ensures a PKI implementation exists for the requested format
+			return valueFactory(pkiFormatFlag, validateString(fmt.Sprintf("required,oneof=%v", strings.Join(pki.SupportedFormats(), " "))), "pgp")
+		},
+		typeFlag: func() pflag.Value {
+			// this ensures the type of the log entry matches a type supported in the CLI
+			return valueFactory(typeFlag, validateTypeFlag, "rekord")
+		},
+		fileFlag: func() pflag.Value {
+			// this validates that the file exists and can be opened by the current uid
+			return valueFactory(fileFlag, validateString("required,file"), "")
+		},
+		urlFlag: func() pflag.Value {
+			// this validates that the string is a valid http/https URL
+			return valueFactory(urlFlag, validateString("required,url,startswith=http|startswith=https"), "")
+		},
+		fileOrURLFlag: func() pflag.Value {
+			// applies logic of fileFlag OR urlFlag validators from above
+			return valueFactory(fileOrURLFlag, validateFileOrURL, "")
+		},
+		oidFlag: func() pflag.Value {
+			// this validates for an OID, which is a sequence of positive integers separated by periods
+			return valueFactory(oidFlag, validateOID, "")
+		},
+		formatFlag: func() pflag.Value {
+			// this validates the output format requested
+			return valueFactory(formatFlag, validateString("required,oneof=json default"), "")
 		},
 	}
-
-	returnVal.Spec = re.IntotoObj
-	returnVal.APIVersion = swag.String(re.APIVersion())
-
-	return &returnVal, nil
 }
 
-func CreateRFC3161FromPFlags() (models.ProposedEntry, error) {
-	//TODO: how to select version of item to create
-	rfc3161 := viper.GetString("artifact")
-	b, err := ioutil.ReadFile(filepath.Clean(rfc3161))
-	if err != nil {
-		return nil, fmt.Errorf("error reading public key file: %w", err)
+// NewFlagValue creates a new pflag.Value for the specified type with the specified default value.
+// If a default value is not desired, pass "" for defaultVal.
+func NewFlagValue(flagType FlagType, defaultVal string) pflag.Value {
+	valFunc := pflagValueFuncMap[flagType]
+	val := valFunc()
+	if defaultVal != "" {
+		if err := val.Set(defaultVal); err != nil {
+			log.Fatal(errors.Wrap(err, "initializing flag"))
+		}
 	}
-
-	return rfc3161_v001.NewEntryFromBytes(b), nil
+	return val
 }
 
-func CreateRpmFromPFlags() (models.ProposedEntry, error) {
-	//TODO: how to select version of item to create
-	returnVal := models.Rpm{}
-	re := new(rpm_v001.V001Entry)
+type validationFunc func(string) error
 
-	rpm := viper.GetString("entry")
-	if rpm != "" {
-		var rpmBytes []byte
-		rpmURL, err := url.Parse(rpm)
-		if err == nil && rpmURL.IsAbs() {
-			/* #nosec G107 */
-			rpmResp, err := http.Get(rpm)
-			if err != nil {
-				return nil, fmt.Errorf("error fetching 'rpm': %w", err)
-			}
-			defer rpmResp.Body.Close()
-			rpmBytes, err = ioutil.ReadAll(rpmResp.Body)
-			if err != nil {
-				return nil, fmt.Errorf("error fetching 'rpm': %w", err)
-			}
-		} else {
-			rpmBytes, err = ioutil.ReadFile(filepath.Clean(rpm))
-			if err != nil {
-				return nil, fmt.Errorf("error processing 'rpm' file: %w", err)
-			}
-		}
-		if err := json.Unmarshal(rpmBytes, &returnVal); err != nil {
-			return nil, fmt.Errorf("error parsing rpm file: %w", err)
-		}
-	} else {
-		// we will need artifact, public-key, signature
-		re.RPMModel = models.RpmV001Schema{}
-		re.RPMModel.Package = &models.RpmV001SchemaPackage{}
-
-		artifact := viper.GetString("artifact")
-		dataURL, err := url.Parse(artifact)
-		if err == nil && dataURL.IsAbs() {
-			re.RPMModel.Package.URL = strfmt.URI(artifact)
-		} else {
-			artifactBytes, err := ioutil.ReadFile(filepath.Clean(artifact))
-			if err != nil {
-				return nil, fmt.Errorf("error reading artifact file: %w", err)
-			}
-			re.RPMModel.Package.Content = strfmt.Base64(artifactBytes)
-		}
-
-		re.RPMModel.PublicKey = &models.RpmV001SchemaPublicKey{}
-		publicKey := viper.GetString("public-key")
-		keyURL, err := url.Parse(publicKey)
-		if err == nil && keyURL.IsAbs() {
-			re.RPMModel.PublicKey.URL = strfmt.URI(publicKey)
-		} else {
-			keyBytes, err := ioutil.ReadFile(filepath.Clean(publicKey))
-			if err != nil {
-				return nil, fmt.Errorf("error reading public key file: %w", err)
-			}
-			re.RPMModel.PublicKey.Content = strfmt.Base64(keyBytes)
-		}
-
-		if err := re.Validate(); err != nil {
-			return nil, err
-		}
-
-		if re.HasExternalEntities() {
-			if err := re.FetchExternalEntities(context.Background()); err != nil {
-				return nil, fmt.Errorf("error retrieving external entities: %v", err)
-			}
-		}
-
-		returnVal.APIVersion = swag.String(re.APIVersion())
-		returnVal.Spec = re.RPMModel
+func valueFactory(flagType FlagType, v validationFunc, defaultVal string) pflag.Value {
+	return &baseValue{
+		flagType:       flagType,
+		validationFunc: v,
+		value:          defaultVal,
 	}
-
-	return &returnVal, nil
 }
 
-func CreateAlpineFromPFlags() (models.ProposedEntry, error) {
-	//TODO: how to select version of item to create
-	returnVal := models.Alpine{}
-	re := new(alpine_v001.V001Entry)
+// baseValue implements pflag.Value
+type baseValue struct {
+	flagType       FlagType
+	value          string
+	validationFunc validationFunc
+}
 
-	apk := viper.GetString("entry")
-	if apk != "" {
-		var apkBytes []byte
-		apkURL, err := url.Parse(apk)
-		if err == nil && apkURL.IsAbs() {
-			/* #nosec G107 */
-			apkResp, err := http.Get(apk)
-			if err != nil {
-				return nil, fmt.Errorf("error fetching 'alpine': %w", err)
-			}
-			defer apkResp.Body.Close()
-			apkBytes, err = ioutil.ReadAll(apkResp.Body)
-			if err != nil {
-				return nil, fmt.Errorf("error fetching 'alpine': %w", err)
-			}
-		} else {
-			apkBytes, err = ioutil.ReadFile(filepath.Clean(apk))
-			if err != nil {
-				return nil, fmt.Errorf("error processing 'alpine' file: %w", err)
-			}
-		}
-		if err := json.Unmarshal(apkBytes, &returnVal); err != nil {
-			return nil, fmt.Errorf("error parsing alpine file: %w", err)
-		}
-	} else {
-		// we will need artifact, public-key, signature
-		re.AlpineModel = models.AlpineV001Schema{}
-		re.AlpineModel.Package = &models.AlpineV001SchemaPackage{}
+// Type returns the type of this Value
+func (b baseValue) Type() string {
+	return string(b.flagType)
+}
 
-		artifact := viper.GetString("artifact")
-		dataURL, err := url.Parse(artifact)
-		if err == nil && dataURL.IsAbs() {
-			re.AlpineModel.Package.URL = strfmt.URI(artifact)
-		} else {
-			artifactBytes, err := ioutil.ReadFile(filepath.Clean(artifact))
-			if err != nil {
-				return nil, fmt.Errorf("error reading artifact file: %w", err)
-			}
-			re.AlpineModel.Package.Content = strfmt.Base64(artifactBytes)
-		}
+// String returns the string representation of this Value
+func (b baseValue) String() string {
+	return b.value
+}
 
-		re.AlpineModel.PublicKey = &models.AlpineV001SchemaPublicKey{}
-		publicKey := viper.GetString("public-key")
-		keyURL, err := url.Parse(publicKey)
-		if err == nil && keyURL.IsAbs() {
-			re.AlpineModel.PublicKey.URL = strfmt.URI(publicKey)
-		} else {
-			keyBytes, err := ioutil.ReadFile(filepath.Clean(publicKey))
-			if err != nil {
-				return nil, fmt.Errorf("error reading public key file: %w", err)
-			}
-			re.AlpineModel.PublicKey.Content = strfmt.Base64(keyBytes)
-		}
-
-		if err := re.Validate(); err != nil {
-			return nil, err
-		}
-
-		if re.HasExternalEntities() {
-			if err := re.FetchExternalEntities(context.Background()); err != nil {
-				return nil, fmt.Errorf("error retrieving external entities: %v", err)
-			}
-		}
-
-		returnVal.APIVersion = swag.String(re.APIVersion())
-		returnVal.Spec = re.AlpineModel
+// Set validates the provided string against the appropriate validation rule
+// for b.flagType; if the string validates, it is stored in the Value and nil is returned.
+// Otherwise the validation error is returned but the state of the Value is not changed.
+func (b *baseValue) Set(s string) error {
+	if err := b.validationFunc(s); err != nil {
+		return err
 	}
-
-	return &returnVal, nil
-}
-
-func CreateRekordFromPFlags() (models.ProposedEntry, error) {
-	//TODO: how to select version of item to create
-	returnVal := models.Rekord{}
-	re := new(rekord_v001.V001Entry)
-
-	rekord := viper.GetString("entry")
-	if rekord != "" {
-		var rekordBytes []byte
-		rekordURL, err := url.Parse(rekord)
-		if err == nil && rekordURL.IsAbs() {
-			/* #nosec G107 */
-			rekordResp, err := http.Get(rekord)
-			if err != nil {
-				return nil, fmt.Errorf("error fetching 'rekord': %w", err)
-			}
-			defer rekordResp.Body.Close()
-			rekordBytes, err = ioutil.ReadAll(rekordResp.Body)
-			if err != nil {
-				return nil, fmt.Errorf("error fetching 'rekord': %w", err)
-			}
-		} else {
-			rekordBytes, err = ioutil.ReadFile(filepath.Clean(rekord))
-			if err != nil {
-				return nil, fmt.Errorf("error processing 'rekord' file: %w", err)
-			}
-		}
-		if err := json.Unmarshal(rekordBytes, &returnVal); err != nil {
-			return nil, fmt.Errorf("error parsing rekord file: %w", err)
-		}
-	} else {
-		// we will need artifact, public-key, signature
-		re.RekordObj.Data = &models.RekordV001SchemaData{}
-
-		artifact := viper.GetString("artifact")
-		dataURL, err := url.Parse(artifact)
-		if err == nil && dataURL.IsAbs() {
-			re.RekordObj.Data.URL = strfmt.URI(artifact)
-		} else {
-			artifactBytes, err := ioutil.ReadFile(filepath.Clean(artifact))
-			if err != nil {
-				return nil, fmt.Errorf("error reading artifact file: %w", err)
-			}
-			re.RekordObj.Data.Content = strfmt.Base64(artifactBytes)
-		}
-
-		re.RekordObj.Signature = &models.RekordV001SchemaSignature{}
-		pkiFormat := viper.GetString("pki-format")
-		switch pkiFormat {
-		case "pgp":
-			re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatPgp
-		case "minisign":
-			re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatMinisign
-		case "x509":
-			re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatX509
-		case "ssh":
-			re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatSSH
-		}
-		signature := viper.GetString("signature")
-		sigURL, err := url.Parse(signature)
-		if err == nil && sigURL.IsAbs() {
-			re.RekordObj.Signature.URL = strfmt.URI(signature)
-		} else {
-			signatureBytes, err := ioutil.ReadFile(filepath.Clean(signature))
-			if err != nil {
-				return nil, fmt.Errorf("error reading signature file: %w", err)
-			}
-			re.RekordObj.Signature.Content = strfmt.Base64(signatureBytes)
-		}
-
-		re.RekordObj.Signature.PublicKey = &models.RekordV001SchemaSignaturePublicKey{}
-		publicKey := viper.GetString("public-key")
-		keyURL, err := url.Parse(publicKey)
-		if err == nil && keyURL.IsAbs() {
-			re.RekordObj.Signature.PublicKey.URL = strfmt.URI(publicKey)
-		} else {
-			keyBytes, err := ioutil.ReadFile(filepath.Clean(publicKey))
-			if err != nil {
-				return nil, fmt.Errorf("error reading public key file: %w", err)
-			}
-			re.RekordObj.Signature.PublicKey.Content = strfmt.Base64(keyBytes)
-		}
-
-		if err := re.Validate(); err != nil {
-			return nil, err
-		}
-
-		if re.HasExternalEntities() {
-			if err := re.FetchExternalEntities(context.Background()); err != nil {
-				return nil, fmt.Errorf("error retrieving external entities: %v", err)
-			}
-		}
-
-		returnVal.APIVersion = swag.String(re.APIVersion())
-		returnVal.Spec = re.RekordObj
-	}
-
-	return &returnVal, nil
-}
-
-type fileOrURLFlag struct {
-	value string
-	IsURL bool
-}
-
-func (f *fileOrURLFlag) String() string {
-	return f.value
-}
-
-func (f *fileOrURLFlag) Set(s string) error {
-	if s == "" {
-		return errors.New("flag must be specified")
-	}
-	if _, err := os.Stat(filepath.Clean(s)); os.IsNotExist(err) {
-		u := urlFlag{}
-		if err := u.Set(s); err != nil {
-			return err
-		}
-		f.IsURL = true
-	}
-	f.value = s
+	b.value = s
 	return nil
 }
 
-func (f *fileOrURLFlag) Type() string {
-	return "fileOrURLFlag"
+// isURL returns true if the supplied value is a valid URL and false otherwise
+func isURL(v string) bool {
+	valGen := pflagValueFuncMap[urlFlag]
+	return valGen().Set(v) == nil
 }
 
-type typeFlag struct {
-	value string
-}
+// validateSHA256Value ensures that the supplied string matches the following format:
+// [sha256:]<64 hexadecimal characters>
+// where [sha256:] is optional
+func validateSHA256Value(v string) error {
+	var prefix, hash string
 
-func (t *typeFlag) Type() string {
-	return "typeFormat"
-}
-
-func (t *typeFlag) String() string {
-	return t.value
-}
-
-func (t *typeFlag) Set(s string) error {
-	set := map[string]struct{}{
-		"rekord":  {},
-		"rpm":     {},
-		"jar":     {},
-		"intoto":  {},
-		"rfc3161": {},
-		"alpine":  {},
+	split := strings.SplitN(v, ":", 2)
+	switch len(split) {
+	case 1:
+		hash = split[0]
+	case 2:
+		prefix = split[0]
+		hash = split[1]
 	}
-	if _, ok := set[s]; ok {
-		t.value = s
+
+	s := struct {
+		Prefix string `validate:"omitempty,oneof=sha256"`
+		Hash   string `validate:"required,len=64,hexadecimal"`
+	}{prefix, hash}
+
+	return useValidator(shaFlag, s)
+}
+
+// validateFileOrURL ensures the provided string is either a valid file path that can be opened or a valid URL
+func validateFileOrURL(v string) error {
+	valGen := pflagValueFuncMap[fileFlag]
+	if valGen().Set(v) == nil {
 		return nil
 	}
-	var types []string
-	for typeStr := range set {
-		types = append(types, typeStr)
-	}
-	return fmt.Errorf("value specified is invalid: [%s] supported values are: [%v]", s, strings.Join(types, ", "))
+	valGen = pflagValueFuncMap[urlFlag]
+	return valGen().Set(v)
 }
 
-type pkiFormatFlag struct {
-	value string
-}
-
-func (f *pkiFormatFlag) Type() string {
-	return "pkiFormat"
-}
-
-func (f *pkiFormatFlag) String() string {
-	return f.value
-}
-
-func (f *pkiFormatFlag) Set(s string) error {
-	set := map[string]struct{}{
-		"pgp":      {},
-		"minisign": {},
-		"x509":     {},
-		"ssh":      {},
-	}
-	if _, ok := set[s]; ok {
-		f.value = s
-		return nil
-	}
-	return fmt.Errorf("value specified is invalid: [%s] supported values are: [pgp, minisign, x509, ssh]", s)
-}
-
-type shaFlag struct {
-	hash string
-}
-
-func (s *shaFlag) String() string {
-	return s.hash
-}
-
-func (s *shaFlag) Set(v string) error {
-	if v == "" {
-		return errors.New("flag must be specified")
-	}
-	strToCheck := v
-	if strings.HasPrefix(v, "sha256:") {
-		strToCheck = strings.Replace(v, "sha256:", "", 1)
-	}
-	if _, err := hex.DecodeString(strToCheck); (err != nil) || (len(strToCheck) != 64) {
-		if err == nil {
-			err = errors.New("invalid length for value")
-		}
-		return fmt.Errorf("value specified is invalid: %w", err)
-	}
-	s.hash = v
-	return nil
-}
-
-func (s *shaFlag) Type() string {
-	return "sha"
-}
-
-type uuidFlag struct {
-	hash string
-}
-
-func (u *uuidFlag) String() string {
-	return u.hash
-}
-
-func (u *uuidFlag) Set(v string) error {
-	if v == "" {
-		return errors.New("flag must be specified")
-	}
-	if _, err := hex.DecodeString(v); (err != nil) || (len(v) != 64) {
-		if err == nil {
-			err = errors.New("invalid length for value")
-		}
-		return fmt.Errorf("value specified is invalid: %w", err)
-	}
-	u.hash = v
-	return nil
-}
-
-func (u *uuidFlag) Type() string {
-	return "uuid"
-}
-
-func addUUIDPFlags(cmd *cobra.Command, required bool) error {
-	cmd.Flags().Var(&uuidFlag{}, "uuid", "UUID of entry in transparency log (if known)")
-	if required {
-		if err := cmd.MarkFlagRequired("uuid"); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-type logIndexFlag struct {
-	index string
-}
-
-func (l *logIndexFlag) String() string {
-	return l.index
-}
-
-func (l *logIndexFlag) Set(v string) error {
-	if v == "" {
-		return errors.New("flag must be specified")
-	}
-	logIndexInt, err := strconv.ParseInt(v, 10, 0)
+// validateLogIndex ensures that the supplied string is a valid log index (integer >= 0)
+func validateLogIndex(v string) error {
+	i, err := strconv.Atoi(v)
 	if err != nil {
-		return fmt.Errorf("error parsing --log-index: %w", err)
-	} else if logIndexInt < 0 {
-		return errors.New("--log-index must be greater than or equal to 0")
+		return err
 	}
-	l.index = v
-	return nil
+	l := struct {
+		Index int `validate:"required,gte=0"`
+	}{i}
+
+	return useValidator(logIndexFlag, l)
 }
 
-func (l *logIndexFlag) Type() string {
-	return "logIndex"
+// validateOID ensures that the supplied string is a valid ASN.1 object identifier
+func validateOID(v string) error {
+	o := struct {
+		Oid []string `validate:"dive,numeric"`
+	}{strings.Split(v, ".")}
+
+	return useValidator(oidFlag, o)
 }
 
-func addLogIndexFlag(cmd *cobra.Command, required bool) error {
-	cmd.Flags().Var(&logIndexFlag{}, "log-index", "the index of the entry in the transparency log")
-	if required {
-		if err := cmd.MarkFlagRequired("log-index"); err != nil {
-			return err
-		}
+// validateTypeFlag ensures that the string is in the format type(\.version)? and
+// that one of the types requested is implemented
+func validateTypeFlag(v string) error {
+	_, _, err := ParseTypeFlag(v)
+	return err
+}
+
+// validateString returns a function that validates an input string against the specified tag,
+// as defined in the format supported by go-playground/validator
+func validateString(tag string) validationFunc {
+	return func(v string) error {
+		validator := validator.New()
+		return validator.Var(v, tag)
 	}
-	return nil
 }
 
-type emailFlag struct {
-	Email string `validate:"email"`
-}
-
-func (e *emailFlag) String() string {
-	return e.Email
-}
-
-func (e *emailFlag) Set(v string) error {
-	if v == "" {
-		return errors.New("flag must be specified")
-	}
-
-	e.Email = v
+// useValidator performs struct level validation on s as defined in the struct's tags using
+// the go-playground/validator library
+func useValidator(flagType FlagType, s interface{}) error {
 	validate := validator.New()
-	if err := validate.Struct(e); err != nil {
-		return fmt.Errorf("error parsing --email: %s", err)
+	if err := validate.Struct(s); err != nil {
+		return fmt.Errorf("error parsing %v flag: %w", flagType, err)
 	}
 
 	return nil
-}
-
-func (e *emailFlag) Type() string {
-	return "email"
 }

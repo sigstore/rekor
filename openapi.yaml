@@ -346,6 +346,22 @@ definitions:
         - spec
       additionalProperties: false
 
+  helm:
+    type: object
+    description: Helm chart
+    allOf:
+    - $ref: '#/definitions/ProposedEntry'
+    - properties:
+        apiVersion:
+          type: string
+          pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
+        spec:
+          type: object
+          $ref: 'pkg/types/helm/helm_schema.json'
+      required:
+        - apiVersion
+        - spec
+
   intoto:
     type: object
     description: Intoto object
@@ -414,6 +430,15 @@ definitions:
           additionalProperties: true
         integratedTime:
           type: integer
+        attestation:
+          type: object
+          properties:
+            data:
+              format: byte
+            mediaType:
+              format: string
+
+          format: byte
         verification:
           type: object
           properties:

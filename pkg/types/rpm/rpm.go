@@ -16,8 +16,9 @@
 package rpm
 
 import (
-	"errors"
+	"context"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 )
@@ -54,4 +55,19 @@ func (brt *BaseRPMType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl
 	}
 
 	return brt.VersionedUnmarshal(rpm, *rpm.APIVersion)
+}
+
+func (brt *BaseRPMType) CreateProposedEntry(ctx context.Context, version string, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	if version == "" {
+		version = brt.DefaultVersion()
+	}
+	ei, err := brt.VersionedUnmarshal(nil, version)
+	if err != nil {
+		return nil, errors.Wrap(err, "fetching RPM version implementation")
+	}
+	return ei.CreateFromArtifactProperties(ctx, props)
+}
+
+func (brt BaseRPMType) DefaultVersion() string {
+	return "0.0.1"
 }

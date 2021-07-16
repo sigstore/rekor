@@ -24,6 +24,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 
 	"github.com/sigstore/rekor/pkg/types/rfc3161"
 
@@ -77,13 +79,6 @@ func NewEntryFromBytes(timestamp []byte) models.ProposedEntry {
 func (v V001Entry) IndexKeys() []string {
 	var result []string
 
-	if v.HasExternalEntities() {
-		if err := v.FetchExternalEntities(context.Background()); err != nil {
-			log.Logger.Error(err)
-			return result
-		}
-	}
-
 	str := v.Rfc3161Obj.Tsr.Content.String()
 	tb, err := base64.StdEncoding.DecodeString(str)
 	if err != nil {
@@ -111,11 +106,10 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 	// field validation
 	if err := v.Rfc3161Obj.Validate(strfmt.Default); err != nil {
-
 		return err
 	}
 
-	if err := v.Validate(); err != nil {
+	if err := v.validate(); err != nil {
 		return err
 	}
 
@@ -124,15 +118,10 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return nil
 }
 
-func (v V001Entry) HasExternalEntities() bool {
-	return false
-}
-
-func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
-	return nil
-}
-
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+	if v.tsrContent == nil {
+		return nil, errors.New("tsr content must be set before canonicalizing")
+	}
 	canonicalEntry := models.Rfc3161V001Schema{
 		Tsr: &models.Rfc3161V001SchemaTsr{
 			Content: v.tsrContent,
@@ -150,8 +139,8 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	return json.Marshal(&ref3161Obj)
 }
 
-// Validate performs cross-field validation for fields in object
-func (v V001Entry) Validate() error {
+// validate performs cross-field validation for fields in object
+func (v V001Entry) validate() error {
 	data := v.Rfc3161Obj.Tsr
 	if data == nil {
 		return errors.New("missing tsr data")
@@ -175,14 +164,14 @@ func (v V001Entry) Validate() error {
 		return err
 	}
 	if tsr.Status.Status != pkcs9.StatusGranted && tsr.Status.Status != pkcs9.StatusGrantedWithMods {
-		return fmt.Errorf("Tsr status not granted: %v", tsr.Status.Status)
+		return fmt.Errorf("tsr status not granted: %v", tsr.Status.Status)
 	}
 	if !tsr.TimeStampToken.ContentType.Equal(asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 7, 2}) {
-		return fmt.Errorf("Tsr wrong content type: %v", tsr.TimeStampToken.ContentType)
+		return fmt.Errorf("tsr wrong content type: %v", tsr.TimeStampToken.ContentType)
 	}
 	_, err = tsr.TimeStampToken.Content.Verify(nil, false)
 	if err != nil {
-		return fmt.Errorf("Tsr verification error: %v", err)
+		return fmt.Errorf("tsr verification error: %v", err)
 	}
 
 	return nil
@@ -190,4 +179,37 @@ func (v V001Entry) Validate() error {
 
 func (v V001Entry) Attestation() (string, []byte) {
 	return "", nil
+}
+
+func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	returnVal := models.Rfc3161{}
+
+	var err error
+	artifactBytes := props.ArtifactBytes
+	if artifactBytes == nil {
+		if props.ArtifactPath == nil {
+			return nil, errors.New("path to artifact file must be specified")
+		}
+		if props.ArtifactPath.IsAbs() {
+			return nil, errors.New("RFC3161 timestamps cannot be fetched over HTTP(S)")
+		}
+		artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+		if err != nil {
+			return nil, fmt.Errorf("error reading artifact file: %w", err)
+		}
+	}
+
+	b64 := strfmt.Base64(artifactBytes)
+	re := V001Entry{
+		Rfc3161Obj: models.Rfc3161V001Schema{
+			Tsr: &models.Rfc3161V001SchemaTsr{
+				Content: &b64,
+			},
+		},
+	}
+
+	returnVal.Spec = re.Rfc3161Obj
+	returnVal.APIVersion = swag.String(re.APIVersion())
+
+	return &returnVal, nil
 }

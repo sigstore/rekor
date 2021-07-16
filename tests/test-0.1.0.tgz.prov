@@ -1,0 +1,22 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+apiVersion: v2
+description: Test Helm Chart
+name: test
+type: application
+version: 0.1.0
+
+...
+files:
+  test-0.1.0.tgz: sha256:6dec7ea21e655d5796c1e214cfb75b73428b2abfa2e66c8f7bc64ff4a7b3b29f
+-----BEGIN PGP SIGNATURE-----
+
+wsBcBAEBCgAQBQJg1/71CRDDyCivtmgcFwAAMEcIABaRFqHhb6ibQqIC7xkn0U7j
+SDEKoDPt7lKJlBWe/9Q1hE1L7AslczkCBBdLI67lHJnEQH6doT2n6ww3yoJJw7gw
+w4ZkNqhdYAYbYDE8FlwgMdi3VqPrCABZA2G9zh9PcmjrS1S+GrznujK26OLA3ooc
+giBTLJ5wsVuP2aQpr+b3czK4pLmWjs1lDywoEtptxgK+Ooyt2XqTzkmWDZvSiYEQ
+vrbb71muPbJVn0+1mW88EyACoUiqNZLu15kyNgSZC6By/C58RPatYz9DieyZoSIQ
+kJeTX/NeHfwBHbpy7fenDfnMbj4LqjvLxeyod7Nc/57dUesimR++2ZC5A4bkq+c=
+=BNTk
+-----END PGP SIGNATURE-----

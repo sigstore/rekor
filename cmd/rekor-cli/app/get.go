@@ -38,15 +38,22 @@ import (
 )
 
 type getCmdOutput struct {
-	Body           interface{}
-	LogIndex       int
-	IntegratedTime int64
-	UUID           string
-	LogID          string
+	Attestation     string
+	AttestationType string
+	Body            interface{}
+	LogIndex        int
+	IntegratedTime  int64
+	UUID            string
+	LogID           string
 }
 
 func (g *getCmdOutput) String() string {
 	s := fmt.Sprintf("LogID: %v\n", g.LogID)
+
+	if g.Attestation != "" {
+		s += fmt.Sprintf("Attestation: %s\n", g.Attestation)
+	}
+
 	s += fmt.Sprintf("Index: %d\n", g.LogIndex)
 	dt := time.Unix(g.IntegratedTime, 0).UTC().Format(time.RFC3339)
 	s += fmt.Sprintf("IntegratedTime: %s\n", dt)
@@ -67,7 +74,7 @@ var getCmd = &cobra.Command{
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			log.Logger.Fatal("Error initializing cmd line args: ", err)
+			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
 		}
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
@@ -141,22 +148,25 @@ func parseEntry(uuid string, e models.LogEntryAnon) (interface{}, error) {
 	}
 
 	obj := getCmdOutput{
-		Body:           eimpl,
-		UUID:           uuid,
-		IntegratedTime: *e.IntegratedTime,
-		LogIndex:       int(*e.LogIndex),
-		LogID:          *e.LogID,
+		Attestation:     string(e.Attestation.Data),
+		AttestationType: e.Attestation.MediaType,
+		Body:            eimpl,
+		UUID:            uuid,
+		IntegratedTime:  *e.IntegratedTime,
+		LogIndex:        int(*e.LogIndex),
+		LogID:           *e.LogID,
 	}
 
 	return &obj, nil
 }
 
 func init() {
+	initializePFlagMap()
 	if err := addUUIDPFlags(getCmd, false); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args:", err)
+		log.CliLogger.Fatal("Error parsing cmd line args: ", err)
 	}
 	if err := addLogIndexFlag(getCmd, false); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args:", err)
+		log.CliLogger.Fatal("Error parsing cmd line args: ", err)
 	}
 
 	rootCmd.AddCommand(getCmd)

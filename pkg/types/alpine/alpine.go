@@ -16,8 +16,9 @@
 package alpine
 
 import (
-	"errors"
+	"context"
 
+	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 )
@@ -43,7 +44,7 @@ func New() types.TypeImpl {
 
 var VersionMap = types.NewSemVerEntryFactoryMap()
 
-func (brt *BaseAlpineType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
+func (bat *BaseAlpineType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
 	if pe == nil {
 		return nil, errors.New("proposed entry cannot be nil")
 	}
@@ -53,5 +54,20 @@ func (brt *BaseAlpineType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryI
 		return nil, errors.New("cannot unmarshal non-Alpine types")
 	}
 
-	return brt.VersionedUnmarshal(apk, *apk.APIVersion)
+	return bat.VersionedUnmarshal(apk, *apk.APIVersion)
+}
+
+func (bat *BaseAlpineType) CreateProposedEntry(ctx context.Context, version string, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	if version == "" {
+		version = bat.DefaultVersion()
+	}
+	ei, err := bat.VersionedUnmarshal(nil, version)
+	if err != nil {
+		return nil, errors.Wrap(err, "fetching Intoto version implementation")
+	}
+	return ei.CreateFromArtifactProperties(ctx, props)
+}
+
+func (bat BaseAlpineType) DefaultVersion() string {
+	return "0.0.1"
 }

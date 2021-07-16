@@ -1,0 +1,12 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.sigstore.dev/types/helm/helm_schema.json",
+    "title": "Helm Schema",
+    "description": "Schema for Helm objects",
+    "type": "object",
+    "oneOf": [
+        {
+            "$ref": "v0.0.1/helm_v0_0_1_schema.json"
+        }
+    ]
+}

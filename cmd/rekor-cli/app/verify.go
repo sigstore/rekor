@@ -16,8 +16,8 @@
 package app
 
 import (
+	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math/bits"
 	"strconv"
@@ -32,6 +32,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/types"
 )
 
 type verifyCmdOutput struct {
@@ -79,7 +80,6 @@ var verifyCmd = &cobra.Command{
 			return fmt.Errorf("error initializing cmd line args: %s", err)
 		}
 		if err := validateArtifactPFlags(true, true); err != nil {
-			_ = cmd.Help()
 			return err
 		}
 		return nil
@@ -105,40 +105,16 @@ var verifyCmd = &cobra.Command{
 			}
 			searchLogQuery.LogIndexes = []*int64{&logIndexInt}
 		} else {
-			var entry models.ProposedEntry
-			switch viper.GetString("type") {
-			case "rekord":
-				entry, err = CreateRekordFromPFlags()
-				if err != nil {
-					return nil, err
-				}
-			case "rpm":
-				entry, err = CreateRpmFromPFlags()
-				if err != nil {
-					return nil, err
-				}
-			case "jar":
-				entry, err = CreateJarFromPFlags()
-				if err != nil {
-					return nil, err
-				}
-			case "intoto":
-				entry, err = CreateIntotoFromPFlags()
-				if err != nil {
-					return nil, err
-				}
-			case "rfc3161":
-				entry, err = CreateRFC3161FromPFlags()
-				if err != nil {
-					return nil, err
-				}
-			case "alpine":
-				entry, err = CreateAlpineFromPFlags()
-				if err != nil {
-					return nil, err
-				}
-			default:
-				return nil, errors.New("invalid type specified")
+			typeStr, versionStr, err := ParseTypeFlag(viper.GetString("type"))
+			if err != nil {
+				return nil, err
+			}
+
+			props := CreatePropsFromPflags()
+
+			entry, err := types.NewProposedEntry(context.Background(), typeStr, versionStr, *props)
+			if err != nil {
+				return nil, err
 			}
 
 			entries := []models.ProposedEntry{entry}
@@ -187,14 +163,15 @@ var verifyCmd = &cobra.Command{
 }
 
 func init() {
+	initializePFlagMap()
 	if err := addArtifactPFlags(verifyCmd); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args:", err)
+		log.CliLogger.Fatal("Error parsing cmd line args:", err)
 	}
 	if err := addUUIDPFlags(verifyCmd, false); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args:", err)
+		log.CliLogger.Fatal("Error parsing cmd line args:", err)
 	}
 	if err := addLogIndexFlag(verifyCmd, false); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args:", err)
+		log.CliLogger.Fatal("Error parsing cmd line args:", err)
 	}
 
 	rootCmd.AddCommand(verifyCmd)

@@ -6,7 +6,19 @@ Rekor supports pluggable types (aka different schemas) for entries stored in the
 
 ### Currently supported types
 
-- Rekord (default type) [schema](rekord/rekord_schema.json)
+- Alpine Packages [schema](alpine/alpine_schema.json)
+  - Versions: 0.0.1
+- Helm Provenance Files [schema](helm/helm_schema.json)
+  - Versions: 0.0.1
+- In-Toto Attestations [schema](intoto/intoto_schema.json)
+  - Versions: 0.0.1
+- Java Archives (JAR Files) [schema](jar/jar_schema.json)
+  - Versions: 0.0.1
+- Rekord *(default type)* [schema](rekord/rekord_schema.json)
+  - Versions: 0.0.1
+- RFC3161 Timestamps [schema](rfc3161/rfc3161_schema.json)
+  - Versions: 0.0.1
+- RPM Packages [schema](rpm/rpm_schema.json)
   - Versions: 0.0.1
 
 
@@ -61,14 +73,20 @@ To add a new type (called `newType` in this example):
 3. In this new Go package, define a struct that:
 ```go
 type TypeImpl interface {
+	CreateProposedEntry(context.Context, string, ArtifactProperties) (models.ProposedEntry, error)
+	DefaultVersion() string
+	SupportedVersions() []string
 	UnmarshalEntry(pe models.ProposedEntry) (EntryImpl, error)
 }
 ```
   - implements the `TypeImpl` interface as defined in `types.go`:
+    - `CreateProposedEntry` will be called with string specifying the requested version and an ArtifactProperties struct that calls the version's `CreateFromArtifactProperties` method
+    - `DefaultVersion` specifies the default version for the type to be used if one is not explicitly requested
+    - `SupportedVersions` specifies a list of all version strings that are supported by this Rekor instance
     - `UnmarshalEntry` will be called with a pointer to a struct that was automatically generated for the type defined in `openapi.yaml` by the [go-swagger](http://github.com/go-swagger/go-swagger) tool used by Rekor
       - This struct will be defined in the generated file at `pkg/generated/models/newType.go` (where `newType` is replaced with the name of the type you are adding)
       - This method should return a pointer to an instance of a struct that implements the `EntryImpl` interface as defined in `types.go`, or a `nil` pointer with an error specified
-  - embedds the `RekorType` type into the struct definition 
+  - embeds the `RekorType` type into the struct definition 
     - The purpose of this is to set the Kind variable to match the type name
     - `RekorType` also includes a `VersionMap` field, which provides the lookup for a version string from a proposed entry to find the correct implmentation code
 
@@ -78,21 +96,20 @@ type EntryImpl interface {
 	APIVersion() string
 	IndexKeys() []string
 	Canonicalize(ctx context.Context) ([]byte, error)
-	FetchExternalEntities(ctx context.Context) error
-	HasExternalEntities() bool
 	Unmarshal(pe models.ProposedEntry) error
-	Validate() error
+	Attestation() (string, []byte)
+	CreateFromArtifactProperties(context.Context, ArtifactProperties) (models.ProposedEntry, error)
 }
 ```
 
   - `APIVersion` should return a version string that identifies the version of the type supported by the Rekor server
   - `IndexKeys` should return a `[]string` that extracts the keys from an entry to be stored in the search index
   - `Canonicalize` should return a `[]byte` containing the canonicalized contents representing the entry. The canonicalization of contents is important as we should have one record per unique signed object in the transparency log.
-  - `FetchExternalEntities` should retrieve any entities that make up the entry which were not included in the object provided in the HTTP request to the Rekor server
-  - `HasExternalEntities` indicates whether the instance of the struct has any external entities it has yet to fetch and resolve
   - `Unmarshal` will be called with a pointer to a struct that was automatically generated for the type defined in `openapi.yaml` by the [go-swagger](http://github.com/go-swagger/go-swagger) tool used by Rekor
     - This method should validate the contents of the struct to ensure any string or cross-field dependencies are met to successfully insert an entry of this type into the transparency log
-  - `Validate` performs cross-field validation for fields in object that can not be expressed easily in the OpenAPI definition
+    - This method should also succesfully unmarshal entries that have been canonicalized and inserted into the log; however, it is worth noting that you may not be able to re-canonicalize an entry (since the original content required to verify the signature may not be present in the persisted log entry).
+  - `Attestation` provides types to return an in-toto attestation that should be persisted.
+  - `CreateFromArtifactProperties` creates a new entry given the specified artifact properties (typically passed in by `rekor-cli`).
 
 5. In the Go package you have created for the new type, be sure to add an entry in the `TypeMap` in `github.com/sigstore/rekor/pkg/types` for your new type in the `init` method for your package. The key for the map is the unique string used to define your type in `openapi.yaml` (e.g. `newType`), and the value for the map is the name of a factory function for an instance of `TypeImpl`.
 
@@ -102,9 +119,11 @@ func init() {
 }
 ```
 
-6. Add an entry to `pluggableTypeMap` in `cmd/server/app/serve.go` that provides a reference to your package. This ensures that the `init` function of your type (and optionally, your version implementation) will be called before the server starts to process incoming requests and therefore will be added to the map that is used to route request processing for different types.
+6. Add an entry to `pluggableTypeMap` in `cmd/rekor-server/app/serve.go` that provides a reference to your package. This ensures that the `init` function of your type (and optionally, your version implementation) will be called before the server starts to process incoming requests and therefore will be added to the map that is used to route request processing for different types.
 
-7. After adding sufficient unit & integration tests, submit a pull request to `github.com/sigstore/rekor` for review and addition to the codebase.
+7. Add an import statement to `cmd/rekor-cli/app/root.go` that provides a reference to your package/new version. This ensures that the `init` function of your type (and optionally, your version implementation) will be called before the CLI runs; this populates the required type maps and allows the CLI to interact with the type implementations in a loosely coupled manner.
+
+8. After adding sufficient unit & integration tests, submit a pull request to `github.com/sigstore/rekor` for review and addition to the codebase.
 
 ## Adding a New Version of the `Rekord` type
 
@@ -118,6 +137,8 @@ To add new version of the default `Rekord` type:
 
 4. In your package's `init` method, ensure there is a call to `VersionMap.Store()` which provides the link between the valid *semver* ranges that your package can successfully process and the factory function that creates an instance of a struct for your new version.
 
-5. Add an entry to `pluggableTypeMap` in `cmd/server/app/serve.go` that provides a reference to the Go package implementing the new version. This ensures that the `init` function will be called before the server starts to process incoming requests and therefore will be added to the map that is used to route request processing for different types.
+5. Add an entry to `pluggableTypeMap` in `cmd/rekor-server/app/serve.go` that provides a reference to the Go package implementing the new version. This ensures that the `init` function will be called before the server starts to process incoming requests and therefore will be added to the map that is used to route request processing for different types.
 
-6. After adding sufficient unit & integration tests, submit a pull request to `github.com/sigstore/rekor` for review and addition to the codebase.
+6. Add an import statement to `cmd/rekor-cli/app/root.go` that provides a reference to your package/new version. This ensures that the `init` function of your type (and optionally, your version implementation) will be called before the CLI runs; this populates the required type maps and allows the CLI to interact with the type implementations in a loosely coupled manner.
+
+7. After adding sufficient unit & integration tests, submit a pull request to `github.com/sigstore/rekor` for review and addition to the codebase.

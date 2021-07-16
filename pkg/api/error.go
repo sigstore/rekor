@@ -46,6 +46,7 @@ const (
 	signingError                      = "Error signing"
 	failedToGenerateTimestampResponse = "Error generating timestamp response"
 	sthGenerateError                  = "Error generating signed tree head"
+	unsupportedPKIFormat              = "The PKI format requested is not supported by this server"
 )
 
 func errorMsg(message string, code int) *models.Error {
@@ -110,6 +111,7 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 			}
 			return resp
 		default:
+			logMsg(params.HTTPRequest)
 			return entries.NewCreateLogEntryDefault(code).WithPayload(errorMsg(message, code))
 		}
 	case entries.SearchLogQueryParams:

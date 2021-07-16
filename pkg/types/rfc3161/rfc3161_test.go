@@ -69,6 +69,9 @@ func (u UnmarshalTester) Unmarshal(pe models.ProposedEntry) error {
 func (u UnmarshalFailsTester) Attestation() (string, []byte) {
 	return "", nil
 }
+func (u UnmarshalTester) CreateFromArtifactProperties(_ context.Context, _ types.ArtifactProperties) (models.ProposedEntry, error) {
+	return nil, nil
+}
 
 type UnmarshalFailsTester struct {
 	UnmarshalTester

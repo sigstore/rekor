@@ -23,6 +23,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	"github.com/asaskevich/govalidator"
@@ -106,7 +108,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 	// cross field validation
-	return nil
+	return v.validate()
 
 }
 
@@ -132,7 +134,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		return nil
 	}
 
-	if err := v.Validate(); err != nil {
+	if err := v.validate(); err != nil {
 		return err
 	}
 
@@ -161,7 +163,10 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	if v.RekordObj.Data.Hash != nil && v.RekordObj.Data.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.RekordObj.Data.Hash.Value)
 	}
-	artifactFactory := pki.NewArtifactFactory(v.RekordObj.Signature.Format)
+	artifactFactory, err := pki.NewArtifactFactory(pki.Format(v.RekordObj.Signature.Format))
+	if err != nil {
+		return err
+	}
 
 	g.Go(func() error {
 		defer hashW.Close()
@@ -342,9 +347,8 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	return bytes, nil
 }
 
-// Validate performs cross-field validation for fields in object
-func (v V001Entry) Validate() error {
-
+// validate performs cross-field validation for fields in object
+func (v V001Entry) validate() error {
 	sig := v.RekordObj.Signature
 	if sig == nil {
 		return errors.New("missing signature")
@@ -366,15 +370,13 @@ func (v V001Entry) Validate() error {
 		return errors.New("missing data")
 	}
 
-	if len(data.Content) == 0 && data.URL.String() == "" {
-		return errors.New("one of 'content' or 'url' must be specified for data")
-	}
-
 	hash := data.Hash
 	if hash != nil {
 		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
 			return errors.New("invalid value for hash")
 		}
+	} else if len(data.Content) == 0 && data.URL.String() == "" {
+		return errors.New("one of 'content' or 'url' must be specified for data")
 	}
 
 	return nil
@@ -382,4 +384,100 @@ func (v V001Entry) Validate() error {
 
 func (v V001Entry) Attestation() (string, []byte) {
 	return "", nil
+}
+
+func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	returnVal := models.Rekord{}
+	re := V001Entry{}
+
+	// we will need artifact, public-key, signature
+	re.RekordObj.Data = &models.RekordV001SchemaData{}
+
+	var err error
+	artifactBytes := props.ArtifactBytes
+	if artifactBytes == nil {
+		if props.ArtifactPath == nil {
+			return nil, errors.New("path to artifact (file or URL) must be specified")
+		}
+		if props.ArtifactPath.IsAbs() {
+			re.RekordObj.Data.URL = strfmt.URI(props.ArtifactPath.String())
+			if props.ArtifactHash != "" {
+				re.RekordObj.Data.Hash = &models.RekordV001SchemaDataHash{
+					Algorithm: swag.String(models.RekordV001SchemaDataHashAlgorithmSha256),
+					Value:     swag.String(props.ArtifactHash),
+				}
+			}
+		} else {
+			artifactBytes, err := ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading artifact file: %w", err)
+			}
+			re.RekordObj.Data.Content = strfmt.Base64(artifactBytes)
+		}
+	} else {
+		re.RekordObj.Data.Content = strfmt.Base64(artifactBytes)
+	}
+
+	re.RekordObj.Signature = &models.RekordV001SchemaSignature{}
+	switch props.PKIFormat {
+	case "pgp":
+		re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatPgp
+	case "minisign":
+		re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatMinisign
+	case "x509":
+		re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatX509
+	case "ssh":
+		re.RekordObj.Signature.Format = models.RekordV001SchemaSignatureFormatSSH
+	}
+	sigBytes := props.SignatureBytes
+	if sigBytes == nil {
+		if props.SignaturePath == nil {
+			return nil, errors.New("a detached signature must be provided")
+		}
+		if props.SignaturePath.IsAbs() {
+			re.RekordObj.Signature.URL = strfmt.URI(props.SignaturePath.String())
+		} else {
+			sigBytes, err = ioutil.ReadFile(filepath.Clean(props.SignaturePath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading signature file: %w", err)
+			}
+			re.RekordObj.Signature.Content = strfmt.Base64(sigBytes)
+		}
+	} else {
+		re.RekordObj.Signature.Content = strfmt.Base64(sigBytes)
+	}
+
+	re.RekordObj.Signature.PublicKey = &models.RekordV001SchemaSignaturePublicKey{}
+	publicKeyBytes := props.PublicKeyBytes
+	if publicKeyBytes == nil {
+		if props.PublicKeyPath == nil {
+			return nil, errors.New("public key must be provided to verify detached signature")
+		}
+		if props.PublicKeyPath.IsAbs() {
+			re.RekordObj.Signature.PublicKey.URL = strfmt.URI(props.PublicKeyPath.String())
+		} else {
+			publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading public key file: %w", err)
+			}
+			re.RekordObj.Signature.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+		}
+	} else {
+		re.RekordObj.Signature.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+	}
+
+	if err := re.validate(); err != nil {
+		return nil, err
+	}
+
+	if re.HasExternalEntities() {
+		if err := re.FetchExternalEntities(ctx); err != nil {
+			return nil, fmt.Errorf("error retrieving external entities: %v", err)
+		}
+	}
+
+	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.Spec = re.RekordObj
+
+	return &returnVal, nil
 }

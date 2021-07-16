@@ -16,6 +16,7 @@
 package types
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -37,26 +38,43 @@ type RekorType struct {
 // TypeImpl is implemented by all types to support the polymorphic conversion of abstract
 // proposed entry to a working implementation for the versioned type requested, if supported
 type TypeImpl interface {
+	CreateProposedEntry(context.Context, string, ArtifactProperties) (models.ProposedEntry, error)
+	DefaultVersion() string
+	SupportedVersions() []string
 	UnmarshalEntry(pe models.ProposedEntry) (EntryImpl, error)
 }
 
 // VersionedUnmarshal extracts the correct implementing factory function from the type's version map,
 // creates an entry of that versioned type and then calls that versioned type's unmarshal method
 func (rt *RekorType) VersionedUnmarshal(pe models.ProposedEntry, version string) (EntryImpl, error) {
-	if pe == nil {
-		return nil, errors.New("proposed entry cannot be nil")
-	}
-
 	ef, err := rt.VersionMap.GetEntryFactory(version)
 	if err != nil {
-		return nil, fmt.Errorf("%s implementation for version '%v' not found: %w", pe.Kind(), version, err)
+		return nil, fmt.Errorf("%s implementation for version '%v' not found: %w", rt.Kind, version, err)
 	}
 	entry := ef()
 	if entry == nil {
 		return nil, errors.New("failure generating object")
 	}
-	if err := entry.Unmarshal(pe); err != nil {
-		return nil, err
+	if pe == nil {
+		return entry, nil
 	}
-	return entry, nil
+	return entry, entry.Unmarshal(pe)
+}
+
+func (rt *RekorType) SupportedVersions() []string {
+	return rt.VersionMap.SupportedVersions()
+}
+
+// ListImplementedTypes returns a list of all type strings currently known to
+// be implemented
+func ListImplementedTypes() []string {
+	retVal := []string{}
+	TypeMap.Range(func(k interface{}, v interface{}) bool {
+		tf := v.(func() TypeImpl)
+		for _, verStr := range tf().SupportedVersions() {
+			retVal = append(retVal, fmt.Sprintf("%v:%v", k.(string), verStr))
+		}
+		return true
+	})
+	return retVal
 }

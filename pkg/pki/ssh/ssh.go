@@ -55,7 +55,7 @@ func (s Signature) Verify(r io.Reader, k interface{}) error {
 
 	key, ok := k.(*PublicKey)
 	if !ok {
-		return fmt.Errorf("Invalid public key type for: %v", k)
+		return fmt.Errorf("invalid public key type for: %v", k)
 	}
 
 	ck, err := key.CanonicalValue()

@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	minisign "github.com/jedisct1/go-minisign"
-	"github.com/sigstore/sigstore/pkg/signature"
+	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
 
 // Signature Signature that follows the minisign standard; supports both minisign and signify generated signatures
@@ -98,7 +98,7 @@ func (s Signature) Verify(r io.Reader, k interface{}) error {
 		return fmt.Errorf("minisign public key has not been initialized")
 	}
 
-	verifier, err := signature.LoadED25519Verifier(key.key.PublicKey[:])
+	verifier, err := sigsig.LoadED25519Verifier(key.key.PublicKey[:])
 	if err != nil {
 		return err
 	}

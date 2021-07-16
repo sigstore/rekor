@@ -27,6 +27,7 @@ import (
 	"io"
 	"io/ioutil"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/sigstore/rekor/pkg/log"
@@ -73,8 +74,8 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() []string {
 	var result []string
 
-	if v.HasExternalEntities() {
-		if err := v.FetchExternalEntities(context.Background()); err != nil {
+	if v.hasExternalEntities() {
+		if err := v.fetchExternalEntities(context.Background()); err != nil {
 			log.Logger.Error(err)
 			return result
 		}
@@ -110,11 +111,11 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	if err := v.JARModel.Validate(strfmt.Default); err != nil {
 		return err
 	}
-	return nil
 
+	return v.validate()
 }
 
-func (v V001Entry) HasExternalEntities() bool {
+func (v V001Entry) hasExternalEntities() bool {
 	if v.fetchedExternalEntities {
 		return false
 	}
@@ -125,12 +126,12 @@ func (v V001Entry) HasExternalEntities() bool {
 	return false
 }
 
-func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
+func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	if v.fetchedExternalEntities {
 		return nil
 	}
 
-	if err := v.Validate(); err != nil {
+	if err := v.validate(); err != nil {
 		return err
 	}
 
@@ -178,7 +179,10 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	}
 	v.jarObj = jarObj[0]
 
-	af := pki.NewArtifactFactory("pkcs7")
+	af, err := pki.NewArtifactFactory(pki.PKCS7)
+	if err != nil {
+		return err
+	}
 	// we need to find and extract the PKCS7 bundle from the JAR file manually
 	sigPKCS7, err := extractPKCS7SignatureFromJAR(zipReader)
 	if err != nil {
@@ -207,7 +211,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
-	if err := v.FetchExternalEntities(ctx); err != nil {
+	if err := v.fetchExternalEntities(ctx); err != nil {
 		return nil, err
 	}
 	if v.jarObj == nil {
@@ -260,15 +264,18 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	return bytes, nil
 }
 
-// Validate performs cross-field validation for fields in object
-func (v V001Entry) Validate() error {
+// validate performs cross-field validation for fields in object
+func (v V001Entry) validate() error {
 	archive := v.JARModel.Archive
 	if archive == nil {
 		return errors.New("missing package")
 	}
 
-	if len(archive.Content) == 0 && archive.URL.String() == "" {
-		return errors.New("one of 'content' or 'url' must be specified for package")
+	// if the signature isn't present, then we need content to extract
+	if v.JARModel.Signature == nil || v.JARModel.Signature.Content == nil {
+		if len(archive.Content) == 0 && archive.URL.String() == "" {
+			return errors.New("one of 'content' or 'url' must be specified for package")
+		}
 	}
 
 	hash := archive.Hash
@@ -315,4 +322,54 @@ func extractPKCS7SignatureFromJAR(inz *zip.Reader) ([]byte, error) {
 
 func (v V001Entry) Attestation() (string, []byte) {
 	return "", nil
+}
+
+func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	returnVal := models.Jar{}
+	re := V001Entry{}
+
+	// we will need only the artifact; public-key & signature are embedded in JAR
+	re.JARModel = models.JarV001Schema{}
+	re.JARModel.Archive = &models.JarV001SchemaArchive{}
+
+	var err error
+	artifactBytes := props.ArtifactBytes
+	if artifactBytes == nil {
+		if props.ArtifactPath == nil {
+			return nil, errors.New("path to JAR archive (file or URL) must be specified")
+		}
+		if props.ArtifactPath.IsAbs() {
+			re.JARModel.Archive.URL = strfmt.URI(props.ArtifactPath.String())
+			if props.ArtifactHash != "" {
+				re.JARModel.Archive.Hash = &models.JarV001SchemaArchiveHash{
+					Algorithm: swag.String(models.JarV001SchemaArchiveHashAlgorithmSha256),
+					Value:     swag.String(props.ArtifactHash),
+				}
+			}
+		} else {
+			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading JAR file: %w", err)
+			}
+			//TODO: ensure this is a valid JAR file; look for META-INF/MANIFEST.MF?
+			re.JARModel.Archive.Content = strfmt.Base64(artifactBytes)
+		}
+	} else {
+		re.JARModel.Archive.Content = strfmt.Base64(artifactBytes)
+	}
+
+	if err := re.validate(); err != nil {
+		return nil, err
+	}
+
+	if re.hasExternalEntities() {
+		if err := re.fetchExternalEntities(ctx); err != nil {
+			return nil, fmt.Errorf("error retrieving external entities: %v", err)
+		}
+	}
+
+	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.Spec = re.JARModel
+
+	return &returnVal, nil
 }

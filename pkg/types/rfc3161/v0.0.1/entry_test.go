@@ -16,6 +16,7 @@
 package rfc3161
 
 import (
+	"bytes"
 	"context"
 	"encoding/asn1"
 	"errors"
@@ -28,11 +29,13 @@ import (
 
 	"github.com/sassoftware/relic/lib/pkcs9"
 
+	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"go.uber.org/goleak"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/types"
 )
 
 func TestMain(m *testing.M) {
@@ -50,7 +53,6 @@ func TestCrossFieldValidation(t *testing.T) {
 	type TestCase struct {
 		caseDesc                     string
 		entry                        V001Entry
-		hasExtEntities               bool
 		expectUnmarshalSuccess       bool
 		expectCanonicalizeSuccess    bool
 		expectValidationErrorMessage string
@@ -82,9 +84,8 @@ func TestCrossFieldValidation(t *testing.T) {
 		{
 			caseDesc:                     "empty obj",
 			entry:                        V001Entry{},
-			hasExtEntities:               false,
 			expectUnmarshalSuccess:       false,
-			expectCanonicalizeSuccess:    true,
+			expectCanonicalizeSuccess:    false,
 			expectValidationErrorMessage: "validation failure",
 		},
 		{
@@ -96,7 +97,6 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			hasExtEntities:            false,
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
 		},
@@ -109,9 +109,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			hasExtEntities:               false,
 			expectUnmarshalSuccess:       false,
-			expectCanonicalizeSuccess:    true,
+			expectCanonicalizeSuccess:    false,
 			expectValidationErrorMessage: "tsr exceeds maximum allowed size (10kB)",
 		},
 		{
@@ -123,10 +122,9 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			hasExtEntities:               false,
 			expectUnmarshalSuccess:       false,
-			expectCanonicalizeSuccess:    true,
-			expectValidationErrorMessage: "Tsr status not granted: 2",
+			expectCanonicalizeSuccess:    false,
+			expectValidationErrorMessage: "tsr status not granted: 2",
 		},
 		{
 			caseDesc: "invalid obj - bad content type",
@@ -137,10 +135,9 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			hasExtEntities:               false,
 			expectUnmarshalSuccess:       false,
-			expectCanonicalizeSuccess:    true,
-			expectValidationErrorMessage: "Tsr wrong content type: 0.0.0.0.42",
+			expectCanonicalizeSuccess:    false,
+			expectValidationErrorMessage: "tsr wrong content type: 0.0.0.0.42",
 		},
 		{
 			caseDesc: "invalid obj - bad content",
@@ -151,10 +148,9 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			hasExtEntities:               false,
 			expectUnmarshalSuccess:       false,
-			expectCanonicalizeSuccess:    true,
-			expectValidationErrorMessage: "Tsr verification error",
+			expectCanonicalizeSuccess:    false,
+			expectValidationErrorMessage: "tsr verification error",
 		},
 		{
 			caseDesc: "valid obj with extra data",
@@ -166,7 +162,6 @@ func TestCrossFieldValidation(t *testing.T) {
 					ExtraData: []byte("{\"something\": \"here\""),
 				},
 			},
-			hasExtEntities:            false,
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
 		},
@@ -187,12 +182,18 @@ func TestCrossFieldValidation(t *testing.T) {
 			}
 		}
 
-		if tc.entry.HasExternalEntities() != tc.hasExtEntities {
-			t.Errorf("unexpected result from HasExternalEntities for '%v'", tc.caseDesc)
-		}
-
-		if _, err := tc.entry.Canonicalize(context.TODO()); (err == nil) != tc.expectCanonicalizeSuccess {
+		b, err := v.Canonicalize(context.TODO())
+		if (err == nil) != tc.expectCanonicalizeSuccess {
 			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
+		}
+		if b != nil {
+			pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
+			if err != nil {
+				t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
+			}
+			if _, err := types.NewEntry(pe); err != nil {
+				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+			}
 		}
 	}
 }

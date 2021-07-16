@@ -92,13 +92,26 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 		Hashes:   hashes,
 	}
 
+	uuid := hex.EncodeToString(leaf.MerkleLeafHash)
+	if viper.GetBool("enable_attestation_storage") {
+		att, typ, err := storageClient.FetchAttestation(ctx, uuid)
+		if err != nil {
+			log.Logger.Errorf("error fetching attestation: %s %s", uuid, err)
+		} else {
+			logEntryAnon.Attestation = &models.LogEntryAnonAttestation{
+				Data:      att,
+				MediaType: typ,
+			}
+		}
+	}
+
 	logEntryAnon.Verification = &models.LogEntryAnonVerification{
 		InclusionProof:       &inclusionProof,
 		SignedEntryTimestamp: strfmt.Base64(signature),
 	}
 
 	return models.LogEntry{
-		hex.EncodeToString(leaf.MerkleLeafHash): logEntryAnon}, nil
+		uuid: logEntryAnon}, nil
 }
 
 // GetLogEntryAndProofByIndexHandler returns the entry and inclusion proof for a specified log index
@@ -297,15 +310,6 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 				entry, err := types.NewEntry(e)
 				if err != nil {
 					return err
-				}
-				if err := entry.Validate(); err != nil {
-					return err
-				}
-
-				if entry.HasExternalEntities() {
-					if err := entry.FetchExternalEntities(httpReqCtx); err != nil {
-						return err
-					}
 				}
 
 				leaf, err := entry.Canonicalize(httpReqCtx)

@@ -18,6 +18,7 @@ package app
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -53,6 +54,37 @@ func (s *searchCmdOutput) String() string {
 	return str
 }
 
+func addSearchPFlags(cmd *cobra.Command) error {
+	cmd.Flags().Var(NewFlagValue(pkiFormatFlag, ""), "pki-format", "format of the signature and/or public key")
+
+	cmd.Flags().Var(NewFlagValue(fileOrURLFlag, ""), "public-key", "path or URL to public key file")
+
+	cmd.Flags().Var(NewFlagValue(fileOrURLFlag, ""), "artifact", "path or URL to artifact file")
+
+	cmd.Flags().Var(NewFlagValue(shaFlag, ""), "sha", "the SHA256 sum of the artifact")
+
+	cmd.Flags().Var(NewFlagValue(emailFlag, ""), "email", "email associated with the public key's subject")
+	return nil
+}
+
+func validateSearchPFlags() error {
+	artifactStr := viper.GetString("artifact")
+
+	publicKey := viper.GetString("public-key")
+	sha := viper.GetString("sha")
+	email := viper.GetString("email")
+
+	if artifactStr == "" && publicKey == "" && sha == "" && email == "" {
+		return errors.New("either 'sha' or 'artifact' or 'public-key' or 'email' must be specified")
+	}
+	if publicKey != "" {
+		if viper.GetString("pki-format") == "" {
+			return errors.New("pki-format must be specified if searching by public-key")
+		}
+	}
+	return nil
+}
+
 // searchCmd represents the get command
 var searchCmd = &cobra.Command{
 	Use:   "search",
@@ -61,16 +93,16 @@ var searchCmd = &cobra.Command{
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			log.Logger.Fatal("Error initializing cmd line args: ", err)
+			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
 		}
 		if err := validateSearchPFlags(); err != nil {
-			log.Logger.Error(err)
+			log.CliLogger.Error(err)
 			_ = cmd.Help()
 			os.Exit(1)
 		}
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
-		log := log.Logger
+		log := log.CliLogger
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"))
 		if err != nil {
 			return nil, err
@@ -84,25 +116,21 @@ var searchCmd = &cobra.Command{
 		if sha != "" {
 			params.Query.Hash = sha
 		} else if artifactStr != "" {
-			artifact := fileOrURLFlag{}
-			if err := artifact.Set(artifactStr); err != nil {
-				return nil, err
-			}
 
 			hasher := sha256.New()
 			var tee io.Reader
-			if artifact.IsURL {
+			if isURL(artifactStr) {
 				/* #nosec G107 */
-				resp, err := http.Get(artifact.String())
+				resp, err := http.Get(artifactStr)
 				if err != nil {
-					return nil, fmt.Errorf("error fetching '%v': %w", artifact.String(), err)
+					return nil, fmt.Errorf("error fetching '%v': %w", artifactStr, err)
 				}
 				defer resp.Body.Close()
 				tee = io.TeeReader(resp.Body, hasher)
 			} else {
-				file, err := os.Open(filepath.Clean(artifact.String()))
+				file, err := os.Open(filepath.Clean(artifactStr))
 				if err != nil {
-					return nil, fmt.Errorf("error opening file '%v': %w", artifact.String(), err)
+					return nil, fmt.Errorf("error opening file '%v': %w", artifactStr, err)
 				}
 				defer func() {
 					if err := file.Close(); err != nil {
@@ -113,7 +141,7 @@ var searchCmd = &cobra.Command{
 				tee = io.TeeReader(file, hasher)
 			}
 			if _, err := ioutil.ReadAll(tee); err != nil {
-				return nil, fmt.Errorf("error processing '%v': %w", artifact.String(), err)
+				return nil, fmt.Errorf("error processing '%v': %w", artifactStr, err)
 			}
 
 			hashVal := strings.ToLower(hex.EncodeToString(hasher.Sum(nil)))
@@ -136,14 +164,11 @@ var searchCmd = &cobra.Command{
 			default:
 				return nil, fmt.Errorf("unknown pki-format %v", pkiFormat)
 			}
-			publicKey := fileOrURLFlag{}
-			if err := publicKey.Set(publicKeyStr); err != nil {
-				return nil, err
-			}
-			if publicKey.IsURL {
-				params.Query.PublicKey.URL = strfmt.URI(publicKey.String())
+			publicKeyStr := viper.GetString("public-key")
+			if isURL(publicKeyStr) {
+				params.Query.PublicKey.URL = strfmt.URI(publicKeyStr)
 			} else {
-				keyBytes, err := ioutil.ReadFile(filepath.Clean(publicKey.String()))
+				keyBytes, err := ioutil.ReadFile(filepath.Clean(publicKeyStr))
 				if err != nil {
 					return nil, fmt.Errorf("error reading public key file: %w", err)
 				}
@@ -175,8 +200,9 @@ var searchCmd = &cobra.Command{
 }
 
 func init() {
+	initializePFlagMap()
 	if err := addSearchPFlags(searchCmd); err != nil {
-		log.Logger.Fatal("Error parsing cmd line args:", err)
+		log.CliLogger.Fatal("Error parsing cmd line args:", err)
 	}
 
 	rootCmd.AddCommand(searchCmd)
