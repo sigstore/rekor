@@ -23,6 +23,7 @@ import (
 	"context"
 	"crypto"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/sassoftware/relic/lib/certloader"
@@ -33,6 +34,7 @@ import (
 //note: reuses PKI artifacts from x509 tests
 
 const manifest = `Manifest-Version: 1.0
+Created-By: REPLACE
 
 Name: src/some/java/HelloWorld.class
 SHA-256-Digest: cp40SgHlLIIr397GHijW7aAmWNLn0rgKm5Ap9B4hLd4=
@@ -58,7 +60,8 @@ func createSignedJar(t *testing.T, artifactPath string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mf.Write([]byte(manifest))
+	randManifest := strings.Replace(manifest, "REPLACE", randomRpmSuffix(), 1)
+	mf.Write([]byte(randManifest))
 	if err := zw.Close(); err != nil {
 		t.Fatal(err)
 	}

@@ -30,6 +30,9 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -440,8 +443,35 @@ func TestTimestampArtifact(t *testing.T) {
 }
 
 func TestJARURL(t *testing.T) {
-	out := runCli(t, "upload", "--artifact", "https://get.jenkins.io/war-stable/2.277.3/jenkins.war", "--type", "jar", "--artifact-hash=3e22c7e8cd7c8ee1e92cbaa8d0d303a7b53e07bc2a152ddc66f8ce55caea91ab")
+	td := t.TempDir()
+	artifactPath := filepath.Join(td, "artifact.jar")
+
+	createSignedJar(t, artifactPath)
+	jarBytes, _ := ioutil.ReadFile(artifactPath)
+	jarSHA := sha256.Sum256(jarBytes)
+	testServer := httptest.NewUnstartedServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/jar" {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(jarBytes)
+		}))
+	defer testServer.Close()
+	l, _ := net.Listen("tcp", "172.17.0.1:0")
+	testServer.Listener.Close()
+	testServer.Listener = l
+	testServer.Start()
+	// ensure hash is required for JAR since signature/public key are embedded
+	out := runCliErr(t, "upload", "--artifact", testServer.URL+"/jar", "--type", "jar")
+	outputContains(t, out, "hash value must be provided if URL is specified")
+	// ensure valid JAR can be fetched over URL and inserted
+	out = runCli(t, "upload", "--artifact", testServer.URL+"/jar", "--type", "jar", "--artifact-hash="+hex.EncodeToString(jarSHA[:]))
 	outputContains(t, out, "Created entry at")
+	// ensure a 404 is handled correctly
+	out = runCliErr(t, "upload", "--artifact", testServer.URL+"/not_found", "--type", "jar", "--artifact-hash="+hex.EncodeToString(jarSHA[:]))
+	outputContains(t, out, "404")
 }
 
 func TestX509(t *testing.T) {
