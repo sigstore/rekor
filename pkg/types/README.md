@@ -142,3 +142,7 @@ To add new version of the default `Rekord` type:
 6. Add an import statement to `cmd/rekor-cli/app/root.go` that provides a reference to your package/new version. This ensures that the `init` function of your type (and optionally, your version implementation) will be called before the CLI runs; this populates the required type maps and allows the CLI to interact with the type implementations in a loosely coupled manner.
 
 7. After adding sufficient unit & integration tests, submit a pull request to `github.com/sigstore/rekor` for review and addition to the codebase.
+
+## Error Handling
+
+The `Canonicalize` method in the `EntryImpl` interface generates the canonicalized content for insertion into the transparency log. While errors returned from the `Unmarshal` method should always be considered as an error with what the client has provided (thus generating a HTTP 400 Bad Request response), errors from the `Canonicalize` method can be either `types.ValidationError` which means the content provided inside of (or referred to by) the incoming request could not be successfully processed or verified, or a generic `error` which should be interpreted as a HTTP 500 Internal Server Error to which the client can not resolve.

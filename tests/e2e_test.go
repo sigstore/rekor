@@ -319,6 +319,10 @@ func TestAPK(t *testing.T) {
 	outputContains(t, out, "Created entry at")
 	out = runCli(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", pubPath)
 	outputContains(t, out, "Entry already exists")
+	// pass invalid public key, ensure we see a 400 error with helpful message
+	out = runCliErr(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", artifactPath)
+	outputContains(t, out, "400")
+	outputContains(t, out, "invalid public key")
 }
 
 func TestIntoto(t *testing.T) {

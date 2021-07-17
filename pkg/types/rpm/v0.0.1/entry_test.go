@@ -393,7 +393,12 @@ func TestCrossFieldValidation(t *testing.T) {
 		b, err := v.Canonicalize(context.TODO())
 		if (err == nil) != tc.expectCanonicalizeSuccess {
 			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
+		} else if err != nil {
+			if _, ok := err.(types.ValidationError); !ok {
+				t.Errorf("canonicalize returned an unexpected error that isn't of type types.ValidationError: %v", err)
+			}
 		}
+
 		if b != nil {
 			pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
 			if err != nil {

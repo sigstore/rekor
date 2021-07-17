@@ -132,7 +132,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	}
 
 	if err := v.validate(); err != nil {
-		return err
+		return types.ValidationError(err)
 	}
 
 	oldSHA := ""
@@ -156,26 +156,26 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 
 	computedSHA := hex.EncodeToString(hasher.Sum(nil))
 	if oldSHA != "" && computedSHA != oldSHA {
-		return fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)
+		return types.ValidationError(fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA))
 	}
 
 	zipReader, err := zip.NewReader(bytes.NewReader(b.Bytes()), n)
 	if err != nil {
-		return err
+		return types.ValidationError(err)
 	}
 
 	// this ensures that the JAR is signed and the signature verifies, as
 	// well as checks that the hashes in the signed manifest are all valid
 	jarObj, err := jarutils.Verify(zipReader, false)
 	if err != nil {
-		return err
+		return types.ValidationError(err)
 	}
 	switch len(jarObj) {
 	case 0:
-		return errors.New("no signatures detected in JAR archive")
+		return types.ValidationError(errors.New("no signatures detected in JAR archive"))
 	case 1:
 	default:
-		return errors.New("multiple signatures detected in JAR; unable to process")
+		return types.ValidationError(errors.New("multiple signatures detected in JAR; unable to process"))
 	}
 	v.jarObj = jarObj[0]
 
@@ -186,17 +186,17 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	// we need to find and extract the PKCS7 bundle from the JAR file manually
 	sigPKCS7, err := extractPKCS7SignatureFromJAR(zipReader)
 	if err != nil {
-		return err
+		return types.ValidationError(err)
 	}
 
 	v.keyObj, err = af.NewPublicKey(bytes.NewReader(sigPKCS7))
 	if err != nil {
-		return err
+		return types.ValidationError(err)
 	}
 
 	v.sigObj, err = af.NewSignature(bytes.NewReader(sigPKCS7))
 	if err != nil {
-		return err
+		return types.ValidationError(err)
 	}
 
 	// if we get here, all goroutines succeeded without error
@@ -256,12 +256,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	jar.APIVersion = swag.String(APIVERSION)
 	jar.Spec = &canonicalEntry
 
-	bytes, err := json.Marshal(&jar)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes, nil
+	return json.Marshal(&jar)
 }
 
 // validate performs cross-field validation for fields in object

@@ -141,7 +141,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	}
 
 	if err := v.validate(); err != nil {
-		return err
+		return types.ValidationError(err)
 	}
 
 	artifactFactory, err := pki.NewArtifactFactory(pki.PGP)
@@ -197,9 +197,8 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		defer keyReadCloser.Close()
 
 		v.keyObj, err = artifactFactory.NewPublicKey(keyReadCloser)
-
 		if err != nil {
-			return closePipesOnError(err)
+			return closePipesOnError(types.ValidationError(err))
 		}
 
 		select {
@@ -214,7 +213,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 
 		provenance := helm.Provenance{}
 		if err := provenance.Unmarshal(provenanceR); err != nil {
-			return closePipesOnError(err)
+			return closePipesOnError(types.ValidationError(err))
 		}
 
 		key := <-keyResult
@@ -224,14 +223,13 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 
 		// Set signature
 		sig, err := artifactFactory.NewSignature(provenance.Block.ArmoredSignature.Body)
-
 		if err != nil {
-			return closePipesOnError(err)
+			return closePipesOnError(types.ValidationError(err))
 		}
 
 		// Verify signature
 		if err := sig.Verify(bytes.NewReader(provenance.Block.Bytes), key); err != nil {
-			return closePipesOnError(err)
+			return closePipesOnError(types.ValidationError(err))
 		}
 
 		v.sigObj = sig
@@ -251,7 +249,6 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 
 	v.fetchedExternalEntities = true
 	return nil
-
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
@@ -305,13 +302,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	helmObj.APIVersion = swag.String(APIVERSION)
 	helmObj.Spec = &canonicalEntry
 
-	bytes, err := json.Marshal(&helmObj)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes, nil
-
+	return json.Marshal(&helmObj)
 }
 
 // validate performs cross-field validation for fields in object

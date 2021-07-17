@@ -163,12 +163,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	itObj.APIVersion = swag.String(APIVERSION)
 	itObj.Spec = &canonicalEntry
 
-	bytes, err := json.Marshal(&itObj)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes, nil
+	return json.Marshal(&itObj)
 }
 
 // validate performs cross-field validation for fields in object

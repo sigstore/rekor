@@ -146,10 +146,13 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	ctx := params.HTTPRequest.Context()
 	entry, err := types.NewEntry(params.ProposedEntry)
 	if err != nil {
-		return nil, handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
+		return nil, handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf(validationError, err))
 	}
 	leaf, err := entry.Canonicalize(ctx)
 	if err != nil {
+		if _, ok := (err).(types.ValidationError); ok {
+			return nil, handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf(validationError, err))
+		}
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalEntry)
 	}
 
