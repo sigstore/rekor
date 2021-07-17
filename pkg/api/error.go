@@ -35,6 +35,7 @@ import (
 const (
 	trillianCommunicationError        = "Unexpected error communicating with transparency log"
 	trillianUnexpectedResult          = "Unexpected result from transparency log"
+	validationError                   = "Error processing entry: %v"
 	failedToGenerateCanonicalEntry    = "Error generating canonicalized entry"
 	entryAlreadyExists                = "An equivalent entry already exists in the transparency log with UUID %v"
 	firstSizeLessThanLastSize         = "firstSize(%d) must be less than lastSize(%d)"

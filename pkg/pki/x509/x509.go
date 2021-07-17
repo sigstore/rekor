@@ -99,7 +99,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 
 	block, _ := pem.Decode(rawPub)
 	if block == nil {
-		return nil, fmt.Errorf("invalid public key: %s", string(rawPub))
+		return nil, errors.New("invalid public key: failure decoding PEM")
 	}
 
 	switch block.Type {
@@ -120,7 +120,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 				b: block.Bytes,
 			}}, nil
 	}
-	return nil, fmt.Errorf("invalid public key: %s", string(rawPub))
+	return nil, fmt.Errorf("invalid public key: cannot handle type %v", block.Type)
 }
 
 // CanonicalValue implements the pki.PublicKey interface

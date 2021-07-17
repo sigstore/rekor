@@ -132,6 +132,11 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	}
 
 	if err := v.validate(); err != nil {
+		return types.ValidationError(err)
+	}
+
+	artifactFactory, err := pki.NewArtifactFactory(pki.X509)
+	if err != nil {
 		return err
 	}
 
@@ -160,7 +165,6 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	if v.AlpineModel.Package.Hash != nil && v.AlpineModel.Package.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.AlpineModel.Package.Hash.Value)
 	}
-	artifactFactory, _ := pki.NewArtifactFactory(pki.X509)
 
 	g.Go(func() error {
 		defer hashW.Close()
@@ -191,7 +195,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 
 		computedSHA := hex.EncodeToString(hasher.Sum(nil))
 		if oldSHA != "" && computedSHA != oldSHA {
-			return closePipesOnError(fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA))
+			return closePipesOnError(types.ValidationError(fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)))
 		}
 
 		select {
@@ -215,7 +219,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 
 		v.keyObj, err = artifactFactory.NewPublicKey(keyReadCloser)
 		if err != nil {
-			return closePipesOnError(err)
+			return closePipesOnError(types.ValidationError(err))
 		}
 
 		select {
@@ -229,7 +233,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	g.Go(func() error {
 		apk := alpine.Package{}
 		if err := apk.Unmarshal(apkR); err != nil {
-			return closePipesOnError(err)
+			return closePipesOnError(types.ValidationError(err))
 		}
 
 		key := <-keyResult
@@ -238,7 +242,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		}
 
 		if err := apk.VerifySignature(key.CryptoPubKey()); err != nil {
-			return closePipesOnError(err)
+			return closePipesOnError(types.ValidationError(err))
 		}
 
 		v.apkObj = &apk

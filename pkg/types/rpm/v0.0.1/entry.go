@@ -134,7 +134,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	}
 
 	if err := v.validate(); err != nil {
-		return err
+		return types.ValidationError(err)
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
@@ -199,7 +199,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 
 		computedSHA := hex.EncodeToString(hasher.Sum(nil))
 		if oldSHA != "" && computedSHA != oldSHA {
-			return closePipesOnError(fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA))
+			return closePipesOnError(types.ValidationError(fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)))
 		}
 
 		select {
@@ -220,16 +220,16 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 
 		v.keyObj, err = artifactFactory.NewPublicKey(keyReadCloser)
 		if err != nil {
-			return closePipesOnError(err)
+			return closePipesOnError(types.ValidationError(err))
 		}
 
 		keyring, err := v.keyObj.(*pgp.PublicKey).KeyRing()
 		if err != nil {
-			return closePipesOnError(err)
+			return closePipesOnError(types.ValidationError(err))
 		}
 
 		if _, err := rpmutils.GPGCheck(sigR, keyring); err != nil {
-			return closePipesOnError(err)
+			return closePipesOnError(types.ValidationError(err))
 		}
 
 		select {
@@ -245,7 +245,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		var err error
 		v.rpmObj, err = rpmutils.ReadPackageFile(rpmR)
 		if err != nil {
-			return closePipesOnError(err)
+			return closePipesOnError(types.ValidationError(err))
 		}
 		// ReadPackageFile does not drain the entire reader so we need to discard the rest
 		if _, err = io.Copy(ioutil.Discard, rpmR); err != nil {

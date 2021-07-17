@@ -135,7 +135,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	}
 
 	if err := v.validate(); err != nil {
-		return err
+		return types.ValidationError(err)
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
@@ -165,7 +165,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	}
 	artifactFactory, err := pki.NewArtifactFactory(pki.Format(v.RekordObj.Signature.Format))
 	if err != nil {
-		return err
+		return types.ValidationError(err)
 	}
 
 	g.Go(func() error {
@@ -197,7 +197,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 
 		computedSHA := hex.EncodeToString(hasher.Sum(nil))
 		if oldSHA != "" && computedSHA != oldSHA {
-			return closePipesOnError(fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA))
+			return closePipesOnError(types.ValidationError(fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)))
 		}
 
 		select {
@@ -222,7 +222,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 
 		signature, err := artifactFactory.NewSignature(sigReadCloser)
 		if err != nil {
-			return closePipesOnError(err)
+			return closePipesOnError(types.ValidationError(err))
 		}
 
 		select {
@@ -247,7 +247,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 
 		key, err := artifactFactory.NewPublicKey(keyReadCloser)
 		if err != nil {
-			return closePipesOnError(err)
+			return closePipesOnError(types.ValidationError(err))
 		}
 
 		select {
@@ -267,7 +267,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 
 		var err error
 		if err = v.sigObj.Verify(sigR, v.keyObj); err != nil {
-			return closePipesOnError(err)
+			return closePipesOnError(types.ValidationError(err))
 		}
 
 		select {
