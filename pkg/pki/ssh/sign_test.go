@@ -140,6 +140,9 @@ func TestFromOpenSSH(t *testing.T) {
 			priv: ed25519PrivateKey,
 		},
 	} {
+		if _, err := exec.LookPath("ssh-keygen"); err != nil {
+			t.Skip("skip TestFromOpenSSH: missing ssh-keygen in PATH")
+		}
 		t.Run(tt.name, func(t *testing.T) {
 			tt := tt
 
@@ -193,6 +196,9 @@ func TestToOpenSSH(t *testing.T) {
 			priv: ed25519PrivateKey,
 		},
 	} {
+		if _, err := exec.LookPath("ssh-keygen"); err != nil {
+			t.Skip("skip TestToOpenSSH: missing ssh-keygen in PATH")
+		}
 		t.Run(tt.name, func(t *testing.T) {
 			tt := tt
 			// Test that a signature from here can validate in the CLI.
