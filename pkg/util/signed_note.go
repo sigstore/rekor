@@ -18,10 +18,8 @@ package util
 import (
 	"bufio"
 	"bytes"
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -31,6 +29,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	"golang.org/x/mod/sumdb/note"
 )
 
@@ -43,30 +43,17 @@ type SignedNote struct {
 
 // Sign adds a signature to a SignedCheckpoint object
 // The signature is added to the signature array as well as being directly returned to the caller
-func (s *SignedNote) Sign(identity string, signer crypto.Signer, opts crypto.SignerOpts) (*note.Signature, error) {
-	hf := crypto.SHA256
-	if opts != nil {
-		hf = opts.HashFunc()
-	}
-
-	input := []byte(s.Note)
-	var digest []byte
-	if hf != crypto.Hash(0) {
-		hasher := hf.New()
-		_, err := hasher.Write(input)
-		if err != nil {
-			return nil, errors.Wrap(err, "hashing checkpoint before signing")
-		}
-		digest = hasher.Sum(nil)
-	} else {
-		digest = input
-	}
-
-	sig, err := signer.Sign(rand.Reader, digest, opts)
+func (s *SignedNote) Sign(identity string, signer signature.Signer, opts signature.SignOption) (*note.Signature, error) {
+	sig, err := signer.SignMessage(bytes.NewReader([]byte(s.Note)), opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "signing checkpoint")
+		return nil, errors.Wrap(err, "signing note")
 	}
-	pubKeyBytes, err := x509.MarshalPKIXPublicKey(signer.Public())
+
+	pk, err := signer.PublicKey()
+	if err != nil {
+		return nil, errors.Wrap(err, "retrieving public key")
+	}
+	pubKeyBytes, err := x509.MarshalPKIXPublicKey(pk)
 	if err != nil {
 		return nil, errors.Wrap(err, "marshalling public key")
 	}
@@ -85,14 +72,12 @@ func (s *SignedNote) Sign(identity string, signer crypto.Signer, opts crypto.Sig
 
 // Verify checks that one of the signatures can be successfully verified using
 // the supplied public key
-func (s SignedNote) Verify(public crypto.PublicKey) bool {
+func (s SignedNote) Verify(verifier signature.Verifier) bool {
 	if len(s.Signatures) == 0 {
 		return false
 	}
 
 	msg := []byte(s.Note)
-
-	//TODO: generalize this
 	digest := sha256.Sum256(msg)
 
 	for _, s := range s.Signatures {
@@ -100,24 +85,22 @@ func (s SignedNote) Verify(public crypto.PublicKey) bool {
 		if err != nil {
 			return false
 		}
-		switch pk := public.(type) {
+		pk, _ := verifier.PublicKey()
+		opts := []signature.VerifyOption{}
+		switch pk.(type) {
 		case *rsa.PublicKey:
-			if err := rsa.VerifyPSS(pk, crypto.SHA256, digest[:], sigBytes, &rsa.PSSOptions{Hash: crypto.SHA256}); err == nil {
-				return true
-			}
 		case *ecdsa.PublicKey:
-			if ecdsa.VerifyASN1(pk, digest[:], sigBytes) {
-				return true
-			}
-		case *ed25519.PublicKey:
-			if ed25519.Verify(*pk, msg, sigBytes) {
-				return true
-			}
+			opts = append(opts, options.WithDigest(digest[:]))
+		case ed25519.PublicKey:
+			break
 		default:
 			return false
 		}
+		if err := verifier.VerifySignature(bytes.NewReader(sigBytes), bytes.NewReader(msg), opts...); err != nil {
+			return false
+		}
 	}
-	return false
+	return true
 }
 
 // MarshalText returns the common format representation of this SignedNote.

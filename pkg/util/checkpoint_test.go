@@ -25,6 +25,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	"golang.org/x/mod/sumdb/note"
 )
 
@@ -213,7 +215,7 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 			},
 			identity:      "someone",
 			signer:        edPrivKey,
-			pubKey:        &edPubKey,
+			pubKey:        edPubKey,
 			opts:          crypto.Hash(0),
 			wantSignErr:   false,
 			wantVerifyErr: false,
@@ -253,7 +255,7 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 			identity:      "someone",
 			signer:        edPrivKey,
 			pubKey:        rsaKey.Public(),
-			opts:          crypto.Hash(0),
+			opts:          &rsa.PSSOptions{Hash: crypto.SHA256},
 			wantSignErr:   false,
 			wantVerifyErr: true,
 		},
@@ -265,7 +267,7 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 			},
 			identity:      "someone",
 			signer:        ecdsaKey,
-			pubKey:        &edPubKey,
+			pubKey:        edPubKey,
 			opts:          nil,
 			wantSignErr:   false,
 			wantVerifyErr: true,
@@ -276,15 +278,25 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 			sc := &SignedNote{
 				Note: string(text),
 			}
-			_, err := sc.Sign(test.identity, test.signer, test.opts)
+			signer, _ := signature.LoadSigner(test.signer, crypto.SHA256)
+			if _, ok := test.signer.(*rsa.PrivateKey); ok {
+				signer, _ = signature.LoadRSAPSSSigner(test.signer.(*rsa.PrivateKey), crypto.SHA256, test.opts.(*rsa.PSSOptions))
+			}
+
+			_, err := sc.Sign(test.identity, signer, options.WithCryptoSignerOpts(test.opts))
 			if (err != nil) != test.wantSignErr {
 				t.Fatalf("signing test failed: wantSignErr %v, err %v", test.wantSignErr, err)
 			}
 			if !test.wantSignErr {
-				if !sc.Verify(test.pubKey) != test.wantVerifyErr {
-					t.Fatalf("verification test failed %v", sc.Verify(test.pubKey))
+				verifier, _ := signature.LoadVerifier(test.pubKey, crypto.SHA256)
+				if _, ok := test.pubKey.(*rsa.PublicKey); ok {
+					verifier, _ = signature.LoadRSAPSSVerifier(test.pubKey.(*rsa.PublicKey), crypto.SHA256, test.opts.(*rsa.PSSOptions))
 				}
-				if _, err := sc.Sign("second", test.signer, test.opts); err != nil {
+
+				if !sc.Verify(verifier) != test.wantVerifyErr {
+					t.Fatalf("verification test failed %v", sc.Verify(verifier))
+				}
+				if _, err := sc.Sign("second", signer, options.WithCryptoSignerOpts(test.opts)); err != nil {
 					t.Fatalf("adding second signature failed: %v", err)
 				}
 				if len(sc.Signatures) != 2 {
@@ -311,6 +323,7 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 }
 
 func TestInvalidSigVerification(t *testing.T) {
+	ecdsaKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	for _, test := range []struct {
 		checkpoint     Checkpoint
 		s              []note.Signature
@@ -324,15 +337,17 @@ func TestInvalidSigVerification(t *testing.T) {
 				Hash:      []byte("bananas"),
 			},
 			s:              []note.Signature{},
+			pubKey:         ecdsaKey.Public(),
 			expectedResult: false,
 		},
 		{
 
 			checkpoint: Checkpoint{
-				Ecosystem: "Log Checkpoint v0",
+				Ecosystem: "Log Checkpoint v0 not base64",
 				Size:      123,
 				Hash:      []byte("bananas"),
 			},
+			pubKey: ecdsaKey.Public(),
 			s: []note.Signature{
 				{
 					Name:   "something",
@@ -340,15 +355,15 @@ func TestInvalidSigVerification(t *testing.T) {
 					Base64: "not_base 64 string",
 				},
 			},
-
 			expectedResult: false,
 		},
 		{
 			checkpoint: Checkpoint{
-				Ecosystem: "Log Checkpoint v0",
+				Ecosystem: "Log Checkpoint v0 invalid signature",
 				Size:      123,
 				Hash:      []byte("bananas"),
 			},
+			pubKey: ecdsaKey.Public(),
 			s: []note.Signature{
 				{
 					Name:   "someone",
@@ -358,22 +373,6 @@ func TestInvalidSigVerification(t *testing.T) {
 			},
 			expectedResult: false,
 		},
-		{
-			checkpoint: Checkpoint{
-				Ecosystem: "Log Checkpoint Ed25519 v0",
-				Size:      123,
-				Hash:      []byte("bananas"),
-			},
-			s: []note.Signature{
-				{
-					Name:   "someone",
-					Hash:   1390313051,
-					Base64: "pOhM+S/mYjEYtQsOF4lL8o/dR+nbjoz5Cvg/n486KIismpVq0s4wxBaakmryI7zThjWAqRUyECPL3WSEcVDEBQ==",
-				},
-			},
-			pubKey:         nil, // valid input, invalid key
-			expectedResult: false,
-		},
 	} {
 		t.Run(string(test.checkpoint.Ecosystem), func(t *testing.T) {
 			text, _ := test.checkpoint.MarshalText()
@@ -381,7 +380,8 @@ func TestInvalidSigVerification(t *testing.T) {
 				Note:       string(text),
 				Signatures: test.s,
 			}
-			result := sc.Verify(test.pubKey)
+			verifier, _ := signature.LoadVerifier(test.pubKey, crypto.SHA256)
+			result := sc.Verify(verifier)
 			if result != test.expectedResult {
 				t.Fatal("verification test generated unexpected result")
 			}
