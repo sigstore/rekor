@@ -17,6 +17,7 @@ package app
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
@@ -35,6 +36,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/tlog"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 type logInfoCmdOutput struct {
@@ -72,7 +74,7 @@ var logInfoCmd = &cobra.Command{
 
 		logInfo := result.GetPayload()
 
-		sth := util.RekorSTH{}
+		sth := util.SignedCheckpoint{}
 		if err := sth.UnmarshalText([]byte(*logInfo.SignedTreeHead)); err != nil {
 			return nil, err
 		}
@@ -97,7 +99,12 @@ var logInfoCmd = &cobra.Command{
 			return nil, err
 		}
 
-		if !sth.Verify(pub) {
+		verifier, err := signature.LoadVerifier(pub, crypto.SHA256)
+		if err != nil {
+			return nil, err
+		}
+
+		if !sth.Verify(verifier) {
 			return nil, errors.New("signature on tree head did not verify")
 		}
 

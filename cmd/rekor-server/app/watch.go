@@ -38,6 +38,7 @@ import (
 	genclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 const rekorSthBucketEnv = "REKOR_STH_BUCKET"
@@ -134,12 +135,17 @@ func doCheck(c *genclient.Rekor, pub crypto.PublicKey) (*SignedAndUnsignedLogRoo
 	if err != nil {
 		return nil, errors.Wrap(err, "getting log info")
 	}
-	sth := util.RekorSTH{}
+	sth := util.SignedCheckpoint{}
 	if err := sth.UnmarshalText([]byte(*li.Payload.SignedTreeHead)); err != nil {
 		return nil, errors.Wrap(err, "unmarshalling tree head")
 	}
 
-	if !sth.Verify(pub) {
+	verifier, err := signature.LoadVerifier(pub, crypto.SHA256)
+	if err != nil {
+		return nil, err
+	}
+
+	if !sth.Verify(verifier) {
 		return nil, errors.Wrap(err, "signed tree head failed verification")
 	}
 
@@ -168,5 +174,5 @@ func uploadToBlobStorage(ctx context.Context, bucket *blob.Bucket, lr *SignedAnd
 
 // For JSON marshalling
 type SignedAndUnsignedLogRoot struct {
-	VerifiedLogRoot *util.RekorSTH
+	VerifiedLogRoot *util.SignedCheckpoint
 }

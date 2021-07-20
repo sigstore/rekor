@@ -25,9 +25,9 @@ import (
 	"github.com/sigstore/rekor/pkg/util"
 )
 
-type persistedState map[string]*util.RekorSTH
+type persistedState map[string]*util.SignedCheckpoint
 
-func Dump(url string, sth *util.RekorSTH) error {
+func Dump(url string, sth *util.SignedCheckpoint) error {
 	rekorDir, err := getRekorDir()
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func loadStateFile() persistedState {
 	return result
 }
 
-func Load(url string) *util.RekorSTH {
+func Load(url string) *util.SignedCheckpoint {
 	if state := loadStateFile(); state != nil {
 		return state[url]
 	}

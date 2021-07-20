@@ -16,9 +16,6 @@
 package api
 
 import (
-	"bytes"
-	"encoding/base64"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -27,7 +24,6 @@ import (
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/google/trillian/types"
 	"github.com/spf13/viper"
-	"golang.org/x/mod/sumdb/note"
 	"google.golang.org/grpc/codes"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -54,46 +50,23 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	hashString := hex.EncodeToString(root.RootHash)
 	treeSize := int64(root.TreeSize)
 
-	sth := util.RekorSTH{
-		SignedCheckpoint: util.SignedCheckpoint{
-			Checkpoint: util.Checkpoint{
-				Ecosystem: "Rekor",
-				Size:      root.TreeSize,
-				Hash:      root.RootHash,
-			},
-		},
+	sth, err := util.CreateSignedCheckpoint(util.Checkpoint{
+		Ecosystem: "Rekor",
+		Size:      root.TreeSize,
+		Hash:      root.RootHash,
+	})
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("marshalling error: %w", err), sthGenerateError)
 	}
 	sth.SetTimestamp(uint64(time.Now().UnixNano()))
-	// TODO: once api.signer implements crypto.Signer, switch to using Sign() API on Checkpoint
-	// var opts crypto.SignerOpts
-	// cs, ok := api.signer.(crypto.Signer)
-	// if !ok {
-	// 	kmsSigner, ok := api.signer.(kms.SignerVerifier)
-	// 	if !ok {
-	// 		return handleRekorAPIError(params, http.StatusInternalServerError, errors.New("unable to cast to crypto.Signer"), signingError)
-	// 	}
-	// 	var err error
-	// 	cs, opts, err = kmsSigner.CryptoSigner(params.HTTPRequest.Context(), nil)
-	// 	if err != nil {
-	// 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("unable to obtain crypto.Signer: %v", err), signingError)
-	// 	}
-	// }
-	// sth.Checkpoint.Sign(viper.GetString("rekor_server.hostname"), cs, opts)
 
 	// sign the log root ourselves to get the log root signature
-	cpString, _ := sth.Checkpoint.MarshalText()
-	sig, err := api.signer.SignMessage(bytes.NewReader(cpString), options.WithContext(params.HTTPRequest.Context()))
+	_, err = sth.Sign(viper.GetString("rekor_server.hostname"), api.signer, options.WithContext(params.HTTPRequest.Context()))
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %w", err), signingError)
 	}
 
-	sth.Signatures = append(sth.Signatures, note.Signature{
-		Name:   viper.GetString("rekor_server.hostname"),
-		Hash:   binary.BigEndian.Uint32([]byte(api.pubkeyHash)[0:4]),
-		Base64: base64.StdEncoding.EncodeToString(sig),
-	})
-
-	scBytes, err := sth.MarshalText()
+	scBytes, err := sth.SignedNote.MarshalText()
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("marshalling error: %w", err), sthGenerateError)
 	}

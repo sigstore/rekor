@@ -44,6 +44,6 @@ func GetRekorClient(rekorServerURL string) (*client.Rekor, error) {
 	}
 
 	registry := strfmt.Default
-	registry.Add("signedCheckpoint", &util.SignedCheckpoint{}, util.SignedCheckpointValidator)
+	registry.Add("signedCheckpoint", &util.SignedNote{}, util.SignedCheckpointValidator)
 	return client.New(rt, registry), nil
 }
