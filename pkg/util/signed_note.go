@@ -85,11 +85,13 @@ func (s SignedNote) Verify(verifier signature.Verifier) bool {
 		if err != nil {
 			return false
 		}
-		pk, _ := verifier.PublicKey()
+		pk, err := verifier.PublicKey()
+		if err != nil {
+			return false
+		}
 		opts := []signature.VerifyOption{}
 		switch pk.(type) {
-		case *rsa.PublicKey:
-		case *ecdsa.PublicKey:
+		case *rsa.PublicKey, *ecdsa.PublicKey:
 			opts = append(opts, options.WithDigest(digest[:]))
 		case ed25519.PublicKey:
 			break
