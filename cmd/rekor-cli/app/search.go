@@ -114,9 +114,12 @@ var searchCmd = &cobra.Command{
 		artifactStr := viper.GetString("artifact")
 		sha := viper.GetString("sha")
 		if sha != "" {
-			params.Query.Hash = sha
+			var prefix string
+			if !strings.HasPrefix(sha, "sha256:") {
+				prefix = "sha256:"
+			}
+			params.Query.Hash = fmt.Sprintf("%v%v", prefix, sha)
 		} else if artifactStr != "" {
-
 			hasher := sha256.New()
 			var tee io.Reader
 			if isURL(artifactStr) {
