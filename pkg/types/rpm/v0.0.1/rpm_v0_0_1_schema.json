@@ -12,7 +12,8 @@
                 "url": {
                     "description": "Specifies the location of the public key",
                     "type": "string",
-                    "format": "uri"
+                    "format": "uri",
+                    "writeOnly": true
                 },
                 "content": {
                     "description": "Specifies the content of the public key inline within the document",
@@ -38,7 +39,8 @@
                     "type": "object",
                     "additionalProperties": {
                         "type": "string"
-                    }
+                    },
+                    "readOnly": true
                 },
                 "hash": {
                     "description": "Specifies the hash algorithm and value for the package",
@@ -59,12 +61,14 @@
                 "url": {
                     "description": "Specifies the location of the package; if this is specified, a hash value must also be provided",
                     "type": "string",
-                    "format": "uri"
+                    "format": "uri",
+                    "writeOnly": true
                 },
                 "content": {
                     "description": "Specifies the package inline within the document",
                     "type": "string",
-                    "format": "byte"
+                    "format": "byte",
+                    "writeOnly": true
                 }
             },
             "oneOf": [

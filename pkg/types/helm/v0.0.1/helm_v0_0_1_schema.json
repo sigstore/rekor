@@ -12,7 +12,8 @@
                 "url": {
                     "description": "Specifies the location of the public key",
                     "type": "string",
-                    "format": "uri"
+                    "format": "uri",
+                    "writeOnly": true
                 },
                 "content": {
                     "description": "Specifies the content of the public key inline within the document",
@@ -53,10 +54,8 @@
                             "type": "string"
                         }
                     },
-                    "required": [
-                        "algorithm",
-                        "value"
-                    ]
+                    "required": [ "algorithm", "value" ],
+                    "readOnly": true
                 },
                 "provenance": {
                     "description": "The provenance entry associated with the signed Helm Chart",
@@ -69,41 +68,37 @@
                                 "content": {
                                     "description": "Specifies the signature embedded within the provenance file ",
                                     "type": "string",
-                                    "format": "byte"
+                                    "format": "byte",
+                                    "readOnly": true
                                 }
                             },
-                            "required": [
-                                "content"
-                            ]
+                            "required": [ "content" ],
+                            "readOnly": true
                         },
                         "url": {
                             "description": "Specifies the location of the provenance file",
                             "type": "string",
-                            "format": "uri"
+                            "format": "uri",
+                            "writeOnly": true
                         },
                         "content": {
                             "description": "Specifies the content of the provenance file inline within the document",
                             "type": "string",
-                            "format": "byte"
+                            "format": "byte",
+                            "writeOnly": true
                         }
                     },
                     "oneOf": [
                         {
-                            "required": [
-                                "url"
-                            ]
+                            "required": [ "url" ]
                         },
                         {
-                            "required": [
-                                "content"
-                            ]
+                            "required": [ "content" ]
                         }
                     ]
                 }
             },
-            "required": [
-                "provenance"
-            ]
+            "required": [ "provenance" ]
         },
         "extraData": {
             "description": "Arbitrary content to be included in the verifiable entry in the transparency log",

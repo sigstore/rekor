@@ -388,8 +388,9 @@ type JarV001SchemaSignature struct {
 
 	// Specifies the PKCS7 signature embedded within the JAR file
 	// Required: true
+	// Read Only: true
 	// Format: byte
-	Content *strfmt.Base64 `json:"content"`
+	Content strfmt.Base64 `json:"content"`
 
 	// public key
 	// Required: true
@@ -416,7 +417,7 @@ func (m *JarV001SchemaSignature) Validate(formats strfmt.Registry) error {
 
 func (m *JarV001SchemaSignature) validateContent(formats strfmt.Registry) error {
 
-	if err := validate.Required("signature"+"."+"content", "body", m.Content); err != nil {
+	if err := validate.Required("signature"+"."+"content", "body", strfmt.Base64(m.Content)); err != nil {
 		return err
 	}
 
@@ -445,6 +446,10 @@ func (m *JarV001SchemaSignature) validatePublicKey(formats strfmt.Registry) erro
 func (m *JarV001SchemaSignature) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.contextValidateContent(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidatePublicKey(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -452,6 +457,15 @@ func (m *JarV001SchemaSignature) ContextValidate(ctx context.Context, formats st
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *JarV001SchemaSignature) contextValidateContent(ctx context.Context, formats strfmt.Registry) error {
+
+	if err := validate.ReadOnly(ctx, "signature"+"."+"content", "body", strfmt.Base64(m.Content)); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -521,8 +535,13 @@ func (m *JarV001SchemaSignaturePublicKey) validateContent(formats strfmt.Registr
 	return nil
 }
 
-// ContextValidate validates this jar v001 schema signature public key based on context it is used
+// ContextValidate validate this jar v001 schema signature public key based on the context it is used
 func (m *JarV001SchemaSignaturePublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
 	return nil
 }
 

@@ -10,10 +10,11 @@
             "properties": {
                 "envelope": {
                     "description": "envelope",
-                    "type": "string"
+                    "type": "string",
+                    "writeOnly": true
                 },
                 "hash": {
-                    "description": "Specifies the hash algorithm and value encompassing the entire signed archive",
+                    "description": "Specifies the hash algorithm and value encompassing the entire signed envelope",
                     "type": "object",
                     "properties": {
                         "algorithm": {
@@ -31,7 +32,8 @@
                     "required": [
                         "algorithm",
                         "value"
-                    ]
+                    ],
+                    "readOnly": true
                 }
             }
         },

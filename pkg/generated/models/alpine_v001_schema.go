@@ -181,6 +181,7 @@ type AlpineV001SchemaPackage struct {
 	Hash *AlpineV001SchemaPackageHash `json:"hash,omitempty"`
 
 	// Values of the .PKGINFO key / value pairs
+	// Read Only: true
 	Pkginfo map[string]string `json:"pkginfo,omitempty"`
 
 	// Specifies the location of the package; if this is specified, a hash value must also be provided
@@ -243,6 +244,10 @@ func (m *AlpineV001SchemaPackage) ContextValidate(ctx context.Context, formats s
 		res = append(res, err)
 	}
 
+	if err := m.contextValidatePkginfo(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
@@ -259,6 +264,11 @@ func (m *AlpineV001SchemaPackage) contextValidateHash(ctx context.Context, forma
 			return err
 		}
 	}
+
+	return nil
+}
+
+func (m *AlpineV001SchemaPackage) contextValidatePkginfo(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

@@ -231,7 +231,7 @@ func (m *IntotoV001SchemaContent) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-// IntotoV001SchemaContentHash Specifies the hash algorithm and value encompassing the entire signed archive
+// IntotoV001SchemaContentHash Specifies the hash algorithm and value encompassing the entire signed envelope
 //
 // swagger:model IntotoV001SchemaContentHash
 type IntotoV001SchemaContentHash struct {
@@ -313,8 +313,13 @@ func (m *IntotoV001SchemaContentHash) validateValue(formats strfmt.Registry) err
 	return nil
 }
 
-// ContextValidate validates this intoto v001 schema content hash based on context it is used
+// ContextValidate validate this intoto v001 schema content hash based on the context it is used
 func (m *IntotoV001SchemaContentHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
 	return nil
 }
 
