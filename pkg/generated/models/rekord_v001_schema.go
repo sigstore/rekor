@@ -180,7 +180,7 @@ type RekordV001SchemaData struct {
 	// hash
 	Hash *RekordV001SchemaDataHash `json:"hash,omitempty"`
 
-	// Specifies the location of the content; if this is specified, a hash value must also be provided
+	// Specifies the location of the content
 	// Format: uri
 	URL strfmt.URI `json:"url,omitempty"`
 }

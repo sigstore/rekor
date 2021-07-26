@@ -295,7 +295,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 
-	canonicalEntry.Chart.Provenance.Signature.Content = (*strfmt.Base64)(&sigContent)
+	canonicalEntry.Chart.Provenance.Signature.Content = sigContent
 
 	// wrap in valid object with kind and apiVersion set
 	helmObj := models.Helm{}

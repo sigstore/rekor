@@ -380,8 +380,13 @@ func (m *HelmV001SchemaChartHash) validateValue(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validates this helm v001 schema chart hash based on context it is used
+// ContextValidate validate this helm v001 schema chart hash based on the context it is used
 func (m *HelmV001SchemaChartHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
 	return nil
 }
 
@@ -520,8 +525,9 @@ type HelmV001SchemaChartProvenanceSignature struct {
 
 	// Specifies the signature embedded within the provenance file
 	// Required: true
+	// Read Only: true
 	// Format: byte
-	Content *strfmt.Base64 `json:"content"`
+	Content strfmt.Base64 `json:"content"`
 }
 
 // Validate validates this helm v001 schema chart provenance signature
@@ -540,15 +546,33 @@ func (m *HelmV001SchemaChartProvenanceSignature) Validate(formats strfmt.Registr
 
 func (m *HelmV001SchemaChartProvenanceSignature) validateContent(formats strfmt.Registry) error {
 
-	if err := validate.Required("chart"+"."+"provenance"+"."+"signature"+"."+"content", "body", m.Content); err != nil {
+	if err := validate.Required("chart"+"."+"provenance"+"."+"signature"+"."+"content", "body", strfmt.Base64(m.Content)); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// ContextValidate validates this helm v001 schema chart provenance signature based on context it is used
+// ContextValidate validate this helm v001 schema chart provenance signature based on the context it is used
 func (m *HelmV001SchemaChartProvenanceSignature) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.contextValidateContent(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *HelmV001SchemaChartProvenanceSignature) contextValidateContent(ctx context.Context, formats strfmt.Registry) error {
+
+	if err := validate.ReadOnly(ctx, "chart"+"."+"provenance"+"."+"signature"+"."+"content", "body", strfmt.Base64(m.Content)); err != nil {
+		return err
+	}
+
 	return nil
 }
 

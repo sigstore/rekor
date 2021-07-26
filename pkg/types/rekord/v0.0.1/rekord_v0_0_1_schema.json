@@ -17,7 +17,8 @@
                 "url": {
                     "description": "Specifies the location of the signature",
                     "type": "string",
-                    "format": "uri"
+                    "format": "uri",
+                    "writeOnly": true
                 },
                 "content": {
                     "description": "Specifies the content of the signature inline within the document",
@@ -31,7 +32,8 @@
                         "url": {
                             "description": "Specifies the location of the public key",
                             "type": "string",
-                            "format": "uri"
+                            "format": "uri",
+                            "writeOnly": true
                         },
                         "content": {
                             "description": "Specifies the content of the public key inline within the document",
@@ -79,14 +81,16 @@
                     "required": [ "algorithm", "value" ]
                 },
                 "url": {
-                    "description": "Specifies the location of the content; if this is specified, a hash value must also be provided",
+                    "description": "Specifies the location of the content",
                     "type": "string",
-                    "format": "uri"
+                    "format": "uri",
+                    "writeOnly": true
                 },
                 "content": {
                     "description": "Specifies the content inline within the document",
                     "type": "string",
-                    "format": "byte"
+                    "format": "byte",
+                    "writeOnly": true
                 }
             },
             "oneOf": [

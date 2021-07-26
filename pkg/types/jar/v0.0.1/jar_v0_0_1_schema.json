@@ -12,7 +12,8 @@
                 "content": {
                     "description": "Specifies the PKCS7 signature embedded within the JAR file ",
                     "type": "string",
-                    "format": "byte"
+                    "format": "byte",
+                    "readOnly": true
                 },
                 "publicKey" : {
                     "description": "The X509 certificate containing the public key JAR which verifies the signature of the JAR",
@@ -24,7 +25,8 @@
                             "format": "byte"
                         }
                     },
-                    "required": [ "content" ]
+                    "required": [ "content" ],
+                    "readOnly": true
                 }
             },
             "required": [ "publicKey", "content" ]
@@ -52,12 +54,14 @@
                 "url": {
                     "description": "Specifies the location of the archive; if this is specified, a hash value must also be provided",
                     "type": "string",
-                    "format": "uri"
+                    "format": "uri",
+                    "writeOnly": true
                 },
                 "content": {
                     "description": "Specifies the archive inline within the document",
                     "type": "string",
-                    "format": "byte"
+                    "format": "byte",
+                    "writeOnly": true
                 }
             },
             "oneOf": [

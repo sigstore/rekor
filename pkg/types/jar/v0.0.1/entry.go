@@ -240,7 +240,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	canonicalEntry.Signature.Content = (*strfmt.Base64)(&sigContent)
+	canonicalEntry.Signature.Content = sigContent
 
 	canonicalEntry.Archive = &models.JarV001SchemaArchive{}
 	canonicalEntry.Archive.Hash = &models.JarV001SchemaArchiveHash{}

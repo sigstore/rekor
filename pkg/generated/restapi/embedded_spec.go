@@ -1307,7 +1307,8 @@ func init() {
         "content": {
           "description": "Specifies the package inline within the document",
           "type": "string",
-          "format": "byte"
+          "format": "byte",
+          "writeOnly": true
         },
         "hash": {
           "description": "Specifies the hash algorithm and value for the package",
@@ -1335,12 +1336,14 @@ func init() {
           "type": "object",
           "additionalProperties": {
             "type": "string"
-          }
+          },
+          "readOnly": true
         },
         "url": {
           "description": "Specifies the location of the package; if this is specified, a hash value must also be provided",
           "type": "string",
-          "format": "uri"
+          "format": "uri",
+          "writeOnly": true
         }
       }
     },
@@ -1389,7 +1392,8 @@ func init() {
         "url": {
           "description": "Specifies the location of the public key",
           "type": "string",
-          "format": "uri"
+          "format": "uri",
+          "writeOnly": true
         }
       }
     },
@@ -1452,7 +1456,8 @@ func init() {
               "description": "The hash value for the chart",
               "type": "string"
             }
-          }
+          },
+          "readOnly": true
         },
         "provenance": {
           "description": "The provenance entry associated with the signed Helm Chart",
@@ -1473,7 +1478,8 @@ func init() {
             "content": {
               "description": "Specifies the content of the provenance file inline within the document",
               "type": "string",
-              "format": "byte"
+              "format": "byte",
+              "writeOnly": true
             },
             "signature": {
               "description": "Information about the included signature in the provenance file",
@@ -1485,14 +1491,17 @@ func init() {
                 "content": {
                   "description": "Specifies the signature embedded within the provenance file ",
                   "type": "string",
-                  "format": "byte"
+                  "format": "byte",
+                  "readOnly": true
                 }
-              }
+              },
+              "readOnly": true
             },
             "url": {
               "description": "Specifies the location of the provenance file",
               "type": "string",
-              "format": "uri"
+              "format": "uri",
+              "writeOnly": true
             }
           }
         }
@@ -1517,7 +1526,8 @@ func init() {
           "description": "The hash value for the chart",
           "type": "string"
         }
-      }
+      },
+      "readOnly": true
     },
     "HelmV001SchemaChartProvenance": {
       "description": "The provenance entry associated with the signed Helm Chart",
@@ -1538,7 +1548,8 @@ func init() {
         "content": {
           "description": "Specifies the content of the provenance file inline within the document",
           "type": "string",
-          "format": "byte"
+          "format": "byte",
+          "writeOnly": true
         },
         "signature": {
           "description": "Information about the included signature in the provenance file",
@@ -1550,14 +1561,17 @@ func init() {
             "content": {
               "description": "Specifies the signature embedded within the provenance file ",
               "type": "string",
-              "format": "byte"
+              "format": "byte",
+              "readOnly": true
             }
-          }
+          },
+          "readOnly": true
         },
         "url": {
           "description": "Specifies the location of the provenance file",
           "type": "string",
-          "format": "uri"
+          "format": "uri",
+          "writeOnly": true
         }
       }
     },
@@ -1571,9 +1585,11 @@ func init() {
         "content": {
           "description": "Specifies the signature embedded within the provenance file ",
           "type": "string",
-          "format": "byte"
+          "format": "byte",
+          "readOnly": true
         }
-      }
+      },
+      "readOnly": true
     },
     "HelmV001SchemaPublicKey": {
       "description": "The public key that can verify the package signature",
@@ -1599,7 +1615,8 @@ func init() {
         "url": {
           "description": "Specifies the location of the public key",
           "type": "string",
-          "format": "uri"
+          "format": "uri",
+          "writeOnly": true
         }
       }
     },
@@ -1643,10 +1660,11 @@ func init() {
       "properties": {
         "envelope": {
           "description": "envelope",
-          "type": "string"
+          "type": "string",
+          "writeOnly": true
         },
         "hash": {
-          "description": "Specifies the hash algorithm and value encompassing the entire signed archive",
+          "description": "Specifies the hash algorithm and value encompassing the entire signed envelope",
           "type": "object",
           "required": [
             "algorithm",
@@ -1664,12 +1682,13 @@ func init() {
               "description": "The hash value for the archive",
               "type": "string"
             }
-          }
+          },
+          "readOnly": true
         }
       }
     },
     "IntotoV001SchemaContentHash": {
-      "description": "Specifies the hash algorithm and value encompassing the entire signed archive",
+      "description": "Specifies the hash algorithm and value encompassing the entire signed envelope",
       "type": "object",
       "required": [
         "algorithm",
@@ -1687,7 +1706,8 @@ func init() {
           "description": "The hash value for the archive",
           "type": "string"
         }
-      }
+      },
+      "readOnly": true
     },
     "JarV001SchemaArchive": {
       "description": "Information about the archive associated with the entry",
@@ -1708,7 +1728,8 @@ func init() {
         "content": {
           "description": "Specifies the archive inline within the document",
           "type": "string",
-          "format": "byte"
+          "format": "byte",
+          "writeOnly": true
         },
         "hash": {
           "description": "Specifies the hash algorithm and value encompassing the entire signed archive",
@@ -1734,7 +1755,8 @@ func init() {
         "url": {
           "description": "Specifies the location of the archive; if this is specified, a hash value must also be provided",
           "type": "string",
-          "format": "uri"
+          "format": "uri",
+          "writeOnly": true
         }
       }
     },
@@ -1770,7 +1792,8 @@ func init() {
         "content": {
           "description": "Specifies the PKCS7 signature embedded within the JAR file ",
           "type": "string",
-          "format": "byte"
+          "format": "byte",
+          "readOnly": true
         },
         "publicKey": {
           "description": "The X509 certificate containing the public key JAR which verifies the signature of the JAR",
@@ -1784,7 +1807,8 @@ func init() {
               "type": "string",
               "format": "byte"
             }
-          }
+          },
+          "readOnly": true
         }
       }
     },
@@ -1800,7 +1824,8 @@ func init() {
           "type": "string",
           "format": "byte"
         }
-      }
+      },
+      "readOnly": true
     },
     "LogEntry": {
       "type": "object",
@@ -1941,7 +1966,8 @@ func init() {
         "content": {
           "description": "Specifies the content inline within the document",
           "type": "string",
-          "format": "byte"
+          "format": "byte",
+          "writeOnly": true
         },
         "hash": {
           "description": "Specifies the hash algorithm and value for the content",
@@ -1965,9 +1991,10 @@ func init() {
           }
         },
         "url": {
-          "description": "Specifies the location of the content; if this is specified, a hash value must also be provided",
+          "description": "Specifies the location of the content",
           "type": "string",
-          "format": "uri"
+          "format": "uri",
+          "writeOnly": true
         }
       }
     },
@@ -2051,14 +2078,16 @@ func init() {
             "url": {
               "description": "Specifies the location of the public key",
               "type": "string",
-              "format": "uri"
+              "format": "uri",
+              "writeOnly": true
             }
           }
         },
         "url": {
           "description": "Specifies the location of the signature",
           "type": "string",
-          "format": "uri"
+          "format": "uri",
+          "writeOnly": true
         }
       }
     },
@@ -2086,7 +2115,8 @@ func init() {
         "url": {
           "description": "Specifies the location of the public key",
           "type": "string",
-          "format": "uri"
+          "format": "uri",
+          "writeOnly": true
         }
       }
     },
@@ -2123,7 +2153,8 @@ func init() {
         "content": {
           "description": "Specifies the package inline within the document",
           "type": "string",
-          "format": "byte"
+          "format": "byte",
+          "writeOnly": true
         },
         "hash": {
           "description": "Specifies the hash algorithm and value for the package",
@@ -2151,12 +2182,14 @@ func init() {
           "type": "object",
           "additionalProperties": {
             "type": "string"
-          }
+          },
+          "readOnly": true
         },
         "url": {
           "description": "Specifies the location of the package; if this is specified, a hash value must also be provided",
           "type": "string",
-          "format": "uri"
+          "format": "uri",
+          "writeOnly": true
         }
       }
     },
@@ -2205,7 +2238,8 @@ func init() {
         "url": {
           "description": "Specifies the location of the public key",
           "type": "string",
-          "format": "uri"
+          "format": "uri",
+          "writeOnly": true
         }
       }
     },
@@ -2368,7 +2402,8 @@ func init() {
             "content": {
               "description": "Specifies the package inline within the document",
               "type": "string",
-              "format": "byte"
+              "format": "byte",
+              "writeOnly": true
             },
             "hash": {
               "description": "Specifies the hash algorithm and value for the package",
@@ -2396,12 +2431,14 @@ func init() {
               "type": "object",
               "additionalProperties": {
                 "type": "string"
-              }
+              },
+              "readOnly": true
             },
             "url": {
               "description": "Specifies the location of the package; if this is specified, a hash value must also be provided",
               "type": "string",
-              "format": "uri"
+              "format": "uri",
+              "writeOnly": true
             }
           }
         },
@@ -2429,7 +2466,8 @@ func init() {
             "url": {
               "description": "Specifies the location of the public key",
               "type": "string",
-              "format": "uri"
+              "format": "uri",
+              "writeOnly": true
             }
           }
         }
@@ -2508,7 +2546,8 @@ func init() {
                   "description": "The hash value for the chart",
                   "type": "string"
                 }
-              }
+              },
+              "readOnly": true
             },
             "provenance": {
               "description": "The provenance entry associated with the signed Helm Chart",
@@ -2529,7 +2568,8 @@ func init() {
                 "content": {
                   "description": "Specifies the content of the provenance file inline within the document",
                   "type": "string",
-                  "format": "byte"
+                  "format": "byte",
+                  "writeOnly": true
                 },
                 "signature": {
                   "description": "Information about the included signature in the provenance file",
@@ -2541,14 +2581,17 @@ func init() {
                     "content": {
                       "description": "Specifies the signature embedded within the provenance file ",
                       "type": "string",
-                      "format": "byte"
+                      "format": "byte",
+                      "readOnly": true
                     }
-                  }
+                  },
+                  "readOnly": true
                 },
                 "url": {
                   "description": "Specifies the location of the provenance file",
                   "type": "string",
-                  "format": "uri"
+                  "format": "uri",
+                  "writeOnly": true
                 }
               }
             }
@@ -2583,7 +2626,8 @@ func init() {
             "url": {
               "description": "Specifies the location of the public key",
               "type": "string",
-              "format": "uri"
+              "format": "uri",
+              "writeOnly": true
             }
           }
         }
@@ -2642,10 +2686,11 @@ func init() {
           "properties": {
             "envelope": {
               "description": "envelope",
-              "type": "string"
+              "type": "string",
+              "writeOnly": true
             },
             "hash": {
-              "description": "Specifies the hash algorithm and value encompassing the entire signed archive",
+              "description": "Specifies the hash algorithm and value encompassing the entire signed envelope",
               "type": "object",
               "required": [
                 "algorithm",
@@ -2663,7 +2708,8 @@ func init() {
                   "description": "The hash value for the archive",
                   "type": "string"
                 }
-              }
+              },
+              "readOnly": true
             }
           }
         },
@@ -2745,7 +2791,8 @@ func init() {
             "content": {
               "description": "Specifies the archive inline within the document",
               "type": "string",
-              "format": "byte"
+              "format": "byte",
+              "writeOnly": true
             },
             "hash": {
               "description": "Specifies the hash algorithm and value encompassing the entire signed archive",
@@ -2771,7 +2818,8 @@ func init() {
             "url": {
               "description": "Specifies the location of the archive; if this is specified, a hash value must also be provided",
               "type": "string",
-              "format": "uri"
+              "format": "uri",
+              "writeOnly": true
             }
           }
         },
@@ -2791,7 +2839,8 @@ func init() {
             "content": {
               "description": "Specifies the PKCS7 signature embedded within the JAR file ",
               "type": "string",
-              "format": "byte"
+              "format": "byte",
+              "readOnly": true
             },
             "publicKey": {
               "description": "The X509 certificate containing the public key JAR which verifies the signature of the JAR",
@@ -2805,7 +2854,8 @@ func init() {
                   "type": "string",
                   "format": "byte"
                 }
-              }
+              },
+              "readOnly": true
             }
           }
         }
@@ -2878,7 +2928,8 @@ func init() {
             "content": {
               "description": "Specifies the content inline within the document",
               "type": "string",
-              "format": "byte"
+              "format": "byte",
+              "writeOnly": true
             },
             "hash": {
               "description": "Specifies the hash algorithm and value for the content",
@@ -2902,9 +2953,10 @@ func init() {
               }
             },
             "url": {
-              "description": "Specifies the location of the content; if this is specified, a hash value must also be provided",
+              "description": "Specifies the location of the content",
               "type": "string",
-              "format": "uri"
+              "format": "uri",
+              "writeOnly": true
             }
           }
         },
@@ -2972,14 +3024,16 @@ func init() {
                 "url": {
                   "description": "Specifies the location of the public key",
                   "type": "string",
-                  "format": "uri"
+                  "format": "uri",
+                  "writeOnly": true
                 }
               }
             },
             "url": {
               "description": "Specifies the location of the signature",
               "type": "string",
-              "format": "uri"
+              "format": "uri",
+              "writeOnly": true
             }
           }
         }
@@ -3125,7 +3179,8 @@ func init() {
             "content": {
               "description": "Specifies the package inline within the document",
               "type": "string",
-              "format": "byte"
+              "format": "byte",
+              "writeOnly": true
             },
             "hash": {
               "description": "Specifies the hash algorithm and value for the package",
@@ -3153,12 +3208,14 @@ func init() {
               "type": "object",
               "additionalProperties": {
                 "type": "string"
-              }
+              },
+              "readOnly": true
             },
             "url": {
               "description": "Specifies the location of the package; if this is specified, a hash value must also be provided",
               "type": "string",
-              "format": "uri"
+              "format": "uri",
+              "writeOnly": true
             }
           }
         },
@@ -3186,7 +3243,8 @@ func init() {
             "url": {
               "description": "Specifies the location of the public key",
               "type": "string",
-              "format": "uri"
+              "format": "uri",
+              "writeOnly": true
             }
           }
         }

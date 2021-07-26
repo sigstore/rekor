@@ -181,6 +181,7 @@ type RpmV001SchemaPackage struct {
 	Hash *RpmV001SchemaPackageHash `json:"hash,omitempty"`
 
 	// Values of the RPM headers
+	// Read Only: true
 	Headers map[string]string `json:"headers,omitempty"`
 
 	// Specifies the location of the package; if this is specified, a hash value must also be provided
@@ -243,6 +244,10 @@ func (m *RpmV001SchemaPackage) ContextValidate(ctx context.Context, formats strf
 		res = append(res, err)
 	}
 
+	if err := m.contextValidateHeaders(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
@@ -259,6 +264,11 @@ func (m *RpmV001SchemaPackage) contextValidateHash(ctx context.Context, formats 
 			return err
 		}
 	}
+
+	return nil
+}
+
+func (m *RpmV001SchemaPackage) contextValidateHeaders(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }
