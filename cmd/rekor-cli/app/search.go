@@ -196,6 +196,10 @@ var searchCmd = &cobra.Command{
 			}
 		}
 
+		if len(resp.Payload) == 0 {
+			return nil, fmt.Errorf("no matching entries found")
+		}
+
 		return &searchCmdOutput{
 			uuids: resp.GetPayload(),
 		}, nil
