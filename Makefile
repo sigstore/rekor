@@ -57,6 +57,10 @@ $(GENSRC): $(SWAGGER) $(OPENAPIDEPS)
 	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --default-consumes application/json\;q=1
 	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A rekor_server --exclude-spec --flag-strategy=pflag --default-produces application/json
 
+.PHONY: validate-openapi
+validate-openapi: $(SWAGGER)
+	$(SWAGGER) validate openapi.yaml
+
 # this exists to override pattern match rule above since this file is in the generated directory but should not be treated as generated code
 pkg/generated/restapi/configure_rekor_server.go: $(OPENAPIDEPS)
 	
