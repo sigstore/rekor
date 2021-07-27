@@ -13,13 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: all test clean clean-gen lint gosec ko sign-container
+.PHONY: all test clean clean-gen lint gosec ko sign-container cross-cli
 
 all: rekor-cli rekor-server
 
 GENSRC = pkg/generated/client/%.go pkg/generated/models/%.go pkg/generated/restapi/%.go
 OPENAPIDEPS = openapi.yaml $(shell find pkg/types -iname "*.json")
 SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go"|grep -v pkg/generated) pkg/generated/restapi/configure_rekor_server.go $(GENSRC)
+TOOLS_DIR := hack/tools
+TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
+BIN_DIR := $(abspath $(ROOT_DIR)/bin)
+GO_INSTALL = ./scripts/go_install.sh
+
 
 # Set version variables for LDFLAGS
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
@@ -37,15 +42,20 @@ ifeq ($(DIFF), 1)
     GIT_TREESTATE = "dirty"
 endif
 
+# Binaries
+SWAGGER_VER := v0.27.0
+SWAGGER_BIN := swagger
+SWAGGER := $(TOOLS_BIN_DIR)/$(SWAGGER_BIN)-$(SWAGGER_VER)
+
 CLI_PKG=github.com/sigstore/rekor/cmd/rekor-cli/app
 CLI_LDFLAGS="-X $(CLI_PKG).gitVersion=$(GIT_VERSION) -X $(CLI_PKG).gitCommit=$(GIT_HASH) -X $(CLI_PKG).gitTreeState=$(GIT_TREESTATE) -X $(CLI_PKG).buildDate=$(BUILD_DATE)"
 
 SERVER_PKG=github.com/sigstore/rekor/cmd/rekor-server/app
 SERVER_LDFLAGS="-X $(SERVER_PKG).gitVersion=$(GIT_VERSION) -X $(SERVER_PKG).gitCommit=$(GIT_HASH) -X $(SERVER_PKG).gitTreeState=$(GIT_TREESTATE) -X $(SERVER_PKG).buildDate=$(BUILD_DATE)"
 
-$(GENSRC): $(OPENAPIDEPS)
-	swagger generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --default-consumes application/json\;q=1
-	swagger generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A rekor_server --exclude-spec --flag-strategy=pflag --default-produces application/json
+$(GENSRC): $(SWAGGER) $(OPENAPIDEPS)
+	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --default-consumes application/json\;q=1
+	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A rekor_server --exclude-spec --flag-strategy=pflag --default-produces application/json
 
 # this exists to override pattern match rule above since this file is in the generated directory but should not be treated as generated code
 pkg/generated/restapi/configure_rekor_server.go: $(OPENAPIDEPS)
@@ -69,6 +79,8 @@ test:
 	go test ./...
 
 clean:
+	rm -rf dist
+	rm -rf hack/tools
 	rm -rf rekor-cli rekor-server
 
 clean-gen: clean
@@ -90,3 +102,30 @@ ko:
 
 sign-container: ko
 	cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}:$(GIT_HASH)
+
+## --------------------------------------
+## Release
+## --------------------------------------
+
+.PHONY: dist-cli
+dist-cli:
+	mkdir -p dist/
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-linux-amd64 ./cmd/rekor-cli
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-linux-arm64 ./cmd/rekor-cli
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-darwin-amd64 ./cmd/rekor-cli
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-darwin-arm64 ./cmd/rekor-cli
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-windows-amd64.exe ./cmd/rekor-cli
+
+.PHONY: dist-server
+dist-server:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags $(SERVER_LDFLAGS) -o rekor-server ./cmd/rekor-server
+
+.PHONY: dist
+dist: dist-server dist-cli
+
+## --------------------------------------
+## Tooling Binaries
+## --------------------------------------
+
+$(SWAGGER): ## Build swagger from tools folder.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/go-swagger/go-swagger/cmd/swagger $(SWAGGER_BIN) $(SWAGGER_VER)

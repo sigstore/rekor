@@ -8,3 +8,5 @@ logid
 /tests/rekor-server
 /server
 swagger
+dist/*
+hack/*
