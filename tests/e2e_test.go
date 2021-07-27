@@ -226,6 +226,10 @@ func TestGet(t *testing.T) {
 	outputContains(t, out, uuid)
 }
 
+func TestSearchNoEntriesRC1(t *testing.T) {
+	runCliErr(t, "search", "--email", "noone@internetz.com")
+}
+
 func TestMinisign(t *testing.T) {
 	// Create a keypair
 	keyPath := filepath.Join(t.TempDir(), "minisign.key")
