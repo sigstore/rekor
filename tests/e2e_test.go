@@ -192,6 +192,9 @@ func TestGet(t *testing.T) {
 
 	uuid := getUUIDFromUploadOutput(t, out)
 
+	// since we at least have 1 valid entry, check the log at index 0
+	runCli(t, "get", "--log-index", "0")
+
 	out = runCli(t, "get", "--format=json", "--uuid", uuid)
 
 	// The output here should be in JSON with this structure:

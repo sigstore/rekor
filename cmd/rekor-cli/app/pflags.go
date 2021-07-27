@@ -195,7 +195,7 @@ func validateLogIndex(v string) error {
 		return err
 	}
 	l := struct {
-		Index int `validate:"required,gte=0"`
+		Index int `validate:"gte=0"`
 	}{i}
 
 	return useValidator(logIndexFlag, l)
