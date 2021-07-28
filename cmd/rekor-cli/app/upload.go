@@ -78,6 +78,7 @@ var uploadCmd = &cobra.Command{
 		}
 		var entry models.ProposedEntry
 		params := entries.NewCreateLogEntryParams()
+		params.SetTimeout(viper.GetDuration("timeout"))
 
 		entryStr := viper.GetString("entry")
 		if entryStr != "" {

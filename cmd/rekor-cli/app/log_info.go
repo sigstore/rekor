@@ -67,7 +67,9 @@ var logInfoCmd = &cobra.Command{
 			return nil, err
 		}
 
-		result, err := rekorClient.Tlog.GetLogInfo(nil)
+		params := tlog.GetLogInfoParams{}
+		params.SetTimeout(viper.GetDuration("timeout"))
+		result, err := rekorClient.Tlog.GetLogInfo(&params)
 		if err != nil {
 			return nil, err
 		}

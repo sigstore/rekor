@@ -154,6 +154,7 @@ var timestampCmd = &cobra.Command{
 		}
 
 		params := timestamp.NewGetTimestampResponseParams()
+		params.SetTimeout(viper.GetDuration("timeout"))
 		params.Request = ioutil.NopCloser(bytes.NewReader(requestBytes))
 
 		var respBytes bytes.Buffer

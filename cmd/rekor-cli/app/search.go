@@ -109,6 +109,7 @@ var searchCmd = &cobra.Command{
 		}
 
 		params := index.NewSearchIndexParams()
+		params.SetTimeout(viper.GetDuration("timeout"))
 		params.Query = &models.SearchIndex{}
 
 		artifactStr := viper.GetString("artifact")

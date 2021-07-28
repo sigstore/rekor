@@ -59,6 +59,7 @@ func init() {
 
 	rootCmd.PersistentFlags().Var(NewFlagValue(urlFlag, "https://rekor.sigstore.dev"), "rekor_server", "Server address:port")
 	rootCmd.PersistentFlags().Var(NewFlagValue(formatFlag, "default"), "format", "Command output format")
+	rootCmd.PersistentFlags().Var(NewFlagValue(timeoutFlag, "30s"), "timeout", "HTTP timeout")
 
 	rootCmd.PersistentFlags().String("api-key", "", "API key for rekor.sigstore.dev")
 

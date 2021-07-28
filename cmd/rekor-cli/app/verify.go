@@ -91,6 +91,7 @@ var verifyCmd = &cobra.Command{
 		}
 
 		searchParams := entries.NewSearchLogQueryParams()
+		searchParams.SetTimeout(viper.GetDuration("timeout"))
 		searchLogQuery := models.SearchLogQuery{}
 
 		uuid := viper.GetString("uuid")

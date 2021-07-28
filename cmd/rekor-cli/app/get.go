@@ -86,6 +86,7 @@ var getCmd = &cobra.Command{
 		logIndex := viper.GetString("log-index")
 		if logIndex != "" {
 			params := entries.NewGetLogEntryByIndexParams()
+			params.SetTimeout(viper.GetDuration("timeout"))
 			logIndexInt, err := strconv.ParseInt(logIndex, 10, 0)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing --log-index: %w", err)
@@ -108,6 +109,7 @@ var getCmd = &cobra.Command{
 		uuid := viper.GetString("uuid")
 		if uuid != "" {
 			params := entries.NewGetLogEntryByUUIDParams()
+			params.SetTimeout(viper.GetDuration("timeout"))
 			params.EntryUUID = uuid
 
 			resp, err := rekorClient.Entries.GetLogEntryByUUID(params)
