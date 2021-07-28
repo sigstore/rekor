@@ -64,7 +64,7 @@ func (t TimestampNote) MarshalText() ([]byte, error) {
 	return []byte(t.String()), nil
 }
 
-// validateSHA256Value ensures that the supplied string matches the following format:
+// validateMessgeImprint ensures that the supplied string matches the following format:
 // [sha256:]<64 hexadecimal characters>
 // where [sha256:] is optional
 func validateMessgeImprint(v string) error {
@@ -94,7 +94,7 @@ func validateMessgeImprint(v string) error {
 // The supplied data is expected to begin with the following 6 lines of text,
 // each followed by a newline:
 // <ecosystem/version string>
-// <base64 representation of message hash>
+// <message hash of the format sha256:$SHA>
 // <base64 representation of the nonce>
 // <RFC 3339 representation of the time>
 // <decimal representation of radius>
