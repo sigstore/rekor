@@ -24,7 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-playground/validator"
 	"github.com/pkg/errors"
 )
 
@@ -64,30 +63,6 @@ func (t TimestampNote) MarshalText() ([]byte, error) {
 	return []byte(t.String()), nil
 }
 
-// validateMessgeImprint ensures that the supplied string matches the following format:
-// [sha256:]<64 hexadecimal characters>
-// where [sha256:] is optional
-func validateMessgeImprint(v string) error {
-	var prefix, hash string
-
-	split := strings.SplitN(v, ":", 2)
-	switch len(split) {
-	case 1:
-		hash = split[0]
-	case 2:
-		prefix = split[0]
-		hash = split[1]
-	}
-
-	s := struct {
-		Prefix string `validate:"omitempty,oneof=sha256"`
-		Hash   string `validate:"required,len=64,hexadecimal"`
-	}{prefix, hash}
-
-	validate := validator.New()
-	return validate.Struct(s)
-}
-
 // UnmarshalText parses the common formatted timestamp note data and stores the result
 // in the TimestampNote.
 //
@@ -113,7 +88,7 @@ func (t *TimestampNote) UnmarshalText(data []byte) error {
 		return errors.New("invalid timestamp note - empty ecosystem")
 	}
 	h := string(l[1])
-	if err := validateMessgeImprint(h); err != nil {
+	if err := ValidateSHA256Value(h); err != nil {
 		return fmt.Errorf("invalid timestamp note - invalid message hash: %w", err)
 	}
 
