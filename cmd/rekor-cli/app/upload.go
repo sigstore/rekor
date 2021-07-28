@@ -19,14 +19,15 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
+	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/swag"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -82,7 +83,7 @@ var uploadCmd = &cobra.Command{
 
 		entryStr := viper.GetString("entry")
 		if entryStr != "" {
-			var entryBytes []byte
+			var entryReader io.Reader
 			entryURL, err := url.Parse(entryStr)
 			if err == nil && entryURL.IsAbs() {
 				/* #nosec G107 */
@@ -91,17 +92,15 @@ var uploadCmd = &cobra.Command{
 					return nil, fmt.Errorf("error fetching entry: %w", err)
 				}
 				defer entryResp.Body.Close()
-				entryBytes, err = ioutil.ReadAll(entryResp.Body)
-				if err != nil {
-					return nil, fmt.Errorf("error fetching entry: %w", err)
-				}
+				entryReader = entryResp.Body
 			} else {
-				entryBytes, err = ioutil.ReadFile(filepath.Clean(entryStr))
+				entryReader, err = os.Open(filepath.Clean(entryStr))
 				if err != nil {
 					return nil, fmt.Errorf("error processing entry file: %w", err)
 				}
 			}
-			if err := json.Unmarshal(entryBytes, &entry); err != nil {
+			entry, err = models.UnmarshalProposedEntry(entryReader, runtime.JSONConsumer())
+			if err != nil {
 				return nil, fmt.Errorf("error parsing entry file: %w", err)
 			}
 		} else {

@@ -763,3 +763,47 @@ func rekorTimestampCertChain(t *testing.T, ctx context.Context, c *genclient.Rek
 	}
 	return certificates
 }
+
+func TestEntryUpload(t *testing.T) {
+	artifactPath := filepath.Join(t.TempDir(), "artifact")
+	sigPath := filepath.Join(t.TempDir(), "signature.asc")
+
+	createdPGPSignedArtifact(t, artifactPath, sigPath)
+	payload, _ := ioutil.ReadFile(artifactPath)
+	sig, _ := ioutil.ReadFile(sigPath)
+
+	// Create the entry file
+	entryPath := filepath.Join(t.TempDir(), "entry.json")
+
+	re := rekord.V001Entry{
+		RekordObj: models.RekordV001Schema{
+			Data: &models.RekordV001SchemaData{
+				Content: strfmt.Base64(payload),
+			},
+			Signature: &models.RekordV001SchemaSignature{
+				Content: strfmt.Base64(sig),
+				Format:  models.RekordV001SchemaSignatureFormatPgp,
+				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+					Content: strfmt.Base64([]byte(publicKey)),
+				},
+			},
+		},
+	}
+
+	returnVal := models.Rekord{
+		APIVersion: swag.String(re.APIVersion()),
+		Spec:       re.RekordObj,
+	}
+	entryBytes, err := json.Marshal(returnVal)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if err := ioutil.WriteFile(entryPath, entryBytes, 0644); err != nil {
+		t.Error(err)
+	}
+
+	// Now upload to rekor!
+	out := runCli(t, "upload", "--entry", entryPath)
+	outputContains(t, out, "Created entry at")
+}
