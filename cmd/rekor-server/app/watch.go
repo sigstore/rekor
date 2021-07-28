@@ -64,7 +64,7 @@ var watchCmd = &cobra.Command{
 		_ = flag.CommandLine.Parse([]string{})
 
 		host := viper.GetString("rekor_server.address")
-		port := viper.GetUint("rekor_server.port")
+		port := viper.GetUint("port")
 		interval := viper.GetDuration("interval")
 		url := fmt.Sprintf("http://%s:%d", host, port)
 		c, err := client.GetRekorClient(url)
