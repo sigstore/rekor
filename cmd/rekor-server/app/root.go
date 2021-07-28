@@ -64,7 +64,7 @@ func init() {
 	rootCmd.PersistentFlags().String("rekor_server.signer", "memory", "Rekor signer to use. Current valid options include: [gcpkms, memory]")
 	rootCmd.PersistentFlags().String("rekor_server.timestamp_chain", "", "PEM encoded cert chain to use for timestamping")
 
-	rootCmd.PersistentFlags().Uint16("rekor_server.port", 3000, "Port to bind to")
+	rootCmd.PersistentFlags().Uint16("port", 3000, "Port to bind to")
 
 	rootCmd.PersistentFlags().Bool("enable_retrieve_api", true, "enables Redis-based index API endpoint")
 	rootCmd.PersistentFlags().String("redis_server.address", "127.0.0.1", "Redis server address")

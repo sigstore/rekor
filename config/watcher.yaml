@@ -43,7 +43,7 @@ spec:
         args: [
           "watch",
           "--rekor_server.address=rekor-server",
-          "--rekor_server.port=80",
+          "--port=80",
           "--log_type=prod",
         ]
         env:
