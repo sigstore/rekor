@@ -9,4 +9,4 @@ logid
 /server
 swagger
 dist/*
-hack/*
+hack/tools/bin/*
