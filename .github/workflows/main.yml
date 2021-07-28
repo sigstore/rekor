@@ -32,10 +32,8 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GOVERSION }}
-      - name: download go-swagger
-        run : go install github.com/go-swagger/go-swagger/cmd/swagger@v0.27.0
       - name: Validate OpenAPI with Swagger
-        run: swagger validate openapi.yaml
+        run: make validate-openapi
       - name: Build
         run: make -C $GITHUB_WORKSPACE all
       - name: Test
