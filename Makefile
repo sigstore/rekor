@@ -23,8 +23,6 @@ SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go"|grep -v pk
 TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
 BIN_DIR := $(abspath $(ROOT_DIR)/bin)
-GO_INSTALL = ./scripts/go_install.sh
-
 
 # Set version variables for LDFLAGS
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
@@ -43,9 +41,7 @@ ifeq ($(DIFF), 1)
 endif
 
 # Binaries
-SWAGGER_VER := v0.27.0
-SWAGGER_BIN := swagger
-SWAGGER := $(TOOLS_BIN_DIR)/$(SWAGGER_BIN)-$(SWAGGER_VER)
+SWAGGER := $(TOOLS_BIN_DIR)/swagger
 
 CLI_PKG=github.com/sigstore/rekor/cmd/rekor-cli/app
 CLI_LDFLAGS="-X $(CLI_PKG).gitVersion=$(GIT_VERSION) -X $(CLI_PKG).gitCommit=$(GIT_HASH) -X $(CLI_PKG).gitTreeState=$(GIT_TREESTATE) -X $(CLI_PKG).buildDate=$(BUILD_DATE)"
@@ -84,7 +80,7 @@ test:
 
 clean:
 	rm -rf dist
-	rm -rf hack/tools
+	rm -rf hack/tools/bin
 	rm -rf rekor-cli rekor-server
 
 clean-gen: clean
@@ -128,9 +124,10 @@ dist-server:
 .PHONY: dist
 dist: dist-server dist-cli
 
+
 ## --------------------------------------
 ## Tooling Binaries
 ## --------------------------------------
 
-$(SWAGGER): ## Build swagger from tools folder.
-	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/go-swagger/go-swagger/cmd/swagger $(SWAGGER_BIN) $(SWAGGER_VER)
+$(SWAGGER): $(TOOLS_DIR)/go.mod
+	cd $(TOOLS_DIR); go build -tags=tools -o $(TOOLS_BIN_DIR)/swagger github.com/go-swagger/go-swagger/cmd/swagger
