@@ -93,7 +93,7 @@ var serveCmd = &cobra.Command{
 		}
 
 		server.Host = viper.GetString("rekor_server.address")
-		server.Port = int(viper.GetUint("rekor_server.port"))
+		server.Port = int(viper.GetUint("port"))
 		server.EnabledListeners = []string{"http"}
 
 		api.ConfigureAPI()
