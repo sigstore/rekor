@@ -122,7 +122,8 @@ dist-cli:
 
 .PHONY: dist-server
 dist-server:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags $(SERVER_LDFLAGS) -o rekor-server ./cmd/rekor-server
+	mkdir -p dist/
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags $(SERVER_LDFLAGS) -o dist/rekor-server-linux-amd64 ./cmd/rekor-server
 
 .PHONY: dist
 dist: dist-server dist-cli
