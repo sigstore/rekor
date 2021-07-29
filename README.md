@@ -14,12 +14,6 @@ Rekor fulfils the signature transparency role of sigstore's software signing
 infrastructure. However, Rekor can be run on its own and is designed to be
 extensible to working with different manifest schemas and PKI tooling.
 
-For more details on set up a Rekor server,  [visit the following link](https://sigstore.dev/get_started/server/)
-
-For details on CLI usage, [visit the following link](https://sigstore.dev/get_started/client/)
-
-If you're interesting in integration with Rekor, we have an [OpenAPI swagger editor](https://sigstore.dev/swagger/)
-
 ## Public Instance
 
 A public instance of rekor can be found at [rekor.sigstore.dev](https://rekor.sigstore.dev/api/v1/log/)
@@ -37,11 +31,8 @@ We are interested in helping on board you!
 
 ### Installation
 
-Rekor releases are available on the [release page](https://github.com/sigstore/rekor/releases)
-
-The components are available, the server; `rekor-server` and the CLI tool `rekor-cli`
-
-See [release-verify](release-verify.md) for details of to verify rekor release binaries.
+Please see the [installation](installation.md) page for details on how to install the rekor CLI and set up / run
+the rekor server
 
 ### Usage
 
@@ -86,7 +77,13 @@ prior to this index were witnessed by Rekor before this time.
 
 ## Extensibility
 
+### Custom schemas / manifests (rekor type)
+
 Rekor allows customized manifests (which term them as types), [type customization is outlined here](https://github.com/sigstore/rekor/tree/main/pkg/types).
+
+### API
+
+If you're interesting in integration with Rekor, we have an [OpenAPI swagger editor](https://sigstore.dev/swagger/)
 
 ## Security
 
