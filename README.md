@@ -31,7 +31,7 @@ We are interested in helping on board you!
 
 ### Installation
 
-Please see the [installation](installation.md) page for details on how to install the rekor CLI and set up / run
+Please see the [installation](INSTALLATION.md) page for details on how to install the rekor CLI and set up / run
 the rekor server
 
 ### Usage
