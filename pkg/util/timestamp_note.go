@@ -17,12 +17,7 @@ package util
 
 import (
 	"bytes"
-	"crypto"
-	"crypto/rand"
-	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
-	"encoding/binary"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -30,7 +25,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"golang.org/x/mod/sumdb/note"
 )
 
 // Signed note based timestamp responses
@@ -39,7 +33,7 @@ type TimestampNote struct {
 	// Ecosystem is the ecosystem/version string
 	Ecosystem string
 	// MessageImprint is the hash of the message to timestamp, of the form sha256:<sha>
-	MessageImprint []byte
+	MessageImprint string
 	// Nonce is a short random  bytes to prove response freshness
 	Nonce []byte
 	// Time is the timestamp to imprint on the message
@@ -56,8 +50,8 @@ type TimestampNote struct {
 func (t TimestampNote) String() string {
 	var b strings.Builder
 	time, _ := t.Time.MarshalText()
-	fmt.Fprintf(&b, "%s\n%s\n%d\n%s\n%d\n%s", t.Ecosystem, base64.StdEncoding.EncodeToString(t.MessageImprint),
-		t.Nonce, time, t.Radius, t.CertChainRef)
+	fmt.Fprintf(&b, "%s\n%s\n%s\n%s\n%d\n%s\n", t.Ecosystem, t.MessageImprint, base64.StdEncoding.EncodeToString(t.Nonce),
+		time, t.Radius, t.CertChainRef)
 	for _, line := range t.OtherContent {
 		fmt.Fprintf(&b, "%s\n", line)
 	}
@@ -75,7 +69,7 @@ func (t TimestampNote) MarshalText() ([]byte, error) {
 // The supplied data is expected to begin with the following 6 lines of text,
 // each followed by a newline:
 // <ecosystem/version string>
-// <base64 representation of message hash>
+// <message hash of the format sha256:$SHA>
 // <base64 representation of the nonce>
 // <RFC 3339 representation of the time>
 // <decimal representation of radius>
@@ -93,10 +87,11 @@ func (t *TimestampNote) UnmarshalText(data []byte) error {
 	if len(eco) == 0 {
 		return errors.New("invalid timestamp note - empty ecosystem")
 	}
-	h, err := base64.StdEncoding.DecodeString(string(l[1]))
-	if err != nil {
+	h := string(l[1])
+	if err := ValidateSHA256Value(h); err != nil {
 		return fmt.Errorf("invalid timestamp note - invalid message hash: %w", err)
 	}
+
 	nonce, err := base64.StdEncoding.DecodeString(string(l[2]))
 	if err != nil {
 		return fmt.Errorf("invalid timestamp note - invalid nonce: %w", err)
@@ -122,8 +117,8 @@ func (t *TimestampNote) UnmarshalText(data []byte) error {
 		Radius:         r,
 		CertChainRef:   u,
 	}
-	if len(l) >= 5 {
-		for _, line := range l[3:] {
+	if len(l) >= 8 {
+		for _, line := range l[6:] {
 			if len(line) == 0 {
 				break
 			}
@@ -133,41 +128,45 @@ func (t *TimestampNote) UnmarshalText(data []byte) error {
 	return nil
 }
 
-func (t TimestampNote) Sign(identity string, signer crypto.Signer, opts crypto.SignerOpts) (*note.Signature, error) {
-	hf := crypto.SHA256
-	if opts != nil {
-		hf = opts.HashFunc()
-	}
+type SignedTimestampNote struct {
+	TimestampNote
+	SignedNote
+}
 
-	input, _ := t.MarshalText()
-	var digest []byte
-	if hf != crypto.Hash(0) {
-		hasher := hf.New()
-		_, err := hasher.Write(input)
-		if err != nil {
-			return nil, errors.Wrap(err, "hashing timestamp note before signing")
-		}
-		digest = hasher.Sum(nil)
-	} else {
-		digest, _ = t.MarshalText()
-	}
-
-	sig, err := signer.Sign(rand.Reader, digest, opts)
+func CreateSignedTimestampNote(t TimestampNote) (*SignedTimestampNote, error) {
+	text, err := t.MarshalText()
 	if err != nil {
-		return nil, errors.Wrap(err, "signing timestamp note")
+		return nil, err
 	}
-	pubKeyBytes, err := x509.MarshalPKIXPublicKey(signer.Public())
-	if err != nil {
-		return nil, errors.Wrap(err, "marshalling public key")
+	return &SignedTimestampNote{
+		TimestampNote: t,
+		SignedNote:    SignedNote{Note: string(text)},
+	}, nil
+}
+
+func SignedTimestampNoteValidator(strToValidate string) bool {
+	s := SignedNote{}
+	if err := s.UnmarshalText([]byte(strToValidate)); err != nil {
+		return false
 	}
+	c := &TimestampNote{}
+	return c.UnmarshalText([]byte(s.Note)) == nil
+}
 
-	pkSha := sha256.Sum256(pubKeyBytes)
+func TimestampNoteValidator(strToValidate string) bool {
+	c := &TimestampNote{}
+	return c.UnmarshalText([]byte(strToValidate)) == nil
+}
 
-	signature := note.Signature{
-		Name:   identity,
-		Hash:   binary.BigEndian.Uint32(pkSha[:]),
-		Base64: base64.StdEncoding.EncodeToString(sig),
+func (r *SignedTimestampNote) UnmarshalText(data []byte) error {
+	s := SignedNote{}
+	if err := s.UnmarshalText([]byte(data)); err != nil {
+		return errors.Wrap(err, "unmarshalling signed note")
 	}
-
-	return &signature, nil
+	t := TimestampNote{}
+	if err := t.UnmarshalText([]byte(s.Note)); err != nil {
+		return errors.Wrap(err, "unmarshalling timestamp note")
+	}
+	*r = SignedTimestampNote{TimestampNote: t, SignedNote: s}
+	return nil
 }

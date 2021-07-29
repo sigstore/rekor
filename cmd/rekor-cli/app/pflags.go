@@ -23,6 +23,8 @@ import (
 	"time"
 
 	"github.com/sigstore/rekor/pkg/pki"
+	"github.com/sigstore/rekor/pkg/util"
+
 	"github.com/spf13/pflag"
 
 	"github.com/go-playground/validator"
@@ -165,23 +167,11 @@ func isURL(v string) bool {
 // [sha256:]<64 hexadecimal characters>
 // where [sha256:] is optional
 func validateSHA256Value(v string) error {
-	var prefix, hash string
-
-	split := strings.SplitN(v, ":", 2)
-	switch len(split) {
-	case 1:
-		hash = split[0]
-	case 2:
-		prefix = split[0]
-		hash = split[1]
+	if err := util.ValidateSHA256Value(v); err != nil {
+		return fmt.Errorf("error parsing %v flag: %w", shaFlag, err)
 	}
 
-	s := struct {
-		Prefix string `validate:"omitempty,oneof=sha256"`
-		Hash   string `validate:"required,len=64,hexadecimal"`
-	}{prefix, hash}
-
-	return useValidator(shaFlag, s)
+	return nil
 }
 
 // validateFileOrURL ensures the provided string is either a valid file path that can be opened or a valid URL
