@@ -35,6 +35,14 @@ Please reach out via the [mailing list](https://groups.google.com/g/sigstore-dev
 If you have production use-cases in mind, again - please reach out over email via the [mailing list](https://groups.google.com/g/sigstore-dev).
 We are interested in helping on board you!
 
+### Installation
+
+Rekor releases are available on the [release page](https://github.com/sigstore/rekor/releases)
+
+To components are available, the server; `rekor-server` and the CLI tool `rekor-cli`
+
+See [release-verify](release-verify.md) for details of to verify rekor release binaries.
+
 ### Usage
 
 For examples of uploading signatures for all the supported types to rekor, see [the types documentation](types.md).
