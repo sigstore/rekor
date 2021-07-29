@@ -71,8 +71,8 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 
 Save this locally to your machine as `fulcio-root.pem`
 
-> :notebook: Note this situation that will change. We are looking at leveraging other trust stores for our Root CA
-   consider this a temporary approach.
+> :notebook: We are looking at leveraging other trust stores for our Root CA
+   , so consider getting the root CA from here, a temporary approach.
 
 Let's now validate the cert chain:
 
@@ -82,7 +82,7 @@ openssl verify -verbose -no_check_time -CAfile fulcio-root.pem rekor-cli-linux-a
 rekor-cli-linux-amd64_cert.pem: OK
 ```
 
-> :notebook: Note we use `-no_check_time` as fulcio certificates are  (so always will be expired by design!)
+> :notebook: We use `-no_check_time` as fulcio certificates are  (so always will be expired by design!)
 
 #### Verify the signing identity
 
