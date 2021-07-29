@@ -39,7 +39,7 @@ We are interested in helping on board you!
 
 Rekor releases are available on the [release page](https://github.com/sigstore/rekor/releases)
 
-To components are available, the server; `rekor-server` and the CLI tool `rekor-cli`
+The components are available, the server; `rekor-server` and the CLI tool `rekor-cli`
 
 See [release-verify](release-verify.md) for details of to verify rekor release binaries.
 
