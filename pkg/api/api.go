@@ -58,6 +58,7 @@ type API struct {
 	pubkey       string // PEM encoded public key
 	pubkeyHash   string // SHA256 hash of DER-encoded public key
 	signer       signature.Signer
+	tsaSigner    signature.Signer    // the signer to use for timestamping
 	certChain    []*x509.Certificate // timestamping cert chain
 	certChainPem string              // PEM encoded timestamping cert chain
 	verifier     *client.LogVerifier
@@ -112,6 +113,16 @@ func NewAPI() (*API, error) {
 		return nil, errors.Wrap(err, "new verifier")
 	}
 
+	// Use an in-memory key for timestamping
+	tsaSigner, err := signer.New(ctx, signer.MemoryScheme)
+	if err != nil {
+		return nil, errors.Wrap(err, "getting new tsa signer")
+	}
+	tsaPk, err := tsaSigner.PublicKey(options.WithContext(ctx))
+	if err != nil {
+		return nil, errors.Wrap(err, "getting public key")
+	}
+
 	var certChain []*x509.Certificate
 	b64CertChainStr := viper.GetString("rekor_server.timestamp_chain")
 	if b64CertChainStr != "" {
@@ -122,15 +133,13 @@ func NewAPI() (*API, error) {
 		if certChain, err = pki.ParseTimestampCertChain([]byte(certChainStr)); err != nil {
 			return nil, errors.Wrap(err, "parsing timestamp cert chain")
 		}
-	} else if viper.GetString("rekor_server.signer") == signer.MemoryScheme {
-		// Generate a timestaming cert with a self signed CA if we are configured with an in-memory signer.
-		var err error
-		certChain, err = signer.NewTimestampingCertWithSelfSignedCA(pk)
-		if err != nil {
-			return nil, errors.Wrap(err, "generating timestaping cert chain")
-		}
 	}
 
+	// Generate a tsa certificate from the rekor signer and provided certificate chain
+	certChain, err = signer.NewTimestampingCertWithChain(ctx, tsaPk, rekorSigner, certChain)
+	if err != nil {
+		return nil, errors.Wrap(err, "generating timestamping cert chain")
+	}
 	certChainPem, err := pki.CertChainToPEM(certChain)
 	if err != nil {
 		return nil, errors.Wrap(err, "timestamping cert chain")
@@ -142,6 +151,7 @@ func NewAPI() (*API, error) {
 		pubkey:       string(pubkey),
 		pubkeyHash:   hex.EncodeToString(pubkeyHashBytes[:]),
 		signer:       rekorSigner,
+		tsaSigner:    tsaSigner,
 		certChain:    certChain,
 		certChainPem: string(certChainPem),
 		verifier:     verifier,

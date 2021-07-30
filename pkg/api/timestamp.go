@@ -33,7 +33,7 @@ import (
 )
 
 func RequestFromRekor(ctx context.Context, req pkcs9.TimeStampReq) ([]byte, error) {
-	resp, err := util.CreateRfc3161Response(ctx, req, api.certChain, api.signer)
+	resp, err := util.CreateRfc3161Response(ctx, req, api.certChain, api.tsaSigner)
 	if err != nil {
 		return nil, err
 	}
