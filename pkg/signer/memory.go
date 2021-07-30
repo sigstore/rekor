@@ -61,16 +61,11 @@ func NewTimestampingCertWithChain(ctx context.Context, pub crypto.PublicKey, sig
 	}
 
 	if len(chain) == 0 {
-		// Generate a self-signed root CA.
+		// Generate an in-memory self-signed root CA.
 		ca := &x509.Certificate{
 			SerialNumber: big.NewInt(2019),
 			Subject: pkix.Name{
-				Organization:  []string{"in-memory root CA"},
-				Country:       []string{"US"},
-				Province:      []string{""},
-				Locality:      []string{"San Francisco"},
-				StreetAddress: []string{"Golden Gate Bridge"},
-				PostalCode:    []string{"94016"},
+				Organization: []string{"rekor in-memory root CA"},
 			},
 			NotBefore:             time.Now(),
 			NotAfter:              time.Now().AddDate(10, 0, 0),
@@ -78,7 +73,7 @@ func NewTimestampingCertWithChain(ctx context.Context, pub crypto.PublicKey, sig
 			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageContentCommitment | x509.KeyUsageCertSign,
 			BasicConstraintsValid: true,
 		}
-		caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, signerPubKey, signer)
+		caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, signerPubKey, cryptoSigner)
 		if err != nil {
 			return nil, errors.Wrap(err, "creating self-signed CA")
 		}
@@ -135,7 +130,7 @@ func NewTimestampingCertWithChain(ctx context.Context, pub crypto.PublicKey, sig
 	verifyOptions := x509.VerifyOptions{
 		Roots:         root,
 		Intermediates: intermediates,
-		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
 	}
 	if _, err = tsaCert[0].Verify(verifyOptions); err != nil {
 		return nil, err
