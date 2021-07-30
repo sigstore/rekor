@@ -17,8 +17,8 @@ limitations under the License.
 package signer
 
 import (
+	"context"
 	"crypto"
-	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
@@ -30,6 +30,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 const MemoryScheme = "memory"
@@ -39,33 +41,53 @@ type Memory struct {
 	signature.ECDSASignerVerifier
 }
 
-// create a self-signed CA and generate a timestamping certificate to rekor
-func NewTimestampingCertWithSelfSignedCA(pub crypto.PublicKey) ([]*x509.Certificate, error) {
-	// generate self-signed CA
-	caPrivKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return nil, errors.Wrap(err, "generating private key")
-	}
-	ca := &x509.Certificate{
-		SerialNumber: big.NewInt(2019),
-		Subject: pkix.Name{
-			Organization:  []string{"Root CA Test"},
-			Country:       []string{"US"},
-			Province:      []string{""},
-			Locality:      []string{"San Francisco"},
-			StreetAddress: []string{"Golden Gate Bridge"},
-			PostalCode:    []string{"94016"},
-		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().AddDate(10, 0, 0),
-		IsCA:                  true,
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageContentCommitment | x509.KeyUsageCertSign,
-		BasicConstraintsValid: true,
-	}
-	caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, &caPrivKey.PublicKey, caPrivKey)
+// Generate a timestamping certificate for pub using the signer. The chain must verify the signer's public key if provided.
+// Otherwise, a self-signed root CA will be generated.
+func NewTimestampingCertWithChain(ctx context.Context, pub crypto.PublicKey, signer signature.Signer, chain []*x509.Certificate) ([]*x509.Certificate, error) {
+	// Get the signer's (rekor's) public key
+	signerPubKey, err := signer.PublicKey(options.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
+
+	// If the signer is not in-memory, retrieve the crypto.Signer
+	var cryptoSigner crypto.Signer
+	if s, ok := signer.(*gcp.SignerVerifier); ok {
+		if cryptoSigner, _, err = s.CryptoSigner(ctx, func(err error) {}); err != nil {
+			return nil, errors.Wrap(err, "getting kms signer")
+		}
+	} else {
+		cryptoSigner = signer.(crypto.Signer)
+	}
+
+	if len(chain) == 0 {
+		// Generate a self-signed root CA.
+		ca := &x509.Certificate{
+			SerialNumber: big.NewInt(2019),
+			Subject: pkix.Name{
+				Organization:  []string{"in-memory root CA"},
+				Country:       []string{"US"},
+				Province:      []string{""},
+				Locality:      []string{"San Francisco"},
+				StreetAddress: []string{"Golden Gate Bridge"},
+				PostalCode:    []string{"94016"},
+			},
+			NotBefore:             time.Now(),
+			NotAfter:              time.Now().AddDate(10, 0, 0),
+			IsCA:                  true,
+			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageContentCommitment | x509.KeyUsageCertSign,
+			BasicConstraintsValid: true,
+		}
+		caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, signerPubKey, signer)
+		if err != nil {
+			return nil, errors.Wrap(err, "creating self-signed CA")
+		}
+		chain, err = x509.ParseCertificates(caBytes)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	timestampExt, err := asn1.Marshal([]asn1.ObjectIdentifier{{1, 3, 6, 1, 5, 5, 7, 3, 8}})
 	if err != nil {
 		return nil, err
@@ -74,12 +96,7 @@ func NewTimestampingCertWithSelfSignedCA(pub crypto.PublicKey) ([]*x509.Certific
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(1658),
 		Subject: pkix.Name{
-			Organization:  []string{"Rekor Test"},
-			Country:       []string{"US"},
-			Province:      []string{""},
-			Locality:      []string{"San Francisco"},
-			StreetAddress: []string{"Golden Gate Bridge"},
-			PostalCode:    []string{"94016"},
+			Organization: []string{"Rekor Timestamping Cert"},
 		},
 		IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
 		NotBefore:    time.Now(),
@@ -97,11 +114,33 @@ func NewTimestampingCertWithSelfSignedCA(pub crypto.PublicKey) ([]*x509.Certific
 		},
 		BasicConstraintsValid: true,
 	}
-	certBytes, err := x509.CreateCertificate(rand.Reader, cert, ca, pub.(*ecdsa.PublicKey), caPrivKey)
+
+	// Create the certificate
+	certBytes, err := x509.CreateCertificate(rand.Reader, cert, chain[0], pub, cryptoSigner)
+	if err != nil {
+		return nil, errors.Wrap(err, "creating tsa certificate")
+	}
+	tsaCert, err := x509.ParseCertificates(certBytes)
 	if err != nil {
 		return nil, err
 	}
-	return x509.ParseCertificates(append(certBytes, caBytes...))
+
+	// Verify and return the certificate chain
+	root := x509.NewCertPool()
+	root.AddCert(chain[len(chain)-1])
+	intermediates := x509.NewCertPool()
+	for _, intermediate := range chain[:len(chain)-1] {
+		intermediates.AddCert(intermediate)
+	}
+	verifyOptions := x509.VerifyOptions{
+		Roots:         root,
+		Intermediates: intermediates,
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+	}
+	if _, err = tsaCert[0].Verify(verifyOptions); err != nil {
+		return nil, err
+	}
+	return append(tsaCert, chain...), nil
 }
 
 func NewMemory() (*Memory, error) {

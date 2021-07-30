@@ -34,16 +34,21 @@ func TestMemory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new memory: %v", err)
 	}
+	tsaKey, err := New(ctx, "memory")
+	if err != nil {
+		t.Fatalf("new memory: %v", err)
+	}
+
 	payload := []byte("payload")
 
-	// sign a payload
-	sig, err := m.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
+	// sign a payload with the tsa key
+	sig, err := tsaKey.SignMessage(bytes.NewReader(payload), options.WithContext(ctx))
 	if err != nil {
 		t.Fatalf("signing payload: %v", err)
 	}
 
 	// verify the signature against public key
-	pubKey, err := m.PublicKey(options.WithContext(ctx))
+	pubKey, err := tsaKey.PublicKey(options.WithContext(ctx))
 	if err != nil {
 		t.Fatalf("public key: %v", err)
 	}
@@ -58,7 +63,7 @@ func TestMemory(t *testing.T) {
 	}
 
 	// verify signature using the cert's public key
-	certChain, err := NewTimestampingCertWithSelfSignedCA(pubKey)
+	certChain, err := NewTimestampingCertWithChain(ctx, pubKey, m, nil)
 	if err != nil {
 		t.Fatalf("generating timestamping cert: %v", err)
 	}

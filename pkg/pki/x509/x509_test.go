@@ -205,17 +205,22 @@ func TestNilCertChainToPEM(t *testing.T) {
 }
 
 func TestCertChain_Verify(t *testing.T) {
-	mem, err := signer.NewMemory()
+	caSigner, err := signer.NewMemory()
 	if err != nil {
 		t.Fatal(err)
 	}
 	// A properly created cert chain should encode to PEM OK.
 	ctx := context.Background()
+	mem, err := signer.NewMemory()
+	if err != nil {
+		t.Fatal(err)
+	}
 	pk, err := mem.PublicKey(options.WithContext(ctx))
 	if err != nil {
 		t.Fatal(err)
 	}
-	certChain, err := signer.NewTimestampingCertWithSelfSignedCA(pk)
+
+	certChain, err := signer.NewTimestampingCertWithChain(ctx, pk, caSigner, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

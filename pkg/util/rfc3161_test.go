@@ -132,11 +132,15 @@ func TestCreateRFC3161Response(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	pk, err := mem.PublicKey(options.WithContext(ctx))
+	tsa, err := signer.NewMemory()
+	if err != nil {
+		t.Error(err)
+	}
+	pk, err := tsa.PublicKey(options.WithContext(ctx))
 	if err != nil {
 		t.Fatal(err)
 	}
-	certChain, err := signer.NewTimestampingCertWithSelfSignedCA(pk)
+	certChain, err := signer.NewTimestampingCertWithChain(ctx, pk, mem, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -154,7 +158,7 @@ func TestCreateRFC3161Response(t *testing.T) {
 		t.Error(err)
 	}
 
-	resp, err := CreateRfc3161Response(ctx, *req, certChain, mem)
+	resp, err := CreateRfc3161Response(ctx, *req, certChain, tsa)
 	if err != nil {
 		t.Error(err)
 	}
