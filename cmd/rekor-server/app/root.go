@@ -18,6 +18,7 @@ package app
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -79,6 +80,19 @@ func init() {
 	}
 
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	// look for the default version and replace it, if found, from runtime build info
+	if GitVersion != "devel" {
+		return
+	}
+
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+	// Version is set in artifacts built with -X github.com/sigstore/rekor/cmd/rekor-server/app.GitVersion=1.2.3
+	// Ensure version is also set when installed via go install github.com/sigstore/rekor/cmd/rekor-server
+	GitVersion = bi.Main.Version
 }
 
 // initConfig reads in config file and ENV variables if set.

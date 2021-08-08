@@ -44,10 +44,10 @@ endif
 SWAGGER := $(TOOLS_BIN_DIR)/swagger
 
 CLI_PKG=github.com/sigstore/rekor/cmd/rekor-cli/app
-CLI_LDFLAGS="-X $(CLI_PKG).gitVersion=$(GIT_VERSION) -X $(CLI_PKG).gitCommit=$(GIT_HASH) -X $(CLI_PKG).gitTreeState=$(GIT_TREESTATE) -X $(CLI_PKG).buildDate=$(BUILD_DATE)"
+CLI_LDFLAGS="-X $(CLI_PKG).GitVersion=$(GIT_VERSION) -X $(CLI_PKG).gitCommit=$(GIT_HASH) -X $(CLI_PKG).gitTreeState=$(GIT_TREESTATE) -X $(CLI_PKG).buildDate=$(BUILD_DATE)"
 
 SERVER_PKG=github.com/sigstore/rekor/cmd/rekor-server/app
-SERVER_LDFLAGS="-X $(SERVER_PKG).gitVersion=$(GIT_VERSION) -X $(SERVER_PKG).gitCommit=$(GIT_HASH) -X $(SERVER_PKG).gitTreeState=$(GIT_TREESTATE) -X $(SERVER_PKG).buildDate=$(BUILD_DATE)"
+SERVER_LDFLAGS="-X $(SERVER_PKG).GitVersion=$(GIT_VERSION) -X $(SERVER_PKG).gitCommit=$(GIT_HASH) -X $(SERVER_PKG).gitTreeState=$(GIT_TREESTATE) -X $(SERVER_PKG).buildDate=$(BUILD_DATE)"
 
 $(GENSRC): $(SWAGGER) $(OPENAPIDEPS)
 	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --default-consumes application/json\;q=1
