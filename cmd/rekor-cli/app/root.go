@@ -17,6 +17,7 @@ package app
 
 import (
 	"fmt"
+	"runtime/debug"
 	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -67,6 +68,19 @@ func init() {
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.CliLogger.Fatal(err)
 	}
+
+	// look for the default version and replace it, if found, from runtime build info
+	if GitVersion != "devel" {
+		return
+	}
+
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+	// Version is set in artifacts built with -X github.com/sigstore/rekor/cmd/rekor-cli/app.GitVersion=1.2.3
+	// Ensure version is also set when installed via go install github.com/sigstore/rekor/cmd/rekor-cli
+	GitVersion = bi.Main.Version
 }
 
 func initConfig(cmd *cobra.Command) error {
