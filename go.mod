@@ -55,7 +55,7 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/goleak v1.1.10
 	go.uber.org/multierr v1.7.0 // indirect
-	go.uber.org/zap v1.18.1
+	go.uber.org/zap v1.19.0
 	gocloud.dev v0.23.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/mod v0.4.2
