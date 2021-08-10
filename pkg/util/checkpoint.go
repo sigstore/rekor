@@ -49,7 +49,7 @@ func (c Checkpoint) String() string {
 }
 
 // MarshalText returns the common format representation of this Checkpoint.
-func (c Checkpoint) MarshalText() ([]byte, error) {
+func (c Checkpoint) MarshalCheckpoint() ([]byte, error) {
 	return []byte(c.String()), nil
 }
 
@@ -65,7 +65,7 @@ func (c Checkpoint) MarshalText() ([]byte, error) {
 // <optional non-empty line of other content>...
 //
 // This will discard any content found after the checkpoint (including signatures)
-func (c *Checkpoint) UnmarshalText(data []byte) error {
+func (c *Checkpoint) UnmarshalCheckpoint(data []byte) error {
 	l := bytes.Split(data, []byte("\n"))
 	if len(l) < 4 {
 		return errors.New("invalid checkpoint - too few newlines")
@@ -104,7 +104,7 @@ type SignedCheckpoint struct {
 }
 
 func CreateSignedCheckpoint(c Checkpoint) (*SignedCheckpoint, error) {
-	text, err := c.MarshalText()
+	text, err := c.MarshalCheckpoint()
 	if err != nil {
 		return nil, err
 	}
@@ -120,12 +120,12 @@ func SignedCheckpointValidator(strToValidate string) bool {
 		return false
 	}
 	c := &Checkpoint{}
-	return c.UnmarshalText([]byte(s.Note)) == nil
+	return c.UnmarshalCheckpoint([]byte(s.Note)) == nil
 }
 
 func CheckpointValidator(strToValidate string) bool {
 	c := &Checkpoint{}
-	return c.UnmarshalText([]byte(strToValidate)) == nil
+	return c.UnmarshalCheckpoint([]byte(strToValidate)) == nil
 }
 
 func (r *SignedCheckpoint) UnmarshalText(data []byte) error {
@@ -134,7 +134,7 @@ func (r *SignedCheckpoint) UnmarshalText(data []byte) error {
 		return errors.Wrap(err, "unmarshalling signed note")
 	}
 	c := Checkpoint{}
-	if err := c.UnmarshalText([]byte(s.Note)); err != nil {
+	if err := c.UnmarshalCheckpoint([]byte(s.Note)); err != nil {
 		return errors.Wrap(err, "unmarshalling checkpoint")
 	}
 	*r = SignedCheckpoint{Checkpoint: c, SignedNote: s}

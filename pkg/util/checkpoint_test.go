@@ -62,7 +62,7 @@ func TestMarshalCheckpoint(t *testing.T) {
 		},
 	} {
 		t.Run(string(test.c.Hash), func(t *testing.T) {
-			got, err := test.c.MarshalText()
+			got, err := test.c.MarshalCheckpoint()
 			if err != nil {
 				t.Fatalf("unexpected error marshalling: %v", err)
 			}
@@ -155,7 +155,7 @@ func TestUnmarshalCheckpoint(t *testing.T) {
 		t.Run(string(test.desc), func(t *testing.T) {
 			var got Checkpoint
 			var gotErr error
-			if gotErr = got.UnmarshalText([]byte(test.m)); (gotErr != nil) != test.wantErr {
+			if gotErr = got.UnmarshalCheckpoint([]byte(test.m)); (gotErr != nil) != test.wantErr {
 				t.Fatalf("Unmarshal = %q, wantErr: %T", gotErr, test.wantErr)
 			}
 			if diff := cmp.Diff(test.want, got); len(diff) != 0 {
@@ -274,7 +274,7 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 		},
 	} {
 		t.Run(string(test.c.Ecosystem), func(t *testing.T) {
-			text, _ := test.c.MarshalText()
+			text, _ := test.c.MarshalCheckpoint()
 			sc := &SignedNote{
 				Note: string(text),
 			}
@@ -307,7 +307,7 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error during marshalling: %v", err)
 				}
-				text, _ = test.c.MarshalText()
+				text, _ = test.c.MarshalCheckpoint()
 				sc2 := &SignedNote{
 					Note: string(text),
 				}
@@ -375,7 +375,7 @@ func TestInvalidSigVerification(t *testing.T) {
 		},
 	} {
 		t.Run(string(test.checkpoint.Ecosystem), func(t *testing.T) {
-			text, _ := test.checkpoint.MarshalText()
+			text, _ := test.checkpoint.MarshalCheckpoint()
 			sc := SignedNote{
 				Note:       string(text),
 				Signatures: test.s,
