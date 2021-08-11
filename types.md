@@ -6,7 +6,7 @@ This documentation contains information on how to sign and upload data in differ
 
 Create a keypair with something like:
 
-```shell
+```console
 $ minisign -G
 Please enter a password to protect the secret key.
 
@@ -24,7 +24,7 @@ minisign -Vm <file> -P RWSzQI7+S6M0c4yReOwcDZ2petL8pAZsrNfkdyqr0V7j/HGafpjdKZQm
 
 Sign a file:
 
-```shell
+```console
 $ minisign -S -m README.md
 Password:
 Deriving a key from the password and decrypting the secret key... done
@@ -32,15 +32,15 @@ Deriving a key from the password and decrypting the secret key... done
 
 Upload to rekor:
 
-```shell
+```console
 $ rekor-cli upload --artifact README.md --signature README.md.minisig --pki-format=minisign --public-key=minisign.pub
 Created entry at index 5895, available at: https://rekor.sigstore.dev/api/v1/log/entries/008bfbbaa8f473a0b17cba5f8078d2c08410bca55f01d2ec71860795ef823b36
 ```
 
 Look at the entry with:
 
-```shell
- $ ./rekor-cli get --uuid=008bfbbaa8f473a0b17cba5f8078d2c08410bca55f01d2ec71860795ef823b36
+```console
+$ ./rekor-cli get --uuid=008bfbbaa8f473a0b17cba5f8078d2c08410bca55f01d2ec71860795ef823b36
 LogID: c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d
 Index: 5895
 IntegratedTime: 2021-07-14T01:39:50Z
@@ -68,8 +68,8 @@ Body: {
 
 Generate a keypair with:
 
-```shell
-ssh-keygen -C test@rekor.dev -t ed25519 -f id_ed25519
+```console
+$ ssh-keygen -C test@rekor.dev -t ed25519 -f id_ed25519
 Generating public/private ed25519 key pair.
 Enter passphrase (empty for no passphrase):
 Enter same passphrase again:
@@ -93,7 +93,7 @@ The key's randomart image is:
 
 Sign a file with:
 
-```shell
+```console
 $ ssh-keygen -Y sign -n file -f id_ed25519 README.md
 Enter passphrase:
 Signing file README.md
@@ -102,14 +102,14 @@ Write signature to README.md.sig
 
 Upload it to rekor with:
 
-```shell
+```console
 $ rekor-cli upload --artifact README.md --signature README.md.sig --pki-format=ssh --public-key=id_ed25519.pub
 Created entry at index 5896, available at: https://rekor.sigstore.dev/api/v1/log/entries/0e81b4d9299e2609e45b5c453a4c0e7820ac74e02c4935a8b830d104632fd2d
 ```
 
 Look at the entry with:
 
-```shell
+```console
 $ rekor-cli get --uuid=0e81b4d9299e2609e45b5c453a4c0e7820ac74e02c4935a8b830d104632fd2d1
 LogID: c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d
 Index: 5896
@@ -138,7 +138,7 @@ Body: {
 
 Generate a keypair with:
 
-```shell
+```console
 $ openssl ecparam -genkey -name prime256v1 > ec_private.pem
 $ openssl ec -in ec_private.pem -pubout > ec_public.pem
 read EC key
@@ -147,20 +147,20 @@ writing EC key
 
 Sign the file with:
 
-```shell
+```console
 $ openssl dgst -sha256 -sign ec_private.pem -out README.md.sig README.md
 ```
 
 Upload it to rekor with:
 
-```shell
+```console
 $ ./rekor-cli upload --artifact README.md --signature README.md.sig --pki-format=x509 --public-key=ec_public.pem
 Created entry at index 5897, available at: https://rekor.sigstore.dev/api/v1/log/entries/31a51c1bc20da83b66b2f24899184b85dbf8261c2de8571479165619ad87cd5d
 ```
 
 View the entry with:
 
-```shell
+```console
 $ rekor-cli get --uuid=31a51c1bc20da83b66b2f24899184b85dbf8261c2de8571479165619ad87cd5d
 LogID: c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d
 Index: 5897
