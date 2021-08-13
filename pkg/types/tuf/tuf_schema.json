@@ -1,0 +1,12 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.dev/types/tuf/tuf_schema.json",
+    "title": "tuf Schema",
+    "description": "Schema for tuf link metadata objects",
+    "type": "object",
+    "oneOf": [
+        {
+            "$ref": "v0.0.1/tuf_v0_0_1_schema.json"
+        }
+    ]
+}

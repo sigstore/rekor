@@ -599,7 +599,8 @@ func init() {
                 "pgp",
                 "x509",
                 "minisign",
-                "ssh"
+                "ssh",
+                "tuf"
               ]
             },
             "url": {
@@ -812,6 +813,32 @@ func init() {
             "spec": {
               "type": "object",
               "$ref": "pkg/types/rpm/rpm_schema.json"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "tuf": {
+      "description": "TUF metadata",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "type": "object",
+              "$ref": "pkg/types/tuf/tuf_schema.json"
             }
           },
           "additionalProperties": false
@@ -2270,7 +2297,8 @@ func init() {
                 "pgp",
                 "x509",
                 "minisign",
-                "ssh"
+                "ssh",
+                "tuf"
               ]
             },
             "url": {
@@ -2297,7 +2325,8 @@ func init() {
             "pgp",
             "x509",
             "minisign",
-            "ssh"
+            "ssh",
+            "tuf"
           ]
         },
         "url": {
@@ -2329,6 +2358,36 @@ func init() {
             "type": "integer",
             "minimum": 0
           }
+        }
+      }
+    },
+    "TufManifestV001SchemaSigned": {
+      "description": "Content of the signed manifest",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "content"
+          ]
+        }
+      ],
+      "properties": {
+        "content": {
+          "description": "Specifies the archive inline within the document",
+          "type": "string",
+          "format": "byte",
+          "writeOnly": true
+        },
+        "url": {
+          "description": "Specifies the location of the archive; if this is specified, a hash value must also be provided",
+          "type": "string",
+          "format": "uri",
+          "writeOnly": true
         }
       }
     },
@@ -3251,6 +3310,134 @@ func init() {
       },
       "$schema": "http://json-schema.org/draft-07/schema",
       "$id": "http://rekor.sigstore.dev/types/rpm/rpm_v0_0_1_schema.json"
+    },
+    "tuf": {
+      "description": "TUF metadata",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "$ref": "#/definitions/tufSchema"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "tufManifestV001Schema": {
+      "description": "Schema for tuf manifests",
+      "type": "object",
+      "title": "tuf targets payload v0.0.1 Schema",
+      "required": [
+        "signed"
+      ],
+      "properties": {
+        "_type": {
+          "description": "Type identifier",
+          "type": "string",
+          "enum": [
+            "root",
+            "targets",
+            "snapshot",
+            "timestamp"
+          ]
+        },
+        "expires": {
+          "description": "Expiration date",
+          "type": "string"
+        },
+        "signed": {
+          "description": "Content of the signed manifest",
+          "type": "object",
+          "oneOf": [
+            {
+              "required": [
+                "url"
+              ]
+            },
+            {
+              "required": [
+                "content"
+              ]
+            }
+          ],
+          "properties": {
+            "content": {
+              "description": "Specifies the archive inline within the document",
+              "type": "string",
+              "format": "byte",
+              "writeOnly": true
+            },
+            "url": {
+              "description": "Specifies the location of the archive; if this is specified, a hash value must also be provided",
+              "type": "string",
+              "format": "uri",
+              "writeOnly": true
+            }
+          }
+        },
+        "version": {
+          "description": "File version",
+          "type": "integer"
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.dev/types/tuf/tuf.json"
+    },
+    "tufSchema": {
+      "description": "Schema for tuf link metadata objects",
+      "type": "object",
+      "title": "tuf Schema",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/tufV001Schema"
+        }
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.dev/types/tuf/tuf_schema.json"
+    },
+    "tufV001Schema": {
+      "description": "Schema for tuf metadata entries",
+      "type": "object",
+      "title": "tuf v0.0.1 Schema",
+      "required": [
+        "manifest",
+        "publicKeys"
+      ],
+      "properties": {
+        "extraData": {
+          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
+          "type": "object",
+          "additionalProperties": true
+        },
+        "manifest": {
+          "$ref": "#/definitions/tufManifestV001Schema"
+        },
+        "root": {
+          "$ref": "#/definitions/tufManifestV001Schema"
+        },
+        "version": {
+          "description": "TUF specification version",
+          "type": "string",
+          "enum": [
+            "1.0.0"
+          ]
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.dev/types/tuf/tuf.json"
     }
   },
   "responses": {

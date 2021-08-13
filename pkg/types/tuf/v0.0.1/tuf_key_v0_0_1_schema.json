@@ -1,0 +1,33 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.dev/types/tuf/tuf.json",
+    "title": "TUF signature v0.0.1 Schema",
+    "description": "Schema for tuf signature verification data (keys and threshold)",
+    "type": "object",
+    "properties": {
+        "keys": {
+            "description": "public key information",
+            "type": "object",
+            "properties": {
+                "keyid": {
+                    "description": "the identifier of the signing key",
+                    "type": "string",
+                    "enum": [ "sha256" ]
+                },
+                "scheme": {
+                    "description": "the signature scheme",
+                    "type": "string"
+                },
+                "keyval": {
+                    "description": "a json string containing the public key value",
+                    "type": "string"
+                }
+            }
+        },
+        "threshold": {
+            "description": "signature threshold",
+            "type": "integer"
+        }
+    },
+    "required": [ "keys", "threshold"]
+}

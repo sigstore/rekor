@@ -1,0 +1,49 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.dev/types/tuf/tuf.json",
+    "title": "tuf targets payload v0.0.1 Schema",
+    "description": "Schema for tuf manifests",
+    "type": "object",
+    "properties": {
+        "_type": {
+            "description": "Type identifier",
+            "type": "string",
+            "enum": ["root", "targets", "snapshot", "timestamp"]
+        },
+        "version": {
+            "description": "File version",
+            "type": "integer"
+        },
+        "expires": {
+            "description": "Expiration date",
+            "type": "string"
+        },
+        "signed": {
+            "description": "Content of the signed manifest",
+            "type": "object",
+            "properties": {
+                "url": {
+                    "description": "Specifies the location of the archive; if this is specified, a hash value must also be provided",
+                    "type": "string",
+                    "format": "uri",
+                    "writeOnly": true
+                },
+                "content": {
+                    "description": "Specifies the archive inline within the document",
+                    "type": "string",
+                    "format": "byte",
+                    "writeOnly": true
+                }
+            },
+            "oneOf": [
+                {
+                    "required": [ "url" ]
+                },
+                {
+                    "required": [ "content" ]
+                }
+            ]
+        }
+    },
+    "required": [ "signed" ]
+}

@@ -46,6 +46,8 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
+	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
+	github.com/theupdateframework/go-tuf v0.0.0-20210722233521-90e262754396
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tilinna/clock v1.1.0 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect

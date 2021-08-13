@@ -23,6 +23,7 @@ import (
 	"github.com/sigstore/rekor/pkg/pki/pgp"
 	"github.com/sigstore/rekor/pkg/pki/pkcs7"
 	"github.com/sigstore/rekor/pkg/pki/ssh"
+	"github.com/sigstore/rekor/pkg/pki/tuf"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 )
 
@@ -34,6 +35,7 @@ const (
 	SSH      Format = "ssh"
 	X509     Format = "x509"
 	PKCS7    Format = "pkcs7"
+	Tuf      Format = "tuf"
 )
 
 type ArtifactFactory struct {
@@ -94,6 +96,14 @@ func init() {
 			},
 			newSignature: func(r io.Reader) (Signature, error) {
 				return pkcs7.NewSignature(r)
+			},
+		},
+		Tuf: {
+			newPubKey: func(r io.Reader) (PublicKey, error) {
+				return tuf.NewPublicKey(r)
+			},
+			newSignature: func(r io.Reader) (Signature, error) {
+				return tuf.NewSignature(r)
 			},
 		},
 	}

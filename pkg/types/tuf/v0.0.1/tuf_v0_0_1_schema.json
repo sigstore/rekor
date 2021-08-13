@@ -1,0 +1,30 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.dev/types/tuf/tuf.json",
+    "title": "tuf v0.0.1 Schema",
+    "description": "Schema for tuf metadata entries",
+    "type": "object",
+    "properties": {
+        "version": {
+            "description": "TUF specification version",
+            "type": "string",
+            "enum": ["1.0.0"]
+        },
+        "manifest": {
+            "description": "tuf manifest",
+            "type": "object",
+            "$ref": "tuf_manifest_v0_0_1_schema.json"
+        },
+        "root" : {
+            "description": "root manifest containing about the public keys used to sign the manifest",
+            "type": "object",
+            "$ref": "tuf_manifest_v0_0_1_schema.json"
+        },
+        "extraData": {
+            "description": "Arbitrary content to be included in the verifiable entry in the transparency log", 
+            "type": "object",
+            "additionalProperties": true
+        }
+    },
+    "required": [ "manifest" , "publicKeys"]
+}

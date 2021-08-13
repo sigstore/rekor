@@ -35,6 +35,7 @@ import (
 	_ "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	_ "github.com/sigstore/rekor/pkg/types/rfc3161/v0.0.1"
 	_ "github.com/sigstore/rekor/pkg/types/rpm/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/tuf/v0.0.1"
 )
 
 var rootCmd = &cobra.Command{
