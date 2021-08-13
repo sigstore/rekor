@@ -202,3 +202,78 @@ TODO
 TODO
 
 ## TSR
+
+TODO
+
+## TUF
+
+Generate a TUF repository (for example, with the (Python reference implementation)[https://pypi.org/project/tuf/] or (go-tuf)[https://github.com/theupdateframework/go-tuf]). With go-tuf:
+
+```console
+$ tuf init
+$ tuf gen-key root
+$ tuf gen-key targets
+$ tuf gen-key snapshot
+$ tuf gen-key timestamp
+$ tuf add path/to/some/target.txt
+$ tuf snapshot
+$ tuf timestamp
+$ tuf commit
+```
+
+You will find the signed metadata in your TUF `repository/` directory:
+
+```console
+$ tree .
+.
+├── keys
+│   ├── snapshot.json
+│   ├── targets.json
+│   └── timestamp.json
+├── repository
+│   ├── root.json
+│   ├── snapshot.json
+│   ├── targets
+│   │   └── foo
+│   │       └── bar
+│   │           └── baz.txt
+│   ├── targets.json
+│   └── timestamp.json
+└── staged
+```
+
+Upload any TUF manifest to rekor by using the `root.json` as a the public key:
+
+```console
+$ ./rekor-cli upload --artifact repository/timestamp.json --type tuf --public-key repository/root.json
+Created entry at index 0, available at: https://rekor.sigstore.dev/api/v1/log/entries/6ed8fa5e9f0aa31b6cdfd2cc6877692f5afba52edd7ff5774eebfb22228e8847
+```
+
+View the entry with:
+
+```console
+$ rekor-cli get --uuid=31a51c1bc20da83b66b2f24899184b85dbf8261c2de8571479165619ad87cd5d
+LogID: 5c4ceffb024e0d0b50bb9e03bc308ce83a76353f1003f8e57a21c51f74cc1e0e
+Index: 0
+IntegratedTime: 2021-08-13T19:17:33Z
+UUID: 6ed8fa5e9f0aa31b6cdfd2cc6877692f5afba52edd7ff5774eebfb22228e8847
+Body: {
+  "TufObj": {
+    "manifest": {
+      "expires": "2021-12-18 13:28:12.99008 -0600 CST",
+      "signed": {
+        "content": [...]
+      },
+      "version": 1
+    },
+    "root": {
+      "expires": "2021-12-18 13:28:12.99008 -0600 CST",
+      "signed": {
+        "content": [...]
+      },
+      "version": 1
+    }
+  }
+}
+
+```
