@@ -19,7 +19,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/sha512"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -27,25 +26,22 @@ import (
 	"io"
 	"io/ioutil"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"time"
 
-	cjson "github.com/tent/canonical-json-go"
+	"github.com/theupdateframework/go-tuf/data"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/tuf"
 	"github.com/sigstore/rekor/pkg/util"
-	"github.com/theupdateframework/go-tuf/data"
 
 	"github.com/go-openapi/strfmt"
 
 	"github.com/sigstore/rekor/pkg/pki"
 
 	"github.com/go-openapi/swag"
-	"github.com/mitchellh/mapstructure"
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -78,20 +74,6 @@ func (v V001Entry) APIVersion() string {
 
 func NewEntry() types.EntryImpl {
 	return &V001Entry{}
-}
-
-func base64StringtoByteArray() mapstructure.DecodeHookFunc {
-	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
-		if f.Kind() != reflect.String || t.Kind() != reflect.Slice {
-			return data, nil
-		}
-
-		bytes, err := base64.StdEncoding.DecodeString(data.(string))
-		if err != nil {
-			return []byte{}, fmt.Errorf("failed parsing base64 data: %v", err)
-		}
-		return bytes, nil
-	}
 }
 
 func (v V001Entry) IndexKeys() []string {
@@ -130,19 +112,10 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non tuf v0.0.1 type")
 	}
 
-	cfg := mapstructure.DecoderConfig{
-		DecodeHook: base64StringtoByteArray(),
-		Result:     &v.TufObj,
-	}
-
-	dec, err := mapstructure.NewDecoder(&cfg)
-	if err != nil {
-		return fmt.Errorf("error initializing decoder: %w", err)
-	}
-
-	if err := dec.Decode(tuf.Spec); err != nil {
+	if err := types.DecodeEntry(tuf.Spec, &v.TufObj); err != nil {
 		return err
 	}
+
 	// field validation
 	if err := v.TufObj.Validate(strfmt.Default); err != nil {
 		return err
@@ -195,7 +168,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	}
 
 	// verify artifact signature
-	artifactFactory, err := pki.NewArtifactFactory(pki.Format("tuf"))
+	artifactFactory, err := pki.NewArtifactFactory(pki.Tuf)
 	if err != nil {
 		return err
 	}
@@ -300,30 +273,27 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	canonicalEntry.Root.Version = v.TufObj.Root.Version
-	canonicalEntry.Root.Expires = v.TufObj.Root.Expires
-	canonicalEntry.Root.Type = v.TufObj.Root.Type
+	// fill in the rest of the manifest fields from the content
+	canonicalEntry.Root, err = updateTufManifest(canonicalEntry.Root)
+	if err != nil {
+		return nil, err
+	}
 
 	canonicalEntry.Manifest = &models.TufManifestV001Schema{Signed: &models.TufManifestV001SchemaSigned{}}
 	canonicalEntry.Manifest.Signed.Content, err = v.sigObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
-	canonicalEntry.Manifest.Version = v.TufObj.Manifest.Version
-	canonicalEntry.Manifest.Expires = v.TufObj.Manifest.Expires
-	canonicalEntry.Manifest.Type = v.TufObj.Manifest.Type
-
+	canonicalEntry.Manifest, err = updateTufManifest(canonicalEntry.Manifest)
+	if err != nil {
+		return nil, err
+	}
 	// wrap in valid object with kind and apiVersion set
 	tuf := models.Tuf{}
 	tuf.APIVersion = swag.String(APIVERSION)
 	tuf.Spec = &canonicalEntry
 
-	bytes, err := json.Marshal(&tuf)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes, nil
+	return json.Marshal(&tuf)
 }
 
 // Validate performs cross-field validation for fields in object
@@ -351,30 +321,25 @@ func (v *V001Entry) Attestation() (string, []byte) {
 	return "", nil
 }
 
-func createTufManifest(manifest []byte) (*models.TufManifestV001Schema, error) {
-	re := &models.TufManifestV001Schema{}
+func updateTufManifest(manifest *models.TufManifestV001Schema) (*models.TufManifestV001Schema, error) {
+	if len(manifest.Signed.Content) == 0 {
+		return nil, errors.New("manifest content has not been initialized")
+	}
+
 	s := &data.Signed{}
-	if err := json.Unmarshal(manifest, s); err != nil {
+	if err := json.Unmarshal(manifest.Signed.Content, s); err != nil {
 		return nil, err
 	}
 	baseSigned := &BaseSigned{}
 	if err := json.Unmarshal(s.Signed, baseSigned); err != nil {
 		return nil, err
 	}
-	// Canonicalize the JSON of the entire manifest
-	var decoded map[string]interface{}
-	if err := json.Unmarshal(manifest, &decoded); err != nil {
-		return nil, err
-	}
-	msg, err := cjson.Marshal(decoded)
-	if err != nil {
-		return nil, err
-	}
-	re.Signed = &models.TufManifestV001SchemaSigned{Content: strfmt.Base64(msg)}
-	re.Expires = baseSigned.Expires.String()
-	re.Type = baseSigned.Type
-	re.Version = int64(baseSigned.Version)
-	return re, nil
+
+	return &models.TufManifestV001Schema{
+		Signed:  manifest.Signed,
+		Expires: baseSigned.Expires.String(),
+		Type:    baseSigned.Type,
+		Version: int64(baseSigned.Version)}, nil
 }
 
 func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
@@ -385,23 +350,53 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	re.TufObj.Version = "1.0.0" // TODO: Get tuf specification for root manifest
 
 	// we will need the manifest and root
-	// Not sure why but only ArtifactPath is ever set with a filepath name
 	var err error
-	artifactBytes, err := ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
-	if err != nil {
-		return nil, fmt.Errorf("error reading artifact file: %w", err)
+	artifactBytes := props.ArtifactBytes
+	re.TufObj.Manifest = &models.TufManifestV001Schema{Signed: &models.TufManifestV001SchemaSigned{}}
+	if artifactBytes == nil {
+		if props.ArtifactPath == nil {
+			return nil, errors.New("path to manifest (file or URL) must be specified")
+		}
+		if props.ArtifactPath.IsAbs() {
+			re.TufObj.Manifest.Signed.URL = strfmt.URI(props.ArtifactPath.String())
+		} else {
+			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading manifest file: %w", err)
+			}
+			re.TufObj.Manifest.Signed.Content = strfmt.Base64(artifactBytes)
+		}
+	} else {
+		re.TufObj.Manifest.Signed.Content = strfmt.Base64(artifactBytes)
 	}
-	re.TufObj.Manifest, err = createTufManifest(artifactBytes)
-	if err != nil {
+
+	rootBytes := props.PublicKeyBytes
+	re.TufObj.Root = &models.TufManifestV001Schema{Signed: &models.TufManifestV001SchemaSigned{}}
+	if rootBytes == nil {
+		if props.PublicKeyPath == nil {
+			return nil, errors.New("path to root (file or URL) must be specified")
+		}
+		if props.PublicKeyPath.IsAbs() {
+			re.TufObj.Root.Signed.URL = strfmt.URI(props.PublicKeyPath.String())
+		} else {
+			rootBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading root file: %w", err)
+			}
+			re.TufObj.Root.Signed.Content = strfmt.Base64(rootBytes)
+		}
+	} else {
+		re.TufObj.Root.Signed.Content = strfmt.Base64(rootBytes)
+	}
+
+	if err := re.Validate(); err != nil {
 		return nil, err
 	}
-	rootBytes, err := ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
-	if err != nil {
-		return nil, fmt.Errorf("error reading root file: %w", err)
-	}
-	re.TufObj.Root, err = createTufManifest(rootBytes)
-	if err != nil {
-		return nil, err
+
+	if re.HasExternalEntities() {
+		if err := re.FetchExternalEntities(ctx); err != nil {
+			return nil, fmt.Errorf("error retrieving external entities: %v", err)
+		}
 	}
 
 	returnVal.APIVersion = swag.String(re.APIVersion())

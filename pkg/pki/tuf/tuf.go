@@ -68,10 +68,22 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 		return nil, fmt.Errorf("tuf manifest has not been initialized")
 	}
 
-	canonical, err := cjson.Marshal(s.signed)
+	var decoded map[string]interface{}
+	if err := json.Unmarshal(s.signed.Signed, &decoded); err != nil {
+		return nil, err
+	}
+
+	canonicalSigned, err := cjson.Marshal(decoded)
 	if err != nil {
 		return nil, err
 	}
+	canonical, err := cjson.Marshal(&data.Signed{
+		Signed:     canonicalSigned,
+		Signatures: s.signed.Signatures})
+	if err != nil {
+		return nil, err
+	}
+
 	return canonical, nil
 }
 
@@ -143,10 +155,22 @@ func (k PublicKey) CanonicalValue() (encoded []byte, err error) {
 		return nil, fmt.Errorf("tuf root has not been initialized")
 	}
 
-	canonical, err := cjson.Marshal(k.root)
+	var decoded map[string]interface{}
+	if err := json.Unmarshal(k.root.Signed, &decoded); err != nil {
+		return nil, err
+	}
+
+	canonicalSigned, err := cjson.Marshal(decoded)
 	if err != nil {
 		return nil, err
 	}
+	canonical, err := cjson.Marshal(&data.Signed{
+		Signed:     canonicalSigned,
+		Signatures: k.root.Signatures})
+	if err != nil {
+		return nil, err
+	}
+
 	return canonical, nil
 }
 
