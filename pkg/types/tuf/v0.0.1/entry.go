@@ -337,7 +337,7 @@ func updateTufManifest(manifest *models.TufManifestV001Schema) (*models.TufManif
 
 	return &models.TufManifestV001Schema{
 		Signed:  manifest.Signed,
-		Expires: baseSigned.Expires.String(),
+		Expires: strfmt.DateTime(baseSigned.Expires),
 		Type:    baseSigned.Type,
 		Version: int64(baseSigned.Version)}, nil
 }

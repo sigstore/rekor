@@ -43,7 +43,8 @@ type TufManifestV001Schema struct {
 	Type string `json:"_type,omitempty"`
 
 	// Expiration date
-	Expires string `json:"expires,omitempty"`
+	// Format: date-time
+	Expires strfmt.DateTime `json:"expires,omitempty"`
 
 	// signed
 	// Required: true
@@ -58,6 +59,10 @@ func (m *TufManifestV001Schema) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateType(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateExpires(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -113,6 +118,18 @@ func (m *TufManifestV001Schema) validateType(formats strfmt.Registry) error {
 
 	// value enum
 	if err := m.validateTypeEnum("_type", "body", m.Type); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *TufManifestV001Schema) validateExpires(formats strfmt.Registry) error {
+	if swag.IsZero(m.Expires) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("expires", "body", "date-time", m.Expires.String(), formats); err != nil {
 		return err
 	}
 
@@ -192,7 +209,7 @@ type TufManifestV001SchemaSigned struct {
 	// Format: byte
 	Content strfmt.Base64 `json:"content,omitempty"`
 
-	// Specifies the location of the archive; if this is specified, a hash value must also be provided
+	// Specifies the location of the archive
 	// Format: uri
 	URL strfmt.URI `json:"url,omitempty"`
 }

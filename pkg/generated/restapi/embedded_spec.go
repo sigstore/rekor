@@ -2384,7 +2384,7 @@ func init() {
           "writeOnly": true
         },
         "url": {
-          "description": "Specifies the location of the archive; if this is specified, a hash value must also be provided",
+          "description": "Specifies the location of the archive",
           "type": "string",
           "format": "uri",
           "writeOnly": true
@@ -3356,7 +3356,8 @@ func init() {
         },
         "expires": {
           "description": "Expiration date",
-          "type": "string"
+          "type": "string",
+          "format": "date-time"
         },
         "signed": {
           "description": "Content of the signed manifest",
@@ -3381,7 +3382,7 @@ func init() {
               "writeOnly": true
             },
             "url": {
-              "description": "Specifies the location of the archive; if this is specified, a hash value must also be provided",
+              "description": "Specifies the location of the archive",
               "type": "string",
               "format": "uri",
               "writeOnly": true
@@ -3394,7 +3395,7 @@ func init() {
         }
       },
       "$schema": "http://json-schema.org/draft-07/schema",
-      "$id": "http://rekor.dev/types/tuf/tuf.json"
+      "$id": "http://rekor.sigstore.dev/types/tuf/tuf_manifest_v0_0_1_schema.json"
     },
     "tufSchema": {
       "description": "Schema for tuf link metadata objects",
@@ -3406,7 +3407,7 @@ func init() {
         }
       ],
       "$schema": "http://json-schema.org/draft-07/schema",
-      "$id": "http://rekor.dev/types/tuf/tuf_schema.json"
+      "$id": "http://rekor.sigstore.dev/types/tuf/tuf_schema.json"
     },
     "tufV001Schema": {
       "description": "Schema for tuf metadata entries",
@@ -3437,7 +3438,7 @@ func init() {
         }
       },
       "$schema": "http://json-schema.org/draft-07/schema",
-      "$id": "http://rekor.dev/types/tuf/tuf.json"
+      "$id": "http://rekor.sigstore.dev/types/tuf/tuf_v0_0_1_schema.json"
     }
   },
   "responses": {

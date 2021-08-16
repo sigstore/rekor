@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"reflect"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
@@ -70,16 +71,21 @@ func NewEntry(pe models.ProposedEntry) (EntryImpl, error) {
 
 // DecodeEntry maps the (abstract) input structure into the specific entry implementation class;
 // while doing so, it detects the case where we need to convert from string to []byte and does
-// the base64 decoding required to make that happen
+// the base64 decoding required to make that happen.
+// This also detects converting from string to strfmt.DateTime
 func DecodeEntry(input, output interface{}) error {
 	cfg := mapstructure.DecoderConfig{
 		DecodeHook: func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
-			if f.Kind() != reflect.String || t.Kind() != reflect.Slice {
+			if f.Kind() != reflect.String || t.Kind() != reflect.Slice && t != reflect.TypeOf(strfmt.DateTime{}) {
 				return data, nil
 			}
 
 			if data == nil {
 				return nil, errors.New("attempted to decode nil data")
+			}
+
+			if t == reflect.TypeOf(strfmt.DateTime{}) {
+				return strfmt.ParseDateTime(data.(string))
 			}
 
 			bytes, err := base64.StdEncoding.DecodeString(data.(string))
