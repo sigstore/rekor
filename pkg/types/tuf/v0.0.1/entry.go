@@ -26,6 +26,7 @@ import (
 	"io"
 	"io/ioutil"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -40,6 +41,7 @@ import (
 	"github.com/go-openapi/strfmt"
 
 	"github.com/sigstore/rekor/pkg/pki"
+	ptuf "github.com/sigstore/rekor/pkg/pki/tuf"
 
 	"github.com/go-openapi/swag"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -62,7 +64,7 @@ type BaseSigned struct {
 }
 
 type V001Entry struct {
-	TufObj                  models.TufV001Schema
+	TufObj                  models.TUFV001Schema
 	fetchedExternalEntities bool
 	keyObj                  pki.PublicKey
 	sigObj                  pki.Signature
@@ -79,18 +81,18 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() []string {
 	var result []string
 
-	if v.HasExternalEntities() {
-		if err := v.FetchExternalEntities(context.Background()); err != nil {
+	if v.hasExternalEntities() {
+		if err := v.fetchExternalEntities(context.Background()); err != nil {
 			log.Logger.Error(err)
 			return result
 		}
 	}
 
 	// Index manifest hash, type, and version.
-	manifestHash := sha512.Sum512([]byte(v.TufObj.Manifest.Signed.Content))
-	result = append(result, strings.ToLower(hex.EncodeToString(manifestHash[:])))
-	result = append(result, v.TufObj.Manifest.Type)
-	result = append(result, v.TufObj.Version)
+	metadataHash := sha512.Sum512([]byte(v.TufObj.Metadata.Signed.Content))
+	result = append(result, strings.ToLower(hex.EncodeToString(metadataHash[:])))
+	result = append(result, v.TufObj.Metadata.Type)
+	result = append(result, strconv.FormatInt(v.TufObj.Metadata.Version, 10))
 
 	// Index root.json hash.
 	root, err := v.keyObj.CanonicalValue()
@@ -107,7 +109,7 @@ func (v V001Entry) IndexKeys() []string {
 }
 
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
-	tuf, ok := pe.(*models.Tuf)
+	tuf, ok := pe.(*models.TUF)
 	if !ok {
 		return errors.New("cannot unmarshal non tuf v0.0.1 type")
 	}
@@ -125,12 +127,12 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 }
 
-func (v V001Entry) HasExternalEntities() bool {
+func (v V001Entry) hasExternalEntities() bool {
 	if v.fetchedExternalEntities {
 		return false
 	}
 
-	if v.TufObj.Manifest != nil && v.TufObj.Manifest.Signed != nil && v.TufObj.Manifest.Signed.URL.String() != "" {
+	if v.TufObj.Metadata != nil && v.TufObj.Metadata.Signed != nil && v.TufObj.Metadata.Signed.URL.String() != "" {
 		return true
 	}
 
@@ -141,7 +143,7 @@ func (v V001Entry) HasExternalEntities() bool {
 	return false
 }
 
-func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
+func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	if err := v.Validate(); err != nil {
 		return types.ValidationError(err)
 	}
@@ -178,8 +180,8 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	g.Go(func() error {
 		defer close(sigResult)
 
-		sigReadCloser, err := util.FileOrURLReadCloser(ctx, v.TufObj.Manifest.Signed.URL.String(),
-			v.TufObj.Manifest.Signed.Content)
+		sigReadCloser, err := util.FileOrURLReadCloser(ctx, v.TufObj.Metadata.Signed.URL.String(),
+			v.TufObj.Metadata.Signed.Content)
 		if err != nil {
 			return closePipesOnError(err)
 		}
@@ -253,7 +255,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
-	if err := v.FetchExternalEntities(ctx); err != nil {
+	if err := v.fetchExternalEntities(ctx); err != nil {
 		return nil, err
 	}
 	if v.sigObj == nil {
@@ -263,33 +265,42 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 		return nil, errors.New("key object not initialized before canonicalization")
 	}
 
-	canonicalEntry := models.TufV001Schema{}
+	canonicalEntry := models.TUFV001Schema{}
 	canonicalEntry.ExtraData = v.TufObj.ExtraData
 
-	// need to canonicalize manifest (canonicalize JSON)
 	var err error
-	canonicalEntry.Root = &models.TufManifestV001Schema{Signed: &models.TufManifestV001SchemaSigned{}}
-	canonicalEntry.Root.Signed.Content, err = v.keyObj.CanonicalValue()
+	canonicalEntry.SpecVersion, err = v.keyObj.(*ptuf.PublicKey).SpecVersion()
+	if err != nil {
+		return nil, err
+	}
+	if canonicalEntry.SpecVersion == "" {
+		return nil, errors.New("empty spec version")
+	}
+	canonicalEntry.SpecVersion = "1.2.3"
+
+	// need to canonicalize manifest (canonicalize JSON)
+	canonicalEntry.Root = &models.TUFMetadataV001Schema{Signed: &models.TUFMetadataV001SchemaSigned{}}
+	canonicalEntry.Root.Signed = v.keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
 	// fill in the rest of the manifest fields from the content
-	canonicalEntry.Root, err = updateTufManifest(canonicalEntry.Root)
+	canonicalEntry.Root, err = updateTufMetadata(canonicalEntry.Root)
 	if err != nil {
 		return nil, err
 	}
 
-	canonicalEntry.Manifest = &models.TufManifestV001Schema{Signed: &models.TufManifestV001SchemaSigned{}}
-	canonicalEntry.Manifest.Signed.Content, err = v.sigObj.CanonicalValue()
+	canonicalEntry.Metadata = &models.TUFMetadataV001Schema{Signed: &models.TUFMetadataV001SchemaSigned{}}
+	canonicalEntry.Metadata.Signed.Content, err = v.sigObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
-	canonicalEntry.Manifest, err = updateTufManifest(canonicalEntry.Manifest)
+	canonicalEntry.Metadata, err = updateTufMetadata(canonicalEntry.Metadata)
 	if err != nil {
 		return nil, err
 	}
 	// wrap in valid object with kind and apiVersion set
-	tuf := models.Tuf{}
+	tuf := models.TUF{}
 	tuf.APIVersion = swag.String(APIVERSION)
 	tuf.Spec = &canonicalEntry
 
@@ -307,7 +318,7 @@ func (v V001Entry) Validate() error {
 		return errors.New("root must be specified")
 	}
 
-	tufManifest := v.TufObj.Manifest
+	tufManifest := v.TufObj.Metadata
 	if tufManifest == nil || tufManifest.Signed == nil {
 		return errors.New("missing TUF metadata")
 	}
@@ -321,7 +332,7 @@ func (v *V001Entry) Attestation() (string, []byte) {
 	return "", nil
 }
 
-func updateTufManifest(manifest *models.TufManifestV001Schema) (*models.TufManifestV001Schema, error) {
+func updateTufMetadata(manifest *models.TUFMetadataV001Schema) (*models.TUFMetadataV001Schema, error) {
 	if len(manifest.Signed.Content) == 0 {
 		return nil, errors.New("manifest content has not been initialized")
 	}
@@ -335,7 +346,7 @@ func updateTufManifest(manifest *models.TufManifestV001Schema) (*models.TufManif
 		return nil, err
 	}
 
-	return &models.TufManifestV001Schema{
+	return &models.TUFMetadataV001Schema{
 		Signed:  manifest.Signed,
 		Expires: strfmt.DateTime(baseSigned.Expires),
 		Type:    baseSigned.Type,
@@ -345,33 +356,32 @@ func updateTufManifest(manifest *models.TufManifestV001Schema) (*models.TufManif
 func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	// This will do only syntactic checks of the metablock, not signature verification.
 	// Signature verification occurs in FetchExternalEntries()
-	returnVal := models.Tuf{}
+	returnVal := models.TUF{}
 	re := V001Entry{}
-	re.TufObj.Version = "1.0.0" // TODO: Get tuf specification for root manifest
 
 	// we will need the manifest and root
 	var err error
 	artifactBytes := props.ArtifactBytes
-	re.TufObj.Manifest = &models.TufManifestV001Schema{Signed: &models.TufManifestV001SchemaSigned{}}
+	re.TufObj.Metadata = &models.TUFMetadataV001Schema{Signed: &models.TUFMetadataV001SchemaSigned{}}
 	if artifactBytes == nil {
 		if props.ArtifactPath == nil {
 			return nil, errors.New("path to manifest (file or URL) must be specified")
 		}
 		if props.ArtifactPath.IsAbs() {
-			re.TufObj.Manifest.Signed.URL = strfmt.URI(props.ArtifactPath.String())
+			re.TufObj.Metadata.Signed.URL = strfmt.URI(props.ArtifactPath.String())
 		} else {
 			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
 			if err != nil {
 				return nil, fmt.Errorf("error reading manifest file: %w", err)
 			}
-			re.TufObj.Manifest.Signed.Content = strfmt.Base64(artifactBytes)
+			re.TufObj.Metadata.Signed.Content = strfmt.Base64(artifactBytes)
 		}
 	} else {
-		re.TufObj.Manifest.Signed.Content = strfmt.Base64(artifactBytes)
+		re.TufObj.Metadata.Signed.Content = strfmt.Base64(artifactBytes)
 	}
 
 	rootBytes := props.PublicKeyBytes
-	re.TufObj.Root = &models.TufManifestV001Schema{Signed: &models.TufManifestV001SchemaSigned{}}
+	re.TufObj.Root = &models.TUFMetadataV001Schema{Signed: &models.TUFMetadataV001SchemaSigned{}}
 	if rootBytes == nil {
 		if props.PublicKeyPath == nil {
 			return nil, errors.New("path to root (file or URL) must be specified")
@@ -393,8 +403,8 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		return nil, err
 	}
 
-	if re.HasExternalEntities() {
-		if err := re.FetchExternalEntities(ctx); err != nil {
+	if re.hasExternalEntities() {
+		if err := re.fetchExternalEntities(ctx); err != nil {
 			return nil, fmt.Errorf("error retrieving external entities: %v", err)
 		}
 	}

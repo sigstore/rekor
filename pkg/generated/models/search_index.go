@@ -220,8 +220,8 @@ const (
 	// SearchIndexPublicKeyFormatSSH captures enum value "ssh"
 	SearchIndexPublicKeyFormatSSH string = "ssh"
 
-	// SearchIndexPublicKeyFormatTuf captures enum value "tuf"
-	SearchIndexPublicKeyFormatTuf string = "tuf"
+	// SearchIndexPublicKeyFormatTUF captures enum value "tuf"
+	SearchIndexPublicKeyFormatTUF string = "tuf"
 )
 
 // prop value enum

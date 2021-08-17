@@ -25,15 +25,16 @@ import (
 func TestReadPublicKey(t *testing.T) {
 	// Tests reading a valid public key (root.json)
 	type test struct {
-		caseDesc   string
-		inputFile  string
-		errorFound bool
+		caseDesc    string
+		inputFile   string
+		errorFound  bool
+		specVersion string
 	}
 
 	tests := []test{
 		{caseDesc: "Unsigned root manifest", inputFile: "testdata/unsigned_root.json", errorFound: true},
-		{caseDesc: "Invalid TUF root.json (invalid type)", inputFile: "testdata/timestamp.json", errorFound: true},
-		{caseDesc: "Valid TUF root.json", inputFile: "testdata/1.root.json", errorFound: false},
+		{caseDesc: "Invalid TUF root.json (invalid type)", inputFile: "testdata/timestamp.json", errorFound: true, specVersion: "1.0"},
+		{caseDesc: "Valid TUF root.json", inputFile: "testdata/1.root.json", errorFound: false, specVersion: "1.0"},
 	}
 
 	for _, tc := range tests {
@@ -42,8 +43,19 @@ func TestReadPublicKey(t *testing.T) {
 			t.Errorf("%v: cannot open %v", tc.caseDesc, tc.inputFile)
 		}
 
-		if got, err := NewPublicKey(file); ((got != nil) == tc.errorFound) || ((err != nil) != tc.errorFound) {
+		got, err := NewPublicKey(file)
+		if ((got != nil) == tc.errorFound) || ((err != nil) != tc.errorFound) {
 			t.Errorf("%v: unexpected result testing %v: %v", tc.caseDesc, tc.inputFile, err)
+		}
+
+		if !tc.errorFound {
+			specVersion, err := got.SpecVersion()
+			if err != nil {
+				t.Errorf("%v: unexpected result testing %v: %v", tc.caseDesc, tc.inputFile, err)
+			}
+			if specVersion != tc.specVersion {
+				t.Errorf("%v: unexpected spec version expected %v, got %v", tc.caseDesc, tc.specVersion, specVersion)
+			}
 		}
 	}
 }

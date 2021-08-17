@@ -33,9 +33,10 @@ type Signature struct {
 }
 
 type signedMeta struct {
-	Type    string    `json:"_type"`
-	Expires time.Time `json:"expires"`
-	Version int       `json:"version"`
+	Type        string    `json:"_type"`
+	Expires     time.Time `json:"expires"`
+	Version     int       `json:"version"`
+	SpecVersion string    `json:"spec_version"`
 }
 
 // NewSignature creates and validates a TUF signed manifest
@@ -172,6 +173,15 @@ func (k PublicKey) CanonicalValue() (encoded []byte, err error) {
 	}
 
 	return canonical, nil
+}
+
+func (k PublicKey) SpecVersion() (string, error) {
+	// extract role
+	sm := &signedMeta{}
+	if err := json.Unmarshal(k.root.Signed, sm); err != nil {
+		return "", err
+	}
+	return sm.SpecVersion, nil
 }
 
 // EmailAddresses implements the pki.PublicKey interface

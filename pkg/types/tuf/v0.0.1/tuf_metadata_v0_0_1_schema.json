@@ -1,26 +1,30 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "$id": "http://rekor.sigstore.dev/types/tuf/tuf_manifest_v0_0_1_schema.json",
-    "title": "tuf targets payload v0.0.1 Schema",
-    "description": "Schema for tuf manifests",
+    "title": "TUF metadata payload v0.0.1 Schema",
+    "description": "Schema for TUF metadata",
     "type": "object",
     "properties": {
         "_type": {
             "description": "Type identifier",
             "type": "string",
-            "enum": ["root", "targets", "snapshot", "timestamp"]
+            "enum": ["root", "targets", "snapshot", "timestamp"],
+            "readOnly": true
         },
         "version": {
             "description": "File version",
-            "type": "integer"
+            "type": "integer",
+            "minimum": 1,
+            "readOnly": true
         },
         "expires": {
             "description": "Expiration date",
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "readOnly": true
         },
         "signed": {
-            "description": "Content of the signed manifest",
+            "description": "Content of the signed metadata",
             "type": "object",
             "properties": {
                 "url": {

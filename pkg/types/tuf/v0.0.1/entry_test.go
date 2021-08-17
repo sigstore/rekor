@@ -89,8 +89,8 @@ func TestCrossFieldValidation(t *testing.T) {
 		{
 			caseDesc: "root without url or content",
 			entry: V001Entry{
-				TufObj: models.TufV001Schema{
-					Root: &models.TufManifestV001Schema{},
+				TufObj: models.TUFV001Schema{
+					Root: &models.TUFMetadataV001Schema{},
 				},
 			},
 			expectUnmarshalSuccess: false,
@@ -98,9 +98,9 @@ func TestCrossFieldValidation(t *testing.T) {
 		{
 			caseDesc: "root without manifest",
 			entry: V001Entry{
-				TufObj: models.TufV001Schema{
-					Root: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+				TufObj: models.TUFV001Schema{
+					Root: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							URL: strfmt.URI(testServer.URL + "/key"),
 						},
 					},
@@ -112,13 +112,13 @@ func TestCrossFieldValidation(t *testing.T) {
 		{
 			caseDesc: "root with empty manifest",
 			entry: V001Entry{
-				TufObj: models.TufV001Schema{
-					Root: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+				TufObj: models.TUFV001Schema{
+					Root: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							URL: strfmt.URI(testServer.URL + "/key"),
 						},
 					},
-					Manifest: &models.TufManifestV001Schema{},
+					Metadata: &models.TUFMetadataV001Schema{},
 				},
 			},
 			hasExtEntities:         true,
@@ -127,14 +127,14 @@ func TestCrossFieldValidation(t *testing.T) {
 		{
 			caseDesc: "root with manifest & url",
 			entry: V001Entry{
-				TufObj: models.TufV001Schema{
-					Root: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+				TufObj: models.TUFV001Schema{
+					Root: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							URL: strfmt.URI(testServer.URL + "/key"),
 						},
 					},
-					Manifest: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+					Metadata: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							URL: strfmt.URI(testServer.URL + "/data"),
 						},
 					},
@@ -147,14 +147,14 @@ func TestCrossFieldValidation(t *testing.T) {
 		{
 			caseDesc: "root with manifest & url with 404 error on root",
 			entry: V001Entry{
-				TufObj: models.TufV001Schema{
-					Root: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+				TufObj: models.TUFV001Schema{
+					Root: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							URL: strfmt.URI(testServer.URL + "/404"),
 						},
 					},
-					Manifest: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+					Metadata: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							URL: strfmt.URI(testServer.URL + "/data"),
 						},
 					},
@@ -167,14 +167,14 @@ func TestCrossFieldValidation(t *testing.T) {
 		{
 			caseDesc: "root with data & url with 404 error on manifest",
 			entry: V001Entry{
-				TufObj: models.TufV001Schema{
-					Root: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+				TufObj: models.TUFV001Schema{
+					Root: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							URL: strfmt.URI(testServer.URL + "/key"),
 						},
 					},
-					Manifest: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+					Metadata: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							URL: strfmt.URI(testServer.URL + "/404"),
 						},
 					},
@@ -187,14 +187,14 @@ func TestCrossFieldValidation(t *testing.T) {
 		{
 			caseDesc: "root with invalid key content & with manifest with content",
 			entry: V001Entry{
-				TufObj: models.TufV001Schema{
-					Root: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+				TufObj: models.TUFV001Schema{
+					Root: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							Content: strfmt.Base64(dataBytes),
 						},
 					},
-					Manifest: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+					Metadata: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							Content: strfmt.Base64(dataBytes),
 						},
 					},
@@ -207,14 +207,14 @@ func TestCrossFieldValidation(t *testing.T) {
 		{
 			caseDesc: "root with data & url and valid manifest",
 			entry: V001Entry{
-				TufObj: models.TufV001Schema{
-					Root: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+				TufObj: models.TUFV001Schema{
+					Root: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							URL: strfmt.URI(testServer.URL + "/key"),
 						},
 					},
-					Manifest: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+					Metadata: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							URL: strfmt.URI(testServer.URL + "/data"),
 						},
 					},
@@ -227,14 +227,14 @@ func TestCrossFieldValidation(t *testing.T) {
 		{
 			caseDesc: "public key with key content & with data with content",
 			entry: V001Entry{
-				TufObj: models.TufV001Schema{
-					Root: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+				TufObj: models.TUFV001Schema{
+					Root: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							Content: strfmt.Base64(keyBytes),
 						},
 					},
-					Manifest: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+					Metadata: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							Content: strfmt.Base64(dataBytes),
 						},
 					},
@@ -247,14 +247,14 @@ func TestCrossFieldValidation(t *testing.T) {
 		{
 			caseDesc: "valid obj with extradata",
 			entry: V001Entry{
-				TufObj: models.TufV001Schema{
-					Root: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+				TufObj: models.TUFV001Schema{
+					Root: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							Content: strfmt.Base64(keyBytes),
 						},
 					},
-					Manifest: &models.TufManifestV001Schema{
-						Signed: &models.TufManifestV001SchemaSigned{
+					Metadata: &models.TUFMetadataV001Schema{
+						Signed: &models.TUFMetadataV001SchemaSigned{
 							Content: strfmt.Base64(dataBytes),
 						},
 					},
@@ -273,7 +273,7 @@ func TestCrossFieldValidation(t *testing.T) {
 		}
 
 		v := &V001Entry{}
-		r := models.Tuf{
+		r := models.TUF{
 			APIVersion: swag.String(tc.entry.APIVersion()),
 			Spec:       tc.entry.TufObj,
 		}
@@ -288,7 +288,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
 		}
 
-		if tc.entry.HasExternalEntities() != tc.hasExtEntities {
+		if tc.entry.hasExternalEntities() != tc.hasExtEntities {
 			t.Errorf("unexpected result from HasExternalEntities for '%v'", tc.caseDesc)
 		}
 

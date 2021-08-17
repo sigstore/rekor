@@ -27,6 +27,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/timestamp"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/sigstore/rekor/pkg/log"
@@ -134,9 +135,9 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		default:
 			return tlog.NewGetLogProofDefault(code).WithPayload(errorMsg(message, code))
 		}
-	case tlog.GetPublicKeyParams:
+	case pubkey.GetPublicKeyParams:
 		logMsg(params.HTTPRequest)
-		return tlog.NewGetPublicKeyDefault(code).WithPayload(errorMsg(message, code))
+		return pubkey.NewGetPublicKeyDefault(code).WithPayload(errorMsg(message, code))
 	case index.SearchIndexParams:
 		logMsg(params.HTTPRequest)
 		switch code {

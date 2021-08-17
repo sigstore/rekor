@@ -1,24 +1,24 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "$id": "http://rekor.sigstore.dev/types/tuf/tuf_v0_0_1_schema.json",
-    "title": "tuf v0.0.1 Schema",
-    "description": "Schema for tuf metadata entries",
+    "title": "TUF v0.0.1 Schema",
+    "description": "Schema for TUF metadata entries",
     "type": "object",
     "properties": {
-        "version": {
+        "spec_version": {
             "description": "TUF specification version",
             "type": "string",
-            "enum": ["1.0.0"]
+            "readOnly": true
         },
-        "manifest": {
-            "description": "tuf manifest",
+        "metadata": {
+            "description": "TUF metadata",
             "type": "object",
-            "$ref": "tuf_manifest_v0_0_1_schema.json"
+            "additionalProperties": true
         },
         "root" : {
-            "description": "root manifest containing about the public keys used to sign the manifest",
+            "description": "root metadata containing about the public keys used to sign the manifest",
             "type": "object",
-            "$ref": "tuf_manifest_v0_0_1_schema.json"
+            "additionalProperties": true
         },
         "extraData": {
             "description": "Arbitrary content to be included in the verifiable entry in the transparency log", 
@@ -26,5 +26,5 @@
             "additionalProperties": true
         }
     },
-    "required": [ "manifest" , "publicKeys"]
+    "required": [ "metadata" , "root"]
 }

@@ -2361,36 +2361,6 @@ func init() {
         }
       }
     },
-    "TufManifestV001SchemaSigned": {
-      "description": "Content of the signed manifest",
-      "type": "object",
-      "oneOf": [
-        {
-          "required": [
-            "url"
-          ]
-        },
-        {
-          "required": [
-            "content"
-          ]
-        }
-      ],
-      "properties": {
-        "content": {
-          "description": "Specifies the archive inline within the document",
-          "type": "string",
-          "format": "byte",
-          "writeOnly": true
-        },
-        "url": {
-          "description": "Specifies the location of the archive",
-          "type": "string",
-          "format": "uri",
-          "writeOnly": true
-        }
-      }
-    },
     "alpine": {
       "description": "Alpine package",
       "type": "object",
@@ -3336,71 +3306,10 @@ func init() {
         }
       ]
     },
-    "tufManifestV001Schema": {
-      "description": "Schema for tuf manifests",
-      "type": "object",
-      "title": "tuf targets payload v0.0.1 Schema",
-      "required": [
-        "signed"
-      ],
-      "properties": {
-        "_type": {
-          "description": "Type identifier",
-          "type": "string",
-          "enum": [
-            "root",
-            "targets",
-            "snapshot",
-            "timestamp"
-          ]
-        },
-        "expires": {
-          "description": "Expiration date",
-          "type": "string",
-          "format": "date-time"
-        },
-        "signed": {
-          "description": "Content of the signed manifest",
-          "type": "object",
-          "oneOf": [
-            {
-              "required": [
-                "url"
-              ]
-            },
-            {
-              "required": [
-                "content"
-              ]
-            }
-          ],
-          "properties": {
-            "content": {
-              "description": "Specifies the archive inline within the document",
-              "type": "string",
-              "format": "byte",
-              "writeOnly": true
-            },
-            "url": {
-              "description": "Specifies the location of the archive",
-              "type": "string",
-              "format": "uri",
-              "writeOnly": true
-            }
-          }
-        },
-        "version": {
-          "description": "File version",
-          "type": "integer"
-        }
-      },
-      "$schema": "http://json-schema.org/draft-07/schema",
-      "$id": "http://rekor.sigstore.dev/types/tuf/tuf_manifest_v0_0_1_schema.json"
-    },
     "tufSchema": {
-      "description": "Schema for tuf link metadata objects",
+      "description": "Schema for TUF metadata objects",
       "type": "object",
-      "title": "tuf Schema",
+      "title": "TUF Schema",
       "oneOf": [
         {
           "$ref": "#/definitions/tufV001Schema"
@@ -3410,12 +3319,12 @@ func init() {
       "$id": "http://rekor.sigstore.dev/types/tuf/tuf_schema.json"
     },
     "tufV001Schema": {
-      "description": "Schema for tuf metadata entries",
+      "description": "Schema for TUF metadata entries",
       "type": "object",
-      "title": "tuf v0.0.1 Schema",
+      "title": "TUF v0.0.1 Schema",
       "required": [
-        "manifest",
-        "publicKeys"
+        "metadata",
+        "root"
       ],
       "properties": {
         "extraData": {
@@ -3423,18 +3332,20 @@ func init() {
           "type": "object",
           "additionalProperties": true
         },
-        "manifest": {
-          "$ref": "#/definitions/tufManifestV001Schema"
+        "metadata": {
+          "description": "TUF metadata",
+          "type": "object",
+          "additionalProperties": true
         },
         "root": {
-          "$ref": "#/definitions/tufManifestV001Schema"
+          "description": "root metadata containing about the public keys used to sign the manifest",
+          "type": "object",
+          "additionalProperties": true
         },
-        "version": {
+        "spec_version": {
           "description": "TUF specification version",
           "type": "string",
-          "enum": [
-            "1.0.0"
-          ]
+          "readOnly": true
         }
       },
       "$schema": "http://json-schema.org/draft-07/schema",

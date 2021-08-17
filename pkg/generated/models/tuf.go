@@ -32,10 +32,10 @@ import (
 	"github.com/go-openapi/validate"
 )
 
-// Tuf TUF metadata
+// TUF TUF metadata
 //
 // swagger:model tuf
-type Tuf struct {
+type TUF struct {
 
 	// api version
 	// Required: true
@@ -44,20 +44,20 @@ type Tuf struct {
 
 	// spec
 	// Required: true
-	Spec TufSchema `json:"spec"`
+	Spec TUFSchema `json:"spec"`
 }
 
 // Kind gets the kind of this subtype
-func (m *Tuf) Kind() string {
+func (m *TUF) Kind() string {
 	return "tuf"
 }
 
 // SetKind sets the kind of this subtype
-func (m *Tuf) SetKind(val string) {
+func (m *TUF) SetKind(val string) {
 }
 
 // UnmarshalJSON unmarshals this object with a polymorphic type from a JSON structure
-func (m *Tuf) UnmarshalJSON(raw []byte) error {
+func (m *TUF) UnmarshalJSON(raw []byte) error {
 	var data struct {
 
 		// api version
@@ -67,7 +67,7 @@ func (m *Tuf) UnmarshalJSON(raw []byte) error {
 
 		// spec
 		// Required: true
-		Spec TufSchema `json:"spec"`
+		Spec TUFSchema `json:"spec"`
 	}
 	buf := bytes.NewBuffer(raw)
 	dec := json.NewDecoder(buf)
@@ -90,7 +90,7 @@ func (m *Tuf) UnmarshalJSON(raw []byte) error {
 		return err
 	}
 
-	var result Tuf
+	var result TUF
 
 	if base.Kind != result.Kind() {
 		/* Not the type we're looking for. */
@@ -106,7 +106,7 @@ func (m *Tuf) UnmarshalJSON(raw []byte) error {
 }
 
 // MarshalJSON marshals this object with a polymorphic type to a JSON structure
-func (m Tuf) MarshalJSON() ([]byte, error) {
+func (m TUF) MarshalJSON() ([]byte, error) {
 	var b1, b2, b3 []byte
 	var err error
 	b1, err = json.Marshal(struct {
@@ -118,7 +118,7 @@ func (m Tuf) MarshalJSON() ([]byte, error) {
 
 		// spec
 		// Required: true
-		Spec TufSchema `json:"spec"`
+		Spec TUFSchema `json:"spec"`
 	}{
 
 		APIVersion: m.APIVersion,
@@ -142,7 +142,7 @@ func (m Tuf) MarshalJSON() ([]byte, error) {
 }
 
 // Validate validates this tuf
-func (m *Tuf) Validate(formats strfmt.Registry) error {
+func (m *TUF) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateAPIVersion(formats); err != nil {
@@ -159,7 +159,7 @@ func (m *Tuf) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *Tuf) validateAPIVersion(formats strfmt.Registry) error {
+func (m *TUF) validateAPIVersion(formats strfmt.Registry) error {
 
 	if err := validate.Required("apiVersion", "body", m.APIVersion); err != nil {
 		return err
@@ -172,7 +172,7 @@ func (m *Tuf) validateAPIVersion(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *Tuf) validateSpec(formats strfmt.Registry) error {
+func (m *TUF) validateSpec(formats strfmt.Registry) error {
 
 	if m.Spec == nil {
 		return errors.Required("spec", "body", nil)
@@ -182,7 +182,7 @@ func (m *Tuf) validateSpec(formats strfmt.Registry) error {
 }
 
 // ContextValidate validate this tuf based on the context it is used
-func (m *Tuf) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *TUF) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if len(res) > 0 {
@@ -192,7 +192,7 @@ func (m *Tuf) ContextValidate(ctx context.Context, formats strfmt.Registry) erro
 }
 
 // MarshalBinary interface implementation
-func (m *Tuf) MarshalBinary() ([]byte, error) {
+func (m *TUF) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -200,8 +200,8 @@ func (m *Tuf) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *Tuf) UnmarshalBinary(b []byte) error {
-	var res Tuf
+func (m *TUF) UnmarshalBinary(b []byte) error {
+	var res TUF
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

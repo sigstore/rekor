@@ -51,7 +51,7 @@ func (btt BaseTufType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl,
 		return nil, errors.New("proposed entry cannot be nil")
 	}
 
-	tuf, ok := pe.(*models.Tuf)
+	tuf, ok := pe.(*models.TUF)
 	if !ok {
 		return nil, fmt.Errorf("cannot unmarshal non-tuf types %+v", pe)
 	}

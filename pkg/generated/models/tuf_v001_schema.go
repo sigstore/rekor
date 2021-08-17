@@ -23,7 +23,6 @@ package models
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -31,33 +30,34 @@ import (
 	"github.com/go-openapi/validate"
 )
 
-// TufV001Schema tuf v0.0.1 Schema
+// TUFV001Schema TUF v0.0.1 Schema
 //
-// Schema for tuf metadata entries
+// Schema for TUF metadata entries
 //
 // swagger:model tufV001Schema
-type TufV001Schema struct {
+type TUFV001Schema struct {
 
 	// Arbitrary content to be included in the verifiable entry in the transparency log
 	ExtraData interface{} `json:"extraData,omitempty"`
 
-	// manifest
+	// TUF metadata
 	// Required: true
-	Manifest *TufManifestV001Schema `json:"manifest"`
+	Metadata interface{} `json:"metadata"`
 
-	// root
-	Root *TufManifestV001Schema `json:"root,omitempty"`
+	// root metadata containing about the public keys used to sign the manifest
+	// Required: true
+	Root interface{} `json:"root"`
 
 	// TUF specification version
-	// Enum: [1.0.0]
-	Version string `json:"version,omitempty"`
+	// Read Only: true
+	SpecVersion string `json:"spec_version,omitempty"`
 }
 
 // Validate validates this tuf v001 schema
-func (m *TufV001Schema) Validate(formats strfmt.Registry) error {
+func (m *TUFV001Schema) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateManifest(formats); err != nil {
+	if err := m.validateMetadata(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -65,99 +65,35 @@ func (m *TufV001Schema) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
-	if err := m.validateVersion(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
 	return nil
 }
 
-func (m *TufV001Schema) validateManifest(formats strfmt.Registry) error {
+func (m *TUFV001Schema) validateMetadata(formats strfmt.Registry) error {
 
-	if err := validate.Required("manifest", "body", m.Manifest); err != nil {
-		return err
-	}
-
-	if m.Manifest != nil {
-		if err := m.Manifest.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("manifest")
-			}
-			return err
-		}
+	if m.Metadata == nil {
+		return errors.Required("metadata", "body", nil)
 	}
 
 	return nil
 }
 
-func (m *TufV001Schema) validateRoot(formats strfmt.Registry) error {
-	if swag.IsZero(m.Root) { // not required
-		return nil
-	}
+func (m *TUFV001Schema) validateRoot(formats strfmt.Registry) error {
 
-	if m.Root != nil {
-		if err := m.Root.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("root")
-			}
-			return err
-		}
-	}
-
-	return nil
-}
-
-var tufV001SchemaTypeVersionPropEnum []interface{}
-
-func init() {
-	var res []string
-	if err := json.Unmarshal([]byte(`["1.0.0"]`), &res); err != nil {
-		panic(err)
-	}
-	for _, v := range res {
-		tufV001SchemaTypeVersionPropEnum = append(tufV001SchemaTypeVersionPropEnum, v)
-	}
-}
-
-const (
-
-	// TufV001SchemaVersionNr1Dot0Dot0 captures enum value "1.0.0"
-	TufV001SchemaVersionNr1Dot0Dot0 string = "1.0.0"
-)
-
-// prop value enum
-func (m *TufV001Schema) validateVersionEnum(path, location string, value string) error {
-	if err := validate.EnumCase(path, location, value, tufV001SchemaTypeVersionPropEnum, true); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (m *TufV001Schema) validateVersion(formats strfmt.Registry) error {
-	if swag.IsZero(m.Version) { // not required
-		return nil
-	}
-
-	// value enum
-	if err := m.validateVersionEnum("version", "body", m.Version); err != nil {
-		return err
+	if m.Root == nil {
+		return errors.Required("root", "body", nil)
 	}
 
 	return nil
 }
 
 // ContextValidate validate this tuf v001 schema based on the context it is used
-func (m *TufV001Schema) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *TUFV001Schema) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.contextValidateManifest(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateRoot(ctx, formats); err != nil {
+	if err := m.contextValidateSpecVersion(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -167,36 +103,17 @@ func (m *TufV001Schema) ContextValidate(ctx context.Context, formats strfmt.Regi
 	return nil
 }
 
-func (m *TufV001Schema) contextValidateManifest(ctx context.Context, formats strfmt.Registry) error {
+func (m *TUFV001Schema) contextValidateSpecVersion(ctx context.Context, formats strfmt.Registry) error {
 
-	if m.Manifest != nil {
-		if err := m.Manifest.ContextValidate(ctx, formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("manifest")
-			}
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *TufV001Schema) contextValidateRoot(ctx context.Context, formats strfmt.Registry) error {
-
-	if m.Root != nil {
-		if err := m.Root.ContextValidate(ctx, formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("root")
-			}
-			return err
-		}
+	if err := validate.ReadOnly(ctx, "spec_version", "body", string(m.SpecVersion)); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 // MarshalBinary interface implementation
-func (m *TufV001Schema) MarshalBinary() ([]byte, error) {
+func (m *TUFV001Schema) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -204,8 +121,8 @@ func (m *TufV001Schema) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *TufV001Schema) UnmarshalBinary(b []byte) error {
-	var res TufV001Schema
+func (m *TUFV001Schema) UnmarshalBinary(b []byte) error {
+	var res TUFV001Schema
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

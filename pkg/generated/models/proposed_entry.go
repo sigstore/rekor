@@ -158,7 +158,7 @@ func unmarshalProposedEntry(data []byte, consumer runtime.Consumer) (ProposedEnt
 		}
 		return &result, nil
 	case "tuf":
-		var result Tuf
+		var result TUF
 		if err := consumer.Consume(buf2, &result); err != nil {
 			return nil, err
 		}

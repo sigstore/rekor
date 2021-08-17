@@ -27,7 +27,7 @@ import (
 )
 
 type UnmarshalTester struct {
-	models.Tuf
+	models.TUF
 }
 
 func (u UnmarshalTester) NewEntry() types.EntryImpl {
@@ -98,31 +98,31 @@ func TestTufType(t *testing.T) {
 		t.Error("valid semver range was not added to SemVerToFacFnMap")
 	}
 
-	u.Tuf.APIVersion = swag.String("2.0.1")
+	u.TUF.APIVersion = swag.String("2.0.1")
 	brt := New()
 
 	// version requested matches implementation in map
-	if _, err := brt.UnmarshalEntry(&u.Tuf); err != nil {
+	if _, err := brt.UnmarshalEntry(&u.TUF); err != nil {
 		t.Errorf("unexpected error in Unmarshal: %v", err)
 	}
 
 	// version requested fails to match implementation in map
-	u.Tuf.APIVersion = swag.String("1.2.2")
-	if _, err := brt.UnmarshalEntry(&u.Tuf); err == nil {
+	u.TUF.APIVersion = swag.String("1.2.2")
+	if _, err := brt.UnmarshalEntry(&u.TUF); err == nil {
 		t.Error("unexpected success in Unmarshal for non-matching version")
 	}
 
 	// error in Unmarshal call is raised appropriately
-	u.Tuf.APIVersion = swag.String("2.2.0")
+	u.TUF.APIVersion = swag.String("2.2.0")
 	u2 := UnmarshalFailsTester{}
 	_ = VersionMap.SetEntryFactory(">= 1.2.3", u2.NewEntry)
-	if _, err := brt.UnmarshalEntry(&u.Tuf); err == nil {
+	if _, err := brt.UnmarshalEntry(&u.TUF); err == nil {
 		t.Error("unexpected success in Unmarshal when error is thrown")
 	}
 
 	// version requested fails to match implementation in map
-	u.Tuf.APIVersion = swag.String("not_a_version")
-	if _, err := brt.UnmarshalEntry(&u.Tuf); err == nil {
+	u.TUF.APIVersion = swag.String("not_a_version")
+	if _, err := brt.UnmarshalEntry(&u.TUF); err == nil {
 		t.Error("unexpected success in Unmarshal for invalid version")
 	}
 }
