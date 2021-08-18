@@ -42,6 +42,8 @@ import (
 	rfc3161_v001 "github.com/sigstore/rekor/pkg/types/rfc3161/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/rpm"
 	rpm_v001 "github.com/sigstore/rekor/pkg/types/rpm/v0.0.1"
+	"github.com/sigstore/rekor/pkg/types/tuf"
+	tuf_v001 "github.com/sigstore/rekor/pkg/types/tuf/v0.0.1"
 )
 
 // serveCmd represents the serve command
@@ -85,6 +87,7 @@ var serveCmd = &cobra.Command{
 			rfc3161.KIND: rfc3161_v001.APIVERSION,
 			alpine.KIND:  alpine_v001.APIVERSION,
 			helm.KIND:    helm_v001.APIVERSION,
+			tuf.KIND:     tuf_v001.APIVERSION,
 		}
 
 		for k, v := range pluggableTypeMap {

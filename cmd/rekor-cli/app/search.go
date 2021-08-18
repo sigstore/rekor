@@ -165,6 +165,8 @@ var searchCmd = &cobra.Command{
 				params.Query.PublicKey.Format = swag.String(models.SearchIndexPublicKeyFormatX509)
 			case "ssh":
 				params.Query.PublicKey.Format = swag.String(models.SearchIndexPublicKeyFormatSSH)
+			case "tuf":
+				params.Query.PublicKey.Format = swag.String(models.SearchIndexPublicKeyFormatTUF)
 			default:
 				return nil, fmt.Errorf("unknown pki-format %v", pkiFormat)
 			}

@@ -1,0 +1,56 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.sigstore.dev/types/tuf/tuf_v0_0_1_schema.json",
+    "title": "TUF v0.0.1 Schema",
+    "description": "Schema for TUF metadata entries",
+    "type": "object",
+    "properties": {
+        "spec_version": {
+            "description": "TUF specification version",
+            "type": "string",
+            "readOnly": true
+        },
+        "metadata": {
+            "description": "TUF metadata",
+            "type": "object",
+            "properties": {
+                "url": {
+                    "description": "Specifies the location of the archive",
+                    "type": "string",
+                    "format": "uri",
+                    "writeOnly": true
+                },
+                "content": {
+                    "description": "Specifies the archive inline within the document",
+                    "type": "object",
+                    "additionalProperties": true,
+                    "writeOnly": true
+                }
+            }
+        },
+        "root" : {
+            "description": "root metadata containing about the public keys used to sign the manifest",
+            "type": "object",
+            "properties": {
+                "url": {
+                    "description": "Specifies the location of the archive",
+                    "type": "string",
+                    "format": "uri",
+                    "writeOnly": true
+                },
+                "content": {
+                    "description": "Specifies the archive inline within the document",
+                    "type": "object",
+                    "additionalProperties": true,
+                    "writeOnly": true
+                }
+            }
+        },
+        "extraData": {
+            "description": "Arbitrary content to be included in the verifiable entry in the transparency log", 
+            "type": "object",
+            "additionalProperties": true
+        }
+    },
+    "required": [ "metadata" , "root"]
+}

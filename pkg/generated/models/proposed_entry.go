@@ -157,6 +157,12 @@ func unmarshalProposedEntry(data []byte, consumer runtime.Consumer) (ProposedEnt
 			return nil, err
 		}
 		return &result, nil
+	case "tuf":
+		var result TUF
+		if err := consumer.Consume(buf2, &result); err != nil {
+			return nil, err
+		}
+		return &result, nil
 	}
 	return nil, errors.New(422, "invalid kind value: %q", getType.Kind)
 }
