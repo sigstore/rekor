@@ -18,7 +18,6 @@ package tuf
 import (
 	"context"
 	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -88,11 +87,23 @@ func (v V001Entry) IndexKeys() []string {
 		}
 	}
 
-	// Index manifest hash, type, and version.
-	metadataHash := sha512.Sum512([]byte(v.TufObj.Metadata.Signed.Content))
-	result = append(result, strings.ToLower(hex.EncodeToString(metadataHash[:])))
-	result = append(result, v.TufObj.Metadata.Type)
-	result = append(result, strconv.FormatInt(v.TufObj.Metadata.Version, 10))
+	// Index metadata hash, type, and version.
+	metadata, err := v.sigObj.CanonicalValue()
+	if err != nil {
+		log.Logger.Error(err)
+	} else {
+		metadataHash := sha256.Sum256(metadata)
+		result = append(result, strings.ToLower(hex.EncodeToString(metadataHash[:])))
+	}
+
+	signed, ok := v.sigObj.(*ptuf.Signature)
+	if !ok {
+		log.Logger.Error(errors.New("invalid metadata format"))
+		return result
+	}
+
+	result = append(result, signed.Role)
+	result = append(result, strconv.Itoa(signed.Version))
 
 	// Index root.json hash.
 	root, err := v.keyObj.CanonicalValue()
@@ -103,8 +114,7 @@ func (v V001Entry) IndexKeys() []string {
 		result = append(result, strings.ToLower(hex.EncodeToString(rootHash[:])))
 	}
 
-	// TODO: Index individual key IDs?
-	// TODO: Index a fully qualified URL into TUF metadata (e.g. OCI/project_name/type)?
+	// TODO: Index individual key IDs
 	return result
 }
 
@@ -132,11 +142,11 @@ func (v V001Entry) hasExternalEntities() bool {
 		return false
 	}
 
-	if v.TufObj.Metadata != nil && v.TufObj.Metadata.Signed != nil && v.TufObj.Metadata.Signed.URL.String() != "" {
+	if v.TufObj.Metadata != nil && v.TufObj.Metadata.URL.String() != "" {
 		return true
 	}
 
-	if v.TufObj.Root != nil && v.TufObj.Root.Signed != nil && v.TufObj.Root.Signed.URL.String() != "" {
+	if v.TufObj.Root != nil && v.TufObj.Root.URL.String() != "" {
 		return true
 	}
 
@@ -180,8 +190,17 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	g.Go(func() error {
 		defer close(sigResult)
 
-		sigReadCloser, err := util.FileOrURLReadCloser(ctx, v.TufObj.Metadata.Signed.URL.String(),
-			v.TufObj.Metadata.Signed.Content)
+		var contentBytes []byte
+		if v.TufObj.Metadata.Content != nil {
+			var err error
+			contentBytes, err = json.Marshal(v.TufObj.Metadata.Content)
+			if err != nil {
+				return closePipesOnError(err)
+			}
+		}
+
+		sigReadCloser, err := util.FileOrURLReadCloser(ctx, v.TufObj.Metadata.URL.String(),
+			contentBytes)
 		if err != nil {
 			return closePipesOnError(err)
 		}
@@ -205,8 +224,17 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	g.Go(func() error {
 		defer close(keyResult)
 
-		keyReadCloser, err := util.FileOrURLReadCloser(ctx, v.TufObj.Root.Signed.URL.String(),
-			v.TufObj.Root.Signed.Content)
+		var contentBytes []byte
+		if v.TufObj.Root.Content != nil {
+			var err error
+			contentBytes, err = json.Marshal(v.TufObj.Root.Content)
+			if err != nil {
+				return closePipesOnError(err)
+			}
+		}
+
+		keyReadCloser, err := util.FileOrURLReadCloser(ctx, v.TufObj.Root.URL.String(),
+			contentBytes)
 		if err != nil {
 			return closePipesOnError(err)
 		}
@@ -273,29 +301,16 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if canonicalEntry.SpecVersion == "" {
-		return nil, errors.New("empty spec version")
-	}
-	canonicalEntry.SpecVersion = "1.2.3"
 
 	// need to canonicalize manifest (canonicalize JSON)
-	canonicalEntry.Root = &models.TUFMetadataV001Schema{Signed: &models.TUFMetadataV001SchemaSigned{}}
-	canonicalEntry.Root.Signed = v.keyObj.CanonicalValue()
-	if err != nil {
-		return nil, err
-	}
-	// fill in the rest of the manifest fields from the content
-	canonicalEntry.Root, err = updateTufMetadata(canonicalEntry.Root)
+	canonicalEntry.Root = &models.TUFV001SchemaRoot{}
+	canonicalEntry.Root.Content, err = v.keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
 
-	canonicalEntry.Metadata = &models.TUFMetadataV001Schema{Signed: &models.TUFMetadataV001SchemaSigned{}}
-	canonicalEntry.Metadata.Signed.Content, err = v.sigObj.CanonicalValue()
-	if err != nil {
-		return nil, err
-	}
-	canonicalEntry.Metadata, err = updateTufMetadata(canonicalEntry.Metadata)
+	canonicalEntry.Metadata = &models.TUFV001SchemaMetadata{}
+	canonicalEntry.Metadata.Content, err = v.sigObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
@@ -311,18 +326,18 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 // FIXME: we can probably export ValidateMetablock on in-toto.go
 func (v V001Entry) Validate() error {
 	root := v.TufObj.Root
-	if root == nil || root.Signed == nil {
+	if root == nil {
 		return errors.New("missing root")
 	}
-	if len(root.Signed.Content) == 0 && root.Signed.URL.String() == "" {
+	if root.Content == nil && root.URL.String() == "" {
 		return errors.New("root must be specified")
 	}
 
 	tufManifest := v.TufObj.Metadata
-	if tufManifest == nil || tufManifest.Signed == nil {
+	if tufManifest == nil {
 		return errors.New("missing TUF metadata")
 	}
-	if len(tufManifest.Signed.Content) == 0 && tufManifest.Signed.URL.String() == "" {
+	if tufManifest.Content == nil && tufManifest.URL.String() == "" {
 		return errors.New("TUF metadata must be specified")
 	}
 	return nil
@@ -330,27 +345,6 @@ func (v V001Entry) Validate() error {
 
 func (v *V001Entry) Attestation() (string, []byte) {
 	return "", nil
-}
-
-func updateTufMetadata(manifest *models.TUFMetadataV001Schema) (*models.TUFMetadataV001Schema, error) {
-	if len(manifest.Signed.Content) == 0 {
-		return nil, errors.New("manifest content has not been initialized")
-	}
-
-	s := &data.Signed{}
-	if err := json.Unmarshal(manifest.Signed.Content, s); err != nil {
-		return nil, err
-	}
-	baseSigned := &BaseSigned{}
-	if err := json.Unmarshal(s.Signed, baseSigned); err != nil {
-		return nil, err
-	}
-
-	return &models.TUFMetadataV001Schema{
-		Signed:  manifest.Signed,
-		Expires: strfmt.DateTime(baseSigned.Expires),
-		Type:    baseSigned.Type,
-		Version: int64(baseSigned.Version)}, nil
 }
 
 func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
@@ -362,41 +356,57 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	// we will need the manifest and root
 	var err error
 	artifactBytes := props.ArtifactBytes
-	re.TufObj.Metadata = &models.TUFMetadataV001Schema{Signed: &models.TUFMetadataV001SchemaSigned{}}
+	re.TufObj.Metadata = &models.TUFV001SchemaMetadata{}
 	if artifactBytes == nil {
 		if props.ArtifactPath == nil {
 			return nil, errors.New("path to manifest (file or URL) must be specified")
 		}
 		if props.ArtifactPath.IsAbs() {
-			re.TufObj.Metadata.Signed.URL = strfmt.URI(props.ArtifactPath.String())
+			re.TufObj.Metadata.URL = strfmt.URI(props.ArtifactPath.String())
 		} else {
 			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
 			if err != nil {
 				return nil, fmt.Errorf("error reading manifest file: %w", err)
 			}
-			re.TufObj.Metadata.Signed.Content = strfmt.Base64(artifactBytes)
+			s := &data.Signed{}
+			if err := json.Unmarshal(artifactBytes, s); err != nil {
+				return nil, err
+			}
+			re.TufObj.Metadata.Content = s
 		}
 	} else {
-		re.TufObj.Metadata.Signed.Content = strfmt.Base64(artifactBytes)
+		s := &data.Signed{}
+		if err := json.Unmarshal(artifactBytes, s); err != nil {
+			return nil, err
+		}
+		re.TufObj.Metadata.Content = s
 	}
 
 	rootBytes := props.PublicKeyBytes
-	re.TufObj.Root = &models.TUFMetadataV001Schema{Signed: &models.TUFMetadataV001SchemaSigned{}}
+	re.TufObj.Root = &models.TUFV001SchemaRoot{}
 	if rootBytes == nil {
 		if props.PublicKeyPath == nil {
 			return nil, errors.New("path to root (file or URL) must be specified")
 		}
 		if props.PublicKeyPath.IsAbs() {
-			re.TufObj.Root.Signed.URL = strfmt.URI(props.PublicKeyPath.String())
+			re.TufObj.Root.URL = strfmt.URI(props.PublicKeyPath.String())
 		} else {
 			rootBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
 			if err != nil {
 				return nil, fmt.Errorf("error reading root file: %w", err)
 			}
-			re.TufObj.Root.Signed.Content = strfmt.Base64(rootBytes)
+			s := &data.Signed{}
+			if err := json.Unmarshal(rootBytes, s); err != nil {
+				return nil, err
+			}
+			re.TufObj.Root.Content = s
 		}
 	} else {
-		re.TufObj.Root.Signed.Content = strfmt.Base64(rootBytes)
+		s := &data.Signed{}
+		if err := json.Unmarshal(rootBytes, s); err != nil {
+			return nil, err
+		}
+		re.TufObj.Root.Content = s
 	}
 
 	if err := re.Validate(); err != nil {

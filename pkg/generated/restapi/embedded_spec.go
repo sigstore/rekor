@@ -2361,6 +2361,42 @@ func init() {
         }
       }
     },
+    "TUFV001SchemaMetadata": {
+      "description": "TUF metadata",
+      "type": "object",
+      "properties": {
+        "content": {
+          "description": "Specifies the archive inline within the document",
+          "type": "object",
+          "additionalProperties": true,
+          "writeOnly": true
+        },
+        "url": {
+          "description": "Specifies the location of the archive",
+          "type": "string",
+          "format": "uri",
+          "writeOnly": true
+        }
+      }
+    },
+    "TUFV001SchemaRoot": {
+      "description": "root metadata containing about the public keys used to sign the manifest",
+      "type": "object",
+      "properties": {
+        "content": {
+          "description": "Specifies the archive inline within the document",
+          "type": "object",
+          "additionalProperties": true,
+          "writeOnly": true
+        },
+        "url": {
+          "description": "Specifies the location of the archive",
+          "type": "string",
+          "format": "uri",
+          "writeOnly": true
+        }
+      }
+    },
     "alpine": {
       "description": "Alpine package",
       "type": "object",
@@ -3335,12 +3371,38 @@ func init() {
         "metadata": {
           "description": "TUF metadata",
           "type": "object",
-          "additionalProperties": true
+          "properties": {
+            "content": {
+              "description": "Specifies the archive inline within the document",
+              "type": "object",
+              "additionalProperties": true,
+              "writeOnly": true
+            },
+            "url": {
+              "description": "Specifies the location of the archive",
+              "type": "string",
+              "format": "uri",
+              "writeOnly": true
+            }
+          }
         },
         "root": {
           "description": "root metadata containing about the public keys used to sign the manifest",
           "type": "object",
-          "additionalProperties": true
+          "properties": {
+            "content": {
+              "description": "Specifies the archive inline within the document",
+              "type": "object",
+              "additionalProperties": true,
+              "writeOnly": true
+            },
+            "url": {
+              "description": "Specifies the location of the archive",
+              "type": "string",
+              "format": "uri",
+              "writeOnly": true
+            }
+          }
         },
         "spec_version": {
           "description": "TUF specification version",

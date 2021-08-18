@@ -40,13 +40,13 @@ type TUFV001Schema struct {
 	// Arbitrary content to be included in the verifiable entry in the transparency log
 	ExtraData interface{} `json:"extraData,omitempty"`
 
-	// TUF metadata
+	// metadata
 	// Required: true
-	Metadata interface{} `json:"metadata"`
+	Metadata *TUFV001SchemaMetadata `json:"metadata"`
 
-	// root metadata containing about the public keys used to sign the manifest
+	// root
 	// Required: true
-	Root interface{} `json:"root"`
+	Root *TUFV001SchemaRoot `json:"root"`
 
 	// TUF specification version
 	// Read Only: true
@@ -73,8 +73,17 @@ func (m *TUFV001Schema) Validate(formats strfmt.Registry) error {
 
 func (m *TUFV001Schema) validateMetadata(formats strfmt.Registry) error {
 
-	if m.Metadata == nil {
-		return errors.Required("metadata", "body", nil)
+	if err := validate.Required("metadata", "body", m.Metadata); err != nil {
+		return err
+	}
+
+	if m.Metadata != nil {
+		if err := m.Metadata.Validate(formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("metadata")
+			}
+			return err
+		}
 	}
 
 	return nil
@@ -82,8 +91,17 @@ func (m *TUFV001Schema) validateMetadata(formats strfmt.Registry) error {
 
 func (m *TUFV001Schema) validateRoot(formats strfmt.Registry) error {
 
-	if m.Root == nil {
-		return errors.Required("root", "body", nil)
+	if err := validate.Required("root", "body", m.Root); err != nil {
+		return err
+	}
+
+	if m.Root != nil {
+		if err := m.Root.Validate(formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("root")
+			}
+			return err
+		}
 	}
 
 	return nil
@@ -93,6 +111,14 @@ func (m *TUFV001Schema) validateRoot(formats strfmt.Registry) error {
 func (m *TUFV001Schema) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.contextValidateMetadata(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateRoot(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateSpecVersion(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -100,6 +126,34 @@ func (m *TUFV001Schema) ContextValidate(ctx context.Context, formats strfmt.Regi
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *TUFV001Schema) contextValidateMetadata(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Metadata != nil {
+		if err := m.Metadata.ContextValidate(ctx, formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("metadata")
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *TUFV001Schema) contextValidateRoot(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.Root != nil {
+		if err := m.Root.ContextValidate(ctx, formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("root")
+			}
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -123,6 +177,130 @@ func (m *TUFV001Schema) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary interface implementation
 func (m *TUFV001Schema) UnmarshalBinary(b []byte) error {
 	var res TUFV001Schema
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// TUFV001SchemaMetadata TUF metadata
+//
+// swagger:model TUFV001SchemaMetadata
+type TUFV001SchemaMetadata struct {
+
+	// Specifies the archive inline within the document
+	Content interface{} `json:"content,omitempty"`
+
+	// Specifies the location of the archive
+	// Format: uri
+	URL strfmt.URI `json:"url,omitempty"`
+}
+
+// Validate validates this TUF v001 schema metadata
+func (m *TUFV001SchemaMetadata) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateURL(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *TUFV001SchemaMetadata) validateURL(formats strfmt.Registry) error {
+	if swag.IsZero(m.URL) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("metadata"+"."+"url", "body", "uri", m.URL.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ContextValidate validates this TUF v001 schema metadata based on context it is used
+func (m *TUFV001SchemaMetadata) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *TUFV001SchemaMetadata) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *TUFV001SchemaMetadata) UnmarshalBinary(b []byte) error {
+	var res TUFV001SchemaMetadata
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// TUFV001SchemaRoot root metadata containing about the public keys used to sign the manifest
+//
+// swagger:model TUFV001SchemaRoot
+type TUFV001SchemaRoot struct {
+
+	// Specifies the archive inline within the document
+	Content interface{} `json:"content,omitempty"`
+
+	// Specifies the location of the archive
+	// Format: uri
+	URL strfmt.URI `json:"url,omitempty"`
+}
+
+// Validate validates this TUF v001 schema root
+func (m *TUFV001SchemaRoot) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateURL(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *TUFV001SchemaRoot) validateURL(formats strfmt.Registry) error {
+	if swag.IsZero(m.URL) { // not required
+		return nil
+	}
+
+	if err := validate.FormatOf("root"+"."+"url", "body", "uri", m.URL.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ContextValidate validates this TUF v001 schema root based on context it is used
+func (m *TUFV001SchemaRoot) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *TUFV001SchemaRoot) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *TUFV001SchemaRoot) UnmarshalBinary(b []byte) error {
+	var res TUFV001SchemaRoot
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

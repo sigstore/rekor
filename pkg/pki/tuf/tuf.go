@@ -28,8 +28,9 @@ import (
 )
 
 type Signature struct {
-	signed *data.Signed
-	role   string
+	signed  *data.Signed
+	Role    string
+	Version int
 }
 
 type signedMeta struct {
@@ -58,8 +59,9 @@ func NewSignature(r io.Reader) (*Signature, error) {
 	}
 
 	return &Signature{
-		signed: s,
-		role:   sm.Type,
+		signed:  s,
+		Role:    sm.Type,
+		Version: sm.Version,
 	}, nil
 }
 
@@ -99,7 +101,7 @@ func (s Signature) Verify(_ io.Reader, k interface{}) error {
 		return fmt.Errorf("tuf root has not been initialized")
 	}
 
-	return key.db.Verify(s.signed, s.role, 0)
+	return key.db.Verify(s.signed, s.Role, 0)
 }
 
 // PublicKey Public Key database with verification keys

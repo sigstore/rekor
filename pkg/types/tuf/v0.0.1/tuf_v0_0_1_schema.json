@@ -13,12 +13,38 @@
         "metadata": {
             "description": "TUF metadata",
             "type": "object",
-            "additionalProperties": true
+            "properties": {
+                "url": {
+                    "description": "Specifies the location of the archive",
+                    "type": "string",
+                    "format": "uri",
+                    "writeOnly": true
+                },
+                "content": {
+                    "description": "Specifies the archive inline within the document",
+                    "type": "object",
+                    "additionalProperties": true,
+                    "writeOnly": true
+                }
+            }
         },
         "root" : {
             "description": "root metadata containing about the public keys used to sign the manifest",
             "type": "object",
-            "additionalProperties": true
+            "properties": {
+                "url": {
+                    "description": "Specifies the location of the archive",
+                    "type": "string",
+                    "format": "uri",
+                    "writeOnly": true
+                },
+                "content": {
+                    "description": "Specifies the archive inline within the document",
+                    "type": "object",
+                    "additionalProperties": true,
+                    "writeOnly": true
+                }
+            }
         },
         "extraData": {
             "description": "Arbitrary content to be included in the verifiable entry in the transparency log", 
