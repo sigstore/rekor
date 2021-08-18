@@ -85,25 +85,24 @@ go install github.com/google/trillian/cmd/trillian_log_signer@v1.3.14-0.20210713
 First run the trillian log server
 
 ```
-trillian_log_server -http_endpoint=localhost:8090 -rpc_endpoint=localhost:8091 --logtostderr ... 
+trillian_log_server -http_endpoint=localhost:8091 -rpc_endpoint=localhost:8090 --logtostderr ...
 ```
 
 Now run the signer:
 
 ```
-trillian_log_signer --logtostderr --force_master --http_endpoint=localhost:8190 -rpc_endpoint=localhost:8191  --batch_size=1000 --sequencer_guard_window=0 --sequencer_interval=200ms
+trillian_log_signer --logtostderr --force_master --http_endpoint=localhost:8191 -rpc_endpoint=localhost:8190  --batch_size=1000 --sequencer_guard_window=0 --sequencer_interval=200ms
 ```
 
 ## Run Rekor
 
 We are now ready to run rekor.
 
+```
+rekor-server serve --rekor_server.address=0.0.0.0 --rekor_server.port=3000 --enable_retrieve_api=false
+```
 > :notebook: If you want a quick handy search index, then you will need to install redis-server
-   if you choose not to, then you must pass the argument `--enable_retrieve_api` false.
-
-```
-rekor-server serve --rekor_server.address=0.0.0.0 --rekor_server.port=3000
-```
+   and remove the argument `--enable_retrieve_api=false`.
 
 Example:
 
