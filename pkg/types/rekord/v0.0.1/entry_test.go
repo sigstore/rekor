@@ -498,27 +498,6 @@ func TestCrossFieldValidation(t *testing.T) {
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
 		},
-		{
-			caseDesc: "valid obj with extradata",
-			entry: V001Entry{
-				RekordObj: models.RekordV001Schema{
-					Signature: &models.RekordV001SchemaSignature{
-						Format:  "pgp",
-						Content: strfmt.Base64(sigBytes),
-						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
-							Content: strfmt.Base64(keyBytes),
-						},
-					},
-					Data: &models.RekordV001SchemaData{
-						Content: strfmt.Base64(dataBytes),
-					},
-					ExtraData: []byte("{\"something\": \"here\""),
-				},
-			},
-			hasExtEntities:            false,
-			expectUnmarshalSuccess:    true,
-			expectCanonicalizeSuccess: true,
-		},
 	}
 
 	for _, tc := range testCases {

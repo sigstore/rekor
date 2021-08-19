@@ -2443,11 +2443,6 @@ func init() {
         "package"
       ],
       "properties": {
-        "extraData": {
-          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
-          "type": "object",
-          "additionalProperties": true
-        },
         "package": {
           "description": "Information about the package associated with the entry",
           "type": "object",
@@ -2662,11 +2657,6 @@ func init() {
             }
           }
         },
-        "extraData": {
-          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
-          "type": "object",
-          "additionalProperties": true
-        },
         "publicKey": {
           "description": "The public key that can verify the package signature",
           "type": "object",
@@ -2778,11 +2768,6 @@ func init() {
             }
           }
         },
-        "extraData": {
-          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
-          "type": "object",
-          "additionalProperties": true
-        },
         "publicKey": {
           "description": "The public key that can verify the signature",
           "type": "string",
@@ -2887,11 +2872,6 @@ func init() {
               "writeOnly": true
             }
           }
-        },
-        "extraData": {
-          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
-          "type": "object",
-          "additionalProperties": true
         },
         "signature": {
           "description": "Information about the included signature in the JAR file",
@@ -3025,11 +3005,6 @@ func init() {
             }
           }
         },
-        "extraData": {
-          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
-          "type": "object",
-          "additionalProperties": true
-        },
         "signature": {
           "description": "Information about the detached signature associated with the entry",
           "type": "object",
@@ -3151,11 +3126,6 @@ func init() {
         "tsr"
       ],
       "properties": {
-        "extraData": {
-          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
-          "type": "object",
-          "additionalProperties": true
-        },
         "tsr": {
           "description": "Information about the tsr file associated with the entry",
           "type": "object",
@@ -3220,11 +3190,6 @@ func init() {
         "package"
       ],
       "properties": {
-        "extraData": {
-          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
-          "type": "object",
-          "additionalProperties": true
-        },
         "package": {
           "description": "Information about the package associated with the entry",
           "type": "object",
@@ -3363,11 +3328,6 @@ func init() {
         "root"
       ],
       "properties": {
-        "extraData": {
-          "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
-          "type": "object",
-          "additionalProperties": true
-        },
         "metadata": {
           "description": "TUF metadata",
           "type": "object",

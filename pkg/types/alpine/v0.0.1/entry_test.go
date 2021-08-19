@@ -346,23 +346,6 @@ func TestCrossFieldValidation(t *testing.T) {
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
 		},
-		{
-			caseDesc: "valid obj with extradata",
-			entry: V001Entry{
-				AlpineModel: models.AlpineV001Schema{
-					PublicKey: &models.AlpineV001SchemaPublicKey{
-						Content: strfmt.Base64(keyBytes),
-					},
-					Package: &models.AlpineV001SchemaPackage{
-						Content: strfmt.Base64(dataBytes),
-					},
-					ExtraData: []byte("{\"something\": \"here\""),
-				},
-			},
-			hasExtEntities:            false,
-			expectUnmarshalSuccess:    true,
-			expectCanonicalizeSuccess: true,
-		},
 	}
 
 	for _, tc := range testCases {

@@ -42,9 +42,6 @@ type RekordV001Schema struct {
 	// Required: true
 	Data *RekordV001SchemaData `json:"data"`
 
-	// Arbitrary content to be included in the verifiable entry in the transparency log
-	ExtraData interface{} `json:"extraData,omitempty"`
-
 	// signature
 	// Required: true
 	Signature *RekordV001SchemaSignature `json:"signature"`

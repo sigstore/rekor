@@ -16,11 +16,6 @@
                 }
             },
             "required": [ "content" ]
-        },
-        "extraData": {
-            "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
-            "type": "object",
-            "additionalProperties": true
         }
     },
     "required": [ "tsr" ]

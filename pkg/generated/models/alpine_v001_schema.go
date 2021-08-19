@@ -38,9 +38,6 @@ import (
 // swagger:model alpineV001Schema
 type AlpineV001Schema struct {
 
-	// Arbitrary content to be included in the verifiable entry in the transparency log
-	ExtraData interface{} `json:"extraData,omitempty"`
-
 	// package
 	// Required: true
 	Package *AlpineV001SchemaPackage `json:"package"`

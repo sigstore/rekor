@@ -42,9 +42,6 @@ type IntotoV001Schema struct {
 	// Required: true
 	Content *IntotoV001SchemaContent `json:"content"`
 
-	// Arbitrary content to be included in the verifiable entry in the transparency log
-	ExtraData interface{} `json:"extraData,omitempty"`
-
 	// The public key that can verify the signature
 	// Required: true
 	// Format: byte

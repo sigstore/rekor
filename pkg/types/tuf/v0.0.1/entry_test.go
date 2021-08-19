@@ -224,23 +224,6 @@ func TestCrossFieldValidation(t *testing.T) {
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
 		},
-		{
-			caseDesc: "valid obj with extradata",
-			entry: V001Entry{
-				TufObj: models.TUFV001Schema{
-					Root: &models.TUFV001SchemaRoot{
-						Content: keyContent,
-					},
-					Metadata: &models.TUFV001SchemaMetadata{
-						Content: dataContent,
-					},
-					ExtraData: []byte("{\"something\": \"here\""),
-				},
-			},
-			hasExtEntities:            false,
-			expectUnmarshalSuccess:    true,
-			expectCanonicalizeSuccess: true,
-		},
 	}
 
 	for _, tc := range testCases {

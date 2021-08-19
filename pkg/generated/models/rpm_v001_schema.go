@@ -38,9 +38,6 @@ import (
 // swagger:model rpmV001Schema
 type RpmV001Schema struct {
 
-	// Arbitrary content to be included in the verifiable entry in the transparency log
-	ExtraData interface{} `json:"extraData,omitempty"`
-
 	// package
 	// Required: true
 	Package *RpmV001SchemaPackage `json:"package"`

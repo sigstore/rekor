@@ -294,7 +294,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 
 	canonicalEntry := models.TUFV001Schema{}
-	canonicalEntry.ExtraData = v.TufObj.ExtraData
 
 	var err error
 	canonicalEntry.SpecVersion, err = v.keyObj.(*ptuf.PublicKey).SpecVersion()

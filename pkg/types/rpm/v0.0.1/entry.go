@@ -286,7 +286,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 
 	canonicalEntry := models.RpmV001Schema{}
-	canonicalEntry.ExtraData = v.RPMModel.ExtraData
 
 	var err error
 	// need to canonicalize key content
@@ -318,9 +317,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	if sha256sum := v.rpmObj.GetBytes(0, 1016); sha256sum != nil {
 		canonicalEntry.Package.Headers["RPMSIGTAG_SHA256"] = hex.EncodeToString(sha256sum)
 	}
-
-	// ExtraData is copied through unfiltered
-	canonicalEntry.ExtraData = v.RPMModel.ExtraData
 
 	// wrap in valid object with kind and apiVersion set
 	rpm := models.Rpm{}

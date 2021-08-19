@@ -346,23 +346,6 @@ func TestCrossFieldValidation(t *testing.T) {
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
 		},
-		{
-			caseDesc: "valid obj with extradata",
-			entry: V001Entry{
-				RPMModel: models.RpmV001Schema{
-					PublicKey: &models.RpmV001SchemaPublicKey{
-						Content: strfmt.Base64(keyBytes),
-					},
-					Package: &models.RpmV001SchemaPackage{
-						Content: strfmt.Base64(dataBytes),
-					},
-					ExtraData: []byte("{\"something\": \"here\""),
-				},
-			},
-			hasExtEntities:            false,
-			expectUnmarshalSuccess:    true,
-			expectCanonicalizeSuccess: true,
-		},
 	}
 
 	for _, tc := range testCases {

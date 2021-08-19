@@ -261,7 +261,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 
 	canonicalEntry := models.HelmV001Schema{}
-	canonicalEntry.ExtraData = v.HelmObj.ExtraData
 
 	var err error
 

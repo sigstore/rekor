@@ -37,9 +37,6 @@ import (
 // swagger:model tufV001Schema
 type TUFV001Schema struct {
 
-	// Arbitrary content to be included in the verifiable entry in the transparency log
-	ExtraData interface{} `json:"extraData,omitempty"`
-
 	// metadata
 	// Required: true
 	Metadata *TUFV001SchemaMetadata `json:"metadata"`
