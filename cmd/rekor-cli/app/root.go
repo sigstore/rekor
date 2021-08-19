@@ -39,7 +39,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "rekor",
+	Use:   "rekor-cli",
 	Short: "Rekor CLI",
 	Long:  `Rekor command line interface tool`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
