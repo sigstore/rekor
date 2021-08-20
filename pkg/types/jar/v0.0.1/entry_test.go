@@ -182,20 +182,6 @@ func TestCrossFieldValidation(t *testing.T) {
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
 		},
-		{
-			caseDesc: "valid obj with extradata",
-			entry: V001Entry{
-				JARModel: models.JarV001Schema{
-					Archive: &models.JarV001SchemaArchive{
-						Content: strfmt.Base64(jarBytes),
-					},
-					ExtraData: []byte("{\"something\": \"here\""),
-				},
-			},
-			hasExtEntities:            false,
-			expectUnmarshalSuccess:    true,
-			expectCanonicalizeSuccess: true,
-		},
 	}
 
 	for _, tc := range testCases {

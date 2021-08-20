@@ -41,11 +41,6 @@
             "description": "The public key that can verify the signature",
             "type": "string",
             "format": "byte"
-        },
-        "extraData": {
-            "description": "Arbitrary content to be included in the verifiable entry in the transparency log",
-            "type": "object",
-            "additionalProperties": true
         }
     },
     "required": [

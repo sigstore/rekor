@@ -281,7 +281,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 
 	canonicalEntry := models.AlpineV001Schema{}
-	canonicalEntry.ExtraData = v.AlpineModel.ExtraData
 
 	var err error
 
@@ -300,9 +299,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	// set .PKGINFO headers
 	canonicalEntry.Package.Pkginfo = v.apkObj.Pkginfo
-
-	// ExtraData is copied through unfiltered
-	canonicalEntry.ExtraData = v.AlpineModel.ExtraData
 
 	// wrap in valid object with kind and apiVersion set
 	apk := models.Alpine{}

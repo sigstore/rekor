@@ -37,9 +37,6 @@ import (
 // swagger:model rfc3161V001Schema
 type Rfc3161V001Schema struct {
 
-	// Arbitrary content to be included in the verifiable entry in the transparency log
-	ExtraData interface{} `json:"extraData,omitempty"`
-
 	// tsr
 	// Required: true
 	Tsr *Rfc3161V001SchemaTsr `json:"tsr"`

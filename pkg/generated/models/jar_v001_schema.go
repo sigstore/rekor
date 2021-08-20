@@ -42,9 +42,6 @@ type JarV001Schema struct {
 	// Required: true
 	Archive *JarV001SchemaArchive `json:"archive"`
 
-	// Arbitrary content to be included in the verifiable entry in the transparency log
-	ExtraData interface{} `json:"extraData,omitempty"`
-
 	// signature
 	Signature *JarV001SchemaSignature `json:"signature,omitempty"`
 }

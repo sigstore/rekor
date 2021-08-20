@@ -307,7 +307,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 
 	canonicalEntry := models.RekordV001Schema{}
-	canonicalEntry.ExtraData = v.RekordObj.ExtraData
 
 	// need to canonicalize signature & key content
 	canonicalEntry.Signature = &models.RekordV001SchemaSignature{}
@@ -330,9 +329,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	canonicalEntry.Data = &models.RekordV001SchemaData{}
 	canonicalEntry.Data.Hash = v.RekordObj.Data.Hash
 	// data content is not set deliberately
-
-	// ExtraData is copied through unfiltered
-	canonicalEntry.ExtraData = v.RekordObj.ExtraData
 
 	// wrap in valid object with kind and apiVersion set
 	rekordObj := models.Rekord{}

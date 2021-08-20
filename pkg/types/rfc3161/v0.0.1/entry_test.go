@@ -152,19 +152,6 @@ func TestCrossFieldValidation(t *testing.T) {
 			expectCanonicalizeSuccess:    false,
 			expectValidationErrorMessage: "tsr verification error",
 		},
-		{
-			caseDesc: "valid obj with extra data",
-			entry: V001Entry{
-				Rfc3161Obj: models.Rfc3161V001Schema{
-					Tsr: &models.Rfc3161V001SchemaTsr{
-						Content: p(tsrBytes),
-					},
-					ExtraData: []byte("{\"something\": \"here\""),
-				},
-			},
-			expectUnmarshalSuccess:    true,
-			expectCanonicalizeSuccess: true,
-		},
 	}
 
 	for _, tc := range testCases {

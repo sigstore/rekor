@@ -42,9 +42,6 @@ type HelmV001Schema struct {
 	// Required: true
 	Chart *HelmV001SchemaChart `json:"chart"`
 
-	// Arbitrary content to be included in the verifiable entry in the transparency log
-	ExtraData interface{} `json:"extraData,omitempty"`
-
 	// public key
 	// Required: true
 	PublicKey *HelmV001SchemaPublicKey `json:"publicKey"`

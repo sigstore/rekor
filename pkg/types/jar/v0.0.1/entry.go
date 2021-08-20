@@ -225,7 +225,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 
 	canonicalEntry := models.JarV001Schema{}
-	canonicalEntry.ExtraData = v.JARModel.ExtraData
 
 	var err error
 	// need to canonicalize key content
@@ -247,9 +246,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	canonicalEntry.Archive.Hash.Algorithm = v.JARModel.Archive.Hash.Algorithm
 	canonicalEntry.Archive.Hash.Value = v.JARModel.Archive.Hash.Value
 	// archive content is not set deliberately
-
-	// ExtraData is copied through unfiltered
-	canonicalEntry.ExtraData = v.JARModel.ExtraData
 
 	// wrap in valid object with kind and apiVersion set
 	jar := models.Jar{}

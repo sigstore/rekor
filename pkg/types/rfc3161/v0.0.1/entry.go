@@ -128,9 +128,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 		},
 	}
 
-	// ExtraData is copied through unfiltered
-	canonicalEntry.ExtraData = v.Rfc3161Obj.ExtraData
-
 	// wrap in valid object with kind and apiVersion set
 	ref3161Obj := models.Rfc3161{}
 	ref3161Obj.APIVersion = swag.String(APIVERSION)
