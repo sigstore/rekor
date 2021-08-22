@@ -44,14 +44,7 @@ type searchCmdOutput struct {
 }
 
 func (s *searchCmdOutput) String() string {
-	str := "No matching entries were found\n"
-	for i, uuid := range s.uuids {
-		if i == 0 {
-			str = "Found matching entries (listed by UUID):\n"
-		}
-		str += fmt.Sprintf("%v\n", uuid)
-	}
-	return str
+	return strings.Join(s.uuids, "\n") + "\n" // one extra /n to terminate the list
 }
 
 func addSearchPFlags(cmd *cobra.Command) error {
@@ -202,6 +195,8 @@ var searchCmd = &cobra.Command{
 		if len(resp.Payload) == 0 {
 			return nil, fmt.Errorf("no matching entries found")
 		}
+
+		fmt.Fprintln(os.Stderr, "Found matching entries (listed by UUID):")
 
 		return &searchCmdOutput{
 			uuids: resp.GetPayload(),
