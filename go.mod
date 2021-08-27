@@ -17,7 +17,7 @@ require (
 	github.com/go-openapi/errors v0.20.0
 	github.com/go-openapi/jsonreference v0.19.6 // indirect
 	github.com/go-openapi/loads v0.20.2
-	github.com/go-openapi/runtime v0.19.30
+	github.com/go-openapi/runtime v0.19.31
 	github.com/go-openapi/spec v0.20.3
 	github.com/go-openapi/strfmt v0.20.2
 	github.com/go-openapi/swag v0.19.15
