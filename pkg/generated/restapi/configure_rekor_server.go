@@ -200,7 +200,11 @@ func cacheForever(handler http.Handler) http.Handler {
 }
 
 func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
-	log.RequestIDLogger(r).Error(err)
+	if apiErr, ok := err.(errors.Error); ok && apiErr.Code() == http.StatusNotFound {
+		log.RequestIDLogger(r).Warn(err)
+	} else {
+		log.RequestIDLogger(r).Error(err)
+	}
 	requestFields := map[string]interface{}{}
 	if err := mapstructure.Decode(r, &requestFields); err == nil {
 		log.RequestIDLogger(r).Debug(requestFields)
