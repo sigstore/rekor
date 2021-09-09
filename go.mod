@@ -55,9 +55,9 @@ require (
 	github.com/zalando/go-keyring v0.1.1 // indirect
 	go.mongodb.org/mongo-driver v1.7.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/goleak v1.1.10
+	go.uber.org/goleak v1.1.11-0.20210813005559-691160354723
 	go.uber.org/multierr v1.7.0 // indirect
-	go.uber.org/zap v1.19.0
+	go.uber.org/zap v1.19.1
 	gocloud.dev v0.23.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/mod v0.5.0
