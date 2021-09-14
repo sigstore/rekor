@@ -31,6 +31,10 @@ issues:
     linters:
     - errcheck
     - gosec
+  # TODO, tracked in #286
+  - text: "SA1019: package golang.org/x/crypto/openpgp"
+    linters:
+    - staticcheck
   max-issues-per-linter: 0
   max-same-issues: 0
 run:

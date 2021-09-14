@@ -3,8 +3,6 @@ module github.com/sigstore/rekor
 go 1.16
 
 require (
-	cloud.google.com/go v0.89.0 // indirect
-	cloud.google.com/go/storage v1.16.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cavaliercoder/badio v0.0.0-20160213150051-ce5280129e9e // indirect
@@ -27,7 +25,6 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/google/rpmpack v0.0.0-20210518075352-dc539ef4f2ea
 	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/in-toto/in-toto-golang v0.2.1-0.20210627200632-886210ae2ab9
 	github.com/jedisct1/go-minisign v0.0.0-20210703085342-c1f07ee84431
 	github.com/leodido/go-urn v1.2.1 // indirect
@@ -54,17 +51,14 @@ require (
 	github.com/urfave/negroni v1.0.0
 	github.com/zalando/go-keyring v0.1.1 // indirect
 	go.mongodb.org/mongo-driver v1.7.0 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/goleak v1.1.11-0.20210813005559-691160354723
-	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1
-	gocloud.dev v0.23.0
-	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
+	gocloud.dev v0.24.0
+	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/mod v0.5.0
-	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985
+	golang.org/x/net v0.0.0-20210825183410-e898025ed96a
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/api v0.52.0 // indirect
-	google.golang.org/genproto v0.0.0-20210729151513-df9385d47c1b
+	google.golang.org/genproto v0.0.0-20210831024726-fe130286e0e2
 	google.golang.org/grpc v1.40.0
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/ini.v1 v1.63.0
