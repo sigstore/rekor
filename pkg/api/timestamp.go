@@ -24,7 +24,6 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime/middleware"
-	"github.com/pkg/errors"
 	"github.com/sassoftware/relic/lib/pkcs9"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/timestamp"
@@ -47,11 +46,6 @@ func RequestFromRekor(ctx context.Context, req pkcs9.TimeStampReq) ([]byte, erro
 }
 
 func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middleware.Responder {
-	// Fail early if we don't haven't configured rekor with a certificate for timestamping.
-	if len(api.certChain) == 0 {
-		return handleRekorAPIError(params, http.StatusNotImplemented, errors.New("rekor is not configured to serve timestamps"), "")
-	}
-
 	// TODO: Add support for in-house JSON based timestamp response.
 	requestBytes, err := ioutil.ReadAll(params.Request)
 	if err != nil {
@@ -96,8 +90,5 @@ func TimestampResponseHandler(params timestamp.GetTimestampResponseParams) middl
 }
 
 func GetTimestampCertChainHandler(params timestamp.GetTimestampCertChainParams) middleware.Responder {
-	if len(api.certChain) == 0 {
-		return handleRekorAPIError(params, http.StatusNotFound, errors.New("rekor is not configured with a timestamping certificate"), "")
-	}
 	return timestamp.NewGetTimestampCertChainOK().WithPayload(api.certChainPem)
 }
