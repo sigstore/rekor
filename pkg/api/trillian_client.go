@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/trillian/merkle/logverifier"
 	"github.com/google/trillian/merkle/rfc6962/hasher"
+	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
 	"github.com/pkg/errors"
 
 	"google.golang.org/grpc/codes"
@@ -35,18 +36,16 @@ import (
 )
 
 type TrillianClient struct {
-	client   trillian.TrillianLogClient
-	logID    int64
-	context  context.Context
-	verifier *client.LogVerifier
+	client  trillian.TrillianLogClient
+	logID   int64
+	context context.Context
 }
 
 func NewTrillianClient(ctx context.Context) TrillianClient {
 	return TrillianClient{
-		client:   api.logClient,
-		logID:    api.logID,
-		context:  ctx,
-		verifier: api.verifier,
+		client:  api.logClient,
+		logID:   api.logID,
+		context: ctx,
 	}
 }
 
@@ -102,7 +101,8 @@ func (t *TrillianClient) addLeaf(byteValue []byte) *Response {
 			getAddResult: resp,
 		}
 	}
-	logClient := client.New(t.logID, t.client, t.verifier, root)
+	v := client.NewLogVerifier(rfc6962.DefaultHasher)
+	logClient := client.New(t.logID, t.client, v, root)
 
 	waitForInclusion := func(ctx context.Context, leafHash []byte) *Response {
 		if logClient.MinMergeDelay > 0 {
@@ -252,8 +252,10 @@ func (t *TrillianClient) getProofByHash(hashValue []byte) *Response {
 		})
 
 	if resp != nil {
+		v := client.NewLogVerifier(rfc6962.DefaultHasher)
 		for _, proof := range resp.Proof {
-			if err := t.verifier.VerifyInclusionByHash(&root, hashValue, proof); err != nil {
+
+			if err := v.VerifyInclusionByHash(&root, hashValue, proof); err != nil {
 				return &Response{
 					status: status.Code(err),
 					err:    err,

@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/google/trillian"
-	"github.com/google/trillian/client"
 	radix "github.com/mediocregopher/radix/v4"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -61,7 +60,6 @@ type API struct {
 	tsaSigner    signature.Signer    // the signer to use for timestamping
 	certChain    []*x509.Certificate // timestamping cert chain
 	certChainPem string              // PEM encoded timestamping cert chain
-	verifier     *client.LogVerifier
 }
 
 func NewAPI() (*API, error) {
@@ -85,13 +83,6 @@ func NewAPI() (*API, error) {
 		tLogID = t.TreeId
 	}
 
-	t, err := logAdminClient.GetTree(ctx, &trillian.GetTreeRequest{
-		TreeId: tLogID,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "get tree")
-	}
-
 	rekorSigner, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
 	if err != nil {
 		return nil, errors.Wrap(err, "getting new signer")
@@ -107,11 +98,6 @@ func NewAPI() (*API, error) {
 	pubkeyHashBytes := sha256.Sum256(b)
 
 	pubkey := cryptoutils.PEMEncode(cryptoutils.PublicKeyPEMType, b)
-
-	verifier, err := client.NewLogVerifierFromTree(t)
-	if err != nil {
-		return nil, errors.Wrap(err, "new verifier")
-	}
 
 	// Use an in-memory key for timestamping
 	tsaSigner, err := signer.New(ctx, signer.MemoryScheme)
@@ -146,15 +132,17 @@ func NewAPI() (*API, error) {
 	}
 
 	return &API{
-		logClient:    logClient,
-		logID:        tLogID,
-		pubkey:       string(pubkey),
-		pubkeyHash:   hex.EncodeToString(pubkeyHashBytes[:]),
-		signer:       rekorSigner,
+		// Transparency Log Stuff
+		logClient: logClient,
+		logID:     tLogID,
+		// Signing/verifying fields
+		pubkey:     string(pubkey),
+		pubkeyHash: hex.EncodeToString(pubkeyHashBytes[:]),
+		signer:     rekorSigner,
+		// TSA signing stuff
 		tsaSigner:    tsaSigner,
 		certChain:    certChain,
 		certChainPem: string(certChainPem),
-		verifier:     verifier,
 	}, nil
 }
 
