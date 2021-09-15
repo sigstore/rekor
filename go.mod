@@ -34,7 +34,7 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mediocregopher/radix/v4 v4.0.0-beta.1
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/mitchellh/mapstructure v1.4.1
+	github.com/mitchellh/mapstructure v1.4.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.30.0 // indirect
