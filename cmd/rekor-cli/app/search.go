@@ -40,11 +40,11 @@ import (
 )
 
 type searchCmdOutput struct {
-	uuids []string
+	UUIDs []string
 }
 
 func (s *searchCmdOutput) String() string {
-	return strings.Join(s.uuids, "\n") + "\n" // one extra /n to terminate the list
+	return strings.Join(s.UUIDs, "\n") + "\n" // one extra /n to terminate the list
 }
 
 func addSearchPFlags(cmd *cobra.Command) error {
@@ -199,7 +199,7 @@ var searchCmd = &cobra.Command{
 		fmt.Fprintln(os.Stderr, "Found matching entries (listed by UUID):")
 
 		return &searchCmdOutput{
-			uuids: resp.GetPayload(),
+			UUIDs: resp.GetPayload(),
 		}, nil
 	}),
 }
