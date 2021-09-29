@@ -54,7 +54,7 @@ require (
 	go.uber.org/zap v1.19.1
 	gocloud.dev v0.24.0
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
-	golang.org/x/mod v0.5.0
+	golang.org/x/mod v0.5.1
 	golang.org/x/net v0.0.0-20210825183410-e898025ed96a
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/genproto v0.0.0-20210831024726-fe130286e0e2
