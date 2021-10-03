@@ -29,7 +29,7 @@ import (
 	"path/filepath"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/in-toto/in-toto-golang/pkg/ssl"
+	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/spf13/viper"
 
 	"github.com/go-openapi/strfmt"
@@ -59,7 +59,7 @@ func init() {
 type V001Entry struct {
 	IntotoObj models.IntotoV001Schema
 	keyObj    pki.PublicKey
-	env       ssl.Envelope
+	env       dsse.Envelope
 }
 
 func (v V001Entry) APIVersion() string {
@@ -179,7 +179,7 @@ func (v *V001Entry) validate() error {
 	if err != nil {
 		return err
 	}
-	sslVerifier, err := ssl.NewEnvelopeSigner(&verifier{v: vfr})
+	dsseVerifier, err := dsse.NewEnvelopeSigner(&verifier{v: vfr})
 	if err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func (v *V001Entry) validate() error {
 		return err
 	}
 
-	if err := sslVerifier.Verify(&v.env); err != nil {
+	if err := dsseVerifier.Verify(&v.env); err != nil {
 		return err
 	}
 	return nil

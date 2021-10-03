@@ -32,7 +32,7 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/in-toto/in-toto-golang/pkg/ssl"
+	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"go.uber.org/goleak"
@@ -64,11 +64,11 @@ func envelope(t *testing.T, k *ecdsa.PrivateKey, payload, payloadType string) st
 	if err != nil {
 		t.Fatal(err)
 	}
-	sslEnv, err := signer.SignPayload([]byte(payload))
+	dsseEnv, err := signer.SignPayload([]byte(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := json.Marshal(sslEnv)
+	b, err := json.Marshal(dsseEnv)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,9 +90,9 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 		Type:  "PUBLIC KEY",
 	})
 
-	invalid, err := json.Marshal(ssl.Envelope{
+	invalid, err := json.Marshal(dsse.Envelope{
 		Payload: "hello",
-		Signatures: []ssl.Signature{
+		Signatures: []dsse.Signature{
 			{
 				Sig: string(strfmt.Base64("foobar")),
 			},
@@ -228,7 +228,7 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 			}
 			payload := base64.StdEncoding.EncodeToString(b)
 			v := V001Entry{
-				env: ssl.Envelope{
+				env: dsse.Envelope{
 					Payload:     payload,
 					PayloadType: in_toto.PayloadType,
 				},

@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build e2e
 // +build e2e
 
 package e2e
@@ -46,7 +47,7 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/google/go-cmp/cmp"
 	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/in-toto/in-toto-golang/pkg/ssl"
+	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/client"
 	genclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
@@ -347,7 +348,7 @@ func TestIntoto(t *testing.T) {
 	it := in_toto.ProvenanceStatement{
 		StatementHeader: in_toto.StatementHeader{
 			Type:          in_toto.StatementInTotoV01,
-			PredicateType: in_toto.PredicateProvenanceV01,
+			PredicateType: in_toto.PredicateSLSAProvenanceV01,
 			Subject: []in_toto.Subject{
 				{
 					Name: "foobar",
@@ -374,7 +375,7 @@ func TestIntoto(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	signer, err := ssl.NewEnvelopeSigner(&IntotoSigner{
+	signer, err := dsse.NewEnvelopeSigner(&IntotoSigner{
 		priv: priv.(*ecdsa.PrivateKey),
 	})
 	if err != nil {

@@ -25,7 +25,7 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/google/rpmpack v0.0.0-20210518075352-dc539ef4f2ea
 	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
-	github.com/in-toto/in-toto-golang v0.2.1-0.20210627200632-886210ae2ab9
+	github.com/in-toto/in-toto-golang v0.3.2
 	github.com/jedisct1/go-minisign v0.0.0-20210703085342-c1f07ee84431
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
@@ -38,6 +38,7 @@ require (
 	github.com/prometheus/procfs v0.7.1 // indirect
 	github.com/rs/cors v1.8.0
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
+	github.com/secure-systems-lab/go-securesystemslib v0.1.0
 	github.com/sigstore/sigstore v0.0.0-20210729211320-56a91f560f44
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
