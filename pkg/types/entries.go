@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"reflect"
 
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -103,6 +104,17 @@ func DecodeEntry(input, output interface{}) error {
 	}
 
 	return dec.Decode(input)
+}
+
+// CanonicalizeEntry returns the entry marshalled in JSON according to the
+// canonicalization rules of RFC8785 to protect against any changes in golang's JSON
+// marshalling logic that may reorder elements
+func CanonicalizeEntry(ctx context.Context, entry EntryImpl) ([]byte, error) {
+	canonicalEntry, err := entry.Canonicalize(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return jsoncanonicalizer.Transform(canonicalEntry)
 }
 
 // ArtifactProperties provide a consistent struct for passing values from

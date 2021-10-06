@@ -148,7 +148,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	if err != nil {
 		return nil, handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf(validationError, err))
 	}
-	leaf, err := entry.Canonicalize(ctx)
+	leaf, err := types.CanonicalizeEntry(ctx, entry)
 	if err != nil {
 		if _, ok := (err).(types.ValidationError); ok {
 			return nil, handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf(validationError, err))
@@ -315,7 +315,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 					return err
 				}
 
-				leaf, err := entry.Canonicalize(httpReqCtx)
+				leaf, err := types.CanonicalizeEntry(httpReqCtx, entry)
 				if err != nil {
 					code = http.StatusInternalServerError
 					return err
