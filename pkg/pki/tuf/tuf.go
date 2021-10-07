@@ -71,7 +71,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 		return nil, fmt.Errorf("tuf manifest has not been initialized")
 	}
 	// TODO(asraa): Should the Signed payload be canonicalized?
-	canonical, err := cjson.Marshal(s)
+	canonical, err := cjson.Marshal(s.signed)
 	if err != nil {
 		return nil, err
 	}
