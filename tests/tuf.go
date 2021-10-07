@@ -42,7 +42,7 @@ func generateTestRepo(t *testing.T, files map[string][]byte) tuf.LocalStore {
 	for file := range files {
 		repo.AddTarget(file, nil)
 	}
-	repo.Snapshot(tuf.CompressionTypeNone)
+	repo.Snapshot()
 	repo.Timestamp()
 	repo.Commit()
 

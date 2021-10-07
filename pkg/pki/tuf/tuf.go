@@ -70,19 +70,8 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 	if s.signed == nil {
 		return nil, fmt.Errorf("tuf manifest has not been initialized")
 	}
-
-	var decoded map[string]interface{}
-	if err := json.Unmarshal(s.signed.Signed, &decoded); err != nil {
-		return nil, err
-	}
-
-	canonicalSigned, err := cjson.Marshal(decoded)
-	if err != nil {
-		return nil, err
-	}
-	canonical, err := cjson.Marshal(&data.Signed{
-		Signed:     canonicalSigned,
-		Signatures: s.signed.Signatures})
+	// TODO(asraa): Should the Signed payload be canonicalized?
+	canonical, err := cjson.Marshal(s)
 	if err != nil {
 		return nil, err
 	}
@@ -154,22 +143,11 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 
 // CanonicalValue implements the pki.PublicKey interface
 func (k PublicKey) CanonicalValue() (encoded []byte, err error) {
+	// TODO(asraa): Should the Signed payload be canonicalized?
 	if k.root == nil {
 		return nil, fmt.Errorf("tuf root has not been initialized")
 	}
-
-	var decoded map[string]interface{}
-	if err := json.Unmarshal(k.root.Signed, &decoded); err != nil {
-		return nil, err
-	}
-
-	canonicalSigned, err := cjson.Marshal(decoded)
-	if err != nil {
-		return nil, err
-	}
-	canonical, err := cjson.Marshal(&data.Signed{
-		Signed:     canonicalSigned,
-		Signatures: k.root.Signatures})
+	canonical, err := cjson.Marshal(k.root)
 	if err != nil {
 		return nil, err
 	}
