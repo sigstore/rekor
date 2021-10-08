@@ -1,6 +1,14 @@
 # Signing and Uploading Other Types
 
 This documentation contains information on how to sign and upload data in different pluggable types.
+The following are covered:
+- [Minisign](#minisign)
+- [SSH](#ssh)
+- [PKIX/X509](#pkixx509)
+- OpenPGP / GPG (TODO)
+- RPM (TODO)
+- TSR (TODO)
+- [TUF](#tuf)
 
 ## Minisign
 
@@ -185,7 +193,7 @@ Body: {
 }
 ```
 
-### PGP
+## OpenPGP / GPG
 
 TODO
 
@@ -207,7 +215,9 @@ TODO
 
 ## TUF
 
-Generate a TUF repository (for example, with the (Python reference implementation)[https://pypi.org/project/tuf/] or (go-tuf)[https://github.com/theupdateframework/go-tuf]). With go-tuf:
+Generate a TUF repository (for example, with the [Python reference implementation](https://pypi.org/project/tuf/) or [go-tuf](https://github.com/theupdateframework/go-tuf)).
+
+With go-tuf:
 
 ```console
 $ tuf init
