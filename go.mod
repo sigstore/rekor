@@ -23,7 +23,7 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/google/rpmpack v0.0.0-20210518075352-dc539ef4f2ea
 	github.com/google/trillian v1.3.14-0.20210713114448-df474653733c
-	github.com/in-toto/in-toto-golang v0.3.2
+	github.com/in-toto/in-toto-golang v0.3.3
 	github.com/jedisct1/go-minisign v0.0.0-20210703085342-c1f07ee84431
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
