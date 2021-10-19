@@ -78,6 +78,8 @@ func (m *TUFV001Schema) validateMetadata(formats strfmt.Registry) error {
 		if err := m.Metadata.Validate(formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("metadata")
+			} else if ce, ok := err.(*errors.CompositeError); ok {
+				return ce.ValidateName("metadata")
 			}
 			return err
 		}
@@ -96,6 +98,8 @@ func (m *TUFV001Schema) validateRoot(formats strfmt.Registry) error {
 		if err := m.Root.Validate(formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("root")
+			} else if ce, ok := err.(*errors.CompositeError); ok {
+				return ce.ValidateName("root")
 			}
 			return err
 		}
@@ -132,6 +136,8 @@ func (m *TUFV001Schema) contextValidateMetadata(ctx context.Context, formats str
 		if err := m.Metadata.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("metadata")
+			} else if ce, ok := err.(*errors.CompositeError); ok {
+				return ce.ValidateName("metadata")
 			}
 			return err
 		}
@@ -146,6 +152,8 @@ func (m *TUFV001Schema) contextValidateRoot(ctx context.Context, formats strfmt.
 		if err := m.Root.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("root")
+			} else if ce, ok := err.(*errors.CompositeError); ok {
+				return ce.ValidateName("root")
 			}
 			return err
 		}
