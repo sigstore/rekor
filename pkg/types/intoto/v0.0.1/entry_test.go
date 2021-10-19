@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"math/big"
 	"reflect"
 	"testing"
 
@@ -90,6 +91,23 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 		Type:  "PUBLIC KEY",
 	})
 
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ca := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+	}
+	caBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, &priv.PublicKey, priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemBytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: caBytes,
+	})
+
 	invalid, err := json.Marshal(dsse.Envelope{
 		Payload: "hello",
 		Signatures: []dsse.Signature{
@@ -135,6 +153,16 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p(pub),
 				Content: &models.IntotoV001SchemaContent{
 					Envelope: envelope(t, key, validPayload, "text"),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "cert",
+			it: &models.IntotoV001Schema{
+				PublicKey: p([]byte(pemBytes)),
+				Content: &models.IntotoV001SchemaContent{
+					Envelope: envelope(t, priv, validPayload, "text"),
 				},
 			},
 			wantErr: false,

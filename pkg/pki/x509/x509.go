@@ -139,6 +139,9 @@ func (k PublicKey) CanonicalValue() (encoded []byte, err error) {
 }
 
 func (k PublicKey) CryptoPubKey() crypto.PublicKey {
+	if k.cert != nil {
+		return k.cert.c.PublicKey
+	}
 	return k.key
 }
 
