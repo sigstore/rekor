@@ -163,6 +163,8 @@ func (m *SearchLogQuery) validateEntries(formats strfmt.Registry) error {
 		if err := m.entriesField[i].Validate(formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("entries" + "." + strconv.Itoa(i))
+			} else if ce, ok := err.(*errors.CompositeError); ok {
+				return ce.ValidateName("entries" + "." + strconv.Itoa(i))
 			}
 			return err
 		}
@@ -234,6 +236,8 @@ func (m *SearchLogQuery) contextValidateEntries(ctx context.Context, formats str
 		if err := m.entriesField[i].ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("entries" + "." + strconv.Itoa(i))
+			} else if ce, ok := err.(*errors.CompositeError); ok {
+				return ce.ValidateName("entries" + "." + strconv.Itoa(i))
 			}
 			return err
 		}

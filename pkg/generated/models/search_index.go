@@ -103,6 +103,8 @@ func (m *SearchIndex) validatePublicKey(formats strfmt.Registry) error {
 		if err := m.PublicKey.Validate(formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("publicKey")
+			} else if ce, ok := err.(*errors.CompositeError); ok {
+				return ce.ValidateName("publicKey")
 			}
 			return err
 		}
@@ -131,6 +133,8 @@ func (m *SearchIndex) contextValidatePublicKey(ctx context.Context, formats strf
 		if err := m.PublicKey.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("publicKey")
+			} else if ce, ok := err.(*errors.CompositeError); ok {
+				return ce.ValidateName("publicKey")
 			}
 			return err
 		}
