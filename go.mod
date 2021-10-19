@@ -27,7 +27,7 @@ require (
 	github.com/jedisct1/go-minisign v0.0.0-20210703085342-c1f07ee84431
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
-	github.com/mediocregopher/radix/v4 v4.0.0-beta.1
+	github.com/mediocregopher/radix/v4 v4.0.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.4.2
 	github.com/pkg/errors v0.9.1
