@@ -70,10 +70,10 @@ gosec:
 gen: $(GENSRC)
 
 rekor-cli: $(SRCS)
-	CGO_ENABLED=0 go build -ldflags $(CLI_LDFLAGS) -o rekor-cli ./cmd/rekor-cli
+	CGO_ENABLED=0 go build -trimpath -ldflags $(CLI_LDFLAGS) -o rekor-cli ./cmd/rekor-cli
 
 rekor-server: $(SRCS)
-	CGO_ENABLED=0 go build -ldflags $(SERVER_LDFLAGS) -o rekor-server ./cmd/rekor-server
+	CGO_ENABLED=0 go build -trimpath -ldflags $(SERVER_LDFLAGS) -o rekor-server ./cmd/rekor-server
 
 test:
 	go test ./...
@@ -110,16 +110,16 @@ sign-container: ko
 .PHONY: dist-cli
 dist-cli:
 	mkdir -p dist/
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-linux-amd64 ./cmd/rekor-cli
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-linux-arm64 ./cmd/rekor-cli
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-darwin-amd64 ./cmd/rekor-cli
-	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-darwin-arm64 ./cmd/rekor-cli
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-windows-amd64.exe ./cmd/rekor-cli
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-linux-amd64 ./cmd/rekor-cli
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-linux-arm64 ./cmd/rekor-cli
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-darwin-amd64 ./cmd/rekor-cli
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-darwin-arm64 ./cmd/rekor-cli
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags $(CLI_LDFLAGS) -o dist/rekor-cli-windows-amd64.exe ./cmd/rekor-cli
 
 .PHONY: dist-server
 dist-server:
 	mkdir -p dist/
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags $(SERVER_LDFLAGS) -o dist/rekor-server-linux-amd64 ./cmd/rekor-server
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags $(SERVER_LDFLAGS) -o dist/rekor-server-linux-amd64 ./cmd/rekor-server
 
 .PHONY: dist
 dist: dist-server dist-cli
@@ -130,4 +130,4 @@ dist: dist-server dist-cli
 ## --------------------------------------
 
 $(SWAGGER): $(TOOLS_DIR)/go.mod
-	cd $(TOOLS_DIR); go build -tags=tools -o $(TOOLS_BIN_DIR)/swagger github.com/go-swagger/go-swagger/cmd/swagger
+	cd $(TOOLS_DIR); go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/swagger github.com/go-swagger/go-swagger/cmd/swagger
