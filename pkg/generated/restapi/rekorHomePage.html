@@ -21,10 +21,26 @@
     A non-profit, public good software signing &amp; transparency service.
     <p>To learn more visit <a href="https://sigstore.dev">Sigstore project page</a></p>
   </h2>
+
+  <p>Currently storing <span id="count">some</span> items.</p>
+
   <footer>
     <p>Copyright © sigstore a Series of LF Projects, LLC For web site terms of use, trademark policy and general project
-      policies please see <a href="https://lfprojects.org">https://lfprojects.org</a>.
-      <p />
+      policies please see <a href="https://lfprojects.org">https://lfprojects.org</a>.</p>
   </footer>
+
+  <script type="text/javascript">
+const url = '/api/v1/log/';
+function update() {
+  fetch(url).then((resp) => {
+    resp.json().then((j) => {
+      let count = j.treeSize;
+      document.getElementById('count').innerText = count;
+    }).catch(console.error);
+  }).catch(console.error);
+}
+update(); // Update immediately on page load.
+setInterval(update, 10000); // Update the counter every 10 seconds.
+  </script>
 </body>
 </html>
