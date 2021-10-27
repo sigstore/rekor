@@ -16,7 +16,9 @@
 package app
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"math/bits"
@@ -136,6 +138,7 @@ var verifyCmd = &cobra.Command{
 		logEntry := resp.Payload[0]
 
 		var o *verifyCmdOutput
+		var entryBytes []byte
 		for k, v := range logEntry {
 			o = &verifyCmdOutput{
 				RootHash:  *v.Verification.InclusionProof.RootHash,
@@ -144,6 +147,19 @@ var verifyCmd = &cobra.Command{
 				Size:      *v.Verification.InclusionProof.TreeSize,
 				Hashes:    v.Verification.InclusionProof.Hashes,
 			}
+			entryBytes, err = base64.StdEncoding.DecodeString(v.Body.(string))
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if viper.IsSet("uuid") && (viper.GetString("uuid") != o.EntryUUID) {
+			return nil, fmt.Errorf("unexpected entry returned from rekor server")
+		}
+
+		leafHash, _ := hex.DecodeString(o.EntryUUID)
+		if !bytes.Equal(rfc6962.DefaultHasher.HashLeaf(entryBytes), leafHash) {
+			return nil, fmt.Errorf("computed leaf hash did not match entry UUID")
 		}
 
 		hashes := [][]byte{}
@@ -153,7 +169,6 @@ var verifyCmd = &cobra.Command{
 		}
 
 		rootHash, _ := hex.DecodeString(o.RootHash)
-		leafHash, _ := hex.DecodeString(o.EntryUUID)
 
 		v := logverifier.New(rfc6962.DefaultHasher)
 		if err := v.VerifyInclusionProof(o.Index, o.Size, hashes, rootHash, leafHash); err != nil {
