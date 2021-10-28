@@ -24,6 +24,8 @@ TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
 BIN_DIR := $(abspath $(ROOT_DIR)/bin)
 
+PROJECT_ID ?= projectsigstore
+RUNTIME_IMAGE ?= gcr.io/distroless/static
 # Set version variables for LDFLAGS
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
 GIT_HASH ?= $(shell git rev-parse HEAD)
@@ -123,7 +125,16 @@ dist-server:
 
 .PHONY: dist
 dist: dist-server dist-cli
+# used when releasing together with GCP CloudBuild
 
+.PHONY: release
+release:
+	CLIENT_LDFLAGS=$(CLI_LDFLAGS) SERVER_LDFLAGS=$(SERVER_LDFLAGS) goreleaser release
+
+# used when need to validate the goreleaser
+.PHONY: snapshot
+snapshot:
+	CLIENT_LDFLAGS=$(CLI_LDFLAGS) SERVER_LDFLAGS=$(SERVER_LDFLAGS) goreleaser release --skip-sign --skip-publish --snapshot --rm-dist
 
 ## --------------------------------------
 ## Tooling Binaries

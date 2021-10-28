@@ -1,0 +1,114 @@
+project_name: rekor
+
+env:
+- GO111MODULE=on
+- CGO_ENABLED=0
+
+# Prevents parallel builds from stepping on eachothers toes downloading modules
+before:
+  hooks:
+  - go mod tidy
+
+builds:
+- id: rekor-server-linux
+  binary: rekor-server-linux-{{ .Arch }}
+  no_unique_dist_dir: true
+  main: ./cmd/rekor-server
+  goos:
+  - linux
+  goarch:
+  - amd64
+  - arm64
+  flags:
+  - -trimpath
+  ldflags:
+  - "{{ .Env.SERVER_LDFLAGS }}"
+
+- id: rekor-cli
+  binary: rekor-cli-{{ .Os }}-{{ .Arch }}
+  no_unique_dist_dir: true
+  main: ./cmd/rekor-cli
+  goos:
+  - linux
+  - darwin
+  - windows
+  goarch:
+  - amd64
+  - arm64
+  ignore:
+  - goos: windows
+    goarch: arm64
+  flags:
+  - -trimpath
+  ldflags:
+  - "{{ .Env.CLIENT_LDFLAGS }}"
+
+dockers:
+  # rekor-server Image
+  - image_templates:
+    - "gcr.io/{{ .Env.PROJECT_ID }}/rekor-server-amd64:{{ .Version }}"
+    use: buildx
+    dockerfile: ./release/Dockerfile.server.release
+    build_flag_templates:
+    - "--platform=linux/amd64"
+    - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
+    - "--build-arg=ARCH=amd64"
+  - image_templates:
+    - "gcr.io/{{ .Env.PROJECT_ID }}/rekor-server-arm64v8:{{ .Version }}"
+    use: buildx
+    goarch: arm64
+    dockerfile: ./release/Dockerfile.server.release
+    build_flag_templates:
+    - "--platform=linux/arm64/v8"
+    - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
+    - "--build-arg=ARCH=arm64"
+
+  # rekor-cli Image
+  - image_templates:
+    - "gcr.io/{{ .Env.PROJECT_ID }}/rekor-cli-amd64:{{ .Version }}"
+    use: buildx
+    dockerfile: ./release/Dockerfile.cli.release
+    build_flag_templates:
+    - "--platform=linux/amd64"
+    - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
+    - "--build-arg=ARCH=amd64"
+  - image_templates:
+    - "gcr.io/{{ .Env.PROJECT_ID }}/rekor-cli-arm64v8:{{ .Version }}"
+    use: buildx
+    goarch: arm64
+    dockerfile: ./release/Dockerfile.cli.release
+    build_flag_templates:
+    - "--platform=linux/arm64/v8"
+    - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
+    - "--build-arg=ARCH=arm64"
+
+docker_manifests:
+- name_template: gcr.io/{{ .Env.PROJECT_ID }}/rekor-server:{{ .Version }}
+  image_templates:
+  - gcr.io/{{ .Env.PROJECT_ID }}/rekor-server-amd64:{{ .Version }}
+  - gcr.io/{{ .Env.PROJECT_ID }}/rekor-server-arm64v8:{{ .Version }}
+
+- name_template: gcr.io/{{ .Env.PROJECT_ID }}/rekor-cli:{{ .Version }}
+  image_templates:
+    - gcr.io/{{ .Env.PROJECT_ID }}/rekor-cli-amd64:{{ .Version }}
+    - gcr.io/{{ .Env.PROJECT_ID }}/rekor-cli-arm64v8:{{ .Version }}
+
+archives:
+- format: binary
+  name_template: "{{ .Binary }}"
+  allow_different_binary_count: true
+
+checksum:
+  name_template: "{{ .ProjectName }}_checksums.txt"
+
+snapshot:
+  name_template: SNAPSHOT-{{ .ShortCommit }}
+
+release:
+  prerelease: allow # remove this when we start publishing non-prerelease or set to auto
+  draft: true # allow for manual edits
+  github:
+    owner: sigstore
+    name: rekor
+  footer: |
+    ### Thanks for all contributors!
