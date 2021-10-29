@@ -21,6 +21,7 @@ builds:
   - arm64
   flags:
   - -trimpath
+  mod_timestamp: '{{ .CommitTimestamp }}'
   ldflags:
   - "{{ .Env.SERVER_LDFLAGS }}"
 
@@ -40,6 +41,7 @@ builds:
     goarch: arm64
   flags:
   - -trimpath
+  mod_timestamp: '{{ .CommitTimestamp }}'
   ldflags:
   - "{{ .Env.CLIENT_LDFLAGS }}"
 
