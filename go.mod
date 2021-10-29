@@ -15,7 +15,7 @@ require (
 	github.com/go-openapi/loads v0.20.3
 	github.com/go-openapi/runtime v0.20.0
 	github.com/go-openapi/spec v0.20.4
-	github.com/go-openapi/strfmt v0.20.3
+	github.com/go-openapi/strfmt v0.21.0
 	github.com/go-openapi/swag v0.19.15
 	github.com/go-openapi/validate v0.20.3
 	github.com/go-playground/validator v9.31.0+incompatible
@@ -48,7 +48,6 @@ require (
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/urfave/negroni v1.0.0
 	github.com/zalando/go-keyring v0.1.1 // indirect
-	go.mongodb.org/mongo-driver v1.7.0 // indirect
 	go.uber.org/goleak v1.1.11-0.20210813005559-691160354723
 	go.uber.org/zap v1.19.1
 	gocloud.dev v0.24.0
