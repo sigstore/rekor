@@ -1,0 +1,67 @@
+#
+# Copyright 2021 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: CI-Validate-Release-Job
+
+on:
+  push:
+    branches:
+      - main
+      - release-*
+  pull_request:
+
+jobs:
+  validate-release-job:
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: none
+      checks: none
+      contents: none
+      deployments: none
+      issues: none
+      packages: none
+      pull-requests: none
+      repository-projects: none
+      security-events: none
+      statuses: none
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Extract version of Go to use
+        run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | sed -r 's/^.*://g'| uniq)" >> $GITHUB_ENV
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GOVERSION }}
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          install-only: true
+
+      - name: snaphot
+        run: make snapshot
+        env:
+          PROJECT_ID: honk-fake-project
+          RUNTIME_IMAGE: gcr.io/distroless/static:debug-nonroot
+
+      - name: check binaries
+        run: |
+          ./dist/rekor-server-linux-amd64 version
+          ./dist/rekor-cli-linux-amd64 version
+
+      - name: check images
+        run: |
+          docker run --entrypoint="" gcr.io/honk-fake-project/rekor-server-amd64:SNAPSHOT-${GITHUB_SHA:0:7} rekor-server version
+          docker run gcr.io/honk-fake-project/rekor-cli-amd64:SNAPSHOT-${GITHUB_SHA:0:7} version
