@@ -20,6 +20,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pgp"
 )
@@ -37,10 +38,14 @@ func TestProvenance(t *testing.T) {
 		t.Fatalf("unmarshal error: %v", err)
 	}
 
-	checksum, err := provenance.GetChartHash()
+	algorithm, checksum, err := provenance.GetChartAlgorithmHash()
 
 	if err != nil {
 		t.Fatalf("Error retrieving chart hash: %v", err)
+	}
+
+	if models.HelmV001SchemaChartHashAlgorithmSha256 != algorithm {
+		t.Fatalf("Unexpected checksum algorithm. Expected %s, found %s", models.HelmV001SchemaChartHashAlgorithmSha256, algorithm)
 	}
 
 	if len(checksum) == 0 {

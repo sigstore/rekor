@@ -87,15 +87,14 @@ func (v V001Entry) IndexKeys() []string {
 
 	result = append(result, v.keyObj.EmailAddresses()...)
 
-	chartHash, err := v.provenanceObj.GetChartHash()
+	algorithm, chartHash, err := v.provenanceObj.GetChartAlgorithmHash()
 
 	if err != nil {
 		log.Logger.Error(err)
 	} else {
-		result = append(result, chartHash)
+		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", algorithm, chartHash))
+		result = append(result, hashKey)
 	}
-
-	//TODO: Store signature as index
 
 	return result
 }
@@ -274,16 +273,14 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	canonicalEntry.Chart = &models.HelmV001SchemaChart{}
 
-	chartHash, err := v.provenanceObj.GetChartHash()
+	algorithm, chartHash, err := v.provenanceObj.GetChartAlgorithmHash()
 
 	if err != nil {
 		return nil, err
 	}
 
-	sha256 := models.AlpineV001SchemaPackageHashAlgorithmSha256
-
 	canonicalEntry.Chart.Hash = &models.HelmV001SchemaChartHash{}
-	canonicalEntry.Chart.Hash.Algorithm = &sha256
+	canonicalEntry.Chart.Hash.Algorithm = &algorithm
 	canonicalEntry.Chart.Hash.Value = &chartHash
 
 	canonicalEntry.Chart.Provenance = &models.HelmV001SchemaChartProvenance{}
