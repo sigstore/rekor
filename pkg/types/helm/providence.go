@@ -94,10 +94,10 @@ func (p *Provenance) parseMessageBlock(data []byte) error {
 	return nil
 }
 
-func (p *Provenance) GetChartHash() (string, error) {
+func (p *Provenance) GetChartAlgorithmHash() (string, string, error) {
 
 	if p.SumCollection == nil || p.SumCollection.Files == nil {
-		return "", errors.New("Unable to locate chart hash")
+		return "", "", errors.New("Unable to locate chart hash")
 
 	}
 
@@ -108,13 +108,13 @@ func (p *Provenance) GetChartHash() (string, error) {
 		parts := strings.Split(value, ":")
 
 		if len(parts) != 2 {
-			return "", errors.New("Invalid hash found in Provenance file")
+			return "", "", errors.New("Invalid hash found in Provenance file")
 		}
 
-		return parts[1], nil
+		return parts[0], parts[1], nil
 	}
 
 	// Return error if no keys found
-	return "", errors.New("No checksums found")
+	return "", "", errors.New("No checksums found")
 
 }
