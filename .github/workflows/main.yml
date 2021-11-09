@@ -55,7 +55,7 @@ jobs:
           version: v0.8.3
       - name: container
         run: |
-          KO_DOCKER_REPO=ko.local make ko 2>&1 | tee output.txt
+          KO_PREFIX=ko.local make ko 2>&1 | tee output.txt
           docker run --rm $(tail -1 output.txt) version
 
   e2e:

@@ -1,104 +1,77 @@
 project_name: rekor
 
 env:
-- GO111MODULE=on
-- CGO_ENABLED=0
+  - GO111MODULE=on
+  - CGO_ENABLED=0
+  - DOCKER_CLI_EXPERIMENTAL=enabled
 
 # Prevents parallel builds from stepping on eachothers toes downloading modules
 before:
   hooks:
-  - go mod tidy
+    - go mod tidy
 
 builds:
-- id: rekor-server-linux
-  binary: rekor-server-linux-{{ .Arch }}
-  no_unique_dist_dir: true
-  main: ./cmd/rekor-server
-  goos:
-  - linux
-  goarch:
-  - amd64
-  - arm64
-  flags:
-  - -trimpath
-  mod_timestamp: '{{ .CommitTimestamp }}'
-  ldflags:
-  - "{{ .Env.SERVER_LDFLAGS }}"
+  - id: rekor-server-linux
+    binary: rekor-server-linux-{{ .Arch }}
+    no_unique_dist_dir: true
+    main: ./cmd/rekor-server
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - arm
+      - s390x
+      - ppc64le
+    goarm:
+      - 7
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    ldflags:
+      - "{{ .Env.SERVER_LDFLAGS }}"
 
-- id: rekor-cli
-  binary: rekor-cli-{{ .Os }}-{{ .Arch }}
-  no_unique_dist_dir: true
-  main: ./cmd/rekor-cli
-  goos:
-  - linux
-  - darwin
-  - windows
-  goarch:
-  - amd64
-  - arm64
-  ignore:
-  - goos: windows
-    goarch: arm64
-  flags:
-  - -trimpath
-  mod_timestamp: '{{ .CommitTimestamp }}'
-  ldflags:
-  - "{{ .Env.CLIENT_LDFLAGS }}"
+  - id: rekor-cli
+    binary: rekor-cli-{{ .Os }}-{{ .Arch }}
+    no_unique_dist_dir: true
+    main: ./cmd/rekor-cli
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+      - s390x
+      - ppc64le
+    goarm:
+      - 7
+    ignore:
+      - goos: windows
+        goarch: arm64
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: s390x
+      - goos: windows
+        goarch: ppc64le
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    ldflags:
+     - "{{ .Env.CLIENT_LDFLAGS }}"
 
-dockers:
-  # rekor-server Image
-  - image_templates:
-    - "gcr.io/{{ .Env.PROJECT_ID }}/rekor-server-amd64:{{ .Version }}"
-    use: buildx
-    dockerfile: ./release/Dockerfile.server.release
-    build_flag_templates:
-    - "--platform=linux/amd64"
-    - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-    - "--build-arg=ARCH=amd64"
-  - image_templates:
-    - "gcr.io/{{ .Env.PROJECT_ID }}/rekor-server-arm64v8:{{ .Version }}"
-    use: buildx
-    goarch: arm64
-    dockerfile: ./release/Dockerfile.server.release
-    build_flag_templates:
-    - "--platform=linux/arm64/v8"
-    - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-    - "--build-arg=ARCH=arm64"
-
-  # rekor-cli Image
-  - image_templates:
-    - "gcr.io/{{ .Env.PROJECT_ID }}/rekor-cli-amd64:{{ .Version }}"
-    use: buildx
-    dockerfile: ./release/Dockerfile.cli.release
-    build_flag_templates:
-    - "--platform=linux/amd64"
-    - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-    - "--build-arg=ARCH=amd64"
-  - image_templates:
-    - "gcr.io/{{ .Env.PROJECT_ID }}/rekor-cli-arm64v8:{{ .Version }}"
-    use: buildx
-    goarch: arm64
-    dockerfile: ./release/Dockerfile.cli.release
-    build_flag_templates:
-    - "--platform=linux/arm64/v8"
-    - "--build-arg=RUNTIME_IMAGE={{ .Env.RUNTIME_IMAGE }}"
-    - "--build-arg=ARCH=arm64"
-
-docker_manifests:
-- name_template: gcr.io/{{ .Env.PROJECT_ID }}/rekor-server:{{ .Version }}
-  image_templates:
-  - gcr.io/{{ .Env.PROJECT_ID }}/rekor-server-amd64:{{ .Version }}
-  - gcr.io/{{ .Env.PROJECT_ID }}/rekor-server-arm64v8:{{ .Version }}
-
-- name_template: gcr.io/{{ .Env.PROJECT_ID }}/rekor-cli:{{ .Version }}
-  image_templates:
-    - gcr.io/{{ .Env.PROJECT_ID }}/rekor-cli-amd64:{{ .Version }}
-    - gcr.io/{{ .Env.PROJECT_ID }}/rekor-cli-arm64v8:{{ .Version }}
+signs:
+  - signature: "${artifact}.sig"
+    cmd: cosign
+    args: ["sign-blob", "--output", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
+    artifacts: binary
 
 archives:
-- format: binary
-  name_template: "{{ .Binary }}"
-  allow_different_binary_count: true
+  - format: binary
+    name_template: "{{ .Binary }}"
+    allow_different_binary_count: true
 
 checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
@@ -114,3 +87,5 @@ release:
     name: rekor
   footer: |
     ### Thanks for all contributors!
+  extra_files:
+    - glob: "./release/release-cosign.pub"
