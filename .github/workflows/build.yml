@@ -30,9 +30,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2.4.0
-      - uses: sigstore/cosign-installer@main
-        with:
-          cosign-release: 'v1.2.1'
+      - uses: sigstore/cosign-installer@v1.3.0
+
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | sed -r 's/^.*://g'| uniq)" >> $GITHUB_ENV
       - uses: actions/setup-go@v2
@@ -52,4 +51,4 @@ jobs:
       - name: creds
         run: gcloud auth configure-docker --quiet
       - name: container
-        run: echo -n "${{secrets.COSIGN_PASSWORD}}" | KO_DOCKER_REPO=gcr.io/projectsigstore/rekor/ci/rekor make sign-container
+        run: echo -n "${{secrets.COSIGN_PASSWORD}}" | KO_PREFIX=gcr.io/projectsigstore/rekor/ci/rekor make sign-container

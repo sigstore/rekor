@@ -60,8 +60,3 @@ jobs:
         run: |
           ./dist/rekor-server-linux-amd64 version
           ./dist/rekor-cli-linux-amd64 version
-
-      - name: check images
-        run: |
-          docker run --entrypoint="" gcr.io/honk-fake-project/rekor-server-amd64:SNAPSHOT-${GITHUB_SHA:0:7} rekor-server version
-          docker run gcr.io/honk-fake-project/rekor-cli-amd64:SNAPSHOT-${GITHUB_SHA:0:7} version

@@ -32,46 +32,25 @@ steps:
     echo "Checking out ${_TOOL_REF}"
     git checkout ${_TOOL_REF}
 
-- name: 'gcr.io/projectsigstore/cosign:v1.2.1@sha256:68801416e6ae0a48820baa3f071146d18846d8cd26ca8ec3a1e87fca8a735498'
-  dir: "go/src/sigstore/rekor"
-  env:
-  - RUNTIME_IMAGE=${_RUNTIME_IMAGE}
-  args:
-  - 'dockerfile'
-  - 'verify'
-  - '-base-image-only'
-  - '-key'
-  - 'https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub'
-  - './release/Dockerfile.cli.release'
-
-- name: 'gcr.io/projectsigstore/cosign:v1.2.1@sha256:68801416e6ae0a48820baa3f071146d18846d8cd26ca8ec3a1e87fca8a735498'
-  dir: "go/src/sigstore/rekor"
-  env:
-  - RUNTIME_IMAGE=${_RUNTIME_IMAGE}
-  args:
-  - 'dockerfile'
-  - 'verify'
-  - '-base-image-only'
-  - '-key'
-  - 'https://raw.githubusercontent.com/GoogleContainerTools/distroless/main/cosign.pub'
-  - './release/Dockerfile.server.release'
-
-- name: 'gcr.io/projectsigstore/cosign:v1.2.1@sha256:68801416e6ae0a48820baa3f071146d18846d8cd26ca8ec3a1e87fca8a735498'
+- name: 'gcr.io/projectsigstore/cosign:1.3.0@sha256:65de2f3f2844815ed20ab939319e3dad4238a9aaaf4893b22ec5702e9bc33755'
   dir: "go/src/sigstore/rekor"
   args:
   - 'verify'
-  - '-key'
-  - 'https://raw.githubusercontent.com/goreleaser/goreleaser/master/cosign.pub'
-  - 'docker.io/goreleaser/goreleaser:v0.183.0@sha256:fca7c247885a248771d1decf76559a66342097b894b87537567795e1a3dbd510'
+  - '--key'
+  - 'https://raw.githubusercontent.com/gythialy/golang-cross/master/cosign.pub'
+  - 'ghcr.io/gythialy/golang-cross:v1.17.3-1@sha256:f934a6b0411bbe6723a65732baa8ff7e318cc2d8b089afddb41be3d60d0ea1ae'
 
-- name: docker.io/goreleaser/goreleaser:v0.183.0@sha256:fca7c247885a248771d1decf76559a66342097b894b87537567795e1a3dbd510
+- name: ghcr.io/gythialy/golang-cross:v1.17.3-1@sha256:f934a6b0411bbe6723a65732baa8ff7e318cc2d8b089afddb41be3d60d0ea1ae
   entrypoint: /bin/sh
   dir: "go/src/sigstore/rekor"
   env:
   - "GOPATH=/workspace/go"
   - "GOBIN=/workspace/bin"
   - PROJECT_ID=${PROJECT_ID}
-  - RUNTIME_IMAGE=${_RUNTIME_IMAGE}
+  - KEY_LOCATION=${_KEY_LOCATION}
+  - KEY_RING=${_KEY_RING}
+  - KEY_NAME=${_KEY_NAME}
+  - KEY_VERSION=${_KEY_VERSION}
   - GIT_TAG=${_GIT_TAG}
   secretEnv:
   - GITHUB_TOKEN
@@ -80,6 +59,27 @@ steps:
     - |
       git tag ${_GIT_TAG}
       make release
+
+- name: ghcr.io/gythialy/golang-cross:v1.17.3-1@sha256:f934a6b0411bbe6723a65732baa8ff7e318cc2d8b089afddb41be3d60d0ea1ae
+  entrypoint: 'bash'
+  dir: "go/src/sigstore/rekor"
+  env:
+  - "GOPATH=/workspace/go"
+  - "GOBIN=/workspace/bin"
+  - PROJECT_ID=${PROJECT_ID}
+  - KEY_LOCATION=${_KEY_LOCATION}
+  - KEY_RING=${_KEY_RING}
+  - KEY_NAME=${_KEY_NAME}
+  - KEY_VERSION=${_KEY_VERSION}
+  - GIT_TAG=${_GIT_TAG}
+  - KO_PREFIX=gcr.io/${PROJECT_ID}
+  secretEnv:
+  - GITHUB_TOKEN
+  args:
+    - '-c'
+    - |
+      gcloud auth configure-docker \
+      && make sign-container-release
 
 availableSecrets:
   secretManager:
@@ -108,4 +108,7 @@ substitutions:
   _TOOL_REPO: 'honk-repo'
   _TOOL_REF: 'release-honk'
   _STORAGE_LOCATION: 'honk'
-  _RUNTIME_IMAGE: 'gcr.io/distroless/static:debug-nonroot'
+  _KEY_RING: 'honk-ring'
+  _KEY_NAME: 'honk-crypto'
+  _KEY_VERSION: '1'
+  _KEY_LOCATION: 'global'

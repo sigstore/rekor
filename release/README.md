@@ -24,7 +24,7 @@ git log --pretty="* %an" --after="YYYY-MM-DD" | sort -u
 
 ```shell
 $ gcloud builds submit --config <PATH_TO_CLOUDBUILD> \
-   --substitutions _GIT_TAG=<_GIT_TAG>,_TOOL_ORG=sigstore,_TOOL_REPO=rekor,_TOOL_REF=main,_STORAGE_LOCATION=rekor-releases \
+   --substitutions _GIT_TAG=<_GIT_TAG>,_TOOL_ORG=sigstore,_TOOL_REPO=rekor,_TOOL_REF=main,_STORAGE_LOCATION=rekor-releases,_KEY_RING=<KEY_RING>,_KEY_NAME=<KEY_NAME> \
    --project <GCP_PROJECT>
 ```
 
