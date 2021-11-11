@@ -104,7 +104,7 @@ func init() {
 			mux.HandleFunc("/debug/pprof/{action}", pprof.Index)
 			mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 
-			if err := http.ListenAndServe(":6060", mux); err != nil {
+			if err := http.ListenAndServe(":6060", mux); err != nil && err != http.ErrServerClosed {
 				log.Logger.Fatalf("Error when starting or running http server: %v", err)
 			}
 		}()
