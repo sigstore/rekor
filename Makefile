@@ -15,7 +15,7 @@
 
 .PHONY: all test clean clean-gen lint gosec ko ko-local sign-container cross-cli
 
-all: rekor-cli rekor-server
+all: rekor-cli rekor-server 
 
 GENSRC = pkg/generated/client/%.go pkg/generated/models/%.go pkg/generated/restapi/%.go
 OPENAPIDEPS = openapi.yaml $(shell find pkg/types -iname "*.json")
@@ -47,6 +47,7 @@ export KO_DOCKER_REPO=$(KO_PREFIX)
 
 # Binaries
 SWAGGER := $(TOOLS_BIN_DIR)/swagger
+GO-FUZZ-BUILD := $(TOOLS_BIN_DIR)/go-fuzz-build
 
 CLI_PKG=github.com/sigstore/rekor/cmd/rekor-cli/app
 CLI_LDFLAGS=-X $(CLI_PKG).GitVersion=$(GIT_VERSION) -X $(CLI_PKG).gitCommit=$(GIT_HASH) -X $(CLI_PKG).gitTreeState=$(GIT_TREESTATE) -X $(CLI_PKG).buildDate=$(BUILD_DATE)
@@ -83,10 +84,14 @@ rekor-server: $(SRCS)
 test:
 	go test ./...
 
+fuzz: $(GO-FUZZ-BUILD)
+	$(GO-FUZZ-BUILD) ./tests/fuzz/...
+
 clean:
 	rm -rf dist
 	rm -rf hack/tools/bin
 	rm -rf rekor-cli rekor-server
+	rm  *fuzz.zip
 
 clean-gen: clean
 	rm -rf $(shell find pkg/generated -iname "*.go"|grep -v pkg/generated/restapi/configure_rekor_server.go)
@@ -132,6 +137,9 @@ ko-local:
 ## --------------------------------------
 ## Tooling Binaries
 ## --------------------------------------
+
+$(GO-FUZZ-BUILD): $(TOOLS_DIR)/go.mod
+	cd $(TOOLS_DIR);go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/go-fuzz-build github.com/dvyukov/go-fuzz/go-fuzz-build
 
 $(SWAGGER): $(TOOLS_DIR)/go.mod
 	cd $(TOOLS_DIR); go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/swagger github.com/go-swagger/go-swagger/cmd/swagger

@@ -10,3 +10,4 @@ logid
 swagger
 dist/*
 hack/tools/bin/*
+*fuzz.zip

@@ -3,6 +3,7 @@ module github.com/sigstore/rekor
 go 1.16
 
 require (
+	github.com/AdaLogics/go-fuzz-headers v0.0.0-20211102141018-f7be0cbad29c
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cavaliercoder/badio v0.0.0-20160213150051-ce5280129e9e // indirect
@@ -55,6 +56,8 @@ require (
 	golang.org/x/mod v0.5.1
 	golang.org/x/net v0.0.0-20210825183410-e898025ed96a
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sys v0.0.0-20211112193437-faf0a1b62c6b // indirect
+	golang.org/x/tools v0.1.7 // indirect
 	google.golang.org/genproto v0.0.0-20210831024726-fe130286e0e2
 	google.golang.org/grpc v1.42.0
 	google.golang.org/protobuf v1.27.1
