@@ -19,5 +19,8 @@
 package tools
 
 import (
+	_ "github.com/AdaLogics/go-fuzz-headers"
+	_ "github.com/dvyukov/go-fuzz/go-fuzz"
+	_ "github.com/dvyukov/go-fuzz/go-fuzz-build"
 	_ "github.com/go-swagger/go-swagger/cmd/swagger"
 )
