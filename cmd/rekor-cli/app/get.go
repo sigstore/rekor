@@ -150,13 +150,16 @@ func parseEntry(uuid string, e models.LogEntryAnon) (interface{}, error) {
 	}
 
 	obj := getCmdOutput{
-		Attestation:     string(e.Attestation.Data),
-		AttestationType: e.Attestation.MediaType,
-		Body:            eimpl,
-		UUID:            uuid,
-		IntegratedTime:  *e.IntegratedTime,
-		LogIndex:        int(*e.LogIndex),
-		LogID:           *e.LogID,
+		Body:           eimpl,
+		UUID:           uuid,
+		IntegratedTime: *e.IntegratedTime,
+		LogIndex:       int(*e.LogIndex),
+		LogID:          *e.LogID,
+	}
+
+	if e.Attestation != nil {
+		obj.Attestation = string(e.Attestation.Data)
+		obj.AttestationType = e.Attestation.MediaType
 	}
 
 	return &obj, nil
