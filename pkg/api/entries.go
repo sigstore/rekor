@@ -111,7 +111,8 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 	}
 
 	return models.LogEntry{
-		uuid: logEntryAnon}, nil
+		uuid: logEntryAnon,
+	}, nil
 }
 
 // GetLogEntryAndProofByIndexHandler returns the entry and inclusion proof for a specified log index
@@ -119,7 +120,7 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 	ctx := params.HTTPRequest.Context()
 	tc := NewTrillianClient(ctx)
 
-	resp := tc.getLeafAndProofByIndex(params.LogIndex)
+	resp := tc.GetLeafAndProofByIndex(params.LogIndex)
 	switch resp.status {
 	case codes.OK:
 	case codes.NotFound, codes.OutOfRange, codes.InvalidArgument:
@@ -158,7 +159,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 
 	tc := NewTrillianClient(ctx)
 
-	resp := tc.addLeaf(leaf)
+	resp := tc.AddLeaf(leaf)
 	// this represents overall GRPC response state (not the results of insertion into the log)
 	if resp.status != codes.OK {
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
@@ -203,7 +204,6 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	}
 
 	if viper.GetBool("enable_attestation_storage") {
-
 		go func() {
 			typ, attestation := entry.Attestation()
 			if typ == "" {
@@ -256,7 +256,6 @@ func getEntryURL(locationURL url.URL, uuid string) strfmt.URI {
 	locationURL.RawQuery = query.Encode()
 	locationURL.Path = fmt.Sprintf("%v/%v", locationURL.Path, uuid)
 	return strfmt.URI(locationURL.String())
-
 }
 
 // GetLogEntryByUUIDHandler gets log entry and inclusion proof for specified UUID aka merkle leaf hash
@@ -265,7 +264,7 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 	hashValue, _ := hex.DecodeString(params.EntryUUID)
 	tc := NewTrillianClient(params.HTTPRequest.Context())
 
-	resp := tc.getLeafAndProofByHash(hashValue)
+	resp := tc.GetLeafAndProofByHash(hashValue)
 	switch resp.status {
 	case codes.OK:
 	case codes.NotFound:
@@ -336,7 +335,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		for i, hash := range searchHashes {
 			i, hash := i, hash // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
-				resp := tc.getLeafAndProofByHash(hash)
+				resp := tc.GetLeafAndProofByHash(hash)
 				switch resp.status {
 				case codes.OK, codes.NotFound:
 				default:
@@ -373,7 +372,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		for i, logIndex := range params.Entry.LogIndexes {
 			i, logIndex := i, logIndex // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
-				resp := tc.getLeafAndProofByIndex(swag.Int64Value(logIndex))
+				resp := tc.GetLeafAndProofByIndex(swag.Int64Value(logIndex))
 				switch resp.status {
 				case codes.OK, codes.NotFound:
 				default:

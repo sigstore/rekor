@@ -36,7 +36,7 @@ import (
 func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	tc := NewTrillianClient(params.HTTPRequest.Context())
 
-	resp := tc.getLatest(0)
+	resp := tc.GetLatest(0)
 	if resp.status != codes.OK {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianCommunicationError)
 	}
@@ -87,7 +87,7 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	}
 	tc := NewTrillianClient(params.HTTPRequest.Context())
 
-	resp := tc.getConsistencyProof(*params.FirstSize, params.LastSize)
+	resp := tc.GetConsistencyProof(*params.FirstSize, params.LastSize)
 	if resp.status != codes.OK {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianCommunicationError)
 	}
