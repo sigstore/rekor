@@ -17,6 +17,8 @@ package app
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/pprof"
 	"os"
 	"runtime/debug"
 
@@ -27,9 +29,12 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 )
 
-var cfgFile string
-var logType string
-var logRangeMap LogRanges
+var (
+	cfgFile     string
+	logType     string
+	enablePprof bool
+	logRangeMap LogRanges
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -57,6 +62,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rekor-server.yaml)")
 	rootCmd.PersistentFlags().StringVar(&logType, "log_type", "dev", "logger type to use (dev/prod)")
+	rootCmd.PersistentFlags().BoolVar(&enablePprof, "enable_pprof", false, "enable pprof for profiling on port 6060")
 
 	rootCmd.PersistentFlags().String("trillian_log_server.address", "127.0.0.1", "Trillian log server address")
 	rootCmd.PersistentFlags().Uint16("trillian_log_server.port", 8090, "Trillian log server port")
@@ -87,6 +93,21 @@ func init() {
 	// look for the default version and replace it, if found, from runtime build info
 	if GitVersion != "devel" {
 		return
+	}
+	log.Logger.Debugf("pprof enabled %v", enablePprof)
+	// Enable pprof
+	if enablePprof {
+		go func() {
+			mux := http.NewServeMux()
+
+			mux.HandleFunc("/debug/pprof/", pprof.Index)
+			mux.HandleFunc("/debug/pprof/{action}", pprof.Index)
+			mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+
+			if err := http.ListenAndServe(":6060", mux); err != nil && err != http.ErrServerClosed {
+				log.Logger.Fatalf("Error when starting or running http server: %v", err)
+			}
+		}()
 	}
 
 	bi, ok := debug.ReadBuildInfo()
