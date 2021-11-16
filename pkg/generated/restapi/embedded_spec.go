@@ -664,6 +664,32 @@ func init() {
         }
       ]
     },
+    "hashed_rekord": {
+      "description": "Rekord object",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "type": "object",
+              "$ref": "pkg/types/hashed_rekord/hashed_rekord_schema.json"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "helm": {
       "description": "Helm chart",
       "type": "object",
@@ -1454,6 +1480,87 @@ func init() {
         },
         "message": {
           "type": "string"
+        }
+      }
+    },
+    "HashedRekordV001SchemaData": {
+      "description": "Information about the content associated with the entry",
+      "type": "object",
+      "properties": {
+        "hash": {
+          "description": "Specifies the hash algorithm and value for the content",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value": {
+              "description": "The hash value for the content",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "HashedRekordV001SchemaDataHash": {
+      "description": "Specifies the hash algorithm and value for the content",
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "The hashing function used to compute the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value": {
+          "description": "The hash value for the content",
+          "type": "string"
+        }
+      }
+    },
+    "HashedRekordV001SchemaSignature": {
+      "description": "Information about the detached signature associated with the entry",
+      "type": "object",
+      "properties": {
+        "content": {
+          "description": "Specifies the content of the signature inline within the document",
+          "type": "string",
+          "format": "byte"
+        },
+        "publicKey": {
+          "description": "The public key that can verify the signature",
+          "type": "object",
+          "properties": {
+            "content": {
+              "description": "Specifies the content of the public key inline within the document",
+              "type": "string",
+              "format": "byte"
+            }
+          }
+        }
+      }
+    },
+    "HashedRekordV001SchemaSignaturePublicKey": {
+      "description": "The public key that can verify the signature",
+      "type": "object",
+      "properties": {
+        "content": {
+          "description": "Specifies the content of the public key inline within the document",
+          "type": "string",
+          "format": "byte"
         }
       }
     },
@@ -2534,6 +2641,105 @@ func init() {
       },
       "$schema": "http://json-schema.org/draft-07/schema",
       "$id": "http://rekor.sigstore.dev/types/alpine/alpine_v0_0_1_schema.json"
+    },
+    "hashedRekordSchema": {
+      "description": "Schema for Rekord objects",
+      "type": "object",
+      "title": "Rekor Schema",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/hashedRekordV001Schema"
+        }
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/rekord/rekord_schema.json"
+    },
+    "hashedRekordV001Schema": {
+      "description": "Schema for Hashed Rekord object",
+      "type": "object",
+      "title": "Hashed Rekor v0.0.1 Schema",
+      "required": [
+        "signature",
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "description": "Information about the content associated with the entry",
+          "type": "object",
+          "properties": {
+            "hash": {
+              "description": "Specifies the hash algorithm and value for the content",
+              "type": "object",
+              "required": [
+                "algorithm",
+                "value"
+              ],
+              "properties": {
+                "algorithm": {
+                  "description": "The hashing function used to compute the hash value",
+                  "type": "string",
+                  "enum": [
+                    "sha256"
+                  ]
+                },
+                "value": {
+                  "description": "The hash value for the content",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "signature": {
+          "description": "Information about the detached signature associated with the entry",
+          "type": "object",
+          "properties": {
+            "content": {
+              "description": "Specifies the content of the signature inline within the document",
+              "type": "string",
+              "format": "byte"
+            },
+            "publicKey": {
+              "description": "The public key that can verify the signature",
+              "type": "object",
+              "properties": {
+                "content": {
+                  "description": "Specifies the content of the public key inline within the document",
+                  "type": "string",
+                  "format": "byte"
+                }
+              }
+            }
+          }
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/rekord/rekord_v0_0_1_schema.json"
+    },
+    "hashed_rekord": {
+      "description": "Rekord object",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "$ref": "#/definitions/hashedRekordSchema"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
     },
     "helm": {
       "description": "Helm chart",

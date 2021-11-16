@@ -30,6 +30,8 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types/alpine"
 	alpine_v001 "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
+	"github.com/sigstore/rekor/pkg/types/hashed_rekord"
+	hashed_rekord_v001 "github.com/sigstore/rekor/pkg/types/hashed_rekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/helm"
 	helm_v001 "github.com/sigstore/rekor/pkg/types/helm/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/intoto"
@@ -80,14 +82,15 @@ var serveCmd = &cobra.Command{
 
 		// these trigger loading of package and therefore init() methods to run
 		pluggableTypeMap := map[string]string{
-			rekord.KIND:  rekord_v001.APIVERSION,
-			rpm.KIND:     rpm_v001.APIVERSION,
-			jar.KIND:     jar_v001.APIVERSION,
-			intoto.KIND:  intoto_v001.APIVERSION,
-			rfc3161.KIND: rfc3161_v001.APIVERSION,
-			alpine.KIND:  alpine_v001.APIVERSION,
-			helm.KIND:    helm_v001.APIVERSION,
-			tuf.KIND:     tuf_v001.APIVERSION,
+			rekord.KIND:        rekord_v001.APIVERSION,
+			rpm.KIND:           rpm_v001.APIVERSION,
+			jar.KIND:           jar_v001.APIVERSION,
+			intoto.KIND:        intoto_v001.APIVERSION,
+			rfc3161.KIND:       rfc3161_v001.APIVERSION,
+			alpine.KIND:        alpine_v001.APIVERSION,
+			helm.KIND:          helm_v001.APIVERSION,
+			tuf.KIND:           tuf_v001.APIVERSION,
+			hashed_rekord.KIND: hashed_rekord_v001.APIVERSION,
 		}
 
 		for k, v := range pluggableTypeMap {
