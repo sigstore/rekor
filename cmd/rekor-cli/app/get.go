@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
+	"github.com/sigstore/rekor/cmd/rekor-cli/app/sharding"
 	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -84,6 +85,12 @@ var getCmd = &cobra.Command{
 		}
 
 		logIndex := viper.GetString("log-index")
+		uuid := viper.GetString("uuid")
+
+		if logIndex == "" && uuid == "" {
+			return nil, errors.New("either --uuid or --log-index must be specified")
+		}
+
 		if logIndex != "" {
 			params := entries.NewGetLogEntryByIndexParams()
 			params.SetTimeout(viper.GetDuration("timeout"))
@@ -106,11 +113,17 @@ var getCmd = &cobra.Command{
 			}
 		}
 
-		uuid := viper.GetString("uuid")
 		if uuid != "" {
 			params := entries.NewGetLogEntryByUUIDParams()
 			params.SetTimeout(viper.GetDuration("timeout"))
-			params.EntryUUID = uuid
+
+			if len(uuid) == sharding.UUIDLen {
+				params.EntryUUID = uuid
+			} else if len(uuid) == sharding.FullIDLen {
+				params.EntryUUID = uuid[sharding.FullIDLen-sharding.UUIDLen:]
+			} else {
+				return nil, fmt.Errorf("invalid UUID length: %v", len(uuid))
+			}
 
 			resp, err := rekorClient.Entries.GetLogEntryByUUID(params)
 			if err != nil {
@@ -118,10 +131,7 @@ var getCmd = &cobra.Command{
 			}
 
 			for k, entry := range resp.Payload {
-				if k != uuid {
-					continue
-				}
-
+				// TODO: understand why we don't need k to match params.EntryUUID
 				if verified, err := verifyLogEntry(context.Background(), rekorClient, entry); err != nil || !verified {
 					return nil, fmt.Errorf("unable to verify entry was added to log %w", err)
 				}
@@ -130,7 +140,7 @@ var getCmd = &cobra.Command{
 			}
 		}
 
-		return nil, errors.New("either --uuid or --log-index must be specified")
+		return nil, errors.New("entry not found")
 	}),
 }
 
