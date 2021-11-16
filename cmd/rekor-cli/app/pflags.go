@@ -61,7 +61,7 @@ func initializePFlagMap() {
 		},
 		shaFlag: func() pflag.Value {
 			// this validates a valid sha256 checksum which is optionally prefixed with 'sha256:'
-			return valueFactory(shaFlag, validateSHA256Value, "")
+			return valueFactory(shaFlag, validateSHAValue, "")
 		},
 		emailFlag: func() pflag.Value {
 			// this validates an email address
@@ -163,10 +163,16 @@ func isURL(v string) bool {
 	return valGen().Set(v) == nil
 }
 
-// validateSHA256Value ensures that the supplied string matches the following format:
+// validateSHAValue ensures that the supplied string matches the following formats:
 // [sha256:]<64 hexadecimal characters>
-// where [sha256:] is optional
-func validateSHA256Value(v string) error {
+// [sha1:]<40 hexadecimal characters>
+// where [sha256:] and [sha1:] are optional
+func validateSHAValue(v string) error {
+	err := util.ValidateSHA1Value(v)
+	if err == nil {
+		return nil
+	}
+
 	if err := util.ValidateSHA256Value(v); err != nil {
 		return fmt.Errorf("error parsing %v flag: %w", shaFlag, err)
 	}

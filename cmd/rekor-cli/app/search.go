@@ -54,7 +54,7 @@ func addSearchPFlags(cmd *cobra.Command) error {
 
 	cmd.Flags().Var(NewFlagValue(fileOrURLFlag, ""), "artifact", "path or URL to artifact file")
 
-	cmd.Flags().Var(NewFlagValue(shaFlag, ""), "sha", "the SHA256 sum of the artifact")
+	cmd.Flags().Var(NewFlagValue(shaFlag, ""), "sha", "the SHA256 or SHA1 sum of the artifact")
 
 	cmd.Flags().Var(NewFlagValue(emailFlag, ""), "email", "email associated with the public key's subject")
 	return nil
@@ -109,8 +109,12 @@ var searchCmd = &cobra.Command{
 		sha := viper.GetString("sha")
 		if sha != "" {
 			var prefix string
-			if !strings.HasPrefix(sha, "sha256:") {
-				prefix = "sha256:"
+			if !strings.HasPrefix(sha, "sha256:") && !strings.HasPrefix(sha, "sha1:") {
+				if len(sha) == 40 {
+					prefix = "sha1:"
+				} else {
+					prefix = "sha256:"
+				}
 			}
 			params.Query.Hash = fmt.Sprintf("%v%v", prefix, sha)
 		} else if artifactStr != "" {

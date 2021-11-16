@@ -44,3 +44,25 @@ func ValidateSHA256Value(v string) error {
 	validate := validator.New()
 	return validate.Struct(s)
 }
+
+func ValidateSHA1Value(v string) error {
+	var prefix, hash string
+
+	split := strings.SplitN(v, ":", 2)
+	switch len(split) {
+	case 1:
+		hash = split[0]
+	case 2:
+		prefix = split[0]
+		hash = split[1]
+	}
+
+	s := struct {
+		Prefix string `validate:"omitempty,oneof=sha1"`
+		Hash   string `validate:"required,len=40,hexadecimal"`
+	}{prefix, hash}
+
+	validate := validator.New()
+	return validate.Struct(s)
+
+}
