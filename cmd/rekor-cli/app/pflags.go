@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sigstore/rekor/cmd/rekor-cli/app/sharding"
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/util"
 
@@ -56,8 +57,8 @@ var pflagValueFuncMap map[FlagType]newPFlagValueFunc
 func initializePFlagMap() {
 	pflagValueFuncMap = map[FlagType]newPFlagValueFunc{
 		uuidFlag: func() pflag.Value {
-			// this corresponds to the merkle leaf hash of entries, which is represented by a 64 character hexadecimal string
-			return valueFactory(uuidFlag, validateString("required,len=64,hexadecimal"), "")
+			// this corresponds to the merkle leaf hash of entries, which is represented by a 64 character hexadecimal string, prepended by the 6-digit shard ID and '-'  separator
+			return valueFactory(uuidFlag, validateFullID, "")
 		},
 		shaFlag: func() pflag.Value {
 			// this validates a valid sha256 checksum which is optionally prefixed with 'sha256:'
@@ -188,6 +189,53 @@ func validateFileOrURL(v string) error {
 	}
 	valGen = pflagValueFuncMap[urlFlag]
 	return valGen().Set(v)
+}
+
+// validateFullID ensures the FullID is composed of a valid shardID, separator character, and UUID
+func validateFullID(v string) error {
+	if len(v) == sharding.FullIDLen {
+
+		// validate separator
+		if string(v[sharding.ShardIDLen]) != sharding.FullIDSeparator {
+			return fmt.Errorf("unexpected separator char in fullID: %v", v[sharding.ShardIDLen])
+		}
+
+		// validate the ShardID
+		shardID := v[:sharding.ShardIDLen]
+		shardIDTag := "required,len=" + fmt.Sprintf("%v", sharding.ShardIDLen) + ",number"
+		shardIDStringValidatorFunc := validateString(shardIDTag)
+		shardIDErr := shardIDStringValidatorFunc(shardID)
+
+		if shardIDErr != nil {
+			return fmt.Errorf("invalid shardID: %v", shardID)
+		}
+
+		// validate the UUID
+		UUID := v[sharding.FullIDLen-sharding.UUIDLen:]
+		UUIDTag := "required,len=" + fmt.Sprintf("%v", sharding.UUIDLen) + ",hexadecimal"
+		UUIDStringValidatorFunc := validateString(UUIDTag)
+		UUIDErr := UUIDStringValidatorFunc(UUID)
+
+		if UUIDErr != nil {
+			return fmt.Errorf("invalid uuid: %v", UUID)
+		}
+
+		return nil
+
+	} else if len(v) == sharding.UUIDLen {
+		// indicates older UUID format is being used without pre-pended shardID
+		UUIDStringValidatorFunc := validateString("required,len=64,hexadecimal")
+		UUIDErr := UUIDStringValidatorFunc(v)
+
+		if UUIDErr != nil {
+			return fmt.Errorf("invalid uuid: %v", v)
+		}
+
+		return nil
+
+	}
+
+	return fmt.Errorf("fullID len error, expected %v but got %v", sharding.FullIDLen, len(v))
 }
 
 // validateLogIndex ensures that the supplied string is a valid log index (integer >= 0)

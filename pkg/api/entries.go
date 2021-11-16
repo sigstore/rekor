@@ -36,6 +36,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/grpc/codes"
 
+	"github.com/sigstore/rekor/cmd/rekor-cli/app/sharding"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/log"
@@ -183,7 +184,8 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	metricNewEntries.Inc()
 
 	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
-	uuid := hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
+	shardID := sharding.NewCurrent()
+	uuid := shardID.ShardIDString + sharding.FullIDSeparator + hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
 
 	logEntryAnon := models.LogEntryAnon{
 		LogID:          swag.String(api.pubkeyHash),

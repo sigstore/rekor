@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
+	"github.com/sigstore/rekor/cmd/rekor-cli/app/sharding"
 	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -110,7 +111,13 @@ var getCmd = &cobra.Command{
 		if uuid != "" {
 			params := entries.NewGetLogEntryByUUIDParams()
 			params.SetTimeout(viper.GetDuration("timeout"))
-			params.EntryUUID = uuid
+			if len(uuid) == sharding.UUIDLen {
+				params.EntryUUID = uuid
+			} else if len(uuid) == sharding.FullIDLen {
+				params.EntryUUID = uuid[sharding.FullIDLen-sharding.UUIDLen:]
+			} else {
+				return nil, fmt.Errorf("invalid UUID length: %v", len(uuid))
+			}
 
 			resp, err := rekorClient.Entries.GetLogEntryByUUID(params)
 			if err != nil {
@@ -118,7 +125,7 @@ var getCmd = &cobra.Command{
 			}
 
 			for k, entry := range resp.Payload {
-				if k != uuid {
+				if k != params.EntryUUID {
 					continue
 				}
 
