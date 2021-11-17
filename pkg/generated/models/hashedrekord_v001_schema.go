@@ -31,24 +31,24 @@ import (
 	"github.com/go-openapi/validate"
 )
 
-// HashedRekordV001Schema Hashed Rekor v0.0.1 Schema
+// HashedrekordV001Schema Hashed Rekor v0.0.1 Schema
 //
 // Schema for Hashed Rekord object
 //
-// swagger:model hashedRekordV001Schema
-type HashedRekordV001Schema struct {
+// swagger:model hashedrekordV001Schema
+type HashedrekordV001Schema struct {
 
 	// data
 	// Required: true
-	Data *HashedRekordV001SchemaData `json:"data"`
+	Data *HashedrekordV001SchemaData `json:"data"`
 
 	// signature
 	// Required: true
-	Signature *HashedRekordV001SchemaSignature `json:"signature"`
+	Signature *HashedrekordV001SchemaSignature `json:"signature"`
 }
 
-// Validate validates this hashed rekord v001 schema
-func (m *HashedRekordV001Schema) Validate(formats strfmt.Registry) error {
+// Validate validates this hashedrekord v001 schema
+func (m *HashedrekordV001Schema) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateData(formats); err != nil {
@@ -65,7 +65,7 @@ func (m *HashedRekordV001Schema) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *HashedRekordV001Schema) validateData(formats strfmt.Registry) error {
+func (m *HashedrekordV001Schema) validateData(formats strfmt.Registry) error {
 
 	if err := validate.Required("data", "body", m.Data); err != nil {
 		return err
@@ -85,7 +85,7 @@ func (m *HashedRekordV001Schema) validateData(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *HashedRekordV001Schema) validateSignature(formats strfmt.Registry) error {
+func (m *HashedrekordV001Schema) validateSignature(formats strfmt.Registry) error {
 
 	if err := validate.Required("signature", "body", m.Signature); err != nil {
 		return err
@@ -105,8 +105,8 @@ func (m *HashedRekordV001Schema) validateSignature(formats strfmt.Registry) erro
 	return nil
 }
 
-// ContextValidate validate this hashed rekord v001 schema based on the context it is used
-func (m *HashedRekordV001Schema) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validate this hashedrekord v001 schema based on the context it is used
+func (m *HashedrekordV001Schema) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateData(ctx, formats); err != nil {
@@ -123,7 +123,7 @@ func (m *HashedRekordV001Schema) ContextValidate(ctx context.Context, formats st
 	return nil
 }
 
-func (m *HashedRekordV001Schema) contextValidateData(ctx context.Context, formats strfmt.Registry) error {
+func (m *HashedrekordV001Schema) contextValidateData(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.Data != nil {
 		if err := m.Data.ContextValidate(ctx, formats); err != nil {
@@ -139,7 +139,7 @@ func (m *HashedRekordV001Schema) contextValidateData(ctx context.Context, format
 	return nil
 }
 
-func (m *HashedRekordV001Schema) contextValidateSignature(ctx context.Context, formats strfmt.Registry) error {
+func (m *HashedrekordV001Schema) contextValidateSignature(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.Signature != nil {
 		if err := m.Signature.ContextValidate(ctx, formats); err != nil {
@@ -156,7 +156,7 @@ func (m *HashedRekordV001Schema) contextValidateSignature(ctx context.Context, f
 }
 
 // MarshalBinary interface implementation
-func (m *HashedRekordV001Schema) MarshalBinary() ([]byte, error) {
+func (m *HashedrekordV001Schema) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -164,8 +164,8 @@ func (m *HashedRekordV001Schema) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *HashedRekordV001Schema) UnmarshalBinary(b []byte) error {
-	var res HashedRekordV001Schema
+func (m *HashedrekordV001Schema) UnmarshalBinary(b []byte) error {
+	var res HashedrekordV001Schema
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}
@@ -173,17 +173,17 @@ func (m *HashedRekordV001Schema) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-// HashedRekordV001SchemaData Information about the content associated with the entry
+// HashedrekordV001SchemaData Information about the content associated with the entry
 //
-// swagger:model HashedRekordV001SchemaData
-type HashedRekordV001SchemaData struct {
+// swagger:model HashedrekordV001SchemaData
+type HashedrekordV001SchemaData struct {
 
 	// hash
-	Hash *HashedRekordV001SchemaDataHash `json:"hash,omitempty"`
+	Hash *HashedrekordV001SchemaDataHash `json:"hash,omitempty"`
 }
 
-// Validate validates this hashed rekord v001 schema data
-func (m *HashedRekordV001SchemaData) Validate(formats strfmt.Registry) error {
+// Validate validates this hashedrekord v001 schema data
+func (m *HashedrekordV001SchemaData) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateHash(formats); err != nil {
@@ -196,7 +196,7 @@ func (m *HashedRekordV001SchemaData) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *HashedRekordV001SchemaData) validateHash(formats strfmt.Registry) error {
+func (m *HashedrekordV001SchemaData) validateHash(formats strfmt.Registry) error {
 	if swag.IsZero(m.Hash) { // not required
 		return nil
 	}
@@ -215,8 +215,8 @@ func (m *HashedRekordV001SchemaData) validateHash(formats strfmt.Registry) error
 	return nil
 }
 
-// ContextValidate validate this hashed rekord v001 schema data based on the context it is used
-func (m *HashedRekordV001SchemaData) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validate this hashedrekord v001 schema data based on the context it is used
+func (m *HashedrekordV001SchemaData) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateHash(ctx, formats); err != nil {
@@ -229,7 +229,7 @@ func (m *HashedRekordV001SchemaData) ContextValidate(ctx context.Context, format
 	return nil
 }
 
-func (m *HashedRekordV001SchemaData) contextValidateHash(ctx context.Context, formats strfmt.Registry) error {
+func (m *HashedrekordV001SchemaData) contextValidateHash(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.Hash != nil {
 		if err := m.Hash.ContextValidate(ctx, formats); err != nil {
@@ -246,7 +246,7 @@ func (m *HashedRekordV001SchemaData) contextValidateHash(ctx context.Context, fo
 }
 
 // MarshalBinary interface implementation
-func (m *HashedRekordV001SchemaData) MarshalBinary() ([]byte, error) {
+func (m *HashedrekordV001SchemaData) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -254,8 +254,8 @@ func (m *HashedRekordV001SchemaData) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *HashedRekordV001SchemaData) UnmarshalBinary(b []byte) error {
-	var res HashedRekordV001SchemaData
+func (m *HashedrekordV001SchemaData) UnmarshalBinary(b []byte) error {
+	var res HashedrekordV001SchemaData
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}
@@ -263,10 +263,10 @@ func (m *HashedRekordV001SchemaData) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-// HashedRekordV001SchemaDataHash Specifies the hash algorithm and value for the content
+// HashedrekordV001SchemaDataHash Specifies the hash algorithm and value for the content
 //
-// swagger:model HashedRekordV001SchemaDataHash
-type HashedRekordV001SchemaDataHash struct {
+// swagger:model HashedrekordV001SchemaDataHash
+type HashedrekordV001SchemaDataHash struct {
 
 	// The hashing function used to compute the hash value
 	// Required: true
@@ -278,8 +278,8 @@ type HashedRekordV001SchemaDataHash struct {
 	Value *string `json:"value"`
 }
 
-// Validate validates this hashed rekord v001 schema data hash
-func (m *HashedRekordV001SchemaDataHash) Validate(formats strfmt.Registry) error {
+// Validate validates this hashedrekord v001 schema data hash
+func (m *HashedrekordV001SchemaDataHash) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateAlgorithm(formats); err != nil {
@@ -296,7 +296,7 @@ func (m *HashedRekordV001SchemaDataHash) Validate(formats strfmt.Registry) error
 	return nil
 }
 
-var hashedRekordV001SchemaDataHashTypeAlgorithmPropEnum []interface{}
+var hashedrekordV001SchemaDataHashTypeAlgorithmPropEnum []interface{}
 
 func init() {
 	var res []string
@@ -304,25 +304,25 @@ func init() {
 		panic(err)
 	}
 	for _, v := range res {
-		hashedRekordV001SchemaDataHashTypeAlgorithmPropEnum = append(hashedRekordV001SchemaDataHashTypeAlgorithmPropEnum, v)
+		hashedrekordV001SchemaDataHashTypeAlgorithmPropEnum = append(hashedrekordV001SchemaDataHashTypeAlgorithmPropEnum, v)
 	}
 }
 
 const (
 
-	// HashedRekordV001SchemaDataHashAlgorithmSha256 captures enum value "sha256"
-	HashedRekordV001SchemaDataHashAlgorithmSha256 string = "sha256"
+	// HashedrekordV001SchemaDataHashAlgorithmSha256 captures enum value "sha256"
+	HashedrekordV001SchemaDataHashAlgorithmSha256 string = "sha256"
 )
 
 // prop value enum
-func (m *HashedRekordV001SchemaDataHash) validateAlgorithmEnum(path, location string, value string) error {
-	if err := validate.EnumCase(path, location, value, hashedRekordV001SchemaDataHashTypeAlgorithmPropEnum, true); err != nil {
+func (m *HashedrekordV001SchemaDataHash) validateAlgorithmEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, hashedrekordV001SchemaDataHashTypeAlgorithmPropEnum, true); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (m *HashedRekordV001SchemaDataHash) validateAlgorithm(formats strfmt.Registry) error {
+func (m *HashedrekordV001SchemaDataHash) validateAlgorithm(formats strfmt.Registry) error {
 
 	if err := validate.Required("data"+"."+"hash"+"."+"algorithm", "body", m.Algorithm); err != nil {
 		return err
@@ -336,7 +336,7 @@ func (m *HashedRekordV001SchemaDataHash) validateAlgorithm(formats strfmt.Regist
 	return nil
 }
 
-func (m *HashedRekordV001SchemaDataHash) validateValue(formats strfmt.Registry) error {
+func (m *HashedrekordV001SchemaDataHash) validateValue(formats strfmt.Registry) error {
 
 	if err := validate.Required("data"+"."+"hash"+"."+"value", "body", m.Value); err != nil {
 		return err
@@ -345,13 +345,13 @@ func (m *HashedRekordV001SchemaDataHash) validateValue(formats strfmt.Registry) 
 	return nil
 }
 
-// ContextValidate validates this hashed rekord v001 schema data hash based on context it is used
-func (m *HashedRekordV001SchemaDataHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validates this hashedrekord v001 schema data hash based on context it is used
+func (m *HashedrekordV001SchemaDataHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 
 // MarshalBinary interface implementation
-func (m *HashedRekordV001SchemaDataHash) MarshalBinary() ([]byte, error) {
+func (m *HashedrekordV001SchemaDataHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -359,8 +359,8 @@ func (m *HashedRekordV001SchemaDataHash) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *HashedRekordV001SchemaDataHash) UnmarshalBinary(b []byte) error {
-	var res HashedRekordV001SchemaDataHash
+func (m *HashedrekordV001SchemaDataHash) UnmarshalBinary(b []byte) error {
+	var res HashedrekordV001SchemaDataHash
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}
@@ -368,21 +368,21 @@ func (m *HashedRekordV001SchemaDataHash) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-// HashedRekordV001SchemaSignature Information about the detached signature associated with the entry
+// HashedrekordV001SchemaSignature Information about the detached signature associated with the entry
 //
-// swagger:model HashedRekordV001SchemaSignature
-type HashedRekordV001SchemaSignature struct {
+// swagger:model HashedrekordV001SchemaSignature
+type HashedrekordV001SchemaSignature struct {
 
 	// Specifies the content of the signature inline within the document
 	// Format: byte
 	Content strfmt.Base64 `json:"content,omitempty"`
 
 	// public key
-	PublicKey *HashedRekordV001SchemaSignaturePublicKey `json:"publicKey,omitempty"`
+	PublicKey *HashedrekordV001SchemaSignaturePublicKey `json:"publicKey,omitempty"`
 }
 
-// Validate validates this hashed rekord v001 schema signature
-func (m *HashedRekordV001SchemaSignature) Validate(formats strfmt.Registry) error {
+// Validate validates this hashedrekord v001 schema signature
+func (m *HashedrekordV001SchemaSignature) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validatePublicKey(formats); err != nil {
@@ -395,7 +395,7 @@ func (m *HashedRekordV001SchemaSignature) Validate(formats strfmt.Registry) erro
 	return nil
 }
 
-func (m *HashedRekordV001SchemaSignature) validatePublicKey(formats strfmt.Registry) error {
+func (m *HashedrekordV001SchemaSignature) validatePublicKey(formats strfmt.Registry) error {
 	if swag.IsZero(m.PublicKey) { // not required
 		return nil
 	}
@@ -414,8 +414,8 @@ func (m *HashedRekordV001SchemaSignature) validatePublicKey(formats strfmt.Regis
 	return nil
 }
 
-// ContextValidate validate this hashed rekord v001 schema signature based on the context it is used
-func (m *HashedRekordV001SchemaSignature) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validate this hashedrekord v001 schema signature based on the context it is used
+func (m *HashedrekordV001SchemaSignature) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidatePublicKey(ctx, formats); err != nil {
@@ -428,7 +428,7 @@ func (m *HashedRekordV001SchemaSignature) ContextValidate(ctx context.Context, f
 	return nil
 }
 
-func (m *HashedRekordV001SchemaSignature) contextValidatePublicKey(ctx context.Context, formats strfmt.Registry) error {
+func (m *HashedrekordV001SchemaSignature) contextValidatePublicKey(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.PublicKey != nil {
 		if err := m.PublicKey.ContextValidate(ctx, formats); err != nil {
@@ -445,7 +445,7 @@ func (m *HashedRekordV001SchemaSignature) contextValidatePublicKey(ctx context.C
 }
 
 // MarshalBinary interface implementation
-func (m *HashedRekordV001SchemaSignature) MarshalBinary() ([]byte, error) {
+func (m *HashedrekordV001SchemaSignature) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -453,8 +453,8 @@ func (m *HashedRekordV001SchemaSignature) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *HashedRekordV001SchemaSignature) UnmarshalBinary(b []byte) error {
-	var res HashedRekordV001SchemaSignature
+func (m *HashedrekordV001SchemaSignature) UnmarshalBinary(b []byte) error {
+	var res HashedrekordV001SchemaSignature
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}
@@ -462,28 +462,28 @@ func (m *HashedRekordV001SchemaSignature) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-// HashedRekordV001SchemaSignaturePublicKey The public key that can verify the signature
+// HashedrekordV001SchemaSignaturePublicKey The public key that can verify the signature
 //
-// swagger:model HashedRekordV001SchemaSignaturePublicKey
-type HashedRekordV001SchemaSignaturePublicKey struct {
+// swagger:model HashedrekordV001SchemaSignaturePublicKey
+type HashedrekordV001SchemaSignaturePublicKey struct {
 
 	// Specifies the content of the public key inline within the document
 	// Format: byte
 	Content strfmt.Base64 `json:"content,omitempty"`
 }
 
-// Validate validates this hashed rekord v001 schema signature public key
-func (m *HashedRekordV001SchemaSignaturePublicKey) Validate(formats strfmt.Registry) error {
+// Validate validates this hashedrekord v001 schema signature public key
+func (m *HashedrekordV001SchemaSignaturePublicKey) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validates this hashed rekord v001 schema signature public key based on context it is used
-func (m *HashedRekordV001SchemaSignaturePublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validates this hashedrekord v001 schema signature public key based on context it is used
+func (m *HashedrekordV001SchemaSignaturePublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 
 // MarshalBinary interface implementation
-func (m *HashedRekordV001SchemaSignaturePublicKey) MarshalBinary() ([]byte, error) {
+func (m *HashedrekordV001SchemaSignaturePublicKey) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -491,8 +491,8 @@ func (m *HashedRekordV001SchemaSignaturePublicKey) MarshalBinary() ([]byte, erro
 }
 
 // UnmarshalBinary interface implementation
-func (m *HashedRekordV001SchemaSignaturePublicKey) UnmarshalBinary(b []byte) error {
-	var res HashedRekordV001SchemaSignaturePublicKey
+func (m *HashedrekordV001SchemaSignaturePublicKey) UnmarshalBinary(b []byte) error {
+	var res HashedrekordV001SchemaSignaturePublicKey
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

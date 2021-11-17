@@ -20,6 +20,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	sigsig "github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -48,7 +49,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(r io.Reader, k interface{}) error {
+func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOption) error {
 	if s.signature == nil {
 		return fmt.Errorf("ssh signature has not been initialized")
 	}

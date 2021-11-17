@@ -312,9 +312,9 @@ definitions:
         - spec
       additionalProperties: false
 
-  hashed_rekord:
+  hashedrekord:
     type: object
-    description: Rekord object
+    description: Hashed Rekord object
     allOf:
     - $ref: '#/definitions/ProposedEntry'
     - properties:
@@ -323,7 +323,7 @@ definitions:
           pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
         spec:
           type: object
-          $ref: 'pkg/types/hashed_rekord/hashed_rekord_schema.json'
+          $ref: 'pkg/types/hashedrekord/hashedrekord_schema.json'
       required:
         - apiVersion
         - spec

@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hashed_rekord
+package hashedrekord
 
 import (
 	"bytes"
@@ -21,7 +21,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -30,12 +29,14 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/pkg/errors"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/types"
-	"github.com/sigstore/rekor/pkg/types/hashed_rekord"
+	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 const (
@@ -43,13 +44,13 @@ const (
 )
 
 func init() {
-	if err := hashed_rekord.VersionMap.SetEntryFactory(APIVERSION, NewEntry); err != nil {
+	if err := hashedrekord.VersionMap.SetEntryFactory(APIVERSION, NewEntry); err != nil {
 		log.Logger.Panic(err)
 	}
 }
 
 type V001Entry struct {
-	HashedRekordObj models.HashedRekordV001Schema
+	HashedRekordObj models.HashedrekordV001Schema
 	keyObj          pki.PublicKey
 	sigObj          pki.Signature
 }
@@ -84,7 +85,7 @@ func (v V001Entry) IndexKeys() []string {
 }
 
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
-	rekord, ok := pe.(*models.HashedRekord)
+	rekord, ok := pe.(*models.Hashedrekord)
 	if !ok {
 		return errors.New("cannot unmarshal non Rekord v0.0.1 type")
 	}
@@ -103,6 +104,9 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+	if err := v.validate(); err != nil {
+		return nil, types.ValidationError(err)
+	}
 
 	artifactFactory, err := pki.NewArtifactFactory(pki.X509)
 	if err != nil {
@@ -121,10 +125,10 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 	v.keyObj = key
 
-	canonicalEntry := models.HashedRekordV001Schema{}
+	canonicalEntry := models.HashedrekordV001Schema{}
 
 	// need to canonicalize signature & key content
-	canonicalEntry.Signature = &models.HashedRekordV001SchemaSignature{}
+	canonicalEntry.Signature = &models.HashedrekordV001SchemaSignature{}
 
 	canonicalEntry.Signature.Content, err = v.sigObj.CanonicalValue()
 	if err != nil {
@@ -132,18 +136,18 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 
 	// key URL (if known) is not set deliberately
-	canonicalEntry.Signature.PublicKey = &models.HashedRekordV001SchemaSignaturePublicKey{}
+	canonicalEntry.Signature.PublicKey = &models.HashedrekordV001SchemaSignaturePublicKey{}
 	canonicalEntry.Signature.PublicKey.Content, err = v.keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
 
-	canonicalEntry.Data = &models.HashedRekordV001SchemaData{}
+	canonicalEntry.Data = &models.HashedrekordV001SchemaData{}
 	canonicalEntry.Data.Hash = v.HashedRekordObj.Data.Hash
 	// data content is not set deliberately
 
 	// wrap in valid object with kind and apiVersion set
-	rekordObj := models.HashedRekord{}
+	rekordObj := models.Hashedrekord{}
 	rekordObj.APIVersion = swag.String(APIVERSION)
 	rekordObj.Spec = &canonicalEntry
 
@@ -161,10 +165,23 @@ func (v V001Entry) validate() error {
 	if sig == nil {
 		return errors.New("missing signature")
 	}
+	// Hashed rekord type only works for x509 signature types
+	artifactFactory, err := pki.NewArtifactFactory(pki.X509)
+	if err != nil {
+		return types.ValidationError(err)
+	}
+	v.sigObj, err = artifactFactory.NewSignature(bytes.NewReader(sig.Content))
+	if err != nil {
+		return types.ValidationError(err)
+	}
 
 	key := sig.PublicKey
 	if key == nil {
 		return errors.New("missing public key")
+	}
+	v.keyObj, err = artifactFactory.NewPublicKey(bytes.NewReader(key.Content))
+	if err != nil {
+		return errors.Wrap(err, "creating new public key")
 	}
 
 	data := v.HashedRekordObj.Data
@@ -173,8 +190,20 @@ func (v V001Entry) validate() error {
 	}
 
 	hash := data.Hash
+	if hash == nil {
+		return errors.New("missing hash")
+	}
 	if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
 		return errors.New("invalid value for hash")
+	}
+
+	decoded, err := hex.DecodeString(*hash.Value)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%d\n", len([]byte(*hash.Value)))
+	if err = v.sigObj.Verify(nil, v.keyObj, options.WithDigest(decoded)); err != nil {
+		return errors.Wrap(err, "verifying signature")
 	}
 
 	return nil
@@ -185,15 +214,15 @@ func (v V001Entry) Attestation() (string, []byte) {
 }
 
 func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
-	returnVal := models.HashedRekord{}
+	returnVal := models.Hashedrekord{}
 	re := V001Entry{}
 
 	// we will need artifact, public-key, signature
-	re.HashedRekordObj.Data = &models.HashedRekordV001SchemaData{}
+	re.HashedRekordObj.Data = &models.HashedrekordV001SchemaData{}
 
 	var err error
 
-	re.HashedRekordObj.Signature = &models.HashedRekordV001SchemaSignature{}
+	re.HashedRekordObj.Signature = &models.HashedrekordV001SchemaSignature{}
 	sigBytes := props.SignatureBytes
 	if sigBytes == nil {
 		if props.SignaturePath == nil {
@@ -206,7 +235,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	}
 	re.HashedRekordObj.Signature.Content = strfmt.Base64(sigBytes)
 
-	re.HashedRekordObj.Signature.PublicKey = &models.HashedRekordV001SchemaSignaturePublicKey{}
+	re.HashedRekordObj.Signature.PublicKey = &models.HashedrekordV001SchemaSignaturePublicKey{}
 	publicKeyBytes := props.PublicKeyBytes
 	if publicKeyBytes == nil {
 		if props.PublicKeyPath == nil {
@@ -219,8 +248,8 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	}
 	re.HashedRekordObj.Signature.PublicKey.Content = strfmt.Base64(publicKeyBytes)
 
-	re.HashedRekordObj.Data.Hash = &models.HashedRekordV001SchemaDataHash{
-		Algorithm: swag.String(models.HashedRekordV001SchemaDataHashAlgorithmSha256),
+	re.HashedRekordObj.Data.Hash = &models.HashedrekordV001SchemaDataHash{
+		Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
 		Value:     swag.String(props.ArtifactHash),
 	}
 

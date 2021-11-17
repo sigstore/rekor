@@ -664,8 +664,8 @@ func init() {
         }
       ]
     },
-    "hashed_rekord": {
-      "description": "Rekord object",
+    "hashedrekord": {
+      "description": "Hashed Rekord object",
       "type": "object",
       "allOf": [
         {
@@ -683,7 +683,7 @@ func init() {
             },
             "spec": {
               "type": "object",
-              "$ref": "pkg/types/hashed_rekord/hashed_rekord_schema.json"
+              "$ref": "pkg/types/hashedrekord/hashedrekord_schema.json"
             }
           },
           "additionalProperties": false
@@ -1483,7 +1483,7 @@ func init() {
         }
       }
     },
-    "HashedRekordV001SchemaData": {
+    "HashedrekordV001SchemaData": {
       "description": "Information about the content associated with the entry",
       "type": "object",
       "properties": {
@@ -1510,7 +1510,7 @@ func init() {
         }
       }
     },
-    "HashedRekordV001SchemaDataHash": {
+    "HashedrekordV001SchemaDataHash": {
       "description": "Specifies the hash algorithm and value for the content",
       "type": "object",
       "required": [
@@ -1531,7 +1531,7 @@ func init() {
         }
       }
     },
-    "HashedRekordV001SchemaSignature": {
+    "HashedrekordV001SchemaSignature": {
       "description": "Information about the detached signature associated with the entry",
       "type": "object",
       "properties": {
@@ -1553,7 +1553,7 @@ func init() {
         }
       }
     },
-    "HashedRekordV001SchemaSignaturePublicKey": {
+    "HashedrekordV001SchemaSignaturePublicKey": {
       "description": "The public key that can verify the signature",
       "type": "object",
       "properties": {
@@ -2642,19 +2642,44 @@ func init() {
       "$schema": "http://json-schema.org/draft-07/schema",
       "$id": "http://rekor.sigstore.dev/types/alpine/alpine_v0_0_1_schema.json"
     },
-    "hashedRekordSchema": {
+    "hashedrekord": {
+      "description": "Hashed Rekord object",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "$ref": "#/definitions/hashedrekordSchema"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "hashedrekordSchema": {
       "description": "Schema for Rekord objects",
       "type": "object",
       "title": "Rekor Schema",
       "oneOf": [
         {
-          "$ref": "#/definitions/hashedRekordV001Schema"
+          "$ref": "#/definitions/hashedrekordV001Schema"
         }
       ],
       "$schema": "http://json-schema.org/draft-07/schema",
-      "$id": "http://rekor.sigstore.dev/types/rekord/rekord_schema.json"
+      "$id": "http://rekor.sigstore.dev/types/hashedrekord/hasehedrekord_schema.json"
     },
-    "hashedRekordV001Schema": {
+    "hashedrekordV001Schema": {
       "description": "Schema for Hashed Rekord object",
       "type": "object",
       "title": "Hashed Rekor v0.0.1 Schema",
@@ -2715,31 +2740,6 @@ func init() {
       },
       "$schema": "http://json-schema.org/draft-07/schema",
       "$id": "http://rekor.sigstore.dev/types/rekord/rekord_v0_0_1_schema.json"
-    },
-    "hashed_rekord": {
-      "description": "Rekord object",
-      "type": "object",
-      "allOf": [
-        {
-          "$ref": "#/definitions/ProposedEntry"
-        },
-        {
-          "required": [
-            "apiVersion",
-            "spec"
-          ],
-          "properties": {
-            "apiVersion": {
-              "type": "string",
-              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
-            },
-            "spec": {
-              "$ref": "#/definitions/hashedRekordSchema"
-            }
-          },
-          "additionalProperties": false
-        }
-      ]
     },
     "helm": {
       "description": "Helm chart",

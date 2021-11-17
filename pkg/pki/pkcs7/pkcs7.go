@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/sassoftware/relic/lib/pkcs7"
+	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
 
 // EmailAddressOID defined by https://oidref.com/1.2.840.113549.1.9.1
@@ -105,7 +106,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(r io.Reader, k interface{}) error {
+func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOption) error {
 	if len(*s.raw) == 0 {
 		return fmt.Errorf("PKCS7 signature has not been initialized")
 	}

@@ -287,3 +287,57 @@ Body: {
 }
 
 ```
+
+
+## Hashed rekord
+
+This is similar to a rekord type, but allows hashed data instead of supplying the full content that was signed. This is suitable for uploading signatures on large payloads. This is only compatible with x509 / PKIX signature types.
+
+Generate a keypair with:
+
+```console
+$ openssl ecparam -genkey -name prime256v1 > ec_private.pem
+$ openssl ec -in ec_private.pem -pubout > ec_public.pem
+read EC key
+writing EC key
+```
+
+Sign the file with:
+
+```console
+$ openssl dgst -sha256 -sign ec_private.pem -out README.md.sig README.md
+```
+
+Upload it to rekor with:
+
+```console
+$ ./rekor-cli upload --type hashedrekord:0.0.1 --artifact-hash $(sha256sum  README.md | awk '{print $1}') --signature README.md.sig --pki-format=x509 --public-key=ec_public.pem
+Created entry at index 12, available at: https://rekor.sigstore.dev/api/v1/log/entries/31a51c1bc20da83b66b2f24899184b85dbf8261c2de8571479165619ad87cd5d
+```
+
+View the entry with:
+
+```console
+$ rekor-cli get --uuid=31a51c1bc20da83b66b2f24899184b85dbf8261c2de8571479165619ad87cd5d
+LogID: b3e217db795022552080ed8b22596131c63f3aa198e83450f3dba9e686633641
+Index: 12
+IntegratedTime: 2021-11-17T21:59:49Z
+UUID: 31a51c1bc20da83b66b2f24899184b85dbf8261c2de8571479165619ad87cd5d
+Body: {
+  "HashedRekordObj": {
+    "data": {
+      "hash": {
+        "algorithm": "sha256",
+        "value": "9249e5dfa2ede1c5bd89c49bf9beaf3e9afda2d961dea7cda7f639210179cd16"
+      }
+    },
+    "signature": {
+      "content": "MEQCIG9s7GVWH67OkeXPQvM/XAcLW7N0xiFZWez95uR+GlXyAiBW+DPRaYvgtpQglQLtqujwb+xQBd8I70Vk/2vDB+G3uQ==",
+      "publicKey": {
+        "content": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFR0JPTVdDanViVTVldkJ0OGcxWTZTR1ZoZ29OVwpjY2lrbHlpTEJQajQ5Um40WVFhTjRJS0xySi9nQlROU2tOREdQbHFvNHVjTVg3L21PZmlBNkVHS09BPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg=="
+      }
+    }
+  }
+}
+
+```

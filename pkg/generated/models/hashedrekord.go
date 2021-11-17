@@ -32,10 +32,10 @@ import (
 	"github.com/go-openapi/validate"
 )
 
-// HashedRekord Rekord object
+// Hashedrekord Hashed Rekord object
 //
-// swagger:model hashed_rekord
-type HashedRekord struct {
+// swagger:model hashedrekord
+type Hashedrekord struct {
 
 	// api version
 	// Required: true
@@ -44,20 +44,20 @@ type HashedRekord struct {
 
 	// spec
 	// Required: true
-	Spec HashedRekordSchema `json:"spec"`
+	Spec HashedrekordSchema `json:"spec"`
 }
 
 // Kind gets the kind of this subtype
-func (m *HashedRekord) Kind() string {
-	return "hashed_rekord"
+func (m *Hashedrekord) Kind() string {
+	return "hashedrekord"
 }
 
 // SetKind sets the kind of this subtype
-func (m *HashedRekord) SetKind(val string) {
+func (m *Hashedrekord) SetKind(val string) {
 }
 
 // UnmarshalJSON unmarshals this object with a polymorphic type from a JSON structure
-func (m *HashedRekord) UnmarshalJSON(raw []byte) error {
+func (m *Hashedrekord) UnmarshalJSON(raw []byte) error {
 	var data struct {
 
 		// api version
@@ -67,7 +67,7 @@ func (m *HashedRekord) UnmarshalJSON(raw []byte) error {
 
 		// spec
 		// Required: true
-		Spec HashedRekordSchema `json:"spec"`
+		Spec HashedrekordSchema `json:"spec"`
 	}
 	buf := bytes.NewBuffer(raw)
 	dec := json.NewDecoder(buf)
@@ -90,7 +90,7 @@ func (m *HashedRekord) UnmarshalJSON(raw []byte) error {
 		return err
 	}
 
-	var result HashedRekord
+	var result Hashedrekord
 
 	if base.Kind != result.Kind() {
 		/* Not the type we're looking for. */
@@ -106,7 +106,7 @@ func (m *HashedRekord) UnmarshalJSON(raw []byte) error {
 }
 
 // MarshalJSON marshals this object with a polymorphic type to a JSON structure
-func (m HashedRekord) MarshalJSON() ([]byte, error) {
+func (m Hashedrekord) MarshalJSON() ([]byte, error) {
 	var b1, b2, b3 []byte
 	var err error
 	b1, err = json.Marshal(struct {
@@ -118,7 +118,7 @@ func (m HashedRekord) MarshalJSON() ([]byte, error) {
 
 		// spec
 		// Required: true
-		Spec HashedRekordSchema `json:"spec"`
+		Spec HashedrekordSchema `json:"spec"`
 	}{
 
 		APIVersion: m.APIVersion,
@@ -141,8 +141,8 @@ func (m HashedRekord) MarshalJSON() ([]byte, error) {
 	return swag.ConcatJSON(b1, b2, b3), nil
 }
 
-// Validate validates this hashed rekord
-func (m *HashedRekord) Validate(formats strfmt.Registry) error {
+// Validate validates this hashedrekord
+func (m *Hashedrekord) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateAPIVersion(formats); err != nil {
@@ -159,7 +159,7 @@ func (m *HashedRekord) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *HashedRekord) validateAPIVersion(formats strfmt.Registry) error {
+func (m *Hashedrekord) validateAPIVersion(formats strfmt.Registry) error {
 
 	if err := validate.Required("apiVersion", "body", m.APIVersion); err != nil {
 		return err
@@ -172,7 +172,7 @@ func (m *HashedRekord) validateAPIVersion(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *HashedRekord) validateSpec(formats strfmt.Registry) error {
+func (m *Hashedrekord) validateSpec(formats strfmt.Registry) error {
 
 	if m.Spec == nil {
 		return errors.Required("spec", "body", nil)
@@ -181,8 +181,8 @@ func (m *HashedRekord) validateSpec(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validate this hashed rekord based on the context it is used
-func (m *HashedRekord) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validate this hashedrekord based on the context it is used
+func (m *Hashedrekord) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if len(res) > 0 {
@@ -192,7 +192,7 @@ func (m *HashedRekord) ContextValidate(ctx context.Context, formats strfmt.Regis
 }
 
 // MarshalBinary interface implementation
-func (m *HashedRekord) MarshalBinary() ([]byte, error) {
+func (m *Hashedrekord) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -200,8 +200,8 @@ func (m *HashedRekord) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *HashedRekord) UnmarshalBinary(b []byte) error {
-	var res HashedRekord
+func (m *Hashedrekord) UnmarshalBinary(b []byte) error {
+	var res Hashedrekord
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}
