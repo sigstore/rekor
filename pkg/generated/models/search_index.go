@@ -41,7 +41,7 @@ type SearchIndex struct {
 	Email strfmt.Email `json:"email,omitempty"`
 
 	// hash
-	// Pattern: ^(sha256:)?[0-9a-fA-F]{64}$
+	// Pattern: ^(sha256:)?[0-9a-fA-F]{64}$|^(sha1:)?[0-9a-fA-F]{40}$
 	Hash string `json:"hash,omitempty"`
 
 	// public key
@@ -87,7 +87,7 @@ func (m *SearchIndex) validateHash(formats strfmt.Registry) error {
 		return nil
 	}
 
-	if err := validate.Pattern("hash", "body", m.Hash, `^(sha256:)?[0-9a-fA-F]{64}$`); err != nil {
+	if err := validate.Pattern("hash", "body", m.Hash, `^(sha256:)?[0-9a-fA-F]{64}$|^(sha1:)?[0-9a-fA-F]{40}$`); err != nil {
 		return err
 	}
 
