@@ -108,28 +108,19 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 		return nil, types.ValidationError(err)
 	}
 
-	artifactFactory, err := pki.NewArtifactFactory(pki.X509)
-	if err != nil {
-		return nil, err
+	if v.sigObj == nil {
+		return nil, errors.New("signature object not initialized before canonicalization")
 	}
 
-	signature, err := artifactFactory.NewSignature(bytes.NewReader(v.HashedRekordObj.Signature.Content))
-	if err != nil {
-		return nil, err
+	if v.keyObj == nil {
+		return nil, errors.New("key object not initialized before canonicalization")
 	}
-	v.sigObj = signature
-
-	key, err := artifactFactory.NewPublicKey(bytes.NewReader(v.HashedRekordObj.Signature.PublicKey.Content))
-	if err != nil {
-		return nil, err
-	}
-	v.keyObj = key
 
 	canonicalEntry := models.HashedrekordV001Schema{}
 
 	// need to canonicalize signature & key content
 	canonicalEntry.Signature = &models.HashedrekordV001SchemaSignature{}
-
+	var err error
 	canonicalEntry.Signature.Content, err = v.sigObj.CanonicalValue()
 	if err != nil {
 		return nil, err
@@ -151,19 +142,14 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	rekordObj.APIVersion = swag.String(APIVERSION)
 	rekordObj.Spec = &canonicalEntry
 
-	bytes, err := json.Marshal(&rekordObj)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes, nil
+	return json.Marshal(&rekordObj)
 }
 
 // validate performs cross-field validation for fields in object
-func (v V001Entry) validate() error {
+func (v *V001Entry) validate() error {
 	sig := v.HashedRekordObj.Signature
 	if sig == nil {
-		return errors.New("missing signature")
+		return types.ValidationError(errors.New("missing signature"))
 	}
 	// Hashed rekord type only works for x509 signature types
 	artifactFactory, err := pki.NewArtifactFactory(pki.X509)
@@ -172,38 +158,37 @@ func (v V001Entry) validate() error {
 	}
 	v.sigObj, err = artifactFactory.NewSignature(bytes.NewReader(sig.Content))
 	if err != nil {
-		return types.ValidationError(err)
+		return errors.Wrap(err, "creating new signature object")
 	}
 
 	key := sig.PublicKey
 	if key == nil {
-		return errors.New("missing public key")
+		return types.ValidationError(errors.New("missing public key"))
 	}
 	v.keyObj, err = artifactFactory.NewPublicKey(bytes.NewReader(key.Content))
 	if err != nil {
-		return errors.Wrap(err, "creating new public key")
+		return errors.Wrap(err, "creating new public key object")
 	}
 
 	data := v.HashedRekordObj.Data
 	if data == nil {
-		return errors.New("missing data")
+		return types.ValidationError(errors.New("missing data"))
 	}
 
 	hash := data.Hash
 	if hash == nil {
-		return errors.New("missing hash")
+		return types.ValidationError(errors.New("missing hash"))
 	}
 	if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
-		return errors.New("invalid value for hash")
+		return types.ValidationError(errors.New("invalid value for hash"))
 	}
 
 	decoded, err := hex.DecodeString(*hash.Value)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%d\n", len([]byte(*hash.Value)))
 	if err = v.sigObj.Verify(nil, v.keyObj, options.WithDigest(decoded)); err != nil {
-		return errors.Wrap(err, "verifying signature")
+		return types.ValidationError(errors.Wrap(err, "verifying signature"))
 	}
 
 	return nil
