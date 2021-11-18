@@ -22,8 +22,7 @@ import (
 	"time"
 
 	"github.com/google/trillian/merkle/logverifier"
-	"github.com/google/trillian/merkle/rfc6962/hasher"
-	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
+	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/pkg/errors"
 
 	"google.golang.org/grpc/codes"
@@ -216,7 +215,7 @@ func (t *TrillianClient) getLeafAndProofByIndex(index int64) *Response {
 		})
 
 	if resp != nil && resp.Proof != nil {
-		logVerifier := logverifier.New(hasher.DefaultHasher)
+		logVerifier := logverifier.New(rfc6962.DefaultHasher)
 		if err := logVerifier.VerifyInclusionProof(index, int64(root.TreeSize), resp.Proof.Hashes, root.RootHash, resp.GetLeaf().MerkleLeafHash); err != nil {
 			return &Response{
 				status: status.Code(err),

@@ -25,7 +25,7 @@ import (
 	"strconv"
 
 	"github.com/google/trillian/merkle/logverifier"
-	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
+	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
