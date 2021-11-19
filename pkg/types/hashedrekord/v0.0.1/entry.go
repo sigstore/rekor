@@ -158,7 +158,7 @@ func (v *V001Entry) validate() error {
 	}
 	v.sigObj, err = artifactFactory.NewSignature(bytes.NewReader(sig.Content))
 	if err != nil {
-		return errors.Wrap(err, "creating new signature object")
+		return types.ValidationError(err)
 	}
 
 	key := sig.PublicKey
@@ -167,7 +167,7 @@ func (v *V001Entry) validate() error {
 	}
 	v.keyObj, err = artifactFactory.NewPublicKey(bytes.NewReader(key.Content))
 	if err != nil {
-		return errors.Wrap(err, "creating new public key object")
+		return types.ValidationError(err)
 	}
 
 	data := v.HashedRekordObj.Data
