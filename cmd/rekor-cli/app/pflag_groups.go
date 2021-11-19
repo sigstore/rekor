@@ -109,11 +109,11 @@ func validateArtifactPFlags(uuidValid, indexValid bool) error {
 	}
 
 	// if neither --entry or --artifact were given, then a reference to a uuid or index is needed
-	if viper.GetString("entry") == "" && viper.GetString("artifact") == "" {
+	if viper.GetString("entry") == "" && viper.GetString("artifact") == "" && viper.GetString("artifact-hash") == "" {
 		if (uuidGiven && uuidValid) || (indexGiven && indexValid) {
 			return nil
 		}
-		return errors.New("either 'entry' or 'artifact' must be specified")
+		return errors.New("either 'entry' or 'artifact' or 'artifact-hash' must be specified")
 	}
 
 	return nil

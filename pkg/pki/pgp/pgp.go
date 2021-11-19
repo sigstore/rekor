@@ -28,6 +28,8 @@ import (
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/openpgp/packet"
+
+	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
 
 // Signature Signature that follows the PGP standard; supports both armored & binary detached signatures
@@ -130,7 +132,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(r io.Reader, k interface{}) error {
+func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOption) error {
 	if len(s.signature) == 0 {
 		return fmt.Errorf("PGP signature has not been initialized")
 	}

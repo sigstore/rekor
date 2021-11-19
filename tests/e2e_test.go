@@ -136,6 +136,35 @@ func TestUploadVerifyRekord(t *testing.T) {
 	outputContains(t, out, "Inclusion Proof:")
 }
 
+func TestUploadVerifyHashedRekord(t *testing.T) {
+
+	// Create a random artifact and sign it.
+	artifactPath := filepath.Join(t.TempDir(), "artifact")
+	sigPath := filepath.Join(t.TempDir(), "signature.asc")
+
+	createdX509SignedArtifact(t, artifactPath, sigPath)
+	dataBytes, _ := ioutil.ReadFile(artifactPath)
+	h := sha256.Sum256(dataBytes)
+	dataSHA := hex.EncodeToString(h[:])
+
+	// Write the public key to a file
+	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
+	if err := ioutil.WriteFile(pubPath, []byte(rsaCert), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify should fail initially
+	runCliErr(t, "verify", "--type=hashedrekord", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+
+	// It should upload successfully.
+	out := runCli(t, "upload", "--type=hashedrekord", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+	outputContains(t, out, "Created entry at")
+
+	// Now we should be able to verify it.
+	out = runCli(t, "verify", "--type=hashedrekord", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+	outputContains(t, out, "Inclusion Proof:")
+}
+
 func TestUploadVerifyRpm(t *testing.T) {
 
 	// Create a random rpm and sign it.

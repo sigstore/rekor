@@ -85,7 +85,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(r io.Reader, k interface{}) error {
+func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOption) error {
 	if s.signature == nil {
 		return fmt.Errorf("minisign signature has not been initialized")
 	}

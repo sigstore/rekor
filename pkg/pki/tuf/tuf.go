@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"time"
 
+	sigsig "github.com/sigstore/sigstore/pkg/signature"
 	cjson "github.com/tent/canonical-json-go"
 	"github.com/theupdateframework/go-tuf/data"
 	"github.com/theupdateframework/go-tuf/verify"
@@ -80,7 +81,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(_ io.Reader, k interface{}) error {
+func (s Signature) Verify(_ io.Reader, k interface{}, opts ...sigsig.VerifyOption) error {
 	key, ok := k.(*PublicKey)
 	if !ok {
 		return fmt.Errorf("invalid public key type for: %v", k)
