@@ -29,7 +29,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/google/trillian"
-	rfc6962 "github.com/google/trillian/merkle/rfc6962/hasher"
+	"github.com/google/trillian/merkle/rfc6962"
 	ttypes "github.com/google/trillian/types"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
