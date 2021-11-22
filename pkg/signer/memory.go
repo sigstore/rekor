@@ -98,7 +98,7 @@ func NewTimestampingCertWithChain(ctx context.Context, pub crypto.PublicKey, sig
 		NotAfter:     time.Now().AddDate(10, 0, 0),
 		SubjectKeyId: []byte{1, 2, 3, 4, 6},
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
-		KeyUsage:     x509.KeyUsageContentCommitment,
+		KeyUsage:     x509.KeyUsageDigitalSignature,
 		IsCA:         false,
 		ExtraExtensions: []pkix.Extension{
 			{
