@@ -18,7 +18,7 @@ package util
 import (
 	"strings"
 
-	"github.com/go-playground/validator"
+	validator "github.com/go-playground/validator/v10"
 )
 
 // validateSHA256Value ensures that the supplied string matches the following format:

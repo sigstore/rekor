@@ -24,7 +24,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/go-playground/validator"
+	validator "github.com/go-playground/validator/v10"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/openpgp/packet"
