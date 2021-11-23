@@ -85,7 +85,8 @@ test:
 	go test ./...
 
 fuzz: $(GO-FUZZ-BUILD)
-	$(GO-FUZZ-BUILD) ./tests/fuzz/...
+	# This is a hack because of this bug https://github.com/golang/go/issues/44129
+	cd tests/fuzz;GOFLAGS=-mod=mod $(GO-FUZZ-BUILD);cd ../../;go mod tidy
 
 clean:
 	rm -rf dist
