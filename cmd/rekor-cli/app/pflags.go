@@ -27,7 +27,7 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/go-playground/validator"
+	validator "github.com/go-playground/validator/v10"
 	"github.com/pkg/errors"
 )
 
