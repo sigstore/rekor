@@ -199,11 +199,19 @@ func (v *V001Entry) validate() error {
 }
 
 func (v *V001Entry) Attestation() (string, []byte) {
-	if len(v.env.Payload) > viper.GetInt("max_attestation_size") {
+	decodedLen := base64.StdEncoding.DecodedLen(len(v.env.Payload))
+	if decodedLen > viper.GetInt("max_attestation_size") {
 		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", len(v.env.Payload), viper.GetInt("max_attestation_size"))
 		return "", nil
 	}
-	return v.env.PayloadType, []byte(v.env.Payload)
+
+	decodedPayload, err := base64.StdEncoding.DecodeString(v.env.Payload)
+	if err != nil {
+		log.Logger.Infof("skipping attestation storage, couldn't base64 decode payload: %v", err)
+		return "", nil
+	}
+
+	return v.env.PayloadType, decodedPayload
 }
 
 type verifier struct {
