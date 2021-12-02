@@ -36,7 +36,7 @@ require (
 	github.com/prometheus/procfs v0.7.1 // indirect
 	github.com/rs/cors v1.8.0
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
-	github.com/secure-systems-lab/go-securesystemslib v0.1.0
+	github.com/secure-systems-lab/go-securesystemslib v0.2.0
 	github.com/sigstore/sigstore v0.0.0-20210729211320-56a91f560f44
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
