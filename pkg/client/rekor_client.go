@@ -25,11 +25,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-func GetRekorClient(rekorServerURL string) (*client.Rekor, error) {
+func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error) {
 	url, err := url.Parse(rekorServerURL)
 	if err != nil {
 		return nil, err
 	}
+	o := makeOptions(opts...)
 
 	rt := httptransport.New(url.Host, client.DefaultBasePath, []string{url.Scheme})
 	rt.Consumers["application/yaml"] = YamlConsumer()
@@ -42,6 +43,8 @@ func GetRekorClient(rekorServerURL string) (*client.Rekor, error) {
 	if viper.GetString("api-key") != "" {
 		rt.DefaultAuthentication = httptransport.APIKeyAuth("apiKey", "query", viper.GetString("api-key"))
 	}
+
+	rt.Transport = createRoundTripper(rt.Transport, o)
 
 	registry := strfmt.Default
 	registry.Add("signedCheckpoint", &util.SignedNote{}, util.SignedCheckpointValidator)

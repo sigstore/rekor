@@ -58,3 +58,25 @@ func TestAPIKey(t *testing.T) {
 	}
 	_, _ = client.Pubkey.GetPublicKey(nil)
 }
+
+func TestGetRekorClientWithOptions(t *testing.T) {
+	expectedUserAgent := "test User-Agent"
+	testServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			file := []byte{}
+
+			got := r.UserAgent()
+			if got != expectedUserAgent {
+				t.Errorf("wanted User-Agent %q, got %q", expectedUserAgent, got)
+			}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(file)
+		}))
+	defer testServer.Close()
+
+	client, err := GetRekorClient(testServer.URL, WithUserAgent(expectedUserAgent))
+	if err != nil {
+		t.Error(err)
+	}
+	_, _ = client.Tlog.GetLogInfo(nil)
+}
