@@ -25,6 +25,7 @@ import (
 )
 
 func TestAPIKey(t *testing.T) {
+	t.Parallel()
 	pkRequestReceived := false
 	logRequestReceived := false
 	testServer := httptest.NewServer(http.HandlerFunc(
@@ -78,6 +79,7 @@ func TestAPIKey(t *testing.T) {
 }
 
 func TestGetRekorClientWithOptions(t *testing.T) {
+	t.Parallel()
 	expectedUserAgent := "test User-Agent"
 	requestReceived := false
 	testServer := httptest.NewServer(http.HandlerFunc(
