@@ -25,16 +25,21 @@ import (
 )
 
 func TestAPIKey(t *testing.T) {
+	t.Parallel()
+	pkRequestReceived := false
+	logRequestReceived := false
 	testServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			file := []byte{}
 
 			switch {
 			case strings.HasPrefix(r.URL.Path, "/api/v1/log/publicKey"):
+				pkRequestReceived = true
 				if r.URL.Query().Get("apiKey") != "" {
 					t.Errorf("API key sent but not expected: %v", r.URL.Query().Get("apiKey"))
 				}
 			case strings.HasPrefix(r.URL.Path, "/api/v1/log"):
+				logRequestReceived = true
 				if r.URL.Query().Get("apiKey") == "" {
 					t.Errorf("API key expected but not sent")
 				}
@@ -44,25 +49,42 @@ func TestAPIKey(t *testing.T) {
 		}))
 	defer testServer.Close()
 
-	viper.Set("api-key", "thisIsAnAPIKey")
-	client, err := GetRekorClient(testServer.URL)
-	if err != nil {
-		t.Error(err)
-	}
-	_, _ = client.Tlog.GetLogInfo(nil)
+	t.Run("GetLogInfo", func(t *testing.T) {
+		logRequestReceived = false
+		viper.Set("api-key", "thisIsAnAPIKey")
+		client, err := GetRekorClient(testServer.URL)
+		if err != nil {
+			t.Error(err)
+		}
+		_, _ = client.Tlog.GetLogInfo(nil)
+		if !logRequestReceived {
+			t.Fatal("no GetLogInfo requests were received")
+		}
+	})
 
-	viper.Set("api-key", "")
-	client, err = GetRekorClient(testServer.URL)
-	if err != nil {
-		t.Error(err)
-	}
-	_, _ = client.Pubkey.GetPublicKey(nil)
+	t.Run("GetPublicKey", func(t *testing.T) {
+		pkRequestReceived = false
+		viper.Set("api-key", "")
+		client, err := GetRekorClient(testServer.URL)
+		if err != nil {
+			t.Error(err)
+		}
+		_, _ = client.Pubkey.GetPublicKey(nil)
+		if !pkRequestReceived {
+			t.Fatal("no GetPublicKey requests were received")
+		}
+
+	})
+
 }
 
 func TestGetRekorClientWithOptions(t *testing.T) {
+	t.Parallel()
 	expectedUserAgent := "test User-Agent"
+	requestReceived := false
 	testServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
+			requestReceived = true
 			file := []byte{}
 
 			got := r.UserAgent()
@@ -79,4 +101,7 @@ func TestGetRekorClientWithOptions(t *testing.T) {
 		t.Error(err)
 	}
 	_, _ = client.Tlog.GetLogInfo(nil)
+	if !requestReceived {
+		t.Fatal("no requests were received")
+	}
 }
