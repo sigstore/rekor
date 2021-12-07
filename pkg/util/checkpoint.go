@@ -87,7 +87,7 @@ func (c *Checkpoint) UnmarshalCheckpoint(data []byte) error {
 		Size:      size,
 		Hash:      h,
 	}
-	if len(l) >= 5 {
+	if len(l) >= 3 {
 		for _, line := range l[3:] {
 			if len(line) == 0 {
 				break
@@ -149,6 +149,7 @@ func (r *SignedCheckpoint) SetTimestamp(timestamp uint64) {
 		}
 	}
 	r.OtherContent = append(r.OtherContent, fmt.Sprintf("Timestamp: %d", timestamp))
+	r.SignedNote = SignedNote{Note: string(r.Checkpoint.String())}
 }
 
 func (r *SignedCheckpoint) GetTimestamp() uint64 {
