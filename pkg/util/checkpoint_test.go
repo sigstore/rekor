@@ -23,6 +23,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -274,16 +275,18 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 		},
 	} {
 		t.Run(string(test.c.Ecosystem), func(t *testing.T) {
-			text, _ := test.c.MarshalCheckpoint()
-			sc := &SignedNote{
-				Note: string(text),
+			sth, err := CreateSignedCheckpoint(test.c)
+			if err != nil {
+				t.Fatalf("error creating signed checkpoint")
 			}
+			time := uint64(time.Now().UnixNano())
+			sth.SetTimestamp(time)
 			signer, _ := signature.LoadSigner(test.signer, crypto.SHA256)
 			if _, ok := test.signer.(*rsa.PrivateKey); ok {
 				signer, _ = signature.LoadRSAPSSSigner(test.signer.(*rsa.PrivateKey), crypto.SHA256, test.opts.(*rsa.PSSOptions))
 			}
 
-			_, err := sc.Sign(test.identity, signer, options.WithCryptoSignerOpts(test.opts))
+			_, err = sth.Sign(test.identity, signer, options.WithCryptoSignerOpts(test.opts))
 			if (err != nil) != test.wantSignErr {
 				t.Fatalf("signing test failed: wantSignErr %v, err %v", test.wantSignErr, err)
 			}
@@ -293,28 +296,25 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 					verifier, _ = signature.LoadRSAPSSVerifier(test.pubKey.(*rsa.PublicKey), crypto.SHA256, test.opts.(*rsa.PSSOptions))
 				}
 
-				if !sc.Verify(verifier) != test.wantVerifyErr {
-					t.Fatalf("verification test failed %v", sc.Verify(verifier))
+				if !sth.Verify(verifier) != test.wantVerifyErr {
+					t.Fatalf("verification test failed %v", sth.Verify(verifier))
 				}
-				if _, err := sc.Sign("second", signer, options.WithCryptoSignerOpts(test.opts)); err != nil {
+				if _, err := sth.Sign("second", signer, options.WithCryptoSignerOpts(test.opts)); err != nil {
 					t.Fatalf("adding second signature failed: %v", err)
 				}
-				if len(sc.Signatures) != 2 {
-					t.Fatalf("expected two signatures on checkpoint, only found %v", len(sc.Signatures))
+				if len(sth.Signatures) != 2 {
+					t.Fatalf("expected two signatures on checkpoint, only found %v", len(sth.Signatures))
 				}
 				// finally, test marshalling object and unmarshalling
-				marshalledSc, err := sc.MarshalText()
+				marshalledSc, err := sth.MarshalText()
 				if err != nil {
 					t.Fatalf("error during marshalling: %v", err)
 				}
-				text, _ = test.c.MarshalCheckpoint()
-				sc2 := &SignedNote{
-					Note: string(text),
-				}
-				if err := sc2.UnmarshalText(marshalledSc); err != nil {
+				sth2, _ := CreateSignedCheckpoint(test.c)
+				if err := sth2.UnmarshalText(marshalledSc); err != nil {
 					t.Fatalf("error unmarshalling just marshalled object %v\n%v", err, string(marshalledSc))
 				}
-				if diff := cmp.Diff(sc, sc2); len(diff) != 0 {
+				if diff := cmp.Diff(sth, sth2); len(diff) != 0 {
 					t.Fatalf("UnmarshalText = diff %s", diff)
 				}
 			}
