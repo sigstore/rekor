@@ -36,7 +36,7 @@ require (
 	github.com/prometheus/procfs v0.7.1 // indirect
 	github.com/rs/cors v1.8.0
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
-	github.com/secure-systems-lab/go-securesystemslib v0.2.0
+	github.com/secure-systems-lab/go-securesystemslib v0.3.0
 	github.com/sigstore/sigstore v0.0.0-20210729211320-56a91f560f44
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
@@ -51,9 +51,9 @@ require (
 	go.uber.org/goleak v1.1.11-0.20210813005559-691160354723
 	go.uber.org/zap v1.19.1
 	gocloud.dev v0.24.0
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
+	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871
 	golang.org/x/mod v0.5.1
-	golang.org/x/net v0.0.0-20210825183410-e898025ed96a
+	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20211112193437-faf0a1b62c6b // indirect
 	golang.org/x/tools v0.1.7 // indirect
