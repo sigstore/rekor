@@ -47,6 +47,7 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/google/go-cmp/cmp"
 	"github.com/in-toto/in-toto-golang/in_toto"
+	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/client"
 	genclient "github.com/sigstore/rekor/pkg/generated/client"
@@ -377,18 +378,18 @@ func TestIntoto(t *testing.T) {
 	it := in_toto.ProvenanceStatement{
 		StatementHeader: in_toto.StatementHeader{
 			Type:          in_toto.StatementInTotoV01,
-			PredicateType: in_toto.PredicateSLSAProvenanceV01,
+			PredicateType: slsa.PredicateSLSAProvenance,
 			Subject: []in_toto.Subject{
 				{
 					Name: "foobar",
-					Digest: in_toto.DigestSet{
+					Digest: slsa.DigestSet{
 						"foo": "bar",
 					},
 				},
 			},
 		},
-		Predicate: in_toto.ProvenancePredicate{
-			Builder: in_toto.ProvenanceBuilder{
+		Predicate: slsa.ProvenancePredicate{
+			Builder: slsa.ProvenanceBuilder{
 				ID: "foo" + id,
 			},
 		},
