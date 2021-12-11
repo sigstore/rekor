@@ -162,16 +162,24 @@ type IntotoSigner struct {
 
 var _ dsse.SignVerifier = &IntotoSigner{}
 
-func (it *IntotoSigner) Sign(data []byte) ([]byte, string, error) {
+func (it *IntotoSigner) Sign(data []byte) ([]byte, error) {
 	h := sha256.Sum256(data)
 	sig, err := it.priv.Sign(rand.Reader, h[:], crypto.SHA256)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-	return sig, "", nil
+	return sig, nil
 }
 
-func (it *IntotoSigner) Verify(_ string, data, sig []byte) error {
+func (it *IntotoSigner) KeyID() (string, error) {
+	return "", nil
+}
+
+func (it *IntotoSigner) Public() crypto.PublicKey {
+	return it.priv.Public()
+}
+
+func (it *IntotoSigner) Verify(data, sig []byte) error {
 	h := sha256.Sum256(data)
 	ok := ecdsa.VerifyASN1(&it.priv.PublicKey, h[:], sig)
 	if ok {

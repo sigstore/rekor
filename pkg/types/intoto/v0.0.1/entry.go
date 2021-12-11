@@ -41,7 +41,6 @@ import (
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/intoto"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
@@ -179,7 +178,10 @@ func (v *V001Entry) validate() error {
 	if err != nil {
 		return err
 	}
-	dsseVerifier, err := dsse.NewEnvelopeSigner(&verifier{v: vfr})
+	dsseVerifier, err := dsse.NewEnvelopeSigner(&verifier{
+		v:   vfr,
+		pub: pk,
+	})
 	if err != nil {
 		return err
 	}
@@ -192,7 +194,7 @@ func (v *V001Entry) validate() error {
 		return err
 	}
 
-	if err := dsseVerifier.Verify(&v.env); err != nil {
+	if _, err := dsseVerifier.Verify(&v.env); err != nil {
 		return err
 	}
 	return nil
@@ -207,31 +209,31 @@ func (v *V001Entry) Attestation() (string, []byte) {
 }
 
 type verifier struct {
-	s signature.Signer
-	v signature.Verifier
+	s   signature.Signer
+	v   signature.Verifier
+	pub crypto.PublicKey
 }
 
-func (v *verifier) Sign(data []byte) (sig []byte, pubKey string, err error) {
+func (v *verifier) KeyID() (string, error) {
+	return "", nil
+}
+
+func (v *verifier) Public() crypto.PublicKey {
+	return v.pub
+}
+
+func (v *verifier) Sign(data []byte) (sig []byte, err error) {
 	if v.s == nil {
-		return nil, "", errors.New("nil signer")
+		return nil, errors.New("nil signer")
 	}
 	sig, err = v.s.SignMessage(bytes.NewReader(data), options.WithCryptoSignerOpts(crypto.SHA256))
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-	pk, err := v.s.PublicKey()
-	if err != nil {
-		return nil, "", err
-	}
-	pubKeyBytes, err := cryptoutils.MarshalPublicKeyToPEM(pk)
-	if err != nil {
-		return nil, "", err
-	}
-	pubKey = string(pubKeyBytes)
-	return
+	return sig, nil
 }
 
-func (v *verifier) Verify(keyID string, data, sig []byte) error {
+func (v *verifier) Verify(data, sig []byte) error {
 	if v.v == nil {
 		return errors.New("nil verifier")
 	}

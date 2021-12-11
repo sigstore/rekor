@@ -61,7 +61,10 @@ func envelope(t *testing.T, k *ecdsa.PrivateKey, payload, payloadType string) st
 	if err != nil {
 		t.Fatal(err)
 	}
-	signer, err := in_toto.NewSSLSigner(&verifier{s: s})
+	signer, err := in_toto.NewDSSESigner(&verifier{
+		s:   s,
+		pub: k.Public(),
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
