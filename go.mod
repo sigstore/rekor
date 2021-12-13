@@ -40,7 +40,7 @@ require (
 	github.com/sigstore/sigstore v1.0.2-0.20211210190220-04746d994282
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.9.0
+	github.com/spf13/viper v1.10.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
 	github.com/theupdateframework/go-tuf v0.0.0-20211203210025-7ded50136bf9
 	github.com/tidwall/pretty v1.2.0 // indirect
@@ -56,7 +56,7 @@ require (
 	golang.org/x/net v0.0.0-20211208012354-db4efeb81f4b
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/tools v0.1.7 // indirect
-	google.golang.org/genproto v0.0.0-20211207154714-918901c715cf
+	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa
 	google.golang.org/grpc v1.42.0
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/ini.v1 v1.66.2
