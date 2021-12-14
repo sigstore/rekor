@@ -12,6 +12,10 @@ release:
 snapshot:
 	CLIENT_LDFLAGS="$(CLI_LDFLAGS)" SERVER_LDFLAGS="$(SERVER_LDFLAGS)" goreleaser release --skip-sign --skip-publish --snapshot --rm-dist
 
+###########################
+# sign with GCP KMS section
+###########################
+
 .PHONY: sign-rekor-server-release
 sign-rekor-server-release:
 	cosign sign --key "gcpkms://projects/${PROJECT_ID}/locations/${KEY_LOCATION}/keyRings/${KEY_RING}/cryptoKeys/${KEY_NAME}/versions/${KEY_VERSION}" -a GIT_HASH=$(GIT_HASH) -a GIT_VERSION=$(GIT_VERSION) ${KO_PREFIX}/rekor-server:$(GIT_VERSION)
@@ -22,6 +26,21 @@ sign-rekor-cli-release:
 
 .PHONY: sign-container-release
 sign-container-release: ko sign-rekor-server-release sign-rekor-cli-release
+
+######################
+# sign keyless section
+######################
+
+.PHONY: sign-keyless-rekor-server-release
+sign-keyless-rekor-server-release:
+	cosign sign --force -a GIT_HASH=$(GIT_HASH) -a GIT_VERSION=$(GIT_VERSION) ${KO_PREFIX}/rekor-server:$(GIT_VERSION)
+
+.PHONY: sign-keyless-rekor-cli-release
+sign-keyless-rekor-cli-release:
+	cosign sign --force -a GIT_HASH=$(GIT_HASH) -a GIT_VERSION=$(GIT_VERSION) ${KO_PREFIX}/rekor-cli:$(GIT_VERSION)
+
+.PHONY: sign-keyless-release
+sign-keyless-release: sign-keyless-rekor-server-release sign-keyless-rekor-cli-release
 
 ## --------------------------------------
 ## Dist / maybe we can deprecate

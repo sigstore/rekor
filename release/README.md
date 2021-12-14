@@ -19,12 +19,19 @@ and a list of authors by running:
 git log --pretty="* %an" --after="YYYY-MM-DD" | sort -u
 ```
 
+2. Tag the repository
 
-2. Submit the cloudbuild Job using the following command:
+```shell
+$ export RELEASE_TAG=<release version, eg "v1.1.0">
+$ git tag -s ${RELEASE_TAG} -m "${RELEASE_TAG}"
+$ git push origin ${RELEASE_TAG}
+```
+
+3. Submit the cloudbuild Job using the following command:
 
 ```shell
 $ gcloud builds submit --config <PATH_TO_CLOUDBUILD> \
-   --substitutions _GIT_TAG=<_GIT_TAG>,_TOOL_ORG=sigstore,_TOOL_REPO=rekor,_TOOL_REF=main,_STORAGE_LOCATION=rekor-releases,_KEY_RING=<KEY_RING>,_KEY_NAME=<KEY_NAME> \
+   --substitutions _GIT_TAG=<_GIT_TAG>,_TOOL_ORG=sigstore,_TOOL_REPO=rekor,_STORAGE_LOCATION=rekor-releases,_KEY_RING=<KEY_RING>,_KEY_NAME=<KEY_NAME> \
    --project <GCP_PROJECT>
 ```
 
@@ -35,22 +42,20 @@ Where:
 - `_GIT_TAG` is the release version we are publishing, this will also create the GitHub Tag.
 - `_TOOL_ORG` is the GitHub Org we will use. Default `sigstore`.
 - `_TOOL_REPO` is the repository we will use to clone. Default `cosign`.
-- `_TOOL_REF` is the branch we will use to cut a release. Default `main`.
 - `_STORAGE_LOCATION` where to push the built artifacts. Default `cosign-releases`.
 - `_KEY_RING` key ring name of your cosign key.
 - `_KEY_NAME` key name of your  cosign key.
 - `_KEY_VERSION` version of the key storaged in KMS. Default `1`.
 - `_KEY_LOCATION` location in GCP where the key is storaged. Default `global`.
 
-
-3. When the job finish, whithout issues, you should be able to see in GitHub a draft release.
+4. When the job finish, whithout issues, you should be able to see in GitHub a draft release.
 You now can review the release, make any changes if needed and then publish to make it an official release.
 
-4. Send an annoucement email to `sigstore-dev@googlegroups.com` mailling list
+5. Send an annoucement email to `sigstore-dev@googlegroups.com` mailling list
 
-5. Tweet about the new release with a fun new trigonometry pun!
+6. Tweet about the new release with a fun new trigonometry pun!
 
-6. Honk!
+7. Honk!
 
 #### After the release:
 
