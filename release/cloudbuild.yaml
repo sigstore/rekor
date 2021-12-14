@@ -29,8 +29,8 @@ steps:
   - '-c'
   - |
     git fetch
-    echo "Checking out ${_TOOL_REF}"
-    git checkout ${_TOOL_REF}
+    echo "Checking out ${_GIT_TAG}"
+    git checkout ${_GIT_TAG}
 
 - name: 'gcr.io/projectsigstore/cosign:1.3.0@sha256:65de2f3f2844815ed20ab939319e3dad4238a9aaaf4893b22ec5702e9bc33755'
   dir: "go/src/sigstore/rekor"
@@ -38,9 +38,9 @@ steps:
   - 'verify'
   - '--key'
   - 'https://raw.githubusercontent.com/gythialy/golang-cross/master/cosign.pub'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.3-1@sha256:f934a6b0411bbe6723a65732baa8ff7e318cc2d8b089afddb41be3d60d0ea1ae'
+  - 'ghcr.io/gythialy/golang-cross:v1.17.5-0@sha256:f7a5d5a79a47d51790e8e7fb1c699e42db765f063fb47537f8e17afe302be803'
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.3-1@sha256:f934a6b0411bbe6723a65732baa8ff7e318cc2d8b089afddb41be3d60d0ea1ae
+- name: ghcr.io/gythialy/golang-cross:v1.17.5-0@sha256:f7a5d5a79a47d51790e8e7fb1c699e42db765f063fb47537f8e17afe302be803
   entrypoint: /bin/sh
   dir: "go/src/sigstore/rekor"
   env:
@@ -52,15 +52,16 @@ steps:
   - KEY_NAME=${_KEY_NAME}
   - KEY_VERSION=${_KEY_VERSION}
   - GIT_TAG=${_GIT_TAG}
+  - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
+  - COSIGN_EXPERIMENTAL=true
   secretEnv:
   - GITHUB_TOKEN
   args:
     - '-c'
     - |
-      git tag ${_GIT_TAG}
       make release
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.3-1@sha256:f934a6b0411bbe6723a65732baa8ff7e318cc2d8b089afddb41be3d60d0ea1ae
+- name: ghcr.io/gythialy/golang-cross:v1.17.5-0@sha256:f7a5d5a79a47d51790e8e7fb1c699e42db765f063fb47537f8e17afe302be803
   entrypoint: 'bash'
   dir: "go/src/sigstore/rekor"
   env:
@@ -73,13 +74,16 @@ steps:
   - KEY_VERSION=${_KEY_VERSION}
   - GIT_TAG=${_GIT_TAG}
   - KO_PREFIX=gcr.io/${PROJECT_ID}
+  - COSIGN_EXPERIMENTAL=true
+  - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
   secretEnv:
   - GITHUB_TOKEN
   args:
     - '-c'
     - |
       gcloud auth configure-docker \
-      && make sign-container-release
+      && make sign-container-release \
+      && make sign-keyless-release
 
 availableSecrets:
   secretManager:
@@ -91,6 +95,7 @@ artifacts:
     location: 'gs://${_STORAGE_LOCATION}/${_GIT_TAG}'
     paths:
     - "go/src/sigstore/rekor/dist/rekor*"
+    - "go/src/sigstore/rekor/release/release-cosign.pub"
 
 options:
   machineType: E2_HIGHCPU_8
@@ -100,13 +105,11 @@ tags:
 - ${_GIT_TAG}
 - ${_TOOL_ORG}
 - ${_TOOL_REPO}
-- ${_TOOL_REF}
 
 substitutions:
   _GIT_TAG: 'v0.0.0'
   _TOOL_ORG: 'honk'
   _TOOL_REPO: 'honk-repo'
-  _TOOL_REF: 'release-honk'
   _STORAGE_LOCATION: 'honk'
   _KEY_RING: 'honk-ring'
   _KEY_NAME: 'honk-crypto'

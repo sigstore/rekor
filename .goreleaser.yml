@@ -4,11 +4,15 @@ env:
   - GO111MODULE=on
   - CGO_ENABLED=0
   - DOCKER_CLI_EXPERIMENTAL=enabled
+  - COSIGN_EXPERIMENTAL=true
 
 # Prevents parallel builds from stepping on eachothers toes downloading modules
 before:
   hooks:
     - go mod tidy
+
+gomod:
+  proxy: true
 
 builds:
   - id: rekor-server-linux
@@ -65,7 +69,13 @@ builds:
 signs:
   - signature: "${artifact}.sig"
     cmd: cosign
-    args: ["sign-blob", "--output", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
+    args: ["sign-blob", "--output-signature", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
+    artifacts: binary
+  # Keyless
+  - id: cosign-keyless
+    signature: "${artifact}-keyless.sig"
+    cmd: cosign
+    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "${artifact}"]
     artifacts: binary
 
 archives:
