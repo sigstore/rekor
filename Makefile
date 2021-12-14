@@ -119,8 +119,8 @@ ko:
 		github.com/sigstore/rekor/cmd/rekor-cli
 
 sign-container: ko
-	cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}/rekor-server:$(GIT_HASH)
-	cosign sign -key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}/rekor-cli:$(GIT_HASH)
+	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}/rekor-server:$(GIT_HASH)
+	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}/rekor-cli:$(GIT_HASH)
 
 .PHONY: ko-local
 ko-local:
