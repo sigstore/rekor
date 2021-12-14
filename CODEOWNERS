@@ -1,1 +1,6 @@
 @sigstore/rekor-codeowners
+
+# The CODEOWNERS are managed via a GitHub team, but the current list is:
+# lukehinds
+# dlorenc
+# bobcallaway
