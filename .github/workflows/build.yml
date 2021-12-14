@@ -62,6 +62,6 @@ jobs:
         run: gcloud auth configure-docker --quiet
 
       - name: container
-        run: KO_PREFIX=gcr.io/projectsigstore/rekor/ci/rekor make sign-container
+        run: KO_PREFIX=gcr.io/projectsigstore/rekor/ci/rekor make sign-keyless-ci
         env:
           COSIGN_EXPERIMENTAL: true
