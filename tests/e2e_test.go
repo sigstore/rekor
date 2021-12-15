@@ -436,6 +436,7 @@ func TestIntoto(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The atteestation should be stored at /var/run/attestations/$uuid
+	t.Log("g.Attesation: ", g.Attestation)
 
 	got := in_toto.ProvenanceStatement{}
 	if err := json.Unmarshal(g.Attestation, &got); err != nil {
