@@ -83,8 +83,8 @@ func (t *TimestampNote) UnmarshalText(data []byte) error {
 	if len(l) < 7 {
 		return errors.New("invalid timestamp note - too few newlines")
 	}
-	eco := string(l[0])
-	if len(eco) == 0 {
+	origin := string(l[0])
+	if len(origin) == 0 {
 		return errors.New("invalid timestamp note - empty ecosystem")
 	}
 	h := string(l[1])
@@ -110,7 +110,7 @@ func (t *TimestampNote) UnmarshalText(data []byte) error {
 
 	}
 	*t = TimestampNote{
-		Origin:         eco,
+		Origin:         origin,
 		MessageImprint: h,
 		Nonce:          nonce,
 		Time:           timestamp,

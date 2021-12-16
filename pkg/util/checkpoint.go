@@ -70,8 +70,8 @@ func (c *Checkpoint) UnmarshalCheckpoint(data []byte) error {
 	if len(l) < 4 {
 		return errors.New("invalid checkpoint - too few newlines")
 	}
-	eco := string(l[0])
-	if len(eco) == 0 {
+	origin := string(l[0])
+	if len(origin) == 0 {
 		return errors.New("invalid checkpoint - empty ecosystem")
 	}
 	size, err := strconv.ParseUint(string(l[1]), 10, 64)
@@ -83,7 +83,7 @@ func (c *Checkpoint) UnmarshalCheckpoint(data []byte) error {
 		return fmt.Errorf("invalid checkpoint - invalid hash: %w", err)
 	}
 	*c = Checkpoint{
-		Origin: eco,
+		Origin: origin,
 		Size:   size,
 		Hash:   h,
 	}
