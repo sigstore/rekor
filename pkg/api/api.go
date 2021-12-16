@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/sigstore/rekor/pkg/log"
 	pki "github.com/sigstore/rekor/pkg/pki/x509"
@@ -44,7 +45,8 @@ func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
 	defer cancel()
 
 	// Set up and test connection to rpc server
-	conn, err := grpc.DialContext(ctx, rpcServer, grpc.WithInsecure())
+	creds := insecure.NewCredentials()
+	conn, err := grpc.DialContext(ctx, rpcServer, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		log.Logger.Fatalf("Failed to connect to RPC server:", err)
 	}
