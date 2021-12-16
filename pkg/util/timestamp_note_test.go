@@ -55,7 +55,7 @@ func TestMarshalTimestampNote(t *testing.T) {
 		{
 			msg: []byte("bananas"),
 			t: TimestampNote{
-				Ecosystem:    "Timestamp Note v0",
+				Origin:       "Timestamp Note v0",
 				Nonce:        big.NewInt(123).Bytes(),
 				Time:         someTime,
 				Radius:       123,
@@ -66,7 +66,7 @@ func TestMarshalTimestampNote(t *testing.T) {
 		{
 			msg: []byte("the view from the tree tops is great!"),
 			t: TimestampNote{
-				Ecosystem:    "Timestamp Note v1",
+				Origin:       "Timestamp Note v1",
 				Nonce:        big.NewInt(12345678).Bytes(),
 				Time:         someTime,
 				Radius:       1,
@@ -76,7 +76,7 @@ func TestMarshalTimestampNote(t *testing.T) {
 		}, {
 			msg: []byte("bananas"),
 			t: TimestampNote{
-				Ecosystem:    "Timestamp Note v7",
+				Origin:       "Timestamp Note v7",
 				Nonce:        big.NewInt(123).Bytes(),
 				Time:         someTime,
 				Radius:       123,
@@ -86,7 +86,7 @@ func TestMarshalTimestampNote(t *testing.T) {
 			want: "Timestamp Note v7\nsha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904\new==\n2021-07-26T00:00:00Z\n123\nhttp://localhost:3000/api/v1/timestamp/certchain\nfoo\nbar\n",
 		},
 	} {
-		t.Run(string(test.t.Ecosystem), func(t *testing.T) {
+		t.Run(string(test.t.Origin), func(t *testing.T) {
 			h := sha256.Sum256([]byte(test.msg))
 			test.t.MessageImprint = "sha256:" + hex.EncodeToString(h[:])
 			got, err := test.t.MarshalText()
@@ -120,7 +120,7 @@ func TestUnmarshalTimestampNote(t *testing.T) {
 			desc: "valid one",
 			m:    "Timestamp Note v0\nsha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904\new==\n2021-07-26T00:00:00Z\n123\nhttp://localhost:3000/api/v1/timestamp/certchain\n",
 			want: TimestampNote{
-				Ecosystem:      "Timestamp Note v0",
+				Origin:         "Timestamp Note v0",
 				MessageImprint: "sha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904",
 				Nonce:          big.NewInt(123).Bytes(),
 				Time:           someTime,
@@ -132,7 +132,7 @@ func TestUnmarshalTimestampNote(t *testing.T) {
 			desc: "valid with different ecosystem",
 			m:    "Timestamp Note v1\nsha256:17fb2e8cbf5f60f881c075b1fd0cad32913f2f08b35053fed1c5a785dff90e8e\nvGFO\n2021-07-26T00:00:00Z\n1\nhttp://localhost:3000/api/v1/timestamp/certchain\n",
 			want: TimestampNote{
-				Ecosystem:      "Timestamp Note v1",
+				Origin:         "Timestamp Note v1",
 				MessageImprint: "sha256:17fb2e8cbf5f60f881c075b1fd0cad32913f2f08b35053fed1c5a785dff90e8e",
 				Nonce:          big.NewInt(12345678).Bytes(),
 				Time:           someTime,
@@ -143,7 +143,7 @@ func TestUnmarshalTimestampNote(t *testing.T) {
 			desc: "valid with trailing data",
 			m:    "Timestamp Note v7\nsha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904\new==\n2021-07-26T00:00:00Z\n123\nhttp://localhost:3000/api/v1/timestamp/certchain\nfoo\nbar\n",
 			want: TimestampNote{
-				Ecosystem:      "Timestamp Note v7",
+				Origin:         "Timestamp Note v7",
 				MessageImprint: "sha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904",
 				Nonce:          big.NewInt(123).Bytes(),
 				Time:           someTime,
@@ -155,7 +155,7 @@ func TestUnmarshalTimestampNote(t *testing.T) {
 			desc: "valid with trailing newlines",
 			m:    "Timestamp Note v1\nsha256:17fb2e8cbf5f60f881c075b1fd0cad32913f2f08b35053fed1c5a785dff90e8e\nvGFO\n2021-07-26T00:00:00Z\n1\nhttp://localhost:3000/api/v1/timestamp/certchain\n\n\n\n",
 			want: TimestampNote{
-				Ecosystem:      "Timestamp Note v1",
+				Origin:         "Timestamp Note v1",
 				MessageImprint: "sha256:17fb2e8cbf5f60f881c075b1fd0cad32913f2f08b35053fed1c5a785dff90e8e",
 				Nonce:          big.NewInt(12345678).Bytes(),
 				Time:           someTime,
@@ -237,7 +237,7 @@ func TestSigningRoundtripTimestampNote(t *testing.T) {
 	}{
 		{
 			t: TimestampNote{
-				Ecosystem:      "Timestamp Note RSA v0",
+				Origin:         "Timestamp Note RSA v0",
 				MessageImprint: "sha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904",
 				Nonce:          big.NewInt(123).Bytes(),
 				Time:           someTime,
@@ -253,7 +253,7 @@ func TestSigningRoundtripTimestampNote(t *testing.T) {
 		},
 		{
 			t: TimestampNote{
-				Ecosystem:      "Timestamp Note ECDSA v0",
+				Origin:         "Timestamp Note ECDSA v0",
 				MessageImprint: "sha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904",
 				Nonce:          big.NewInt(123).Bytes(),
 				Time:           someTime,
@@ -269,7 +269,7 @@ func TestSigningRoundtripTimestampNote(t *testing.T) {
 		},
 		{
 			t: TimestampNote{
-				Ecosystem:      "Timestamp Note ED25519 v0",
+				Origin:         "Timestamp Note ED25519 v0",
 				MessageImprint: "sha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904",
 				Nonce:          big.NewInt(123).Bytes(),
 				Time:           someTime,
@@ -285,7 +285,7 @@ func TestSigningRoundtripTimestampNote(t *testing.T) {
 		},
 		{
 			t: TimestampNote{
-				Ecosystem:      "Timestamp Note Mismatch v0",
+				Origin:         "Timestamp Note Mismatch v0",
 				MessageImprint: "sha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904",
 				Nonce:          big.NewInt(123).Bytes(),
 				Time:           someTime,
@@ -301,7 +301,7 @@ func TestSigningRoundtripTimestampNote(t *testing.T) {
 		},
 		{
 			t: TimestampNote{
-				Ecosystem:      "Timestamp Note Mismatch v1",
+				Origin:         "Timestamp Note Mismatch v1",
 				MessageImprint: "sha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904",
 				Nonce:          big.NewInt(123).Bytes(),
 				Time:           someTime,
@@ -317,7 +317,7 @@ func TestSigningRoundtripTimestampNote(t *testing.T) {
 		},
 		{
 			t: TimestampNote{
-				Ecosystem:      "Timestamp Note Mismatch v2",
+				Origin:         "Timestamp Note Mismatch v2",
 				MessageImprint: "sha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904",
 				Nonce:          big.NewInt(123).Bytes(),
 				Time:           someTime,
@@ -333,7 +333,7 @@ func TestSigningRoundtripTimestampNote(t *testing.T) {
 		},
 		{
 			t: TimestampNote{
-				Ecosystem:      "Timestamp Note Mismatch v3",
+				Origin:         "Timestamp Note Mismatch v3",
 				MessageImprint: "sha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904",
 				Nonce:          big.NewInt(123).Bytes(),
 				Time:           someTime,
@@ -348,7 +348,7 @@ func TestSigningRoundtripTimestampNote(t *testing.T) {
 			wantVerifyErr: true,
 		},
 	} {
-		t.Run(string(test.t.Ecosystem), func(t *testing.T) {
+		t.Run(string(test.t.Origin), func(t *testing.T) {
 			text, _ := test.t.MarshalText()
 			sc := &SignedNote{
 				Note: string(text),
@@ -416,7 +416,7 @@ func TestInvalidSigVerificationTimestampNote(t *testing.T) {
 	}{
 		{
 			t: TimestampNote{
-				Ecosystem:      "Timestamp Note v0",
+				Origin:         "Timestamp Note v0",
 				MessageImprint: "sha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904",
 				Nonce:          big.NewInt(123).Bytes(),
 				Time:           someTime,
@@ -429,7 +429,7 @@ func TestInvalidSigVerificationTimestampNote(t *testing.T) {
 		},
 		{
 			t: TimestampNote{
-				Ecosystem:      "Timestamp Note v0 - not base 64",
+				Origin:         "Timestamp Note v0 - not base 64",
 				MessageImprint: "sha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904",
 				Nonce:          big.NewInt(123).Bytes(),
 				Time:           someTime,
@@ -448,7 +448,7 @@ func TestInvalidSigVerificationTimestampNote(t *testing.T) {
 		},
 		{
 			t: TimestampNote{
-				Ecosystem:      "Timestamp Note v0 invalid signature",
+				Origin:         "Timestamp Note v0 invalid signature",
 				MessageImprint: "sha256:e4ba5cbd251c98e6cd1c23f126a3b81d8d8328abc95387229850952b3ef9f904",
 				Nonce:          big.NewInt(123).Bytes(),
 				Time:           someTime,
@@ -466,7 +466,7 @@ func TestInvalidSigVerificationTimestampNote(t *testing.T) {
 			expectedResult: false,
 		},
 	} {
-		t.Run(string(test.t.Ecosystem), func(t *testing.T) {
+		t.Run(string(test.t.Origin), func(t *testing.T) {
 			text, _ := test.t.MarshalText()
 			sc := SignedNote{
 				Note:       string(text),
