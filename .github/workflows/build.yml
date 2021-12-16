@@ -16,6 +16,7 @@
 name: CI-Container-Build
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -28,27 +29,39 @@ jobs:
     name: build
     runs-on: ubuntu-latest
 
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
       - uses: actions/checkout@v2.4.0
       - uses: sigstore/cosign-installer@v1.4.1
 
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | sed -r 's/^.*://g'| uniq)" >> $GITHUB_ENV
+
       - uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GOVERSION }}
+
       - name: deps
         run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
+
       - uses: imjasonh/setup-ko@v0.4
         with:
-          version: v0.8.3
+          version: v0.9.3
+
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@master
         with:
           project_id: projectsigstore
           service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           export_default_credentials: true
+
       - name: creds
         run: gcloud auth configure-docker --quiet
+
       - name: container
-        run: echo -n "${{secrets.COSIGN_PASSWORD}}" | KO_PREFIX=gcr.io/projectsigstore/rekor/ci/rekor make sign-container
+        run: KO_PREFIX=gcr.io/projectsigstore/rekor/ci/rekor make sign-keyless-ci
+        env:
+          COSIGN_EXPERIMENTAL: true
