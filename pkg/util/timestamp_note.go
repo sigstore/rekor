@@ -30,8 +30,8 @@ import (
 // Signed note based timestamp responses
 
 type TimestampNote struct {
-	// Ecosystem is the ecosystem/version string
-	Ecosystem string
+	// Origin is the unique identifier/version string
+	Origin string
 	// MessageImprint is the hash of the message to timestamp, of the form sha256:<sha>
 	MessageImprint string
 	// Nonce is a short random  bytes to prove response freshness
@@ -50,7 +50,7 @@ type TimestampNote struct {
 func (t TimestampNote) String() string {
 	var b strings.Builder
 	time, _ := t.Time.MarshalText()
-	fmt.Fprintf(&b, "%s\n%s\n%s\n%s\n%d\n%s\n", t.Ecosystem, t.MessageImprint, base64.StdEncoding.EncodeToString(t.Nonce),
+	fmt.Fprintf(&b, "%s\n%s\n%s\n%s\n%d\n%s\n", t.Origin, t.MessageImprint, base64.StdEncoding.EncodeToString(t.Nonce),
 		time, t.Radius, t.CertChainRef)
 	for _, line := range t.OtherContent {
 		fmt.Fprintf(&b, "%s\n", line)
@@ -83,8 +83,8 @@ func (t *TimestampNote) UnmarshalText(data []byte) error {
 	if len(l) < 7 {
 		return errors.New("invalid timestamp note - too few newlines")
 	}
-	eco := string(l[0])
-	if len(eco) == 0 {
+	origin := string(l[0])
+	if len(origin) == 0 {
 		return errors.New("invalid timestamp note - empty ecosystem")
 	}
 	h := string(l[1])
@@ -110,7 +110,7 @@ func (t *TimestampNote) UnmarshalText(data []byte) error {
 
 	}
 	*t = TimestampNote{
-		Ecosystem:      eco,
+		Origin:         origin,
 		MessageImprint: h,
 		Nonce:          nonce,
 		Time:           timestamp,

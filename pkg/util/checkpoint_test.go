@@ -40,21 +40,21 @@ func TestMarshalCheckpoint(t *testing.T) {
 	}{
 		{
 			c: Checkpoint{
-				Ecosystem: "Log Checkpoint v0",
-				Size:      123,
-				Hash:      []byte("bananas"),
+				Origin: "Log Checkpoint v0",
+				Size:   123,
+				Hash:   []byte("bananas"),
 			},
 			want: "Log Checkpoint v0\n123\nYmFuYW5hcw==\n",
 		}, {
 			c: Checkpoint{
-				Ecosystem: "Banana Checkpoint v5",
-				Size:      9944,
-				Hash:      []byte("the view from the tree tops is great!"),
+				Origin: "Banana Checkpoint v5",
+				Size:   9944,
+				Hash:   []byte("the view from the tree tops is great!"),
 			},
 			want: "Banana Checkpoint v5\n9944\ndGhlIHZpZXcgZnJvbSB0aGUgdHJlZSB0b3BzIGlzIGdyZWF0IQ==\n",
 		}, {
 			c: Checkpoint{
-				Ecosystem:    "Banana Checkpoint v7",
+				Origin:       "Banana Checkpoint v7",
 				Size:         9943,
 				Hash:         []byte("the view from the tree tops is great!"),
 				OtherContent: []string{"foo", "bar"},
@@ -85,23 +85,23 @@ func TestUnmarshalCheckpoint(t *testing.T) {
 			desc: "valid one",
 			m:    "Log Checkpoint v0\n123\nYmFuYW5hcw==\n",
 			want: Checkpoint{
-				Ecosystem: "Log Checkpoint v0",
-				Size:      123,
-				Hash:      []byte("bananas"),
+				Origin: "Log Checkpoint v0",
+				Size:   123,
+				Hash:   []byte("bananas"),
 			},
 		}, {
 			desc: "valid with different ecosystem",
 			m:    "Banana Checkpoint v1\n9944\ndGhlIHZpZXcgZnJvbSB0aGUgdHJlZSB0b3BzIGlzIGdyZWF0IQ==\n",
 			want: Checkpoint{
-				Ecosystem: "Banana Checkpoint v1",
-				Size:      9944,
-				Hash:      []byte("the view from the tree tops is great!"),
+				Origin: "Banana Checkpoint v1",
+				Size:   9944,
+				Hash:   []byte("the view from the tree tops is great!"),
 			},
 		}, {
 			desc: "valid with trailing data",
 			m:    "Log Checkpoint v0\n9944\ndGhlIHZpZXcgZnJvbSB0aGUgdHJlZSB0b3BzIGlzIGdyZWF0IQ==\nHere's some associated data.\n",
 			want: Checkpoint{
-				Ecosystem:    "Log Checkpoint v0",
+				Origin:       "Log Checkpoint v0",
 				Size:         9944,
 				Hash:         []byte("the view from the tree tops is great!"),
 				OtherContent: []string{"Here's some associated data."},
@@ -110,7 +110,7 @@ func TestUnmarshalCheckpoint(t *testing.T) {
 			desc: "valid with multiple trailing data lines",
 			m:    "Log Checkpoint v0\n9944\ndGhlIHZpZXcgZnJvbSB0aGUgdHJlZSB0b3BzIGlzIGdyZWF0IQ==\nlots\nof\nlines\n",
 			want: Checkpoint{
-				Ecosystem:    "Log Checkpoint v0",
+				Origin:       "Log Checkpoint v0",
 				Size:         9944,
 				Hash:         []byte("the view from the tree tops is great!"),
 				OtherContent: []string{"lots", "of", "lines"},
@@ -119,9 +119,9 @@ func TestUnmarshalCheckpoint(t *testing.T) {
 			desc: "valid with trailing newlines",
 			m:    "Log Checkpoint v0\n9944\ndGhlIHZpZXcgZnJvbSB0aGUgdHJlZSB0b3BzIGlzIGdyZWF0IQ==\n\n\n\n",
 			want: Checkpoint{
-				Ecosystem: "Log Checkpoint v0",
-				Size:      9944,
-				Hash:      []byte("the view from the tree tops is great!"),
+				Origin: "Log Checkpoint v0",
+				Size:   9944,
+				Hash:   []byte("the view from the tree tops is great!"),
 			},
 		}, {
 			desc:    "invalid - insufficient lines",
@@ -184,9 +184,9 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 	}{
 		{
 			c: Checkpoint{
-				Ecosystem: "Log Checkpoint RSA v0",
-				Size:      123,
-				Hash:      []byte("bananas"),
+				Origin: "Log Checkpoint RSA v0",
+				Size:   123,
+				Hash:   []byte("bananas"),
 			},
 			identity:      "someone",
 			signer:        rsaKey,
@@ -197,9 +197,9 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 		},
 		{
 			c: Checkpoint{
-				Ecosystem: "Log Checkpoint ECDSA v0",
-				Size:      123,
-				Hash:      []byte("bananas"),
+				Origin: "Log Checkpoint ECDSA v0",
+				Size:   123,
+				Hash:   []byte("bananas"),
 			},
 			identity:      "someone",
 			signer:        ecdsaKey,
@@ -210,9 +210,9 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 		},
 		{
 			c: Checkpoint{
-				Ecosystem: "Log Checkpoint Ed25519 v0",
-				Size:      123,
-				Hash:      []byte("bananas"),
+				Origin: "Log Checkpoint Ed25519 v0",
+				Size:   123,
+				Hash:   []byte("bananas"),
 			},
 			identity:      "someone",
 			signer:        edPrivKey,
@@ -223,9 +223,9 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 		},
 		{
 			c: Checkpoint{
-				Ecosystem: "Log Checkpoint Mismatch v0",
-				Size:      123,
-				Hash:      []byte("bananas"),
+				Origin: "Log Checkpoint Mismatch v0",
+				Size:   123,
+				Hash:   []byte("bananas"),
 			},
 			identity:      "someone",
 			signer:        edPrivKey,
@@ -236,9 +236,9 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 		},
 		{
 			c: Checkpoint{
-				Ecosystem: "Log Checkpoint Mismatch v1",
-				Size:      123,
-				Hash:      []byte("bananas"),
+				Origin: "Log Checkpoint Mismatch v1",
+				Size:   123,
+				Hash:   []byte("bananas"),
 			},
 			identity:      "someone",
 			signer:        ecdsaKey,
@@ -249,9 +249,9 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 		},
 		{
 			c: Checkpoint{
-				Ecosystem: "Log Checkpoint Mismatch v2",
-				Size:      123,
-				Hash:      []byte("bananas"),
+				Origin: "Log Checkpoint Mismatch v2",
+				Size:   123,
+				Hash:   []byte("bananas"),
 			},
 			identity:      "someone",
 			signer:        edPrivKey,
@@ -262,9 +262,9 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 		},
 		{
 			c: Checkpoint{
-				Ecosystem: "Log Checkpoint Mismatch v3",
-				Size:      123,
-				Hash:      []byte("bananas"),
+				Origin: "Log Checkpoint Mismatch v3",
+				Size:   123,
+				Hash:   []byte("bananas"),
 			},
 			identity:      "someone",
 			signer:        ecdsaKey,
@@ -274,7 +274,7 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 			wantVerifyErr: true,
 		},
 	} {
-		t.Run(string(test.c.Ecosystem), func(t *testing.T) {
+		t.Run(string(test.c.Origin), func(t *testing.T) {
 			sth, err := CreateSignedCheckpoint(test.c)
 			if err != nil {
 				t.Fatalf("error creating signed checkpoint")
@@ -332,9 +332,9 @@ func TestInvalidSigVerification(t *testing.T) {
 	}{
 		{
 			checkpoint: Checkpoint{
-				Ecosystem: "Log Checkpoint v0",
-				Size:      123,
-				Hash:      []byte("bananas"),
+				Origin: "Log Checkpoint v0",
+				Size:   123,
+				Hash:   []byte("bananas"),
 			},
 			s:              []note.Signature{},
 			pubKey:         ecdsaKey.Public(),
@@ -343,9 +343,9 @@ func TestInvalidSigVerification(t *testing.T) {
 		{
 
 			checkpoint: Checkpoint{
-				Ecosystem: "Log Checkpoint v0 not base64",
-				Size:      123,
-				Hash:      []byte("bananas"),
+				Origin: "Log Checkpoint v0 not base64",
+				Size:   123,
+				Hash:   []byte("bananas"),
 			},
 			pubKey: ecdsaKey.Public(),
 			s: []note.Signature{
@@ -359,9 +359,9 @@ func TestInvalidSigVerification(t *testing.T) {
 		},
 		{
 			checkpoint: Checkpoint{
-				Ecosystem: "Log Checkpoint v0 invalid signature",
-				Size:      123,
-				Hash:      []byte("bananas"),
+				Origin: "Log Checkpoint v0 invalid signature",
+				Size:   123,
+				Hash:   []byte("bananas"),
 			},
 			pubKey: ecdsaKey.Public(),
 			s: []note.Signature{
@@ -374,7 +374,7 @@ func TestInvalidSigVerification(t *testing.T) {
 			expectedResult: false,
 		},
 	} {
-		t.Run(string(test.checkpoint.Ecosystem), func(t *testing.T) {
+		t.Run(string(test.checkpoint.Origin), func(t *testing.T) {
 			text, _ := test.checkpoint.MarshalCheckpoint()
 			sc := SignedNote{
 				Note:       string(text),

@@ -51,9 +51,9 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	treeSize := int64(root.TreeSize)
 
 	sth, err := util.CreateSignedCheckpoint(util.Checkpoint{
-		Ecosystem: "Rekor",
-		Size:      root.TreeSize,
-		Hash:      root.RootHash,
+		Origin: "Rekor",
+		Size:   root.TreeSize,
+		Hash:   root.RootHash,
 	})
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("marshalling error: %w", err), sthGenerateError)
