@@ -14,7 +14,7 @@ Rekor fulfils the signature transparency role of sigstore's software signing
 infrastructure. However, Rekor can be run on its own and is designed to be
 extensible to working with different manifest schemas and PKI tooling.
 
-[Official Documentation](http://docs.sigstore.dev/rekor/overview).
+[Official Documentation](https://docs.sigstore.dev/rekor/overview).
 
 ## Public Instance
 
@@ -22,7 +22,7 @@ extensible to working with different manifest schemas and PKI tooling.
 We **will take the log down** and reset it with zero notice.
 We will improve the stability and publish SLOs over time.
 
-More details on the public instance can be found at [docs.sigstore.dev](http://docs.sigstore.dev/rekor/public-instance).
+More details on the public instance can be found at [docs.sigstore.dev](https://docs.sigstore.dev/rekor/public-instance).
 
 ### Installation
 
