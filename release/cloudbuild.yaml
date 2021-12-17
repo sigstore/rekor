@@ -37,7 +37,7 @@ steps:
   args:
   - 'verify'
   - '--key'
-  - 'https://raw.githubusercontent.com/gythialy/golang-cross/master/cosign.pub'
+  - 'https://raw.githubusercontent.com/gythialy/golang-cross/main/cosign.pub'
   - 'ghcr.io/gythialy/golang-cross:v1.17.5-1@sha256:f6cc024baf829eaa61972c7fd20d0d62bf9faad31246fd61d9d78fc122cbcd29'
 
 - name: ghcr.io/gythialy/golang-cross:v1.17.5-1@sha256:f6cc024baf829eaa61972c7fd20d0d62bf9faad31246fd61d9d78fc122cbcd29
