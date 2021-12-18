@@ -139,6 +139,17 @@ ko-local:
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
 		github.com/sigstore/rekor/cmd/rekor-cli
 
+# This builds the trillian containers we rely on using ko for cross platform support
+.PHONY: ko-trillian
+ko-trillian:
+	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	ko publish --base-import-paths --bare \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		github.com/google/trillian/cmd/trillian_log_signer
+	ko publish --base-import-paths --bare \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		github.com/google/trillian/cmd/trillian_log_server
+
 
 ## --------------------------------------
 ## Tooling Binaries
