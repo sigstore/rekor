@@ -93,11 +93,12 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 		Hashes:   hashes,
 	}
 
-	uuid := hex.EncodeToString(leaf.MerkleLeafHash)
+	shardID := sharding.NewCurrent()
+	shardUUID := shardID.ShardIDString + sharding.FullIDSeparator + hex.EncodeToString(leaf.MerkleLeafHash)
 	if viper.GetBool("enable_attestation_storage") {
-		att, typ, err := storageClient.FetchAttestation(ctx, uuid)
+		att, typ, err := storageClient.FetchAttestation(ctx, shardUUID)
 		if err != nil {
-			log.Logger.Errorf("error fetching attestation: %s %s", uuid, err)
+			log.Logger.Errorf("error fetching attestation: %s %s", shardUUID, err)
 		} else {
 			logEntryAnon.Attestation = &models.LogEntryAnonAttestation{
 				Data:      att,
@@ -112,7 +113,8 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 	}
 
 	return models.LogEntry{
-		uuid: logEntryAnon}, nil
+		hex.EncodeToString(leaf.MerkleLeafHash): logEntryAnon,
+	}, nil
 }
 
 // GetLogEntryAndProofByIndexHandler returns the entry and inclusion proof for a specified log index
