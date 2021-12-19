@@ -147,19 +147,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	defer hashR.Close()
 	defer apkR.Close()
 
-	closePipesOnError := func(err error) error {
-		pipeReaders := []*io.PipeReader{hashR, apkR}
-		pipeWriters := []*io.PipeWriter{hashW, apkW}
-		for idx := range pipeReaders {
-			if e := pipeReaders[idx].CloseWithError(err); e != nil {
-				log.Logger.Error(fmt.Errorf("error closing pipe: %w", e))
-			}
-			if e := pipeWriters[idx].CloseWithError(err); e != nil {
-				log.Logger.Error(fmt.Errorf("error closing pipe: %w", e))
-			}
-		}
-		return err
-	}
+	closePipesOnError := types.PipeCloser(hashR, hashW, apkR, apkW)
 
 	oldSHA := ""
 	if v.AlpineModel.Package.Hash != nil && v.AlpineModel.Package.Hash.Value != nil {

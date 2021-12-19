@@ -145,19 +145,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	defer hashR.Close()
 	defer sigR.Close()
 
-	closePipesOnError := func(err error) error {
-		pipeReaders := []*io.PipeReader{hashR, sigR}
-		pipeWriters := []*io.PipeWriter{hashW, sigW}
-		for idx := range pipeReaders {
-			if e := pipeReaders[idx].CloseWithError(err); e != nil {
-				log.Logger.Error(fmt.Errorf("error closing pipe: %w", e))
-			}
-			if e := pipeWriters[idx].CloseWithError(err); e != nil {
-				log.Logger.Error(fmt.Errorf("error closing pipe: %w", e))
-			}
-		}
-		return err
-	}
+	closePipesOnError := types.PipeCloser(hashR, hashW, sigR, sigW)
 
 	oldSHA := ""
 	if v.RekordObj.Data.Hash != nil && v.RekordObj.Data.Hash.Value != nil {
@@ -299,12 +287,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	if err := v.FetchExternalEntities(ctx); err != nil {
 		return nil, err
 	}
-	if v.sigObj == nil {
-		return nil, errors.New("signature object not initialized before canonicalization")
-	}
-	if v.keyObj == nil {
-		return nil, errors.New("key object not initialized before canonicalization")
-	}
 
 	canonicalEntry := models.RekordV001Schema{}
 
@@ -346,7 +328,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 // validate performs cross-field validation for fields in object
 func (v V001Entry) validate() error {
 	sig := v.RekordObj.Signature
-	if sig == nil {
+	if v.RekordObj.Signature == nil {
 		return errors.New("missing signature")
 	}
 	if len(sig.Content) == 0 && sig.URL.String() == "" {
