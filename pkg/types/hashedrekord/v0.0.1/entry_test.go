@@ -24,18 +24,21 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/hex"
 	"encoding/pem"
+	"math/big"
 	"reflect"
 	"testing"
 
 	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"go.uber.org/goleak"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
+	x509r "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"go.uber.org/goleak"
 )
 
 func TestMain(m *testing.M) {
@@ -216,7 +219,7 @@ func TestCrossFieldValidation(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if err := tc.entry.validate(); (err == nil) != tc.expectUnmarshalSuccess {
+		if _, _, err := tc.entry.validate(); (err == nil) != tc.expectUnmarshalSuccess {
 			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
 		}
 
@@ -230,7 +233,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			if err := v.Unmarshal(&r); err != nil {
 				return err
 			}
-			if err := v.validate(); err != nil {
+			if _, _, err := v.validate(); err != nil {
 				return err
 			}
 			return nil
@@ -258,4 +261,126 @@ func TestCrossFieldValidation(t *testing.T) {
 			}
 		}
 	}
+}
+
+func hexHash(b []byte) string {
+	h := sha256.Sum256([]byte(b))
+	return hex.EncodeToString(h[:])
+}
+
+func TestV001Entry_IndexKeys(t *testing.T) {
+	pub, cert, priv := testKeyAndCert(t)
+
+	data := "my random data"
+	h := sha256.Sum256([]byte(data))
+	sig, err := ecdsa.SignASN1(rand.Reader, priv, h[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hashStr := hex.EncodeToString(h[:])
+	hashIndexKey := "sha256:" + hashStr
+	// Base entry template
+	v := V001Entry{
+		HashedRekordObj: models.HashedrekordV001Schema{
+			Data: &models.HashedrekordV001SchemaData{
+				Hash: &models.HashedrekordV001SchemaDataHash{
+					Algorithm: swag.String("sha256"),
+					Value:     swag.String(hashStr),
+				},
+			},
+			Signature: &models.HashedrekordV001SchemaSignature{
+				Content:   strfmt.Base64(sig),
+				PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{},
+			},
+		},
+	}
+
+	// Test with a public key and a cert
+
+	// For the public key, we should have the key and the hash.
+	t.Run("public key", func(t *testing.T) {
+		v.HashedRekordObj.Signature.PublicKey.Content = strfmt.Base64(pub)
+
+		k, err := v.IndexKeys()
+		if err != nil {
+			t.Fatal(err)
+		}
+		keys := map[string]struct{}{}
+		for _, key := range k {
+			keys[key] = struct{}{}
+		}
+
+		if _, ok := keys[hashIndexKey]; !ok {
+			t.Errorf("missing hash index entry %s, got %v", hashIndexKey, keys)
+		}
+		want := hexHash(pub)
+		if _, ok := keys[want]; !ok {
+			t.Errorf("missing key index entry %s, got %v", want, keys)
+		}
+	})
+
+	// For the public key, we should have the key and the hash.
+	t.Run("cert", func(t *testing.T) {
+		v.HashedRekordObj.Signature.PublicKey.Content = strfmt.Base64(cert)
+
+		k, err := v.IndexKeys()
+		if err != nil {
+			t.Fatal(err)
+		}
+		keys := map[string]struct{}{}
+		for _, key := range k {
+			keys[key] = struct{}{}
+		}
+
+		if _, ok := keys[hashIndexKey]; !ok {
+			t.Errorf("missing hash index entry for public key test, got %v", keys)
+		}
+		if _, ok := keys[hexHash(cert)]; !ok {
+			t.Errorf("missing key index entry for public key test, got %v", keys)
+		}
+	})
+
+}
+
+func testKeyAndCert(t *testing.T) ([]byte, []byte, *ecdsa.PrivateKey) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	der, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pub := pem.EncodeToMemory(&pem.Block{
+		Bytes: der,
+		Type:  "PUBLIC KEY",
+	})
+
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ca := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Names: []pkix.AttributeTypeAndValue{
+				{
+					Type:  x509r.EmailAddressOID,
+					Value: "foo@bar.com",
+				},
+			},
+		},
+	}
+	cb, err := x509.CreateCertificate(rand.Reader, ca, ca, &priv.PublicKey, priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certPem := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cb,
+	})
+
+	return pub, certPem, priv
 }
