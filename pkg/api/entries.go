@@ -194,7 +194,12 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 
 	if viper.GetBool("enable_retrieve_api") {
 		go func() {
-			for _, key := range entry.IndexKeys() {
+			keys, err := entry.IndexKeys()
+			if err != nil {
+				log.RequestIDLogger(params.HTTPRequest).Error(err)
+				return
+			}
+			for _, key := range keys {
 				if err := addToIndex(context.Background(), key, uuid); err != nil {
 					log.RequestIDLogger(params.HTTPRequest).Error(err)
 				}

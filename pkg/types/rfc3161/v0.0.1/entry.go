@@ -76,22 +76,21 @@ func NewEntryFromBytes(timestamp []byte) models.ProposedEntry {
 	}
 }
 
-func (v V001Entry) IndexKeys() []string {
+func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
 	str := v.Rfc3161Obj.Tsr.Content.String()
 	tb, err := base64.StdEncoding.DecodeString(str)
 	if err != nil {
-		log.Logger.Warn(err)
-	} else {
-		h := sha256.Sum256(tb)
-		hx := hex.EncodeToString(h[:])
-
-		payloadKey := "sha256:" + hx
-		result = append(result, payloadKey)
+		return nil, err
 	}
+	h := sha256.Sum256(tb)
+	hx := hex.EncodeToString(h[:])
 
-	return result
+	payloadKey := "sha256:" + hx
+	result = append(result, payloadKey)
+
+	return result, nil
 }
 
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {

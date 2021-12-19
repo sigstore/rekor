@@ -77,15 +77,8 @@ func NewEntry() types.EntryImpl {
 	return &V001Entry{}
 }
 
-func (v V001Entry) IndexKeys() []string {
+func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
-
-	if v.hasExternalEntities() {
-		if err := v.fetchExternalEntities(context.Background()); err != nil {
-			log.Logger.Error(err)
-			return result
-		}
-	}
 
 	// Index metadata hash, type, and version.
 	metadata, err := v.sigObj.CanonicalValue()
@@ -98,8 +91,7 @@ func (v V001Entry) IndexKeys() []string {
 
 	signed, ok := v.sigObj.(*ptuf.Signature)
 	if !ok {
-		log.Logger.Error(errors.New("invalid metadata format"))
-		return result
+		return nil, errors.New("invalid metadata format")
 	}
 
 	result = append(result, signed.Role)
@@ -115,7 +107,7 @@ func (v V001Entry) IndexKeys() []string {
 	}
 
 	// TODO: Index individual key IDs
-	return result
+	return result, nil
 }
 
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
