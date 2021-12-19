@@ -51,10 +51,9 @@ func init() {
 }
 
 type V001Entry struct {
-	RekordObj               models.RekordV001Schema
-	fetchedExternalEntities bool
-	keyObj                  pki.PublicKey
-	sigObj                  pki.Signature
+	RekordObj models.RekordV001Schema
+	keyObj    pki.PublicKey
+	sigObj    pki.Signature
 }
 
 func (v V001Entry) APIVersion() string {
@@ -67,13 +66,6 @@ func NewEntry() types.EntryImpl {
 
 func (v V001Entry) IndexKeys() []string {
 	var result []string
-
-	if v.HasExternalEntities() {
-		if err := v.FetchExternalEntities(context.Background()); err != nil {
-			log.Logger.Error(err)
-			return result
-		}
-	}
 
 	key, err := v.keyObj.CanonicalValue()
 	if err != nil {
@@ -113,10 +105,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 }
 
 func (v V001Entry) HasExternalEntities() bool {
-	if v.fetchedExternalEntities {
-		return false
-	}
-
 	if v.RekordObj.Data != nil && v.RekordObj.Data.URL.String() != "" {
 		return true
 	}
@@ -130,10 +118,6 @@ func (v V001Entry) HasExternalEntities() bool {
 }
 
 func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
-	if v.fetchedExternalEntities {
-		return nil
-	}
-
 	if err := v.validate(); err != nil {
 		return types.ValidationError(err)
 	}
@@ -291,7 +275,6 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		v.RekordObj.Data.Hash.Value = swag.String(computedSHA)
 	}
 
-	v.fetchedExternalEntities = true
 	return nil
 }
 

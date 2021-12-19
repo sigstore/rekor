@@ -56,11 +56,10 @@ func init() {
 }
 
 type V001Entry struct {
-	JARModel                models.JarV001Schema
-	fetchedExternalEntities bool
-	jarObj                  *jarutils.JarSignature
-	keyObj                  pki.PublicKey
-	sigObj                  pki.Signature
+	JARModel models.JarV001Schema
+	jarObj   *jarutils.JarSignature
+	keyObj   pki.PublicKey
+	sigObj   pki.Signature
 }
 
 func (v V001Entry) APIVersion() string {
@@ -116,10 +115,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 }
 
 func (v V001Entry) hasExternalEntities() bool {
-	if v.fetchedExternalEntities {
-		return false
-	}
-
 	if v.JARModel.Archive != nil && v.JARModel.Archive.URL.String() != "" {
 		return true
 	}
@@ -127,10 +122,6 @@ func (v V001Entry) hasExternalEntities() bool {
 }
 
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
-	if v.fetchedExternalEntities {
-		return nil
-	}
-
 	if err := v.validate(); err != nil {
 		return types.ValidationError(err)
 	}
@@ -206,7 +197,6 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		v.JARModel.Archive.Hash.Value = swag.String(computedSHA)
 	}
 
-	v.fetchedExternalEntities = true
 	return nil
 }
 
