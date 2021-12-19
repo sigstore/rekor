@@ -26,6 +26,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
@@ -33,9 +34,21 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/theupdateframework/go-tuf/data"
+	"github.com/theupdateframework/go-tuf/verify"
 
 	"go.uber.org/goleak"
 )
+
+func patchIsExpired() func() {
+	// Patch out the IsExpired to make the tests stable :)
+	old := verify.IsExpired
+	verify.IsExpired = func(t time.Time) bool {
+		return false
+	}
+	return func() {
+		verify.IsExpired = old
+	}
+}
 
 func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
@@ -49,6 +62,8 @@ func TestNewEntryReturnType(t *testing.T) {
 }
 
 func TestCrossFieldValidation(t *testing.T) {
+	defer patchIsExpired()()
+
 	type TestCase struct {
 		caseDesc                  string
 		entry                     V001Entry

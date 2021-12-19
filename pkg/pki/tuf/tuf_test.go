@@ -20,7 +20,21 @@ import (
 	"io"
 	"os"
 	"testing"
+	"time"
+
+	"github.com/theupdateframework/go-tuf/verify"
 )
+
+func patchIsExpired() func() {
+	// Patch out the IsExpired to make the tests stable :)
+	old := verify.IsExpired
+	verify.IsExpired = func(t time.Time) bool {
+		return false
+	}
+	return func() {
+		verify.IsExpired = old
+	}
+}
 
 func TestReadPublicKey(t *testing.T) {
 	// Tests reading a valid public key (root.json)
@@ -36,6 +50,9 @@ func TestReadPublicKey(t *testing.T) {
 		{caseDesc: "Invalid TUF root.json (invalid type)", inputFile: "testdata/timestamp.json", errorFound: true, specVersion: "1.0"},
 		{caseDesc: "Valid TUF root.json", inputFile: "testdata/1.root.json", errorFound: false, specVersion: "1.0"},
 	}
+
+	// Patch out the expired function to make tests stable :)
+	defer patchIsExpired()()
 
 	for _, tc := range tests {
 		file, err := os.Open(tc.inputFile)
@@ -101,6 +118,9 @@ func TestCanonicalValue(t *testing.T) {
 		t.Errorf("CanonicalValue did not error out for uninitialized key")
 	}
 
+	// Patch out the expired function to make tests stable :)
+	defer patchIsExpired()()
+
 	tests := []test{
 		{caseDesc: "root", input: "testdata/1.root.json", output: "testdata/reformat.1.root.json", match: true},
 	}
@@ -115,7 +135,7 @@ func TestCanonicalValue(t *testing.T) {
 
 		inputKey, err := NewPublicKey(inputFile)
 		if err != nil {
-			t.Errorf("%v: Error reading input for TestCanonicalValuePublicKey: %v", tc.caseDesc, err)
+			t.Errorf("%v: Error reading input for TestCanonicalValue: %v", tc.caseDesc, err)
 		}
 
 		cvInput, err := inputKey.CanonicalValue()
@@ -130,7 +150,7 @@ func TestCanonicalValue(t *testing.T) {
 
 		outputKey, err := NewPublicKey(outputFile)
 		if err != nil {
-			t.Errorf("%v: Error reading input for TestCanonicalValuePublicKey: %v", tc.caseDesc, err)
+			t.Errorf("%v: Error reading input for TestCanonicalValue: %v", tc.caseDesc, err)
 		}
 
 		cvOutput, err := outputKey.CanonicalValue()
@@ -158,6 +178,8 @@ func TestVerifySignature(t *testing.T) {
 		{caseDesc: "Valid root.json, mismatched timestamp.json", keyFile: "testdata/other_root.json", sigFile: "testdata/timestamp.json", verified: false},
 		{caseDesc: "Valid root.json, unsigned root.json", keyFile: "testdata/1.root.json", sigFile: "testdata/unsigned_root.json", verified: false},
 	}
+
+	defer patchIsExpired()()
 
 	for _, tc := range tests {
 		keyFile, err := os.Open(tc.keyFile)
