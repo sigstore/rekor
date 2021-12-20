@@ -69,7 +69,7 @@ func NewEntry() types.EntryImpl {
 	return &V001Entry{}
 }
 
-func (v V001Entry) IndexKeys() []string {
+func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
 	h := sha256.Sum256([]byte(v.env.Payload))
@@ -80,8 +80,7 @@ func (v V001Entry) IndexKeys() []string {
 	case in_toto.PayloadType:
 		statement, err := parseStatement(v.env.Payload)
 		if err != nil {
-			log.Logger.Info("invalid id in_toto Statement")
-			return result
+			return result, err
 		}
 		for _, s := range statement.Subject {
 			for alg, ds := range s.Digest {
@@ -91,7 +90,7 @@ func (v V001Entry) IndexKeys() []string {
 	default:
 		log.Logger.Infof("Unknown in_toto Statement Type: %s", v.env.PayloadType)
 	}
-	return result
+	return result, nil
 }
 
 func parseStatement(p string) (*in_toto.Statement, error) {

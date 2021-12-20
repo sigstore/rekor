@@ -64,7 +64,7 @@ func NewEntry() types.EntryImpl {
 	return &V001Entry{}
 }
 
-func (v V001Entry) IndexKeys() []string {
+func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
 	key, err := v.keyObj.CanonicalValue()
@@ -82,7 +82,7 @@ func (v V001Entry) IndexKeys() []string {
 		result = append(result, hashKey)
 	}
 
-	return result
+	return result, nil
 }
 
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {

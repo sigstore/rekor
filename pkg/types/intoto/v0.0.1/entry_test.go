@@ -204,7 +204,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				if err := v.validate(); err != nil {
 					return err
 				}
-				keys := v.IndexKeys()
+				keys, _ := v.IndexKeys()
 				h := sha256.Sum256([]byte(v.env.Payload))
 				sha := "sha256:" + hex.EncodeToString(h[:])
 				if keys[0] != sha {
@@ -268,7 +268,7 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 			// Always start with the hash
 			want := []string{"sha256:" + hex.EncodeToString(sha[:])}
 			want = append(want, tt.want...)
-			if got := v.IndexKeys(); !reflect.DeepEqual(got, want) {
+			if got, _ := v.IndexKeys(); !reflect.DeepEqual(got, want) {
 				t.Errorf("V001Entry.IndexKeys() = %v, want %v", got, tt.want)
 			}
 		})

@@ -70,30 +70,22 @@ func NewEntry() types.EntryImpl {
 	return &V001Entry{}
 }
 
-func (v V001Entry) IndexKeys() []string {
+func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
-
-	if v.hasExternalEntities() {
-		if err := v.fetchExternalEntities(context.Background()); err != nil {
-			log.Logger.Error(err)
-			return result
-		}
-	}
 
 	key, err := v.keyObj.CanonicalValue()
 	if err != nil {
-		log.Logger.Error(err)
-	} else {
-		keyHash := sha256.Sum256(key)
-		result = append(result, strings.ToLower(hex.EncodeToString(keyHash[:])))
+		return nil, err
 	}
+	keyHash := sha256.Sum256(key)
+	result = append(result, strings.ToLower(hex.EncodeToString(keyHash[:])))
 
 	if v.JARModel.Archive.Hash != nil {
 		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.JARModel.Archive.Hash.Algorithm, *v.JARModel.Archive.Hash.Value))
 		result = append(result, hashKey)
 	}
 
-	return result
+	return result, nil
 }
 
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
