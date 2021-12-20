@@ -16,7 +16,6 @@
 package jar
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -27,50 +26,11 @@ import (
 
 type UnmarshalTester struct {
 	models.Jar
-}
-
-func (u UnmarshalTester) NewEntry() types.EntryImpl {
-	return &UnmarshalTester{}
-}
-
-func (u UnmarshalTester) APIVersion() string {
-	return "2.0.1"
-}
-
-func (u UnmarshalTester) IndexKeys() ([]string, error) {
-	return []string{}, nil
-}
-
-func (u UnmarshalTester) Canonicalize(ctx context.Context) ([]byte, error) {
-	return nil, nil
-}
-
-func (u UnmarshalTester) HasExternalEntities() bool {
-	return false
-}
-
-func (u *UnmarshalTester) FetchExternalEntities(ctx context.Context) error {
-	return nil
-}
-
-func (u UnmarshalTester) Unmarshal(pe models.ProposedEntry) error {
-	return nil
-}
-
-func (u UnmarshalTester) Validate() error {
-	return nil
-}
-
-func (u UnmarshalTester) Attestation() (string, []byte) {
-	return "", nil
-}
-
-func (u UnmarshalTester) CreateFromArtifactProperties(_ context.Context, _ types.ArtifactProperties) (models.ProposedEntry, error) {
-	return nil, nil
+	types.BaseUnmarshalTester
 }
 
 type UnmarshalFailsTester struct {
-	UnmarshalTester
+	types.BaseUnmarshalTester
 }
 
 func (u UnmarshalFailsTester) NewEntry() types.EntryImpl {
