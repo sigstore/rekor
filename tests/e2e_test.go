@@ -501,7 +501,10 @@ func TestJARURL(t *testing.T) {
 			_, _ = w.Write(jarBytes)
 		}))
 	defer testServer.Close()
-	l, _ := net.Listen("tcp", "172.17.0.1:0")
+	l, err := net.Listen("tcp", "172.17.0.1:0")
+	if err != nil {
+		t.Skipf("unable to forward port to rekor server: %s", err)
+	}
 	testServer.Listener.Close()
 	testServer.Listener = l
 	testServer.Start()
