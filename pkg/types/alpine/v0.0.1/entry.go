@@ -52,10 +52,9 @@ func init() {
 }
 
 type V001Entry struct {
-	AlpineModel             models.AlpineV001Schema
-	fetchedExternalEntities bool
-	keyObj                  pki.PublicKey
-	apkObj                  *alpine.Package
+	AlpineModel models.AlpineV001Schema
+	keyObj      pki.PublicKey
+	apkObj      *alpine.Package
 }
 
 func (v V001Entry) APIVersion() string {
@@ -113,10 +112,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 }
 
 func (v V001Entry) hasExternalEntities() bool {
-	if v.fetchedExternalEntities {
-		return false
-	}
-
 	if v.AlpineModel.Package != nil && v.AlpineModel.Package.URL.String() != "" {
 		return true
 	}
@@ -127,10 +122,6 @@ func (v V001Entry) hasExternalEntities() bool {
 }
 
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
-	if v.fetchedExternalEntities {
-		return nil
-	}
-
 	if err := v.validate(); err != nil {
 		return types.ValidationError(err)
 	}
@@ -268,7 +259,6 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		v.AlpineModel.Package.Hash.Value = swag.String(computedSHA)
 	}
 
-	v.fetchedExternalEntities = true
 	return nil
 }
 

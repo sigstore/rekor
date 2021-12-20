@@ -63,10 +63,9 @@ type BaseSigned struct {
 }
 
 type V001Entry struct {
-	TufObj                  models.TUFV001Schema
-	fetchedExternalEntities bool
-	keyObj                  pki.PublicKey
-	sigObj                  pki.Signature
+	TufObj models.TUFV001Schema
+	keyObj pki.PublicKey
+	sigObj pki.Signature
 }
 
 func (v V001Entry) APIVersion() string {
@@ -138,9 +137,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 }
 
 func (v V001Entry) hasExternalEntities() bool {
-	if v.fetchedExternalEntities {
-		return false
-	}
 
 	if v.TufObj.Metadata != nil && v.TufObj.Metadata.URL.String() != "" {
 		return true
@@ -278,7 +274,6 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		return err
 	}
 
-	v.fetchedExternalEntities = true
 	return nil
 }
 
