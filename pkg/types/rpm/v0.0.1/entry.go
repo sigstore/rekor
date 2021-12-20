@@ -139,19 +139,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	defer sigR.Close()
 	defer rpmR.Close()
 
-	closePipesOnError := func(err error) error {
-		pipeReaders := []*io.PipeReader{hashR, sigR, rpmR}
-		pipeWriters := []*io.PipeWriter{hashW, sigW, rpmW}
-		for idx := range pipeReaders {
-			if e := pipeReaders[idx].CloseWithError(err); e != nil {
-				log.Logger.Error(fmt.Errorf("error closing pipe: %w", e))
-			}
-			if e := pipeWriters[idx].CloseWithError(err); e != nil {
-				log.Logger.Error(fmt.Errorf("error closing pipe: %w", e))
-			}
-		}
-		return err
-	}
+	closePipesOnError := types.PipeCloser(hashR, hashW, sigR, sigW, rpmR, rpmW)
 
 	oldSHA := ""
 	if v.RPMModel.Package.Hash != nil && v.RPMModel.Package.Hash.Value != nil {

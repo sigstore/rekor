@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/log"
 )
 
 // TypeMap stores mapping between type strings and entry constructors
@@ -77,4 +78,19 @@ func ListImplementedTypes() []string {
 		return true
 	})
 	return retVal
+}
+
+type errCloser interface {
+	CloseWithError(error) error
+}
+
+func PipeCloser(errClosers ...errCloser) func(err error) error {
+	return func(err error) error {
+		for _, p := range errClosers {
+			if err := p.CloseWithError(err); err != nil {
+				log.Logger.Error(fmt.Errorf("error closing pipe: %w", err))
+			}
+		}
+		return err
+	}
 }

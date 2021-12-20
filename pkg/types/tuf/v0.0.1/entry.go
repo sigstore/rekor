@@ -161,19 +161,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	defer metaR.Close()
 	defer rootR.Close()
 
-	closePipesOnError := func(err error) error {
-		pipeReaders := []*io.PipeReader{metaR, rootR}
-		pipeWriters := []*io.PipeWriter{metaW, rootW}
-		for idx := range pipeReaders {
-			if e := pipeReaders[idx].CloseWithError(err); e != nil {
-				log.Logger.Error(fmt.Errorf("error closing pipe: %w", e))
-			}
-			if e := pipeWriters[idx].CloseWithError(err); e != nil {
-				log.Logger.Error(fmt.Errorf("error closing pipe: %w", e))
-			}
-		}
-		return err
-	}
+	closePipesOnError := types.PipeCloser(metaR, metaW, rootR, rootW)
 
 	// verify artifact signature
 	artifactFactory, err := pki.NewArtifactFactory(pki.Tuf)

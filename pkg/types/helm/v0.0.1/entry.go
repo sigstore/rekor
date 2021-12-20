@@ -142,22 +142,9 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	provenanceR, provenanceW := io.Pipe()
-
 	defer provenanceR.Close()
 
-	closePipesOnError := func(err error) error {
-		pipeReaders := []*io.PipeReader{provenanceR}
-		pipeWriters := []*io.PipeWriter{provenanceW}
-		for idx := range pipeReaders {
-			if e := pipeReaders[idx].CloseWithError(err); e != nil {
-				log.Logger.Error(fmt.Errorf("error closing pipe: %w", e))
-			}
-			if e := pipeWriters[idx].CloseWithError(err); e != nil {
-				log.Logger.Error(fmt.Errorf("error closing pipe: %w", e))
-			}
-		}
-		return err
-	}
+	closePipesOnError := types.PipeCloser(provenanceR, provenanceW)
 
 	g.Go(func() error {
 		defer provenanceW.Close()
