@@ -1,3 +1,4 @@
+//go:build tools
 // +build tools
 
 // Copyright 2021 The Sigstore Authors.
@@ -24,4 +25,8 @@ import (
 	_ "github.com/dvyukov/go-fuzz/go-fuzz-build"
 	_ "github.com/dvyukov/go-fuzz/go-fuzz-dep"
 	_ "github.com/go-swagger/go-swagger/cmd/swagger"
+
+	// These are so we can build these two binaries into containers with ko
+	_ "github.com/google/trillian/cmd/trillian_log_server"
+	_ "github.com/google/trillian/cmd/trillian_log_signer"
 )
