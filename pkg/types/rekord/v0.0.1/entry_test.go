@@ -501,31 +501,21 @@ func TestCrossFieldValidation(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if err := tc.entry.validate(); (err == nil) != tc.expectUnmarshalSuccess {
-			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
-		}
-
 		v := &V001Entry{}
 		r := models.Rekord{
 			APIVersion: swag.String(tc.entry.APIVersion()),
 			Spec:       tc.entry.RekordObj,
 		}
 
-		unmarshalAndValidate := func() error {
-			if err := v.Unmarshal(&r); err != nil {
-				return err
-			}
-			if err := v.validate(); err != nil {
-				return err
-			}
-			return nil
+		if err := v.Unmarshal(&r); (err == nil) != tc.expectUnmarshalSuccess {
+			t.Fatalf("unexpected result in '%v': %v", tc.caseDesc, err)
+		}
+		// No need to continue here if we didn't unmarshal
+		if !tc.expectUnmarshalSuccess {
+			continue
 		}
 
-		if err := unmarshalAndValidate(); (err == nil) != tc.expectUnmarshalSuccess {
-			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
-		}
-
-		if tc.entry.HasExternalEntities() != tc.hasExtEntities {
+		if tc.entry.hasExternalEntities() != tc.hasExtEntities {
 			t.Errorf("unexpected result from HasExternalEntities for '%v'", tc.caseDesc)
 		}
 
