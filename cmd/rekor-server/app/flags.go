@@ -104,3 +104,8 @@ func (l *LogRanges) ResolveVirtualIndex(index int) (uint64, uint64) {
 	// Return the last one!
 	return l.Ranges[len(l.Ranges)-1].TreeID, uint64(indexLeft)
 }
+
+// ActiveIndex returns the active shard index, always the last shard in the range
+func (l *LogRanges) ActiveIndex() uint64 {
+	return l.Ranges[len(l.Ranges)-1].TreeID
+}

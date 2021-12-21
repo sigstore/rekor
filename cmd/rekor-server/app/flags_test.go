@@ -23,9 +23,10 @@ import (
 
 func TestLogRanges_Set(t *testing.T) {
 	tests := []struct {
-		name string
-		arg  string
-		want []LogRange
+		name   string
+		arg    string
+		want   []LogRange
+		active uint64
 	}{
 		{
 			name: "one, no length",
@@ -36,6 +37,7 @@ func TestLogRanges_Set(t *testing.T) {
 					TreeLength: 0,
 				},
 			},
+			active: 1234,
 		},
 		{
 			name: "two",
@@ -50,6 +52,7 @@ func TestLogRanges_Set(t *testing.T) {
 					TreeLength: 0,
 				},
 			},
+			active: 7234,
 		},
 	}
 	for _, tt := range tests {
@@ -61,6 +64,11 @@ func TestLogRanges_Set(t *testing.T) {
 
 			if diff := cmp.Diff(tt.want, l.Ranges); diff != "" {
 				t.Errorf(diff)
+			}
+
+			active := l.ActiveIndex()
+			if active != tt.active {
+				t.Errorf("LogRanges.Active() expected %d no error, got %d", tt.active, active)
 			}
 		})
 	}
