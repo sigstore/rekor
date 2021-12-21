@@ -137,10 +137,6 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 	if v.RPMModel.Package.Hash != nil && v.RPMModel.Package.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.RPMModel.Package.Hash.Value)
 	}
-	artifactFactory, err := pki.NewArtifactFactory(pki.PGP)
-	if err != nil {
-		return err
-	}
 
 	g.Go(func() error {
 		defer hashW.Close()
@@ -191,7 +187,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 		}
 		defer keyReadCloser.Close()
 
-		v.keyObj, err = artifactFactory.NewPublicKey(keyReadCloser)
+		v.keyObj, err = pgp.NewPublicKey(keyReadCloser)
 		if err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}

@@ -40,6 +40,7 @@ import (
 	"github.com/go-openapi/strfmt"
 
 	"github.com/sigstore/rekor/pkg/pki"
+
 	ptuf "github.com/sigstore/rekor/pkg/pki/tuf"
 
 	"github.com/go-openapi/swag"
@@ -156,11 +157,6 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	closePipesOnError := types.PipeCloser(metaR, metaW, rootR, rootW)
 
 	// verify artifact signature
-	artifactFactory, err := pki.NewArtifactFactory(pki.Tuf)
-	if err != nil {
-		return err
-	}
-
 	sigResult := make(chan pki.Signature)
 
 	g.Go(func() error {
@@ -182,7 +178,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		}
 		defer sigReadCloser.Close()
 
-		signature, err := artifactFactory.NewSignature(sigReadCloser)
+		signature, err := ptuf.NewSignature(sigReadCloser)
 		if err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}
@@ -216,7 +212,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		}
 		defer keyReadCloser.Close()
 
-		key, err := artifactFactory.NewPublicKey(keyReadCloser)
+		key, err := ptuf.NewPublicKey(keyReadCloser)
 		if err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}

@@ -121,13 +121,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
-	// Only support x509 signatures for intoto attestations
-	af, err := pki.NewArtifactFactory(pki.X509)
-	if err != nil {
-		return err
-	}
-
-	v.keyObj, err = af.NewPublicKey(bytes.NewReader(*v.IntotoObj.PublicKey))
+	v.keyObj, err = x509.NewPublicKey(bytes.NewReader(*v.IntotoObj.PublicKey))
 	if err != nil {
 		return err
 	}
