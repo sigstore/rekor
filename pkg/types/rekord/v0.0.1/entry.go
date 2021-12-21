@@ -104,7 +104,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 }
 
-func (v V001Entry) HasExternalEntities() bool {
+func (v *V001Entry) hasExternalEntities() bool {
 	if v.RekordObj.Data != nil && v.RekordObj.Data.URL.String() != "" {
 		return true
 	}
@@ -117,11 +117,7 @@ func (v V001Entry) HasExternalEntities() bool {
 	return false
 }
 
-func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
-	if err := v.validate(); err != nil {
-		return types.ValidationError(err)
-	}
-
+func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	hashR, hashW := io.Pipe()
@@ -267,7 +263,7 @@ func (v *V001Entry) FetchExternalEntities(ctx context.Context) error {
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
-	if err := v.FetchExternalEntities(ctx); err != nil {
+	if err := v.fetchExternalEntities(ctx); err != nil {
 		return nil, err
 	}
 
@@ -431,8 +427,8 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		return nil, err
 	}
 
-	if re.HasExternalEntities() {
-		if err := re.FetchExternalEntities(ctx); err != nil {
+	if re.hasExternalEntities() {
+		if err := re.fetchExternalEntities(ctx); err != nil {
 			return nil, fmt.Errorf("error retrieving external entities: %v", err)
 		}
 	}
