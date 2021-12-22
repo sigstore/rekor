@@ -34,7 +34,7 @@ require (
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.30.0 // indirect
 	github.com/prometheus/procfs v0.7.1 // indirect
-	github.com/rs/cors v1.8.0
+	github.com/rs/cors v1.8.2
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
 	github.com/secure-systems-lab/go-securesystemslib v0.3.0
 	github.com/sigstore/sigstore v1.0.2-0.20211210190220-04746d994282
