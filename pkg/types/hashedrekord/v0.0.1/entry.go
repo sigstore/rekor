@@ -129,6 +129,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	canonicalEntry.Data.Hash = v.HashedRekordObj.Data.Hash
 	// data content is not set deliberately
 
+	v.HashedRekordObj = canonicalEntry
 	// wrap in valid object with kind and apiVersion set
 	rekordObj := models.Hashedrekord{}
 	rekordObj.APIVersion = swag.String(APIVERSION)

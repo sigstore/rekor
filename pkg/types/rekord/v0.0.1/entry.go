@@ -310,6 +310,8 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	rekordObj.APIVersion = swag.String(APIVERSION)
 	rekordObj.Spec = &canonicalEntry
 
+	v.RekordObj = canonicalEntry
+
 	bytes, err := json.Marshal(&rekordObj)
 	if err != nil {
 		return nil, err

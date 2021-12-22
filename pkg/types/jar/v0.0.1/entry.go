@@ -31,7 +31,6 @@ import (
 	"strings"
 
 	"github.com/sigstore/rekor/pkg/log"
-	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pkcs7"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/jar"
@@ -58,9 +57,6 @@ func init() {
 
 type V001Entry struct {
 	JARModel models.JarV001Schema
-	jarObj   *jarutils.JarSignature
-	keyObj   pki.PublicKey
-	sigObj   pki.Signature
 }
 
 func (v V001Entry) APIVersion() string {
@@ -71,10 +67,14 @@ func NewEntry() types.EntryImpl {
 	return &V001Entry{}
 }
 
-func (v V001Entry) IndexKeys() ([]string, error) {
+func (v *V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
-	key, err := v.keyObj.CanonicalValue()
+	keyObj, err := pkcs7.NewSignature(bytes.NewReader(v.JARModel.Signature.Content))
+	if err != nil {
+		return nil, err
+	}
+	key, err := keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
@@ -107,18 +107,14 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return v.validate()
 }
 
-func (v V001Entry) hasExternalEntities() bool {
+func (v *V001Entry) hasExternalEntities() bool {
 	if v.JARModel.Archive != nil && v.JARModel.Archive.URL.String() != "" {
 		return true
 	}
 	return false
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
-	if err := v.validate(); err != nil {
-		return types.ValidationError(err)
-	}
-
+func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pkcs7.PublicKey, *pkcs7.Signature, error) {
 	oldSHA := ""
 	if v.JARModel.Archive.Hash != nil && v.JARModel.Archive.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.JARModel.Archive.Hash.Value)
@@ -126,7 +122,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 
 	dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.JARModel.Archive.URL.String(), v.JARModel.Archive.Content)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	defer dataReadCloser.Close()
 
@@ -135,97 +131,94 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 
 	n, err := io.Copy(io.MultiWriter(hasher, b), dataReadCloser)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	computedSHA := hex.EncodeToString(hasher.Sum(nil))
 	if oldSHA != "" && computedSHA != oldSHA {
-		return types.ValidationError(fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA))
+		return nil, nil, types.ValidationError(fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA))
 	}
 
 	zipReader, err := zip.NewReader(bytes.NewReader(b.Bytes()), n)
 	if err != nil {
-		return types.ValidationError(err)
+		return nil, nil, types.ValidationError(err)
 	}
 
 	// this ensures that the JAR is signed and the signature verifies, as
 	// well as checks that the hashes in the signed manifest are all valid
-	jarObj, err := jarutils.Verify(zipReader, false)
+	jarObjs, err := jarutils.Verify(zipReader, false)
 	if err != nil {
-		return types.ValidationError(err)
+		return nil, nil, types.ValidationError(err)
 	}
-	switch len(jarObj) {
+	switch len(jarObjs) {
 	case 0:
-		return types.ValidationError(errors.New("no signatures detected in JAR archive"))
+		return nil, nil, types.ValidationError(errors.New("no signatures detected in JAR archive"))
 	case 1:
 	default:
-		return types.ValidationError(errors.New("multiple signatures detected in JAR; unable to process"))
+		return nil, nil, types.ValidationError(errors.New("multiple signatures detected in JAR; unable to process"))
 	}
-	v.jarObj = jarObj[0]
 
 	// we need to find and extract the PKCS7 bundle from the JAR file manually
 	sigPKCS7, err := extractPKCS7SignatureFromJAR(zipReader)
 	if err != nil {
-		return types.ValidationError(err)
+		return nil, nil, types.ValidationError(err)
 	}
 
-	v.keyObj, err = pkcs7.NewPublicKey(bytes.NewReader(sigPKCS7))
+	keyObj, err := pkcs7.NewPublicKey(bytes.NewReader(sigPKCS7))
 	if err != nil {
-		return types.ValidationError(err)
+		return nil, nil, types.ValidationError(err)
 	}
 
-	v.sigObj, err = pkcs7.NewSignature(bytes.NewReader(sigPKCS7))
+	sigObj, err := pkcs7.NewSignature(bytes.NewReader(sigPKCS7))
 	if err != nil {
-		return types.ValidationError(err)
+		return nil, nil, types.ValidationError(err)
 	}
 
 	// if we get here, all goroutines succeeded without error
 	if oldSHA == "" {
-		v.JARModel.Archive.Hash = &models.JarV001SchemaArchiveHash{}
-		v.JARModel.Archive.Hash.Algorithm = swag.String(models.JarV001SchemaArchiveHashAlgorithmSha256)
-		v.JARModel.Archive.Hash.Value = swag.String(computedSHA)
+		v.JARModel.Archive.Hash = &models.JarV001SchemaArchiveHash{
+			Algorithm: swag.String(models.JarV001SchemaArchiveHashAlgorithmSha256),
+			Value:     swag.String(computedSHA),
+		}
+
 	}
 
-	return nil
+	return keyObj, sigObj, nil
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
-	if err := v.fetchExternalEntities(ctx); err != nil {
+	keyObj, sigObj, err := v.fetchExternalEntities(ctx)
+	if err != nil {
 		return nil, err
 	}
-	if v.jarObj == nil {
-		return nil, errors.New("JAR object not initialized before canonicalization")
-	}
-	if v.keyObj == nil {
-		return nil, errors.New("public key not initialized before canonicalization")
-	}
-	if v.sigObj == nil {
-		return nil, errors.New("signature not initialized before canonicalization")
-	}
 
-	canonicalEntry := models.JarV001Schema{}
-
-	var err error
 	// need to canonicalize key content
-	canonicalEntry.Signature = &models.JarV001SchemaSignature{}
-	canonicalEntry.Signature.PublicKey = &models.JarV001SchemaSignaturePublicKey{}
-	keyContent, err := v.keyObj.CanonicalValue()
+	keyContent, err := keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
-	canonicalEntry.Signature.PublicKey.Content = (*strfmt.Base64)(&keyContent)
-	sigContent, err := v.sigObj.CanonicalValue()
+	sigContent, err := sigObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
-	canonicalEntry.Signature.Content = sigContent
 
-	canonicalEntry.Archive = &models.JarV001SchemaArchive{}
-	canonicalEntry.Archive.Hash = &models.JarV001SchemaArchiveHash{}
-	canonicalEntry.Archive.Hash.Algorithm = v.JARModel.Archive.Hash.Algorithm
-	canonicalEntry.Archive.Hash.Value = v.JARModel.Archive.Hash.Value
+	canonicalEntry := models.JarV001Schema{
+		Signature: &models.JarV001SchemaSignature{
+			PublicKey: &models.JarV001SchemaSignaturePublicKey{
+				Content: (*strfmt.Base64)(&keyContent),
+			},
+			Content: sigContent,
+		},
+		Archive: &models.JarV001SchemaArchive{
+			Hash: &models.JarV001SchemaArchiveHash{
+				Algorithm: v.JARModel.Archive.Hash.Algorithm,
+				Value:     v.JARModel.Archive.Hash.Value,
+			},
+		},
+	}
 	// archive content is not set deliberately
 
+	v.JARModel = canonicalEntry
 	// wrap in valid object with kind and apiVersion set
 	jar := models.Jar{}
 	jar.APIVersion = swag.String(APIVERSION)
@@ -235,7 +228,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 }
 
 // validate performs cross-field validation for fields in object
-func (v V001Entry) validate() error {
+func (v *V001Entry) validate() error {
 	archive := v.JARModel.Archive
 	if archive == nil {
 		return errors.New("missing package")
@@ -290,11 +283,11 @@ func extractPKCS7SignatureFromJAR(inz *zip.Reader) ([]byte, error) {
 	return nil, errors.New("unable to locate signature in JAR file")
 }
 
-func (v V001Entry) Attestation() []byte {
+func (v *V001Entry) Attestation() []byte {
 	return nil
 }
 
-func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+func (v *V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	returnVal := models.Jar{}
 	re := V001Entry{}
 
@@ -333,7 +326,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	}
 
 	if re.hasExternalEntities() {
-		if err := re.fetchExternalEntities(ctx); err != nil {
+		if _, _, err := re.fetchExternalEntities(ctx); err != nil {
 			return nil, fmt.Errorf("error retrieving external entities: %v", err)
 		}
 	}
