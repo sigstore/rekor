@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pgp"
 )
 
@@ -62,12 +61,7 @@ func TestProvenance(t *testing.T) {
 		t.Fatalf("failed to parse public key: %v", err)
 	}
 
-	artifactFactory, err := pki.NewArtifactFactory(pki.PGP)
-	if err != nil {
-		t.Fatalf("Failed to create PGP pki factory %v", err)
-	}
-
-	sig, err := artifactFactory.NewSignature(provenance.Block.ArmoredSignature.Body)
+	sig, err := pgp.NewSignature(provenance.Block.ArmoredSignature.Body)
 	if err != nil {
 		t.Fatalf("Failed to create signature %v", err)
 	}

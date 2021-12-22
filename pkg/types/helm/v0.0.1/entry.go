@@ -126,11 +126,6 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		return types.ValidationError(err)
 	}
 
-	artifactFactory, err := pki.NewArtifactFactory(pki.PGP)
-	if err != nil {
-		return err
-	}
-
 	g, ctx := errgroup.WithContext(ctx)
 
 	provenanceR, provenanceW := io.Pipe()
@@ -165,7 +160,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		}
 		defer keyReadCloser.Close()
 
-		v.keyObj, err = artifactFactory.NewPublicKey(keyReadCloser)
+		v.keyObj, err = pgp.NewPublicKey(keyReadCloser)
 		if err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}
@@ -191,7 +186,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		}
 
 		// Set signature
-		sig, err := artifactFactory.NewSignature(provenance.Block.ArmoredSignature.Body)
+		sig, err := pgp.NewSignature(provenance.Block.ArmoredSignature.Body)
 		if err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}

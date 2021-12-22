@@ -16,6 +16,7 @@
 package rekord
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -52,8 +53,6 @@ func init() {
 
 type V001Entry struct {
 	RekordObj models.RekordV001Schema
-	keyObj    pki.PublicKey
-	sigObj    pki.Signature
 }
 
 func (v V001Entry) APIVersion() string {
@@ -67,7 +66,16 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
-	key, err := v.keyObj.CanonicalValue()
+	af, err := pki.NewArtifactFactory(pki.Format(v.RekordObj.Signature.Format))
+	if err != nil {
+		return nil, err
+	}
+	keyObj, err := af.NewPublicKey(bytes.NewReader(v.RekordObj.Signature.PublicKey.Content))
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := keyObj.CanonicalValue()
 	if err != nil {
 		log.Logger.Error(err)
 	} else {
@@ -75,7 +83,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 		result = append(result, strings.ToLower(hex.EncodeToString(keyHash[:])))
 	}
 
-	result = append(result, v.keyObj.EmailAddresses()...)
+	result = append(result, keyObj.EmailAddresses()...)
 
 	if v.RekordObj.Data.Hash != nil {
 		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.RekordObj.Data.Hash.Algorithm, *v.RekordObj.Data.Hash.Value))
@@ -99,6 +107,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	if err := v.RekordObj.Validate(strfmt.Default); err != nil {
 		return err
 	}
+
 	// cross field validation
 	return v.validate()
 
@@ -117,8 +126,13 @@ func (v *V001Entry) hasExternalEntities() bool {
 	return false
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
+func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, pki.Signature, error) {
 	g, ctx := errgroup.WithContext(ctx)
+
+	af, err := pki.NewArtifactFactory(pki.Format(v.RekordObj.Signature.Format))
+	if err != nil {
+		return nil, nil, err
+	}
 
 	hashR, hashW := io.Pipe()
 	sigR, sigW := io.Pipe()
@@ -130,10 +144,6 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	oldSHA := ""
 	if v.RekordObj.Data.Hash != nil && v.RekordObj.Data.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.RekordObj.Data.Hash.Value)
-	}
-	artifactFactory, err := pki.NewArtifactFactory(pki.Format(v.RekordObj.Signature.Format))
-	if err != nil {
-		return types.ValidationError(err)
 	}
 
 	g.Go(func() error {
@@ -188,7 +198,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		}
 		defer sigReadCloser.Close()
 
-		signature, err := artifactFactory.NewSignature(sigReadCloser)
+		signature, err := af.NewSignature(sigReadCloser)
 		if err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}
@@ -213,7 +223,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		}
 		defer keyReadCloser.Close()
 
-		key, err := artifactFactory.NewPublicKey(keyReadCloser)
+		key, err := af.NewPublicKey(keyReadCloser)
 		if err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}
@@ -226,15 +236,19 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		}
 	})
 
+	var (
+		keyObj pki.PublicKey
+		sigObj pki.Signature
+	)
 	g.Go(func() error {
-		v.keyObj, v.sigObj = <-keyResult, <-sigResult
+		keyObj, sigObj = <-keyResult, <-sigResult
 
-		if v.keyObj == nil || v.sigObj == nil {
+		if keyObj == nil || sigObj == nil {
 			return closePipesOnError(errors.New("failed to read signature or public key"))
 		}
 
 		var err error
-		if err = v.sigObj.Verify(sigR, v.keyObj); err != nil {
+		if err = sigObj.Verify(sigR, keyObj); err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}
 
@@ -249,7 +263,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	computedSHA := <-hashResult
 
 	if err := g.Wait(); err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	// if we get here, all goroutines succeeded without error
@@ -259,11 +273,12 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		v.RekordObj.Data.Hash.Value = swag.String(computedSHA)
 	}
 
-	return nil
+	return keyObj, sigObj, nil
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
-	if err := v.fetchExternalEntities(ctx); err != nil {
+	keyObj, sigObj, err := v.fetchExternalEntities(ctx)
+	if err != nil {
 		return nil, err
 	}
 
@@ -274,15 +289,14 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	// signature URL (if known) is not set deliberately
 	canonicalEntry.Signature.Format = v.RekordObj.Signature.Format
 
-	var err error
-	canonicalEntry.Signature.Content, err = v.sigObj.CanonicalValue()
+	canonicalEntry.Signature.Content, err = sigObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
 
 	// key URL (if known) is not set deliberately
 	canonicalEntry.Signature.PublicKey = &models.RekordV001SchemaSignaturePublicKey{}
-	canonicalEntry.Signature.PublicKey.Content, err = v.keyObj.CanonicalValue()
+	canonicalEntry.Signature.PublicKey.Content, err = keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
@@ -428,7 +442,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	}
 
 	if re.hasExternalEntities() {
-		if err := re.fetchExternalEntities(ctx); err != nil {
+		if _, _, err := re.fetchExternalEntities(ctx); err != nil {
 			return nil, fmt.Errorf("error retrieving external entities: %v", err)
 		}
 	}

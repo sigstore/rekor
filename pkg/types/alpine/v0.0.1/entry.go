@@ -118,11 +118,6 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		return types.ValidationError(err)
 	}
 
-	artifactFactory, err := pki.NewArtifactFactory(pki.X509)
-	if err != nil {
-		return err
-	}
-
 	g, ctx := errgroup.WithContext(ctx)
 
 	hashR, hashW := io.Pipe()
@@ -188,7 +183,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		}
 		defer keyReadCloser.Close()
 
-		v.keyObj, err = artifactFactory.NewPublicKey(keyReadCloser)
+		v.keyObj, err = x509.NewPublicKey(keyReadCloser)
 		if err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}
