@@ -120,6 +120,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	}
 
 	inputString := inputBuffer.String()
+
 	key, err := minisign.DecodePublicKey(inputString)
 	if err != nil {
 		// try as a standalone base64 string
@@ -139,7 +140,11 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 		return nil, fmt.Errorf("minisign public key has not been initialized")
 	}
 
-	b64Key := base64.StdEncoding.EncodeToString(k.key.PublicKey[:])
+	bin := []byte{}
+	bin = append(bin, k.key.SignatureAlgorithm[:]...)
+	bin = append(bin, k.key.KeyId[:]...)
+	bin = append(bin, k.key.PublicKey[:]...)
+	b64Key := base64.StdEncoding.EncodeToString(bin)
 	return []byte(b64Key), nil
 }
 

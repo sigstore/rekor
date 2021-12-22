@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"go.uber.org/goleak"
 )
 
@@ -239,6 +240,15 @@ func TestCanonicalValuePublicKey(t *testing.T) {
 
 		if bytes.Equal(cvInput, cvOutput) != tc.match {
 			t.Errorf("%v: %v equality of canonical values of %v and %v was expected but not generated", tc.caseDesc, tc.match, tc.input, tc.output)
+		}
+
+		// The canonical values should be round-trippable
+		rt, err := NewPublicKey(bytes.NewReader(cvInput))
+		if err != nil {
+			t.Fatalf("error parsing canonicalized key: %v", err)
+		}
+		if diff := cmp.Diff(rt.key, inputKey.key); diff != "" {
+			t.Error(diff)
 		}
 	}
 }
