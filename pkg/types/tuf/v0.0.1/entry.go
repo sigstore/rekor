@@ -16,6 +16,7 @@ limitations under the License.
 package tuf
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -65,8 +66,6 @@ type BaseSigned struct {
 
 type V001Entry struct {
 	TufObj models.TUFV001Schema
-	keyObj pki.PublicKey
-	sigObj pki.Signature
 }
 
 func (v V001Entry) APIVersion() string {
@@ -79,26 +78,36 @@ func NewEntry() types.EntryImpl {
 
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
-
-	// Index metadata hash, type, and version.
-	metadata, err := v.sigObj.CanonicalValue()
+	keyBytes, err := json.Marshal(v.TufObj.Root.Content)
 	if err != nil {
-		log.Logger.Error(err)
-	} else {
-		metadataHash := sha256.Sum256(metadata)
-		result = append(result, strings.ToLower(hex.EncodeToString(metadataHash[:])))
+		return nil, err
+	}
+	sigBytes, err := json.Marshal(v.TufObj.Metadata.Content)
+	if err != nil {
+		return nil, err
+	}
+	key, err := ptuf.NewPublicKey(bytes.NewReader(keyBytes))
+	if err != nil {
+		return nil, err
+	}
+	sig, err := ptuf.NewSignature(bytes.NewReader(sigBytes))
+	if err != nil {
+		return nil, err
+	}
+	// Index metadata hash, type, and version.
+	metadata, err := sig.CanonicalValue()
+	if err != nil {
+		return nil, err
 	}
 
-	signed, ok := v.sigObj.(*ptuf.Signature)
-	if !ok {
-		return nil, errors.New("invalid metadata format")
-	}
+	metadataHash := sha256.Sum256(metadata)
+	result = append(result, strings.ToLower(hex.EncodeToString(metadataHash[:])))
 
-	result = append(result, signed.Role)
-	result = append(result, strconv.Itoa(signed.Version))
+	result = append(result, sig.Role)
+	result = append(result, strconv.Itoa(sig.Version))
 
 	// Index root.json hash.
-	root, err := v.keyObj.CanonicalValue()
+	root, err := key.CanonicalValue()
 	if err != nil {
 		log.Logger.Error(err)
 	} else {
@@ -130,7 +139,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 }
 
 func (v V001Entry) hasExternalEntities() bool {
-
 	if v.TufObj.Metadata != nil && v.TufObj.Metadata.URL.String() != "" {
 		return true
 	}
@@ -142,11 +150,7 @@ func (v V001Entry) hasExternalEntities() bool {
 	return false
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
-	if err := v.Validate(); err != nil {
-		return types.ValidationError(err)
-	}
-
+func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, pki.Signature, error) {
 	g, ctx := errgroup.WithContext(ctx)
 
 	metaR, metaW := io.Pipe()
@@ -225,16 +229,20 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		}
 	})
 
+	var (
+		keyObj pki.PublicKey
+		sigObj pki.Signature
+	)
 	// the sigObj contains the signed content.
 	g.Go(func() error {
-		v.keyObj, v.sigObj = <-keyResult, <-sigResult
+		keyObj, sigObj = <-keyResult, <-sigResult
 
-		if v.keyObj == nil || v.sigObj == nil {
+		if keyObj == nil || sigObj == nil {
 			return closePipesOnError(errors.New("failed to read signature or public key"))
 		}
 
 		var err error
-		if err = v.sigObj.Verify(nil, v.keyObj); err != nil {
+		if err = sigObj.Verify(nil, keyObj); err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}
 
@@ -247,40 +255,34 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	})
 
 	if err := g.Wait(); err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	return nil
+	return keyObj, sigObj, nil
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
-	if err := v.fetchExternalEntities(ctx); err != nil {
+	key, sig, err := v.fetchExternalEntities(ctx)
+	if err != nil {
 		return nil, err
-	}
-	if v.sigObj == nil {
-		return nil, errors.New("signature object not initialized before canonicalization")
-	}
-	if v.keyObj == nil {
-		return nil, errors.New("key object not initialized before canonicalization")
 	}
 
 	canonicalEntry := models.TUFV001Schema{}
 
-	var err error
-	canonicalEntry.SpecVersion, err = v.keyObj.(*ptuf.PublicKey).SpecVersion()
+	canonicalEntry.SpecVersion, err = key.(*ptuf.PublicKey).SpecVersion()
 	if err != nil {
 		return nil, err
 	}
 
 	// need to canonicalize manifest (canonicalize JSON)
 	canonicalEntry.Root = &models.TUFV001SchemaRoot{}
-	canonicalEntry.Root.Content, err = v.keyObj.CanonicalValue()
+	canonicalEntry.Root.Content, err = key.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
 
 	canonicalEntry.Metadata = &models.TUFV001SchemaMetadata{}
-	canonicalEntry.Metadata.Content, err = v.sigObj.CanonicalValue()
+	canonicalEntry.Metadata.Content, err = sig.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +386,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	}
 
 	if re.hasExternalEntities() {
-		if err := re.fetchExternalEntities(ctx); err != nil {
+		if _, _, err := re.fetchExternalEntities(ctx); err != nil {
 			return nil, fmt.Errorf("error retrieving external entities: %v", err)
 		}
 	}
