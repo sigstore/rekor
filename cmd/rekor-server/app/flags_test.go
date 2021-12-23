@@ -19,19 +19,20 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/sigstore/rekor/pkg/api"
 )
 
 func TestLogRanges_Set(t *testing.T) {
 	tests := []struct {
 		name   string
 		arg    string
-		want   []LogRange
+		want   []api.LogRange
 		active uint64
 	}{
 		{
 			name: "one, no length",
 			arg:  "1234",
-			want: []LogRange{
+			want: []api.LogRange{
 				{
 					TreeID:     1234,
 					TreeLength: 0,
@@ -42,7 +43,7 @@ func TestLogRanges_Set(t *testing.T) {
 		{
 			name: "two",
 			arg:  "1234=10,7234",
-			want: []LogRange{
+			want: []api.LogRange{
 				{
 					TreeID:     1234,
 					TreeLength: 10,
@@ -57,16 +58,16 @@ func TestLogRanges_Set(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := &LogRanges{}
+			l := &LogRangesFlag{}
 			if err := l.Set(tt.arg); err != nil {
 				t.Errorf("LogRanges.Set() expected no error, got %v", err)
 			}
 
-			if diff := cmp.Diff(tt.want, l.Ranges); diff != "" {
+			if diff := cmp.Diff(tt.want, l.Ranges.Ranges); diff != "" {
 				t.Errorf(diff)
 			}
 
-			active := l.ActiveIndex()
+			active := l.Ranges.ActiveIndex()
 			if active != tt.active {
 				t.Errorf("LogRanges.Active() expected %d no error, got %d", tt.active, active)
 			}
@@ -94,50 +95,10 @@ func TestLogRanges_SetErr(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := &LogRanges{}
+			l := &LogRangesFlag{}
 			if err := l.Set(tt.arg); err == nil {
 				t.Error("LogRanges.Set() expected error but got none")
 			}
 		})
-	}
-}
-
-func TestLogRanges_ResolveVirtualIndex(t *testing.T) {
-	lrs := LogRanges{
-		Ranges: []LogRange{
-			{TreeID: 1, TreeLength: 17},
-			{TreeID: 2, TreeLength: 1},
-			{TreeID: 3, TreeLength: 100},
-			{TreeID: 4},
-		},
-	}
-
-	for _, tt := range []struct {
-		Index      int
-		WantTreeID uint64
-		WantIndex  uint64
-	}{
-		{
-			Index:      3,
-			WantTreeID: 1, WantIndex: 3,
-		},
-		// This is the first (0th) entry in the next tree
-		{
-			Index:      17,
-			WantTreeID: 2, WantIndex: 0,
-		},
-		// Overflow
-		{
-			Index:      3000,
-			WantTreeID: 4, WantIndex: 2882,
-		},
-	} {
-		tree, index := lrs.ResolveVirtualIndex(tt.Index)
-		if tree != tt.WantTreeID {
-			t.Errorf("LogRanges.ResolveVirtualIndex() tree = %v, want %v", tree, tt.WantTreeID)
-		}
-		if index != tt.WantIndex {
-			t.Errorf("LogRanges.ResolveVirtualIndex() index = %v, want %v", index, tt.WantIndex)
-		}
 	}
 }
