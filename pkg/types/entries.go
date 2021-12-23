@@ -35,7 +35,7 @@ type EntryImpl interface {
 	IndexKeys() ([]string, error)                     // the keys that should be added to the external index for this entry
 	Canonicalize(ctx context.Context) ([]byte, error) // marshal the canonical entry to be put into the tlog
 	Unmarshal(e models.ProposedEntry) error           // unmarshal the abstract entry into the specific struct for this versioned type
-	Attestation() (string, []byte)
+	Attestation() []byte
 	CreateFromArtifactProperties(context.Context, ArtifactProperties) (models.ProposedEntry, error)
 }
 

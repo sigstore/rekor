@@ -193,12 +193,12 @@ func (v *V001Entry) validate() error {
 	return nil
 }
 
-func (v *V001Entry) Attestation() (string, []byte) {
+func (v *V001Entry) Attestation() []byte {
 	if len(v.env.Payload) > viper.GetInt("max_attestation_size") {
 		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", len(v.env.Payload), viper.GetInt("max_attestation_size"))
-		return "", nil
+		return nil
 	}
-	return v.env.PayloadType, []byte(v.env.Payload)
+	return []byte(v.env.Payload)
 }
 
 type verifier struct {

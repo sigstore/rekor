@@ -159,7 +159,6 @@ func parseEntry(uuid string, e models.LogEntryAnon) (interface{}, error) {
 
 	if e.Attestation != nil {
 		obj.Attestation = string(e.Attestation.Data)
-		obj.AttestationType = e.Attestation.MediaType
 	}
 
 	return &obj, nil
