@@ -49,11 +49,12 @@ export KO_DOCKER_REPO=$(KO_PREFIX)
 SWAGGER := $(TOOLS_BIN_DIR)/swagger
 GO-FUZZ-BUILD := $(TOOLS_BIN_DIR)/go-fuzz-build
 
-CLI_PKG=github.com/sigstore/rekor/cmd/rekor-cli/app
-CLI_LDFLAGS=-X $(CLI_PKG).GitVersion=$(GIT_VERSION) -X $(CLI_PKG).gitCommit=$(GIT_HASH) -X $(CLI_PKG).gitTreeState=$(GIT_TREESTATE) -X $(CLI_PKG).buildDate=$(BUILD_DATE)
+FLAG_PKG=github.com/sigstore/rekor/pkg/api
+REKOR_LDFLAGS=-X $(FLAG_PKG).GitVersion=$(GIT_VERSION) -X $(FLAG_PKG).GitCommit=$(GIT_HASH) -X $(FLAG_PKG).GitTreeState=$(GIT_TREESTATE) -X $(FLAG_PKG).BuildDate=$(BUILD_DATE)
 
-SERVER_PKG=github.com/sigstore/rekor/cmd/rekor-server/app
-SERVER_LDFLAGS=-X $(SERVER_PKG).GitVersion=$(GIT_VERSION) -X $(SERVER_PKG).gitCommit=$(GIT_HASH) -X $(SERVER_PKG).gitTreeState=$(GIT_TREESTATE) -X $(SERVER_PKG).buildDate=$(BUILD_DATE)
+CLI_LDFLAGS=$(REKOR_LDFLAGS)
+SERVER_LDFLAGS=$(REKOR_LDFLAGS)
+
 
 $(GENSRC): $(SWAGGER) $(OPENAPIDEPS)
 	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --default-consumes application/json\;q=1 --additional-initialism=TUF

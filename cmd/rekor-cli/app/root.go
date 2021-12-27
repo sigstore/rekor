@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
+	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/log"
 
 	// these imports are to call the packages' init methods
@@ -72,7 +73,7 @@ func init() {
 	}
 
 	// look for the default version and replace it, if found, from runtime build info
-	if GitVersion != "devel" {
+	if api.GitVersion != "devel" {
 		return
 	}
 
@@ -82,7 +83,7 @@ func init() {
 	}
 	// Version is set in artifacts built with -X github.com/sigstore/rekor/cmd/rekor-cli/app.GitVersion=1.2.3
 	// Ensure version is also set when installed via go install github.com/sigstore/rekor/cmd/rekor-cli
-	GitVersion = bi.Main.Version
+	api.GitVersion = bi.Main.Version
 }
 
 func initConfig(cmd *cobra.Command) error {

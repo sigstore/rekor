@@ -411,6 +411,26 @@ func init() {
           }
         }
       }
+    },
+    "/api/v1/version": {
+      "get": {
+        "tags": [
+          "server"
+        ],
+        "summary": "Get the current version of the rekor server",
+        "operationId": "getRekorVersion",
+        "responses": {
+          "200": {
+            "description": "A JSON object with the running rekor version",
+            "schema": {
+              "$ref": "#/definitions/RekorVersion"
+            }
+          },
+          "default": {
+            "$ref": "#/responses/InternalServerError"
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -568,6 +588,29 @@ func init() {
         }
       },
       "discriminator": "kind"
+    },
+    "RekorVersion": {
+      "type": "object",
+      "required": [
+        "version",
+        "commit",
+        "treestate",
+        "builddate"
+      ],
+      "properties": {
+        "builddate": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        },
+        "treestate": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
     },
     "SearchIndex": {
       "type": "object",
@@ -1335,6 +1378,29 @@ func init() {
           }
         }
       }
+    },
+    "/api/v1/version": {
+      "get": {
+        "tags": [
+          "server"
+        ],
+        "summary": "Get the current version of the rekor server",
+        "operationId": "getRekorVersion",
+        "responses": {
+          "200": {
+            "description": "A JSON object with the running rekor version",
+            "schema": {
+              "$ref": "#/definitions/RekorVersion"
+            }
+          },
+          "default": {
+            "description": "There was an internal error in the server while processing the request",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -2071,6 +2137,29 @@ func init() {
         }
       },
       "discriminator": "kind"
+    },
+    "RekorVersion": {
+      "type": "object",
+      "required": [
+        "version",
+        "commit",
+        "treestate",
+        "builddate"
+      ],
+      "properties": {
+        "builddate": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        },
+        "treestate": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
     },
     "RekordV001SchemaData": {
       "description": "Information about the content associated with the entry",

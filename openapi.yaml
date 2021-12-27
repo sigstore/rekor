@@ -31,6 +31,20 @@ produces:
   - application/yaml
 
 paths:
+  /api/v1/version:
+    get:
+      summary: Get the current version of the rekor server
+      operationId: getRekorVersion
+      tags:
+        - server
+      responses:
+        200:
+          description: A JSON object with the running rekor version
+          schema:
+            $ref: '#/definitions/RekorVersion'
+        default:
+          $ref: '#/responses/InternalServerError'
+
   /api/v1/index/retrieve:
     post:
       summary: Searches index by entry metadata
@@ -489,6 +503,23 @@ definitions:
         - "logIndex"
         - "body"
         - "integratedTime"
+
+  RekorVersion:
+    type: object
+    properties:
+      version:
+        type: string
+      commit:
+        type: string
+      treestate:
+        type: string
+      builddate:
+        type: string
+    required:
+      - version
+      - commit
+      - treestate
+      - builddate
 
   SearchIndex:
     type: object
