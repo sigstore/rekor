@@ -29,6 +29,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/index"
 	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
+	serverops "github.com/sigstore/rekor/pkg/generated/client/server"
 	"github.com/sigstore/rekor/pkg/generated/client/timestamp"
 	"github.com/sigstore/rekor/pkg/generated/client/tlog"
 )
@@ -78,6 +79,7 @@ func New(transport runtime.ClientTransport, formats strfmt.Registry) *Rekor {
 	cli.Entries = entries.New(transport, formats)
 	cli.Index = index.New(transport, formats)
 	cli.Pubkey = pubkey.New(transport, formats)
+	cli.Server = serverops.New(transport, formats)
 	cli.Timestamp = timestamp.New(transport, formats)
 	cli.Tlog = tlog.New(transport, formats)
 	return cli
@@ -130,6 +132,8 @@ type Rekor struct {
 
 	Pubkey pubkey.ClientService
 
+	Server serverops.ClientService
+
 	Timestamp timestamp.ClientService
 
 	Tlog tlog.ClientService
@@ -143,6 +147,7 @@ func (c *Rekor) SetTransport(transport runtime.ClientTransport) {
 	c.Entries.SetTransport(transport)
 	c.Index.SetTransport(transport)
 	c.Pubkey.SetTransport(transport)
+	c.Server.SetTransport(transport)
 	c.Timestamp.SetTransport(transport)
 	c.Tlog.SetTransport(transport)
 }
