@@ -313,8 +313,8 @@ func (v V001Entry) Validate() error {
 	return nil
 }
 
-func (v *V001Entry) Attestation() (string, []byte) {
-	return "", nil
+func (v *V001Entry) Attestation() []byte {
+	return nil
 }
 
 func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {

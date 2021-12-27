@@ -300,9 +300,6 @@ type LogEntryAnonAttestation struct {
 	// data
 	// Format: byte
 	Data strfmt.Base64 `json:"data,omitempty"`
-
-	// media type
-	MediaType string `json:"mediaType,omitempty"`
 }
 
 // Validate validates this log entry anon attestation

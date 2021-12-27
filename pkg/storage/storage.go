@@ -31,8 +31,8 @@ import (
 )
 
 type AttestationStorage interface {
-	StoreAttestation(ctx context.Context, key string, attestationType string, attestation []byte) error
-	FetchAttestation(ctx context.Context, key string) ([]byte, string, error)
+	StoreAttestation(ctx context.Context, key string, attestation []byte) error
+	FetchAttestation(ctx context.Context, key string) ([]byte, error)
 }
 
 func NewAttestationStorage() (AttestationStorage, error) {
@@ -53,11 +53,9 @@ type Blob struct {
 	bucket *blob.Bucket
 }
 
-func (b *Blob) StoreAttestation(ctx context.Context, key, attestationType string, attestation []byte) error {
-	log.Logger.Infof("storing attestation of type %s at %s", attestationType, key)
-	w, err := b.bucket.NewWriter(ctx, key, &blob.WriterOptions{
-		ContentType: attestationType,
-	})
+func (b *Blob) StoreAttestation(ctx context.Context, key string, attestation []byte) error {
+	log.Logger.Infof("storing attestation at %s", key)
+	w, err := b.bucket.NewWriter(ctx, key, nil)
 	if err != nil {
 		return err
 	}
@@ -67,23 +65,19 @@ func (b *Blob) StoreAttestation(ctx context.Context, key, attestationType string
 	return w.Close()
 }
 
-func (b *Blob) FetchAttestation(ctx context.Context, key string) ([]byte, string, error) {
+func (b *Blob) FetchAttestation(ctx context.Context, key string) ([]byte, error) {
 	log.Logger.Infof("fetching attestation %s", key)
 	exists, err := b.bucket.Exists(ctx, key)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	if !exists {
-		return nil, "", nil
-	}
-	att, err := b.bucket.Attributes(ctx, key)
-	if err != nil {
-		return nil, "", err
+		return nil, nil
 	}
 
 	data, err := b.bucket.ReadAll(ctx, key)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-	return data, att.ContentType, nil
+	return data, nil
 }

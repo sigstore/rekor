@@ -96,6 +96,6 @@ func addToIndex(ctx context.Context, key, value string) error {
 	return redisClient.Do(ctx, radix.Cmd(nil, "LPUSH", key, value))
 }
 
-func storeAttestation(ctx context.Context, uuid, attestationType string, attestation []byte) error {
-	return storageClient.StoreAttestation(ctx, uuid, attestationType, attestation)
+func storeAttestation(ctx context.Context, uuid string, attestation []byte) error {
+	return storageClient.StoreAttestation(ctx, uuid, attestation)
 }

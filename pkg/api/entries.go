@@ -94,13 +94,12 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 
 	uuid := hex.EncodeToString(leaf.MerkleLeafHash)
 	if viper.GetBool("enable_attestation_storage") {
-		att, typ, err := storageClient.FetchAttestation(ctx, uuid)
+		att, err := storageClient.FetchAttestation(ctx, uuid)
 		if err != nil {
 			log.Logger.Errorf("error fetching attestation: %s %s", uuid, err)
 		} else {
 			logEntryAnon.Attestation = &models.LogEntryAnonAttestation{
-				Data:      att,
-				MediaType: typ,
+				Data: att,
 			}
 		}
 	}
@@ -210,12 +209,12 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	if viper.GetBool("enable_attestation_storage") {
 
 		go func() {
-			typ, attestation := entry.Attestation()
-			if typ == "" {
+			attestation := entry.Attestation()
+			if attestation == nil {
 				log.RequestIDLogger(params.HTTPRequest).Infof("no attestation for %s", uuid)
 				return
 			}
-			if err := storeAttestation(context.Background(), uuid, typ, attestation); err != nil {
+			if err := storeAttestation(context.Background(), uuid, attestation); err != nil {
 				log.RequestIDLogger(params.HTTPRequest).Errorf("error storing attestation: %s", err)
 			}
 		}()

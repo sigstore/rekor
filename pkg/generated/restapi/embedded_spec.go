@@ -498,9 +498,6 @@ func init() {
             "properties": {
               "data": {
                 "format": "byte"
-              },
-              "mediaType": {
-                "format": "string"
               }
             }
           },
@@ -1982,9 +1979,6 @@ func init() {
           "properties": {
             "data": {
               "format": "byte"
-            },
-            "mediaType": {
-              "format": "string"
             }
           }
         },
@@ -2025,9 +2019,6 @@ func init() {
       "properties": {
         "data": {
           "format": "byte"
-        },
-        "mediaType": {
-          "format": "string"
         }
       }
     },
