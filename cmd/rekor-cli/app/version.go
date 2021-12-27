@@ -23,23 +23,8 @@ import (
 	"text/tabwriter"
 
 	"github.com/pkg/errors"
+	"github.com/sigstore/rekor/pkg/api"
 	"github.com/spf13/cobra"
-)
-
-// Base version information.
-//
-// This is the fallback data used when version information from git is not
-// provided via go ldflags (e.g. via Makefile).
-var (
-	// Output of "git describe". The prerequisite is that the branch should be
-	// tagged using the correct versioning strategy.
-	GitVersion string = "devel"
-	// SHA1 from git, output of $(git rev-parse HEAD)
-	gitCommit = "unknown"
-	// State of git tree, either "clean" or "dirty"
-	gitTreeState = "unknown"
-	// Build date in ISO8601 format, output of $(date -u +'%Y-%m-%dT%H:%M:%SZ')
-	buildDate = "unknown"
 )
 
 type versionOptions struct {
@@ -93,10 +78,10 @@ func VersionInfo() Info {
 	// These variables typically come from -ldflags settings and in
 	// their absence fallback to the global defaults set above.
 	return Info{
-		GitVersion:   GitVersion,
-		GitCommit:    gitCommit,
-		GitTreeState: gitTreeState,
-		BuildDate:    buildDate,
+		GitVersion:   api.GitVersion,
+		GitCommit:    api.GitCommit,
+		GitTreeState: api.GitTreeState,
+		BuildDate:    api.BuildDate,
 		GoVersion:    runtime.Version(),
 		Compiler:     runtime.Compiler,
 		Platform:     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
