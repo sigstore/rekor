@@ -119,6 +119,9 @@ ko:
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/sigstore/rekor/cmd/rekor-cli
 
+deploy:
+	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) ko apply -f config/
+
 sign-container: ko
 	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}/rekor-server:$(GIT_HASH)
 	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}/rekor-cli:$(GIT_HASH)
