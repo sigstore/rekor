@@ -32,26 +32,64 @@ func TestMain(m *testing.M) {
 
 func TestReadPublicKey(t *testing.T) {
 	type test struct {
-		caseDesc   string
-		inputFile  string
-		errorFound bool
+		caseDesc  string
+		inputFile string
 	}
 
 	tests := []test{
-		{caseDesc: "Not a valid public key file", inputFile: "testdata/hello_world.txt.minisig", errorFound: true},
-		{caseDesc: "Valid public key (minisign)", inputFile: "testdata/minisign.pub", errorFound: false},
-		{caseDesc: "Valid public key (signify)", inputFile: "testdata/signify.pub", errorFound: false},
+		{caseDesc: "Valid public key (minisign)", inputFile: "testdata/minisign.pub"},
+		{caseDesc: "Valid public key (signify)", inputFile: "testdata/signify.pub"},
 	}
 
 	for _, tc := range tests {
-		file, err := os.Open(tc.inputFile)
-		if err != nil {
-			t.Errorf("%v: cannot open %v", tc.caseDesc, tc.inputFile)
-		}
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			file, err := os.Open(tc.inputFile)
+			if err != nil {
+				t.Fatalf("%v: cannot open %v", tc.caseDesc, tc.inputFile)
+			}
 
-		if got, err := NewPublicKey(file); ((got != nil) == tc.errorFound) || ((err != nil) != tc.errorFound) {
-			t.Errorf("%v: unexpected result testing %v: %v", tc.caseDesc, tc.inputFile, err)
-		}
+			got, err := NewPublicKey(file)
+			if err != nil {
+				t.Fatalf("unexpected error %v", err)
+			}
+
+			// Try to send just the raw public key bytes too
+			rawBytes := got.key.PublicKey[:]
+
+			rawGot, err := NewPublicKey(bytes.NewReader(rawBytes))
+			if err != nil {
+				t.Fatalf("unexpected error re-parsing public key: %v", err)
+			}
+			if !bytes.Equal(rawGot.key.PublicKey[:], rawBytes) {
+				t.Errorf("expected parsed keys to be equal, %v != %v", rawGot.key.PublicKey, rawBytes)
+			}
+		})
+	}
+}
+
+func TestReadPublicKeyErr(t *testing.T) {
+	type test struct {
+		caseDesc  string
+		inputFile string
+	}
+
+	tests := []test{
+		{caseDesc: "Not a valid public key file", inputFile: "testdata/hello_world.txt.minisig"},
+		{caseDesc: "Wrong length", inputFile: "testdata/hello_world.txt"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			file, err := os.Open(tc.inputFile)
+			if err != nil {
+				t.Fatalf("%v: cannot open %v", tc.caseDesc, tc.inputFile)
+			}
+
+			got, err := NewPublicKey(file)
+			if err == nil {
+				t.Errorf("error expected, got nil error and %v", got)
+			}
+		})
 	}
 }
 
