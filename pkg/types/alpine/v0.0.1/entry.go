@@ -16,6 +16,7 @@
 package alpine
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -34,7 +35,6 @@ import (
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
-	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/alpine"
@@ -53,8 +53,6 @@ func init() {
 
 type V001Entry struct {
 	AlpineModel models.AlpineV001Schema
-	keyObj      pki.PublicKey
-	apkObj      *alpine.Package
 }
 
 func (v V001Entry) APIVersion() string {
@@ -68,14 +66,18 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
-	key, err := v.keyObj.CanonicalValue()
+	keyObj, err := x509.NewPublicKey(bytes.NewReader(v.AlpineModel.PublicKey.Content))
+	if err != nil {
+		return nil, err
+	}
+	key, err := keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
 	keyHash := sha256.Sum256(key)
 	result = append(result, strings.ToLower(hex.EncodeToString(keyHash[:])))
 
-	result = append(result, v.keyObj.EmailAddresses()...)
+	result = append(result, keyObj.EmailAddresses()...)
 
 	if v.AlpineModel.Package.Hash != nil {
 		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.AlpineModel.Package.Hash.Algorithm, *v.AlpineModel.Package.Hash.Value))
@@ -113,9 +115,9 @@ func (v V001Entry) hasExternalEntities() bool {
 	return false
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
+func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*x509.PublicKey, *alpine.Package, error) {
 	if err := v.validate(); err != nil {
-		return types.ValidationError(err)
+		return nil, nil, types.ValidationError(err)
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
@@ -183,7 +185,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		}
 		defer keyReadCloser.Close()
 
-		v.keyObj, err = x509.NewPublicKey(keyReadCloser)
+		keyObj, err := x509.NewPublicKey(keyReadCloser)
 		if err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}
@@ -191,10 +193,13 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case keyResult <- v.keyObj.(*x509.PublicKey):
+		case keyResult <- keyObj:
 			return nil
 		}
 	})
+
+	var apkObj *alpine.Package
+	var key *x509.PublicKey
 
 	g.Go(func() error {
 		apk := alpine.Package{}
@@ -202,7 +207,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 			return closePipesOnError(types.ValidationError(err))
 		}
 
-		key := <-keyResult
+		key = <-keyResult
 		if key == nil {
 			return closePipesOnError(errors.New("error processing public key"))
 		}
@@ -211,7 +216,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 			return closePipesOnError(types.ValidationError(err))
 		}
 
-		v.apkObj = &apk
+		apkObj = &apk
 
 		select {
 		case <-ctx.Done():
@@ -224,7 +229,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	computedSHA := <-hashResult
 
 	if err := g.Wait(); err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	// if we get here, all goroutines succeeded without error
@@ -234,24 +239,20 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		v.AlpineModel.Package.Hash.Value = swag.String(computedSHA)
 	}
 
-	return nil
+	return key, apkObj, nil
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
-	if err := v.fetchExternalEntities(ctx); err != nil {
+	key, apkObj, err := v.fetchExternalEntities(ctx)
+	if err != nil {
 		return nil, err
-	}
-	if v.keyObj == nil {
-		return nil, errors.New("key object not initialized before canonicalization")
 	}
 
 	canonicalEntry := models.AlpineV001Schema{}
 
-	var err error
-
 	// need to canonicalize key content
 	canonicalEntry.PublicKey = &models.AlpineV001SchemaPublicKey{}
-	canonicalEntry.PublicKey.Content, err = v.keyObj.CanonicalValue()
+	canonicalEntry.PublicKey.Content, err = key.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
@@ -263,12 +264,14 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	// data content is not set deliberately
 
 	// set .PKGINFO headers
-	canonicalEntry.Package.Pkginfo = v.apkObj.Pkginfo
+	canonicalEntry.Package.Pkginfo = apkObj.Pkginfo
 
 	// wrap in valid object with kind and apiVersion set
 	apk := models.Alpine{}
 	apk.APIVersion = swag.String(APIVERSION)
 	apk.Spec = &canonicalEntry
+
+	v.AlpineModel = canonicalEntry
 
 	return json.Marshal(&apk)
 }
@@ -355,7 +358,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	}
 
 	if re.hasExternalEntities() {
-		if err := re.fetchExternalEntities(ctx); err != nil {
+		if _, _, err := re.fetchExternalEntities(ctx); err != nil {
 			return nil, fmt.Errorf("error retrieving external entities: %v", err)
 		}
 	}
