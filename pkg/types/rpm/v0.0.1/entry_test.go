@@ -369,7 +369,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
 		}
 
-		if tc.entry.HasExternalEntities() != tc.hasExtEntities {
+		if tc.entry.hasExternalEntities() != tc.hasExtEntities {
 			t.Errorf("unexpected result from HasExternalEntities for '%v'", tc.caseDesc)
 		}
 
