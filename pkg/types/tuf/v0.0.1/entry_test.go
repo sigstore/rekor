@@ -245,6 +245,10 @@ func TestCrossFieldValidation(t *testing.T) {
 		if err := tc.entry.Validate(); (err == nil) != tc.expectUnmarshalSuccess {
 			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
 		}
+		// No need to continue here if we failed at unmarshal
+		if !tc.expectUnmarshalSuccess {
+			continue
+		}
 
 		v := &V001Entry{}
 		r := models.TUF{
