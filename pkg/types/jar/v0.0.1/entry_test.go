@@ -191,14 +191,12 @@ func TestCrossFieldValidation(t *testing.T) {
 			Spec:       tc.entry.JARModel,
 		}
 
-		unmarshalAndValidate := func() error {
-			if err := v.Unmarshal(&r); err != nil {
-				return err
-			}
-			return v.validate()
-		}
-		if err := unmarshalAndValidate(); (err == nil) != tc.expectUnmarshalSuccess {
+		if err := v.Unmarshal(&r); (err == nil) != tc.expectUnmarshalSuccess {
 			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
+		}
+		// No need to continue here if unmarshal failed
+		if !tc.expectUnmarshalSuccess {
+			continue
 		}
 
 		if tc.entry.hasExternalEntities() != tc.hasExtEntities {
