@@ -56,6 +56,7 @@ func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
 type API struct {
 	logClient    trillian.TrillianLogClient
 	logID        int64
+	logRanges    *LogRanges
 	pubkey       string // PEM encoded public key
 	pubkeyHash   string // SHA256 hash of DER-encoded public key
 	signer       signature.Signer
@@ -64,7 +65,7 @@ type API struct {
 	certChainPem string              // PEM encoded timestamping cert chain
 }
 
-func NewAPI() (*API, error) {
+func NewAPI(ranges LogRanges) (*API, error) {
 	logRPCServer := fmt.Sprintf("%s:%d",
 		viper.GetString("trillian_log_server.address"),
 		viper.GetUint("trillian_log_server.port"))
@@ -137,6 +138,7 @@ func NewAPI() (*API, error) {
 		// Transparency Log Stuff
 		logClient: logClient,
 		logID:     tLogID,
+		logRanges: &ranges,
 		// Signing/verifying fields
 		pubkey:     string(pubkey),
 		pubkeyHash: hex.EncodeToString(pubkeyHashBytes[:]),
@@ -154,10 +156,11 @@ var (
 	storageClient storage.AttestationStorage
 )
 
-func ConfigureAPI() {
+func ConfigureAPI(ranges LogRanges) {
 	cfg := radix.PoolConfig{}
 	var err error
-	api, err = NewAPI()
+
+	api, err = NewAPI(ranges)
 	if err != nil {
 		log.Logger.Panic(err)
 	}

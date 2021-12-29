@@ -102,7 +102,7 @@ var serveCmd = &cobra.Command{
 		server.Port = int(viper.GetUint("port"))
 		server.EnabledListeners = []string{"http"}
 
-		api.ConfigureAPI()
+		api.ConfigureAPI(logRangeMap.Ranges)
 		server.ConfigureAPI()
 
 		http.Handle("/metrics", promhttp.Handler())

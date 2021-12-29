@@ -34,7 +34,7 @@ var (
 	cfgFile     string
 	logType     string
 	enablePprof bool
-	logRangeMap LogRanges
+	logRangeMap LogRangesFlag
 )
 
 // rootCmd represents the base command when called without any subcommands

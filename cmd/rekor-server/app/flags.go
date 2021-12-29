@@ -19,23 +19,20 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/sigstore/rekor/pkg/api"
 )
 
-type LogRange struct {
-	TreeID     uint64
-	TreeLength uint64
+type LogRangesFlag struct {
+	Ranges api.LogRanges
 }
 
-type LogRanges struct {
-	Ranges []LogRange
-}
-
-func (l *LogRanges) Set(s string) error {
+func (l *LogRangesFlag) Set(s string) error {
 	ranges := strings.Split(s, ",")
-	l.Ranges = []LogRange{}
+	l.Ranges = api.LogRanges{}
 
 	var err error
-	inputRanges := []LogRange{}
+	inputRanges := []api.LogRange{}
 
 	// Only go up to the second to last one, the last one is special cased beow
 	for _, r := range ranges[:len(ranges)-1] {
@@ -43,7 +40,7 @@ func (l *LogRanges) Set(s string) error {
 		if len(split) != 2 {
 			return fmt.Errorf("invalid range flag, expected two parts separated by an =, got %s", r)
 		}
-		lr := LogRange{}
+		lr := api.LogRange{}
 		lr.TreeID, err = strconv.ParseUint(split[0], 10, 64)
 		if err != nil {
 			return err
@@ -63,7 +60,7 @@ func (l *LogRanges) Set(s string) error {
 		return err
 	}
 
-	inputRanges = append(inputRanges, LogRange{
+	inputRanges = append(inputRanges, api.LogRange{
 		TreeID: lastTreeID,
 	})
 
@@ -76,36 +73,20 @@ func (l *LogRanges) Set(s string) error {
 		TreeIDs[lr.TreeID] = struct{}{}
 	}
 
-	l.Ranges = inputRanges
+	l.Ranges = api.LogRanges{
+		Ranges: inputRanges,
+	}
 	return nil
 }
 
-func (l *LogRanges) String() string {
+func (l *LogRangesFlag) String() string {
 	ranges := []string{}
-	for _, r := range l.Ranges {
+	for _, r := range l.Ranges.Ranges {
 		ranges = append(ranges, fmt.Sprintf("%d=%d", r.TreeID, r.TreeLength))
 	}
 	return strings.Join(ranges, ",")
 }
 
-func (l *LogRanges) Type() string {
-	return "LogRanges"
-}
-
-func (l *LogRanges) ResolveVirtualIndex(index int) (uint64, uint64) {
-	indexLeft := index
-	for _, l := range l.Ranges {
-		if indexLeft < int(l.TreeLength) {
-			return l.TreeID, uint64(indexLeft)
-		}
-		indexLeft -= int(l.TreeLength)
-	}
-
-	// Return the last one!
-	return l.Ranges[len(l.Ranges)-1].TreeID, uint64(indexLeft)
-}
-
-// ActiveIndex returns the active shard index, always the last shard in the range
-func (l *LogRanges) ActiveIndex() uint64 {
-	return l.Ranges[len(l.Ranges)-1].TreeID
+func (l *LogRangesFlag) Type() string {
+	return "LogRangesFlag"
 }
