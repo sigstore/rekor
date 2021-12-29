@@ -33,7 +33,6 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
-	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pgp"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/helm"
@@ -52,10 +51,7 @@ func init() {
 }
 
 type V001Entry struct {
-	HelmObj       models.HelmV001Schema
-	keyObj        pki.PublicKey
-	sigObj        pki.Signature
-	provenanceObj *helm.Provenance
+	HelmObj models.HelmV001Schema
 }
 
 func (v V001Entry) APIVersion() string {
@@ -69,16 +65,26 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
-	key, err := v.keyObj.CanonicalValue()
+	keyObj, err := pgp.NewPublicKey(bytes.NewReader(v.HelmObj.PublicKey.Content))
+	if err != nil {
+		return nil, err
+	}
+
+	provenance := helm.Provenance{}
+	if err := provenance.Unmarshal(bytes.NewReader(v.HelmObj.Chart.Provenance.Content)); err != nil {
+		return nil, err
+	}
+
+	key, err := keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
 	keyHash := sha256.Sum256(key)
 	result = append(result, strings.ToLower(hex.EncodeToString(keyHash[:])))
 
-	result = append(result, v.keyObj.EmailAddresses()...)
+	result = append(result, keyObj.EmailAddresses()...)
 
-	algorithm, chartHash, err := v.provenanceObj.GetChartAlgorithmHash()
+	algorithm, chartHash, err := provenance.GetChartAlgorithmHash()
 
 	if err != nil {
 		log.Logger.Error(err)
@@ -121,11 +127,7 @@ func (v V001Entry) hasExternalEntities() bool {
 	return false
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
-	if err := v.validate(); err != nil {
-		return types.ValidationError(err)
-	}
-
+func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*helm.Provenance, *pgp.PublicKey, *pgp.Signature, error) {
 	g, ctx := errgroup.WithContext(ctx)
 
 	provenanceR, provenanceW := io.Pipe()
@@ -160,7 +162,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		}
 		defer keyReadCloser.Close()
 
-		v.keyObj, err = pgp.NewPublicKey(keyReadCloser)
+		keyObj, err := pgp.NewPublicKey(keyReadCloser)
 		if err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}
@@ -168,25 +170,28 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case keyResult <- v.keyObj.(*pgp.PublicKey):
+		case keyResult <- keyObj:
 			return nil
 		}
 	})
 
+	var key *pgp.PublicKey
+	provenance := &helm.Provenance{}
+	var sig *pgp.Signature
 	g.Go(func() error {
 
-		provenance := helm.Provenance{}
 		if err := provenance.Unmarshal(provenanceR); err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}
 
-		key := <-keyResult
+		key = <-keyResult
 		if key == nil {
 			return closePipesOnError(errors.New("error processing public key"))
 		}
 
 		// Set signature
-		sig, err := pgp.NewSignature(provenance.Block.ArmoredSignature.Body)
+		var err error
+		sig, err = pgp.NewSignature(provenance.Block.ArmoredSignature.Body)
 		if err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}
@@ -195,9 +200,6 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 		if err := sig.Verify(bytes.NewReader(provenance.Block.Bytes), key); err != nil {
 			return closePipesOnError(types.ValidationError(err))
 		}
-
-		v.sigObj = sig
-		v.provenanceObj = &provenance
 
 		select {
 		case <-ctx.Done():
@@ -208,27 +210,26 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) error {
 	})
 
 	if err := g.Wait(); err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
-	return nil
+	return provenance, key, sig, nil
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
-	if err := v.fetchExternalEntities(ctx); err != nil {
+	provenanceObj, keyObj, sigObj, err := v.fetchExternalEntities(ctx)
+	if err != nil {
 		return nil, err
 	}
 
-	if v.keyObj == nil {
+	if keyObj == nil {
 		return nil, errors.New("key object not initialized before canonicalization")
 	}
 
 	canonicalEntry := models.HelmV001Schema{}
 
-	var err error
-
 	canonicalEntry.PublicKey = &models.HelmV001SchemaPublicKey{}
-	keyContent, err := v.keyObj.CanonicalValue()
+	keyContent, err := keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +238,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	canonicalEntry.Chart = &models.HelmV001SchemaChart{}
 
-	algorithm, chartHash, err := v.provenanceObj.GetChartAlgorithmHash()
+	algorithm, chartHash, err := provenanceObj.GetChartAlgorithmHash()
 
 	if err != nil {
 		return nil, err
@@ -250,7 +251,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	canonicalEntry.Chart.Provenance = &models.HelmV001SchemaChartProvenance{}
 	canonicalEntry.Chart.Provenance.Signature = &models.HelmV001SchemaChartProvenanceSignature{}
 
-	sigContent, err := v.sigObj.CanonicalValue()
+	sigContent, err := sigObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +351,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	}
 
 	if re.hasExternalEntities() {
-		if err := re.fetchExternalEntities(ctx); err != nil {
+		if _, _, _, err := re.fetchExternalEntities(ctx); err != nil {
 			return nil, fmt.Errorf("error retrieving external entities: %v", err)
 		}
 	}
