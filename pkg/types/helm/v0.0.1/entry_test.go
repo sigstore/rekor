@@ -218,50 +218,50 @@ func TestCrossFieldValidation(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if err := tc.entry.validate(); (err == nil) != tc.expectUnmarshalSuccess {
-			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
-		}
+		t.Run(tc.caseDesc, func(t *testing.T) {
 
-		v := &V001Entry{}
-		r := models.Helm{
-			APIVersion: swag.String(tc.entry.APIVersion()),
-			Spec:       tc.entry.HelmObj,
-		}
+			if err := tc.entry.validate(); (err == nil) != tc.expectUnmarshalSuccess {
+				t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
+			}
 
-		unmarshalAndValidate := func() error {
-			if err := v.Unmarshal(&r); err != nil {
-				return err
+			v := &V001Entry{}
+			r := models.Helm{
+				APIVersion: swag.String(tc.entry.APIVersion()),
+				Spec:       tc.entry.HelmObj,
+			}
+
+			if err := v.Unmarshal(&r); (err == nil) != tc.expectUnmarshalSuccess {
+				t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
+			}
+
+			if !tc.expectUnmarshalSuccess {
+				return
 			}
 			if err := v.validate(); err != nil {
-				return err
+				return
 			}
-			return nil
-		}
 
-		if err := unmarshalAndValidate(); (err == nil) != tc.expectUnmarshalSuccess {
-			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
-		}
+			if tc.entry.hasExternalEntities() != tc.hasExtEntities {
+				t.Errorf("unexpected result from HasExternalEntities for '%v'", tc.caseDesc)
+			}
 
-		if tc.entry.hasExternalEntities() != tc.hasExtEntities {
-			t.Errorf("unexpected result from HasExternalEntities for '%v'", tc.caseDesc)
-		}
-
-		b, err := v.Canonicalize(context.TODO())
-		if (err == nil) != tc.expectCanonicalizeSuccess {
-			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
-		} else if err != nil {
-			if _, ok := err.(types.ValidationError); !ok {
-				t.Errorf("canonicalize returned an unexpected error that isn't of type types.ValidationError: %v", err)
+			b, err := v.Canonicalize(context.TODO())
+			if (err == nil) != tc.expectCanonicalizeSuccess {
+				t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
+			} else if err != nil {
+				if _, ok := err.(types.ValidationError); !ok {
+					t.Errorf("canonicalize returned an unexpected error that isn't of type types.ValidationError: %v", err)
+				}
 			}
-		}
-		if b != nil {
-			pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
-			if err != nil {
-				t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
+			if b != nil {
+				pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
+				if err != nil {
+					t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
+				}
+				if _, err := types.NewEntry(pe); err != nil {
+					t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+				}
 			}
-			if _, err := types.NewEntry(pe); err != nil {
-				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
-			}
-		}
+		})
 	}
 }
