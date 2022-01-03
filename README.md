@@ -26,7 +26,7 @@ More details on the public instance can be found at [docs.sigstore.dev](https://
 
 ### Installation
 
-Please see the [installation](INSTALLATION.md) page for details on how to install the rekor CLI and set up / run
+Please see the [installation](https://docs.sigstore.dev/rekor/overview#usage-and-installation) page for details on how to install the rekor CLI and set up / run
 the rekor server
 
 ### Usage
