@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/sigstore/rekor/pkg/pki"
+	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/util"
 
 	"github.com/spf13/pflag"
@@ -56,8 +57,10 @@ var pflagValueFuncMap map[FlagType]newPFlagValueFunc
 func initializePFlagMap() {
 	pflagValueFuncMap = map[FlagType]newPFlagValueFunc{
 		uuidFlag: func() pflag.Value {
-			// this corresponds to the merkle leaf hash of entries, which is represented by a 64 character hexadecimal string
-			return valueFactory(uuidFlag, validateString("required,len=64,hexadecimal"), "")
+			// this validates a UUID with or without a prepended TreeID;
+			// the UUID corresponds to the merkle leaf hash of entries,
+			// which is represented by a 64 character hexadecimal string
+			return valueFactory(uuidFlag, validateID, "")
 		},
 		shaFlag: func() pflag.Value {
 			// this validates a valid sha256 checksum which is optionally prefixed with 'sha256:'
@@ -188,6 +191,19 @@ func validateFileOrURL(v string) error {
 	}
 	valGen = pflagValueFuncMap[urlFlag]
 	return valGen().Set(v)
+}
+
+// validateID ensures the ID is either a FullID (TreeID + UUID) or a UUID
+func validateID(v string) error {
+	if len(v) != sharding.FullIDHexStringLen && len(v) != sharding.UUIDHexStringLen {
+		return fmt.Errorf("ID len error, expected %v (FullID) or %v (UUID) but got len %v for ID %v", sharding.FullIDHexStringLen, sharding.UUIDHexStringLen, len(v), v)
+	}
+
+	if err := validateString("required,hexadecimal")(v); err != nil {
+		return fmt.Errorf("invalid uuid: %v", v)
+	}
+
+	return nil
 }
 
 // validateLogIndex ensures that the supplied string is a valid log index (integer >= 0)
