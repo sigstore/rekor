@@ -48,8 +48,8 @@ require (
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/urfave/negroni v1.0.0
 	github.com/zalando/go-keyring v0.1.1 // indirect
-	go.uber.org/goleak v1.1.11-0.20210813005559-691160354723
-	go.uber.org/zap v1.19.1
+	go.uber.org/goleak v1.1.11
+	go.uber.org/zap v1.20.0
 	gocloud.dev v0.24.1-0.20211119014450-028788aaaa4c
 	golang.org/x/crypto v0.0.0-20211209193657-4570a0811e8b
 	golang.org/x/mod v0.5.1
