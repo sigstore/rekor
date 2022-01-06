@@ -14,6 +14,9 @@ before:
 gomod:
   proxy: true
 
+sboms:
+- artifacts: binary
+
 builds:
   - id: rekor-server-linux
     binary: rekor-server-linux-{{ .Arch }}
@@ -72,11 +75,18 @@ signs:
     args: ["sign-blob", "--output-signature", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
     artifacts: binary
   # Keyless
-  - id: cosign-keyless
+  - id: rekor-keyless
     signature: "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
     cmd: cosign
-    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "${artifact}"]
+    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
     artifacts: binary
+  - id: checksum-keyless
+    signature: "${artifact}-keyless.sig"
+    certificate: "${artifact}-keyless.pem"
+    cmd: cosign
+    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
+    artifacts: checksum
 
 archives:
   - format: binary
@@ -97,5 +107,3 @@ release:
     name: rekor
   footer: |
     ### Thanks for all contributors!
-  extra_files:
-    - glob: "./release/release-cosign.pub"
