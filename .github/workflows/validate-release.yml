@@ -45,6 +45,7 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GOVERSION }}
+      - uses: anchore/sbom-action/download-syft@v0.6.0 # installs syft
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
