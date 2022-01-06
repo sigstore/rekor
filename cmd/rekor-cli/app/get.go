@@ -34,6 +34,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types"
 )
 
@@ -84,6 +85,11 @@ var getCmd = &cobra.Command{
 		}
 
 		logIndex := viper.GetString("log-index")
+		uuid := viper.GetString("uuid")
+		if logIndex == "" && uuid == "" {
+			return nil, errors.New("either --uuid or --log-index must be specified")
+		}
+
 		if logIndex != "" {
 			params := entries.NewGetLogEntryByIndexParams()
 			params.SetTimeout(viper.GetDuration("timeout"))
@@ -106,11 +112,14 @@ var getCmd = &cobra.Command{
 			}
 		}
 
-		uuid := viper.GetString("uuid")
 		if uuid != "" {
 			params := entries.NewGetLogEntryByUUIDParams()
 			params.SetTimeout(viper.GetDuration("timeout"))
-			params.EntryUUID = uuid
+
+			params.EntryUUID, err = sharding.GetUUIDFromIDString(uuid)
+			if err != nil {
+				return nil, fmt.Errorf("unable to parse uuid: %w", err)
+			}
 
 			resp, err := rekorClient.Entries.GetLogEntryByUUID(params)
 			if err != nil {
@@ -118,7 +127,7 @@ var getCmd = &cobra.Command{
 			}
 
 			for k, entry := range resp.Payload {
-				if k != uuid {
+				if k != params.EntryUUID {
 					continue
 				}
 
@@ -130,7 +139,7 @@ var getCmd = &cobra.Command{
 			}
 		}
 
-		return nil, errors.New("either --uuid or --log-index must be specified")
+		return nil, errors.New("entry not found")
 	}),
 }
 
