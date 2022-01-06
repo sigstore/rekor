@@ -78,7 +78,7 @@ func init() {
               "items": {
                 "description": "Entry UUID in transparency log",
                 "type": "string",
-                "pattern": "^[0-9a-fA-F]{64}$"
+                "pattern": "(^[0-9a-fA-F]{64}|[0-9a-fA-F]{80}$)"
               }
             }
           },
@@ -236,7 +236,7 @@ func init() {
         "operationId": "getLogEntryByUUID",
         "parameters": [
           {
-            "pattern": "^[0-9a-fA-F]{64}$",
+            "pattern": "(^[0-9a-fA-F]{64}|[0-9a-fA-F]{80}$)",
             "type": "string",
             "description": "the UUID of the entry for which the inclusion proof information should be returned",
             "name": "entryUUID",
@@ -990,7 +990,7 @@ func init() {
               "items": {
                 "description": "Entry UUID in transparency log",
                 "type": "string",
-                "pattern": "^[0-9a-fA-F]{64}$"
+                "pattern": "(^[0-9a-fA-F]{64}|[0-9a-fA-F]{80}$)"
               }
             }
           },
@@ -1182,7 +1182,7 @@ func init() {
         "operationId": "getLogEntryByUUID",
         "parameters": [
           {
-            "pattern": "^[0-9a-fA-F]{64}$",
+            "pattern": "(^[0-9a-fA-F]{64}|[0-9a-fA-F]{80}$)",
             "type": "string",
             "description": "the UUID of the entry for which the inclusion proof information should be returned",
             "name": "entryUUID",

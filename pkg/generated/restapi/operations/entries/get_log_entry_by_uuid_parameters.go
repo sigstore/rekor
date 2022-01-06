@@ -49,7 +49,7 @@ type GetLogEntryByUUIDParams struct {
 
 	/*the UUID of the entry for which the inclusion proof information should be returned
 	  Required: true
-	  Pattern: ^[0-9a-fA-F]{64}$
+	  Pattern: (^[0-9a-fA-F]{64}|[0-9a-fA-F]{80}$)
 	  In: path
 	*/
 	EntryUUID string
@@ -95,7 +95,7 @@ func (o *GetLogEntryByUUIDParams) bindEntryUUID(rawData []string, hasKey bool, f
 // validateEntryUUID carries on validations for parameter EntryUUID
 func (o *GetLogEntryByUUIDParams) validateEntryUUID(formats strfmt.Registry) error {
 
-	if err := validate.Pattern("entryUUID", "path", o.EntryUUID, `^[0-9a-fA-F]{64}$`); err != nil {
+	if err := validate.Pattern("entryUUID", "path", o.EntryUUID, `(^[0-9a-fA-F]{64}|[0-9a-fA-F]{80}$)`); err != nil {
 		return err
 	}
 
