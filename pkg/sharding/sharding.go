@@ -19,8 +19,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
-
-	"github.com/sigstore/rekor/pkg/api"
 )
 
 // A FullID refers to a specific artifact's ID and is made of two components,
@@ -41,8 +39,8 @@ const UUIDHexStringLen = 64
 const FullIDHexStringLen = TreeIDHexStringLen + UUIDHexStringLen
 
 // TODO: replace this with the actual LogRanges struct when logic is hooked up
-var dummy = api.LogRanges{
-	Ranges: []api.LogRange{},
+var dummy = LogRanges{
+	Ranges: []LogRange{},
 }
 
 type FullID struct {
