@@ -54,6 +54,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/timestamp"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/util"
@@ -255,6 +256,13 @@ func TestGet(t *testing.T) {
 
 	out = runCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
 	outputContains(t, out, uuid)
+
+	// Exercise GET with the new EntryID (TreeID + UUID)
+	entryID, err := sharding.CreateEntryIDFromParts("0", uuid)
+	if err != nil {
+		t.Error(err)
+	}
+	out = runCli(t, "get", "--format=json", "--uuid", entryID.ReturnEntryIDString())
 }
 
 func TestSearchNoEntriesRC1(t *testing.T) {
