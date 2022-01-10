@@ -32,7 +32,7 @@
   <script type="text/javascript">
 const url = '/api/v1/log/';
 function update() {
-  fetch(url).then((resp) => {
+  fetch(url, {headers: {'Accept': 'application/json'}}).then((resp) => {
     resp.json().then((j) => {
       let count = j.treeSize;
       document.getElementById('count').innerText = count;
