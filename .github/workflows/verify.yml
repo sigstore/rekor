@@ -24,12 +24,12 @@ jobs:
     steps:
       - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | sed -r 's/^.*://g'| uniq)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
       - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
         with:
           go-version: ${{ env.GOVERSION }}
       - name: Install addlicense
-        run: go install github.com/google/addlicense@2fe3ee94479d08be985a84861de4e6b06a1c7208 #v1.0.0
+        run: go install github.com/google/addlicense@v1.0.0
       - name: Check license headers
         run: |
           set -e
