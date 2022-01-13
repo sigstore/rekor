@@ -33,6 +33,7 @@ import (
 	alpine_v001 "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/cose"
 	cose_v001 "github.com/sigstore/rekor/pkg/types/cose/v0.0.1"
+	"github.com/sigstore/rekor/pkg/types/dsse"
 	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/helm"
@@ -95,6 +96,7 @@ var serveCmd = &cobra.Command{
 			helm.KIND:         helm_v001.APIVERSION,
 			tuf.KIND:          tuf_v001.APIVERSION,
 			hashedrekord.KIND: hashedrekord_v001.APIVERSION,
+			dsse.KIND:         dsse_v001.APIVERSION,
 		}
 
 		for k, v := range pluggableTypeMap {
