@@ -22,14 +22,14 @@ jobs:
     name: license boilerplate check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | sed -r 's/^.*://g'| uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@v2
+        run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
+      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
         with:
           go-version: ${{ env.GOVERSION }}
       - name: Install addlicense
-        run: go install github.com/google/addlicense@latest
+        run: go install github.com/google/addlicense@v1.0.0
       - name: Check license headers
         run: |
           set -e
@@ -40,11 +40,11 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
       - name: deps
         run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2.5.2
+        uses: golangci/golangci-lint-action@5c56cd6c9dc07901af25baab6f2b0d9f3b7c3018 #v2.5.2
         timeout-minutes: 5
         with:
           version: latest

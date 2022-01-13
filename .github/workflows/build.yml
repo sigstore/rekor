@@ -34,25 +34,25 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v2.4.0
-      - uses: sigstore/cosign-installer@v1.4.1
+      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
+      - uses: sigstore/cosign-installer@116dc6872c0a067bcb78758f18955414cdbf918f #v1.4.1
 
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | sed -r 's/^.*://g'| uniq)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@424fc82d43fa5a37540bae62709ddcc23d9520d4 #v2.1.5
         with:
           go-version: ${{ env.GOVERSION }}
 
       - name: deps
         run: sudo apt-get update && sudo apt-get install -yq libpcsclite-dev
 
-      - uses: imjasonh/setup-ko@v0.4
+      - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 #v0.4
         with:
           version: v0.9.3
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@master
+        uses: google-github-actions/setup-gcloud@a45a0825993ace67ae6e11cf3011b3e7d6795f82 #v0.3.0
         with:
           project_id: projectsigstore
           service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT }}
