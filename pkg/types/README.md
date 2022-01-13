@@ -20,5 +20,7 @@ Rekor supports pluggable types (aka different schemas) for entries stored in the
   - Versions: 0.0.1
 - RPM Packages [schema](rpm/rpm_schema.json)
   - Versions: 0.0.1
+- DSSE Envelopes [schema](dsse/dsse_schema.json).  DSSE types are used to index any arbitrary payload contained within a DSSE envelope as opposed to the in-toto type. The DSSE type can be used to recreate a DSSE envelope for local verification.
+  - Versions: 0.0.1
 
 Refer to [Rekor docs](https://docs.sigstore.dev/rekor/pluggable-types) for adding support for new types.

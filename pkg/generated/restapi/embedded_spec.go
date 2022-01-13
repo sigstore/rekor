@@ -704,6 +704,32 @@ func init() {
         }
       ]
     },
+    "dsse": {
+      "description": "DSSE object",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "type": "object",
+              "$ref": "pkg/types/dsse/dsse_schema.json"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "hashedrekord": {
       "description": "Hashed Rekord object",
       "type": "object",
@@ -1532,6 +1558,44 @@ func init() {
           "description": "The hash value stored at the root of the merkle tree at the time the proof was generated",
           "type": "string",
           "pattern": "^[0-9a-fA-F]{64}$"
+        }
+      }
+    },
+    "DsseV001SchemaPayloadHash": {
+      "description": "hash of the envelope's payload after being PAE encoded",
+      "type": "object",
+      "properties": {
+        "algorithm": {
+          "description": "The hasing function used to compue the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value": {
+          "description": "The hash value of the PAE encoded payload",
+          "type": "string"
+        }
+      },
+      "readOnly": true
+    },
+    "DsseV001SchemaSignaturesItems0": {
+      "description": "a signature of the envelope's payload along with the public key for the signature",
+      "type": "object",
+      "properties": {
+        "keyid": {
+          "description": "optional id of the key used to create the signature",
+          "type": "string"
+        },
+        "publicKey": {
+          "description": "public key that corresponds to this signature",
+          "type": "string",
+          "format": "byte",
+          "readOnly": true
+        },
+        "sig": {
+          "description": "signature of the payload",
+          "type": "string"
         }
       }
     },
@@ -2721,6 +2785,93 @@ func init() {
       },
       "$schema": "http://json-schema.org/draft-07/schema",
       "$id": "http://rekor.sigstore.dev/types/alpine/alpine_v0_0_1_schema.json"
+    },
+    "dsse": {
+      "description": "DSSE object",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "$ref": "#/definitions/dsseSchema"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "dsseSchema": {
+      "description": "DSSE for Rekord objects",
+      "type": "object",
+      "title": "DSSE Schema",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/dsseV001Schema"
+        }
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/dsse/dsse_schema.json"
+    },
+    "dsseV001Schema": {
+      "description": "Schema for dsse object",
+      "type": "object",
+      "title": "dsse v0.0.1 Schema",
+      "required": [
+        "payloadType",
+        "payloadHash",
+        "signatures"
+      ],
+      "properties": {
+        "payload": {
+          "description": "payload of the envelope",
+          "type": "string",
+          "format": "byte",
+          "writeOnly": true
+        },
+        "payloadHash": {
+          "description": "hash of the envelope's payload after being PAE encoded",
+          "type": "object",
+          "properties": {
+            "algorithm": {
+              "description": "The hasing function used to compue the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value": {
+              "description": "The hash value of the PAE encoded payload",
+              "type": "string"
+            }
+          },
+          "readOnly": true
+        },
+        "payloadType": {
+          "description": "type descriping the payload",
+          "type": "string"
+        },
+        "signatures": {
+          "description": "collection of all signatures of the envelope's payload",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/DsseV001SchemaSignaturesItems0"
+          }
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/dsse/dsse_v0_0_1_schema.json"
     },
     "hashedrekord": {
       "description": "Hashed Rekord object",
