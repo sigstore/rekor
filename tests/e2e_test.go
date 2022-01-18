@@ -155,14 +155,14 @@ func TestUploadVerifyHashedRekord(t *testing.T) {
 	}
 
 	// Verify should fail initially
-	runCliErr(t, "verify", "--type=hashedrekord", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+	runCliErr(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 
 	// It should upload successfully.
-	out := runCli(t, "upload", "--type=hashedrekord", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+	out := runCli(t, "upload", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
 
 	// Now we should be able to verify it.
-	out = runCli(t, "verify", "--type=hashedrekord", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+	out = runCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Inclusion Proof:")
 }
 
