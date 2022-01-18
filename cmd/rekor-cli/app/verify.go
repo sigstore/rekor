@@ -117,7 +117,7 @@ var verifyCmd = &cobra.Command{
 
 			entry, err := types.NewProposedEntry(context.Background(), typeStr, versionStr, *props)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("error: %w", err)
 			}
 
 			entries := []models.ProposedEntry{entry}
