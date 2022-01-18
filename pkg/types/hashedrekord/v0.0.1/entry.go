@@ -196,6 +196,10 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 
 	var err error
 
+	if props.PKIFormat != string(pki.X509) {
+		return nil, errors.New("hashedrekord entries can only be created for artifacts signed with x509-based PKI")
+	}
+
 	re.HashedRekordObj.Signature = &models.HashedrekordV001SchemaSignature{}
 	sigBytes := props.SignatureBytes
 	if sigBytes == nil {
