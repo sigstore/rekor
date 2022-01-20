@@ -57,5 +57,5 @@ require (
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa
 	google.golang.org/grpc v1.43.0
 	google.golang.org/protobuf v1.27.1
-	gopkg.in/ini.v1 v1.66.2
+	gopkg.in/ini.v1 v1.66.3
 )
