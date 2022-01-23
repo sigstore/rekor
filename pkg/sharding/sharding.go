@@ -39,8 +39,11 @@ const UUIDHexStringLen = 64
 const EntryIDHexStringLen = TreeIDHexStringLen + UUIDHexStringLen
 
 // TODO: replace this with the actual LogRanges struct when logic is hooked up
-var dummy = LogRanges{
-	Ranges: []LogRange{},
+var dummyLogRanges = LogRanges{
+	Ranges: []LogRange{
+		{
+			TreeID:     0,
+			TreeLength: 0}},
 }
 
 type EntryID struct {
@@ -48,8 +51,11 @@ type EntryID struct {
 	UUID   string
 }
 
-func CreateEntryID(treeid string, uuid string) (EntryID, error) {
-	if len(treeid) != TreeIDHexStringLen {
+// This function can take a TreeID of equal or greater length than TreeIDHexStringLen. In
+// case the TreeID length is less than TreeIDHexStringLen, it will be padded to the correct
+// length.
+func CreateEntryIDFromParts(treeid string, uuid string) (EntryID, error) {
+	if len(treeid) > TreeIDHexStringLen {
 		err := fmt.Errorf("invalid treeid len: %v", len(treeid))
 		return createEmptyEntryID(), err
 	}
@@ -59,18 +65,23 @@ func CreateEntryID(treeid string, uuid string) (EntryID, error) {
 		return createEmptyEntryID(), err
 	}
 
-	if _, err := hex.DecodeString(treeid); err != nil {
-		err := fmt.Errorf("treeid is not a valid hex string: %v", treeid)
+	treeidFormatted, err := PadToTreeIDLen(treeid)
+	if err != nil {
+		return createEmptyEntryID(), err
+	}
+
+	if _, err := hex.DecodeString(treeidFormatted); err != nil {
+		err := fmt.Errorf("treeid %v is not a valid hex string: %v", treeidFormatted, err)
 		return createEmptyEntryID(), err
 	}
 
 	if _, err := hex.DecodeString(uuid); err != nil {
-		err := fmt.Errorf("uuid is not a valid hex string: %v", uuid)
+		err := fmt.Errorf("uuid %v is not a valid hex string: %v", uuid, err)
 		return createEmptyEntryID(), err
 	}
 
 	return EntryID{
-		TreeID: treeid,
+		TreeID: treeidFormatted,
 		UUID:   uuid}, nil
 }
 
@@ -80,8 +91,36 @@ func createEmptyEntryID() EntryID {
 		UUID:   ""}
 }
 
-func PrependActiveTreeID(uuid string) (EntryID, error) {
+func CreateEntryIDWithActiveTreeID(uuid string) (EntryID, error) {
 	// TODO: Update this to be the global LogRanges struct
-	active := dummy.ActiveIndex()
-	return CreateEntryID(strconv.FormatUint(active, 10), uuid)
+	treeid := strconv.FormatUint(dummyLogRanges.ActiveIndex(), 10)
+	return CreateEntryIDFromParts(treeid, uuid)
+}
+
+func (e EntryID) ReturnEntryIDString() string {
+	return e.TreeID + e.UUID
+}
+
+func PadToTreeIDLen(t string) (string, error) {
+	switch {
+	case len(t) == TreeIDHexStringLen:
+		return t, nil
+	case len(t) > TreeIDHexStringLen:
+		return "", fmt.Errorf("invalid treeID %v: too long", t)
+	default:
+		return fmt.Sprintf("%016s", t), nil
+	}
+}
+
+// Returns UUID (with no prepended TreeID) from a UUID or EntryID string
+func GetUUIDFromIDString(id string) (string, error) {
+	if len(id) != UUIDHexStringLen && len(id) != EntryIDHexStringLen {
+		return "", fmt.Errorf("invalid ID len %v for %v", len(id), id)
+	}
+
+	if _, err := hex.DecodeString(id); err != nil {
+		return "", fmt.Errorf("id %v is not a valid hex string: %v", id, err)
+	}
+
+	return id[len(id)-UUIDHexStringLen:], nil
 }
