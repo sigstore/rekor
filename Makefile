@@ -93,7 +93,7 @@ clean:
 	rm -rf dist
 	rm -rf hack/tools/bin
 	rm -rf rekor-cli rekor-server
-	rm  *fuzz.zip
+	rm -f *fuzz.zip
 
 clean-gen: clean
 	rm -rf $(shell find pkg/generated -iname "*.go"|grep -v pkg/generated/restapi/configure_rekor_server.go)
