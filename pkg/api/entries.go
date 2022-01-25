@@ -39,6 +39,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -266,7 +267,12 @@ func getEntryURL(locationURL url.URL, uuid string) strfmt.URI {
 // GetLogEntryByUUIDHandler gets log entry and inclusion proof for specified UUID aka merkle leaf hash
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
 	ctx := params.HTTPRequest.Context()
-	hashValue, _ := hex.DecodeString(params.EntryUUID)
+
+	entryUUID, err := sharding.GetUUIDFromIDString(params.EntryUUID)
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusBadRequest, err, "")
+	}
+	hashValue, _ := hex.DecodeString(entryUUID)
 	tc := NewTrillianClient(params.HTTPRequest.Context())
 
 	resp := tc.getLeafAndProofByHash(hashValue)

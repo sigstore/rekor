@@ -19,18 +19,16 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
-
-	"github.com/sigstore/rekor/pkg/api"
 )
 
-// A FullID refers to a specific artifact's ID and is made of two components,
+// An EntryID refers to a specific artifact's ID and is made of two components,
 // the TreeID and the UUID. The TreeID is a hex-encoded uint64 (8 bytes)
 // referring to the specific trillian tree (also known as log or shard) where
 // the artifact can be found. The UUID is a hex-encoded 32-byte number
 // referring to the artifact's merkle leaf hash from trillian. Artifact lookup
 // by UUID occurs by finding the UUID within the tree specified by the TreeID.
 //
-// A FullID is 40 bytes long and looks like this:
+// An EntryID is 40 bytes long and looks like this:
 // FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF
 // |_______  ________| |_____________________________________  ______________________________________|
 //         \/                                                \/
@@ -38,52 +36,91 @@ import (
 
 const TreeIDHexStringLen = 16
 const UUIDHexStringLen = 64
-const FullIDHexStringLen = TreeIDHexStringLen + UUIDHexStringLen
+const EntryIDHexStringLen = TreeIDHexStringLen + UUIDHexStringLen
 
 // TODO: replace this with the actual LogRanges struct when logic is hooked up
-var dummy = api.LogRanges{
-	Ranges: []api.LogRange{},
+var dummyLogRanges = LogRanges{
+	Ranges: []LogRange{
+		{
+			TreeID:     0,
+			TreeLength: 0}},
 }
 
-type FullID struct {
+type EntryID struct {
 	TreeID string
 	UUID   string
 }
 
-func CreateFullID(treeid string, uuid string) (FullID, error) {
-	if len(treeid) != TreeIDHexStringLen {
+// This function can take a TreeID of equal or greater length than TreeIDHexStringLen. In
+// case the TreeID length is less than TreeIDHexStringLen, it will be padded to the correct
+// length.
+func CreateEntryIDFromParts(treeid string, uuid string) (EntryID, error) {
+	if len(treeid) > TreeIDHexStringLen {
 		err := fmt.Errorf("invalid treeid len: %v", len(treeid))
-		return createEmptyFullID(), err
+		return createEmptyEntryID(), err
 	}
 
 	if len(uuid) != UUIDHexStringLen {
 		err := fmt.Errorf("invalid uuid len: %v", len(uuid))
-		return createEmptyFullID(), err
+		return createEmptyEntryID(), err
 	}
 
-	if _, err := hex.DecodeString(treeid); err != nil {
-		err := fmt.Errorf("treeid is not a valid hex string: %v", treeid)
-		return createEmptyFullID(), err
+	treeidFormatted, err := PadToTreeIDLen(treeid)
+	if err != nil {
+		return createEmptyEntryID(), err
+	}
+
+	if _, err := hex.DecodeString(treeidFormatted); err != nil {
+		err := fmt.Errorf("treeid %v is not a valid hex string: %v", treeidFormatted, err)
+		return createEmptyEntryID(), err
 	}
 
 	if _, err := hex.DecodeString(uuid); err != nil {
-		err := fmt.Errorf("uuid is not a valid hex string: %v", uuid)
-		return createEmptyFullID(), err
+		err := fmt.Errorf("uuid %v is not a valid hex string: %v", uuid, err)
+		return createEmptyEntryID(), err
 	}
 
-	return FullID{
-		TreeID: treeid,
+	return EntryID{
+		TreeID: treeidFormatted,
 		UUID:   uuid}, nil
 }
 
-func createEmptyFullID() FullID {
-	return FullID{
+func createEmptyEntryID() EntryID {
+	return EntryID{
 		TreeID: "",
 		UUID:   ""}
 }
 
-func PrependActiveTreeID(uuid string) (FullID, error) {
+func CreateEntryIDWithActiveTreeID(uuid string) (EntryID, error) {
 	// TODO: Update this to be the global LogRanges struct
-	active := dummy.ActiveIndex()
-	return CreateFullID(strconv.FormatUint(active, 10), uuid)
+	treeid := strconv.FormatUint(dummyLogRanges.ActiveIndex(), 10)
+	return CreateEntryIDFromParts(treeid, uuid)
+}
+
+func (e EntryID) ReturnEntryIDString() string {
+	return e.TreeID + e.UUID
+}
+
+func PadToTreeIDLen(t string) (string, error) {
+	switch {
+	case len(t) == TreeIDHexStringLen:
+		return t, nil
+	case len(t) > TreeIDHexStringLen:
+		return "", fmt.Errorf("invalid treeID %v: too long", t)
+	default:
+		return fmt.Sprintf("%016s", t), nil
+	}
+}
+
+// Returns UUID (with no prepended TreeID) from a UUID or EntryID string
+func GetUUIDFromIDString(id string) (string, error) {
+	if len(id) != UUIDHexStringLen && len(id) != EntryIDHexStringLen {
+		return "", fmt.Errorf("invalid ID len %v for %v", len(id), id)
+	}
+
+	if _, err := hex.DecodeString(id); err != nil {
+		return "", fmt.Errorf("id %v is not a valid hex string: %v", id, err)
+	}
+
+	return id[len(id)-UUIDHexStringLen:], nil
 }

@@ -193,10 +193,10 @@ func validateFileOrURL(v string) error {
 	return valGen().Set(v)
 }
 
-// validateID ensures the ID is either a FullID (TreeID + UUID) or a UUID
+// validateID ensures the ID is either an EntryID (TreeID + UUID) or a UUID
 func validateID(v string) error {
-	if len(v) != sharding.FullIDHexStringLen && len(v) != sharding.UUIDHexStringLen {
-		return fmt.Errorf("ID len error, expected %v (FullID) or %v (UUID) but got len %v for ID %v", sharding.FullIDHexStringLen, sharding.UUIDHexStringLen, len(v), v)
+	if len(v) != sharding.EntryIDHexStringLen && len(v) != sharding.UUIDHexStringLen {
+		return fmt.Errorf("ID len error, expected %v (EntryID) or %v (UUID) but got len %v for ID %v", sharding.EntryIDHexStringLen, sharding.UUIDHexStringLen, len(v), v)
 	}
 
 	if err := validateString("required,hexadecimal")(v); err != nil {

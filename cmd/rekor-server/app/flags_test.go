@@ -19,20 +19,20 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/sigstore/rekor/pkg/api"
+	"github.com/sigstore/rekor/pkg/sharding"
 )
 
 func TestLogRanges_Set(t *testing.T) {
 	tests := []struct {
 		name   string
 		arg    string
-		want   []api.LogRange
+		want   []sharding.LogRange
 		active uint64
 	}{
 		{
 			name: "one, no length",
 			arg:  "1234",
-			want: []api.LogRange{
+			want: []sharding.LogRange{
 				{
 					TreeID:     1234,
 					TreeLength: 0,
@@ -43,7 +43,7 @@ func TestLogRanges_Set(t *testing.T) {
 		{
 			name: "two",
 			arg:  "1234=10,7234",
-			want: []api.LogRange{
+			want: []sharding.LogRange{
 				{
 					TreeID:     1234,
 					TreeLength: 10,

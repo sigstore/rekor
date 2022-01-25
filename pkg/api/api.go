@@ -33,6 +33,7 @@ import (
 
 	"github.com/sigstore/rekor/pkg/log"
 	pki "github.com/sigstore/rekor/pkg/pki/x509"
+	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/rekor/pkg/storage"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -56,7 +57,7 @@ func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
 type API struct {
 	logClient    trillian.TrillianLogClient
 	logID        int64
-	logRanges    *LogRanges
+	logRanges    *sharding.LogRanges
 	pubkey       string // PEM encoded public key
 	pubkeyHash   string // SHA256 hash of DER-encoded public key
 	signer       signature.Signer
@@ -65,7 +66,7 @@ type API struct {
 	certChainPem string              // PEM encoded timestamping cert chain
 }
 
-func NewAPI(ranges LogRanges) (*API, error) {
+func NewAPI(ranges sharding.LogRanges) (*API, error) {
 	logRPCServer := fmt.Sprintf("%s:%d",
 		viper.GetString("trillian_log_server.address"),
 		viper.GetUint("trillian_log_server.port"))
@@ -156,7 +157,7 @@ var (
 	storageClient storage.AttestationStorage
 )
 
-func ConfigureAPI(ranges LogRanges) {
+func ConfigureAPI(ranges sharding.LogRanges) {
 	cfg := radix.PoolConfig{}
 	var err error
 

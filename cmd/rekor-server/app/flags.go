@@ -20,19 +20,19 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sigstore/rekor/pkg/api"
+	"github.com/sigstore/rekor/pkg/sharding"
 )
 
 type LogRangesFlag struct {
-	Ranges api.LogRanges
+	Ranges sharding.LogRanges
 }
 
 func (l *LogRangesFlag) Set(s string) error {
 	ranges := strings.Split(s, ",")
-	l.Ranges = api.LogRanges{}
+	l.Ranges = sharding.LogRanges{}
 
 	var err error
-	inputRanges := []api.LogRange{}
+	inputRanges := []sharding.LogRange{}
 
 	// Only go up to the second to last one, the last one is special cased beow
 	for _, r := range ranges[:len(ranges)-1] {
@@ -40,7 +40,7 @@ func (l *LogRangesFlag) Set(s string) error {
 		if len(split) != 2 {
 			return fmt.Errorf("invalid range flag, expected two parts separated by an =, got %s", r)
 		}
-		lr := api.LogRange{}
+		lr := sharding.LogRange{}
 		lr.TreeID, err = strconv.ParseUint(split[0], 10, 64)
 		if err != nil {
 			return err
@@ -60,7 +60,7 @@ func (l *LogRangesFlag) Set(s string) error {
 		return err
 	}
 
-	inputRanges = append(inputRanges, api.LogRange{
+	inputRanges = append(inputRanges, sharding.LogRange{
 		TreeID: lastTreeID,
 	})
 
@@ -73,7 +73,7 @@ func (l *LogRangesFlag) Set(s string) error {
 		TreeIDs[lr.TreeID] = struct{}{}
 	}
 
-	l.Ranges = api.LogRanges{
+	l.Ranges = sharding.LogRanges{
 		Ranges: inputRanges,
 	}
 	return nil
