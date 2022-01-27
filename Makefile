@@ -60,16 +60,23 @@ $(GENSRC): $(SWAGGER) $(OPENAPIDEPS)
 	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --default-consumes application/json\;q=1 --additional-initialism=TUF
 	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A rekor_server --exclude-spec --flag-strategy=pflag --default-produces application/json --additional-initialism=TUF
 
+GOLANGCI_LINT_DIR = $(shell pwd)/bin
+GOLANGCI_LINT_BIN = $(GOLANGCI_LINT_DIR)/golangci-lint
+
 .PHONY: validate-openapi
 validate-openapi: $(SWAGGER)
 	$(SWAGGER) validate openapi.yaml
 
 # this exists to override pattern match rule above since this file is in the generated directory but should not be treated as generated code
 pkg/generated/restapi/configure_rekor_server.go: $(OPENAPIDEPS)
-	
+
+golangci-lint:
+	rm -f $(GOLANGCI_LINT_BIN) || :
+	set -e ;\
+	GOBIN=$(GOLANGCI_LINT_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.43.0 ;\
 
 lint:
-	$(GOBIN)/golangci-lint run -v ./...
+	$(GOLANGCI_LINT_BIN) run -v ./...
 
 gosec:
 	$(GOBIN)/gosec ./...

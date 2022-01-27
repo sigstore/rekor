@@ -1,0 +1,12 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.sigstore.dev/types/container/container_schema.json",
+    "title": "Container Schema",
+    "description": "Schema for container objects",
+    "type": "object",
+    "oneOf": [
+        {
+            "$ref": "v0.0.1/container_v0_0_1_schema.json"
+        }
+    ]
+}

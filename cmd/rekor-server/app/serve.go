@@ -30,6 +30,8 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types/alpine"
 	alpine_v001 "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
+	"github.com/sigstore/rekor/pkg/types/container"
+	container_v001 "github.com/sigstore/rekor/pkg/types/container/v0.0.1"
 	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/helm"
@@ -90,6 +92,7 @@ var serveCmd = &cobra.Command{
 			alpine.KIND:       alpine_v001.APIVERSION,
 			helm.KIND:         helm_v001.APIVERSION,
 			tuf.KIND:          tuf_v001.APIVERSION,
+			container.KIND:    container_v001.APIVERSION,
 			hashedrekord.KIND: hashedrekord_v001.APIVERSION,
 		}
 

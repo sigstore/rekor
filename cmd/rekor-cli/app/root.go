@@ -30,6 +30,7 @@ import (
 
 	// these imports are to call the packages' init methods
 	_ "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/container/v0.0.1"
 	_ "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	_ "github.com/sigstore/rekor/pkg/types/helm/v0.0.1"
 	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"

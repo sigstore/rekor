@@ -11,3 +11,4 @@ swagger
 dist/*
 hack/tools/bin/*
 *fuzz.zip
+bin/*
