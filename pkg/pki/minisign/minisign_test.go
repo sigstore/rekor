@@ -302,6 +302,7 @@ func TestVerifySignature(t *testing.T) {
 
 	tests := []test{
 		{caseDesc: "Valid Signature (minisign), Valid Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.minisig", keyFile: "testdata/minisign.pub", verified: true},
+		{caseDesc: "Valid Signature (minisign, prehashed), Valid Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world_hashed.txt.minisig", keyFile: "testdata/minisign_hashed.pub", verified: true},
 		{caseDesc: "Valid Signature (signify), Valid Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.signify", keyFile: "testdata/signify.pub", verified: true},
 		{caseDesc: "Valid Signature, Incorrect Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.minisig", keyFile: "testdata/signify.pub", verified: false},
 		{caseDesc: "Data does not match Signature", dataFile: "testdata/signify.pub", sigFile: "testdata/hello_world.txt.minisig", keyFile: "testdata/minisign.pub", verified: false},
