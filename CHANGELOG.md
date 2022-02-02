@@ -1,3 +1,78 @@
+# v0.5.0
+
+## Highlights
+
+* update API calls to v5 (https://github.com/sigstore/rekor/pull/591)
+* Refactor helm type to remove intermediate state. (https://github.com/sigstore/rekor/pull/575)
+* Refactor the shard map parsing so we can pass it down into the API object. (https://github.com/sigstore/rekor/pull/564)
+* Refactor the alpine type to reduce intermediate state. (https://github.com/sigstore/rekor/pull/573)
+
+## Enhancements
+
+* Add logic to GET artifacts via old or new UUID (https://github.com/sigstore/rekor/pull/587)
+* helpful error message for hashedrekord types (https://github.com/sigstore/rekor/pull/605)
+* Set Accept header in dynamic counter requests (https://github.com/sigstore/rekor/pull/594)
+* Add sharding package and update validators (https://github.com/sigstore/rekor/pull/583)
+* rekor-cli: show the url in case of error (https://github.com/sigstore/rekor/pull/581)
+* Enable parsing of incomplete minisign keys, to enable re-indexing. (https://github.com/sigstore/rekor/pull/567)
+* Cleanups on the TUF pluggable type. (https://github.com/sigstore/rekor/pull/563)
+* Refactor the RPM type to remove more intermediate state. (https://github.com/sigstore/rekor/pull/566)
+* Do some cleanups of the jar type to remove intermediate state. (https://github.com/sigstore/rekor/pull/561)
+
+## Others
+
+* Update Makefile (https://github.com/sigstore/rekor/pull/621)
+* update version comments since dependabot doesn't do it (https://github.com/sigstore/rekor/pull/617)
+* Use workload identity provider instead of GitHub Secret for GCR access (https://github.com/sigstore/rekor/pull/600)
+* add OSSF scorecard action (https://github.com/sigstore/rekor/pull/599)
+* enable the sbom for rekor releases (https://github.com/sigstore/rekor/pull/586)
+* Point to the official website (instead of a 404) (https://github.com/sigstore/rekor/pull/580)
+* add milestone to closed prs (https://github.com/sigstore/rekor/pull/574)
+* Add a Makefile target for the "ko apply" step. (https://github.com/sigstore/rekor/pull/572)
+* types/README.md: Corrected documentation link (https://github.com/sigstore/rekor/pull/568)
+
+## Dependencies Updates
+
+* Bump github.com/prometheus/client_golang from 1.12.0 to 1.12.1 (https://github.com/sigstore/rekor/pull/636)
+* Bump github.com/go-openapi/runtime from 0.21.1 to 0.22.0 (https://github.com/sigstore/rekor/pull/635)
+* Bump github.com/go-openapi/swag from 0.19.15 to 0.20.0 (https://github.com/sigstore/rekor/pull/634)
+* Bump golang from `f71d4ca` to `301609e` (https://github.com/sigstore/rekor/pull/627)
+* Bump golang from `0fa6504` to `f71d4ca` (https://github.com/sigstore/rekor/pull/624)
+* Bump google.golang.org/grpc from 1.43.0 to 1.44.0 (https://github.com/sigstore/rekor/pull/622)
+* Bump github/codeql-action from 1.0.29 to 1.0.30 (https://github.com/sigstore/rekor/pull/619)
+* Bump ossf/scorecard-action from 1.0.1 to 1.0.2 (https://github.com/sigstore/rekor/pull/618)
+* bump swagger and go mod tidy (https://github.com/sigstore/rekor/pull/616)
+* Bump github.com/go-openapi/runtime from 0.21.0 to 0.21.1 (https://github.com/sigstore/rekor/pull/614)
+* Bump github.com/go-openapi/errors from 0.20.1 to 0.20.2 (https://github.com/sigstore/rekor/pull/613)
+* Bump google-github-actions/auth from 0.4.4 to 0.5.0 (https://github.com/sigstore/rekor/pull/612)
+* Bump github/codeql-action from 1.0.28 to 1.0.29 (https://github.com/sigstore/rekor/pull/611)
+* Bump gopkg.in/ini.v1 from 1.66.2 to 1.66.3 (https://github.com/sigstore/rekor/pull/608)
+* Bump github.com/google/go-cmp from 0.5.6 to 0.5.7 (https://github.com/sigstore/rekor/pull/609)
+* Update github/codeql-action requirement to 8a4b243fbf9a03a93e93a71c1ec257347041f9c4 (https://github.com/sigstore/rekor/pull/606)
+* Bump github.com/prometheus/client_golang from 1.11.0 to 1.12.0 (https://github.com/sigstore/rekor/pull/607)
+* Bump ossf/scorecard-action from 0fe1afdc40f536c78e3dc69147b91b3ecec2cc8a to 1.0.1 (https://github.com/sigstore/rekor/pull/603)
+* Bump goreleaser/goreleaser-action from 2.8.0 to 2.8.1 (https://github.com/sigstore/rekor/pull/602)
+* Bump golang from `8c0269d` to `0fa6504` (https://github.com/sigstore/rekor/pull/597)
+* Pin dependencies in github action workflows and Dockerfile (https://github.com/sigstore/rekor/pull/595)
+* update release image to use go 1.17.6 (https://github.com/sigstore/rekor/pull/589)
+* Bump golang from 1.17.5 to 1.17.6 (https://github.com/sigstore/rekor/pull/588)
+* Bump go.uber.org/goleak from 1.1.11 to 1.1.12 (https://github.com/sigstore/rekor/pull/585)
+* Bump go.uber.org/zap from 1.19.1 to 1.20.0 (https://github.com/sigstore/rekor/pull/584)
+* Bump github.com/go-playground/validator/v10 from 10.9.0 to 10.10.0 (https://github.com/sigstore/rekor/pull/579)
+* Bump actions/github-script from 4 to 5 (https://github.com/sigstore/rekor/pull/577)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Bob Callaway (@bobcallaway)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Dan Lorenc (@dlorenc)
+* Jason Hall (@imjasonh)
+* Lily Sturmann (@lkatalin)
+* Morten Linderud (@Foxboron)
+* Sylvestre Ledru (@sylvestre)
+* Trishank Karthik Kuppusamy (@trishankatdatadog)
+
 # v0.4.0
 
 ## Highlights
@@ -45,6 +120,7 @@
 
 ## Bug Fixes
 
+* bug: fix minisign prehashed entries (https://github.com/sigstore/rekor/pull/639)
 * fix timestamp addition and unmarshal (https://github.com/sigstore/rekor/pull/525)
 * Correct & parallelize tests (https://github.com/sigstore/rekor/pull/522)
 * Fix fuzz go.sum issue (https://github.com/sigstore/rekor/pull/509)
