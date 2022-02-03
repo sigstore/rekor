@@ -1,3 +1,7 @@
+<p align="center">
+  <img style="max-width: 100%;width: 300px;" src="./images/logo.svg" alt="Rekor logo"/>
+</p>
+
 # Rekor
 
 Rekór - Greek for “Record”
