@@ -2,6 +2,7 @@
 
 ## Highlights
 
+* Add Rekor logo to README (https://github.com/sigstore/rekor/pull/650)
 * update API calls to v5 (https://github.com/sigstore/rekor/pull/591)
 * Refactor helm type to remove intermediate state. (https://github.com/sigstore/rekor/pull/575)
 * Refactor the shard map parsing so we can pass it down into the API object. (https://github.com/sigstore/rekor/pull/564)
@@ -70,6 +71,7 @@
 * Jason Hall (@imjasonh)
 * Lily Sturmann (@lkatalin)
 * Morten Linderud (@Foxboron)
+* Nathan Smith (@nsmith5)
 * Sylvestre Ledru (@sylvestre)
 * Trishank Karthik Kuppusamy (@trishankatdatadog)
 

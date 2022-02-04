@@ -32,18 +32,16 @@ steps:
     echo "Checking out ${_GIT_TAG}"
     git checkout ${_GIT_TAG}
 
-- name: 'gcr.io/projectsigstore/cosign:v1.4.1@sha256:502d5130431e45f28c51d2c24a05ef5ccd3fd916bcc91db0c8bee3a81e09a0bb'
+- name: 'gcr.io/projectsigstore/cosign:v1.5.1@sha256:6247b2e693b0e6a62dcfa75eb46b698c1f4cd1aca36aaefafd4bbb2f2b2af717'
   dir: "go/src/sigstore/rekor"
   env:
   - COSIGN_EXPERIMENTAL=true
   - TUF_ROOT=/tmp
   args:
   - 'verify'
-  - '--key'
-  - 'https://raw.githubusercontent.com/gythialy/golang-cross/main/cosign.pub'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.6-0@sha256:d22430bb9b3b2ba21adae7f9774a68e9891a0458c8e487edf86311cefb32c766'
+  - 'ghcr.io/gythialy/golang-cross:v1.17.6-3@sha256:312ac8449408302e5fdde452578607cff075bc80052f4526254cd25fa96ce9e0'
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.6-0@sha256:d22430bb9b3b2ba21adae7f9774a68e9891a0458c8e487edf86311cefb32c766
+- name: ghcr.io/gythialy/golang-cross:v1.17.6-3@sha256:312ac8449408302e5fdde452578607cff075bc80052f4526254cd25fa96ce9e0
   entrypoint: /bin/sh
   dir: "go/src/sigstore/rekor"
   env:
@@ -64,7 +62,7 @@ steps:
     - |
       make release
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.6-0@sha256:d22430bb9b3b2ba21adae7f9774a68e9891a0458c8e487edf86311cefb32c766
+- name: ghcr.io/gythialy/golang-cross:v1.17.6-3@sha256:312ac8449408302e5fdde452578607cff075bc80052f4526254cd25fa96ce9e0
   entrypoint: 'bash'
   dir: "go/src/sigstore/rekor"
   env:
