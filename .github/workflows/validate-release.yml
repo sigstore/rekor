@@ -38,6 +38,10 @@ jobs:
       security-events: none
       statuses: none
 
+    env:
+      CROSS_BUILDER_IMAGE: ghcr.io/gythialy/golang-cross:v1.17.6-3@sha256:312ac8449408302e5fdde452578607cff075bc80052f4526254cd25fa96ce9e0
+      COSIGN_IMAGE: gcr.io/projectsigstore/cosign:v1.5.1@sha256:6247b2e693b0e6a62dcfa75eb46b698c1f4cd1aca36aaefafd4bbb2f2b2af717
+
     steps:
       - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
       - name: Extract version of Go to use
@@ -50,6 +54,15 @@ jobs:
         uses: goreleaser/goreleaser-action@79d4afbba1b4eff8b9a98e3d2e58c4dbaf094e2b #v2.8.1
         with:
           install-only: true
+
+      - name: Check Signature
+        run: |
+          docker run --rm \
+          -e COSIGN_EXPERIMENTAL=true \
+          -e TUF_ROOT=/tmp \
+          $COSIGN_IMAGE \
+          verify \
+          $CROSS_BUILDER_IMAGE
 
       - name: snaphot
         run: make snapshot
