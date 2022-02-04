@@ -14,3 +14,256 @@
 // limitations under the License.
 
 package container
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"io/ioutil"
+	"reflect"
+	"testing"
+
+	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
+	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/sigstore/pkg/signature/payload"
+	"go.uber.org/goleak"
+)
+
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
+}
+
+func TestNewEntryReturnType(t *testing.T) {
+	entry := NewEntry()
+	if reflect.TypeOf(entry) != reflect.ValueOf(&V001Entry{}).Type() {
+		t.Errorf("invalid type returned from NewEntry: %T", entry)
+	}
+}
+
+func TestCrossFieldValidation(t *testing.T) {
+	type TestCase struct {
+		caseDesc                  string
+		entry                     V001Entry
+		expectUnmarshalSuccess    bool
+		expectCanonicalizeSuccess bool
+	}
+
+	sigBytes, _ := ioutil.ReadFile("../../../../tests/test_container.sig")
+	keyBytes, _ := ioutil.ReadFile("../../../../tests/test_container_public_key.key")
+	dataBytes, _ := ioutil.ReadFile("../../../../tests/test_container.txt")
+
+	h := sha256.Sum256(bytes.TrimSpace(dataBytes))
+	dataSHA := hex.EncodeToString(h[:])
+
+	dataContent := &payload.Cosign{}
+	_ = json.Unmarshal(dataBytes, dataContent)
+
+	testCases := []TestCase{
+		{
+			caseDesc:               "empty obj",
+			entry:                  V001Entry{},
+			expectUnmarshalSuccess: false,
+		},
+		{
+			caseDesc: "signature without content",
+			entry: V001Entry{
+				ContainerObj: models.ContainerV001Schema{
+					Signature: &models.ContainerV001SchemaSignature{},
+				},
+			},
+			expectUnmarshalSuccess: false,
+		},
+		{
+			caseDesc: "signature without public key",
+			entry: V001Entry{
+				ContainerObj: models.ContainerV001Schema{
+					Signature: &models.ContainerV001SchemaSignature{
+						Content: strfmt.Base64(sigBytes),
+					},
+				},
+			},
+			expectUnmarshalSuccess: false,
+		},
+		{
+			caseDesc: "signature with empty public key",
+			entry: V001Entry{
+				ContainerObj: models.ContainerV001Schema{
+					Signature: &models.ContainerV001SchemaSignature{
+						Content:   strfmt.Base64(sigBytes),
+						PublicKey: &models.ContainerV001SchemaSignaturePublicKey{},
+					},
+				},
+			},
+			expectUnmarshalSuccess: false,
+		},
+		{
+			caseDesc: "signature without data",
+			entry: V001Entry{
+				ContainerObj: models.ContainerV001Schema{
+					Signature: &models.ContainerV001SchemaSignature{
+						Content: strfmt.Base64(sigBytes),
+						PublicKey: &models.ContainerV001SchemaSignaturePublicKey{
+							Content: strfmt.Base64(keyBytes),
+						},
+					},
+				},
+			},
+			expectUnmarshalSuccess: false,
+		},
+		{
+			caseDesc: "signature with empty data",
+			entry: V001Entry{
+				ContainerObj: models.ContainerV001Schema{
+					Signature: &models.ContainerV001SchemaSignature{
+						Content: strfmt.Base64(sigBytes),
+						PublicKey: &models.ContainerV001SchemaSignaturePublicKey{
+							Content: strfmt.Base64(keyBytes),
+						},
+					},
+					Data: &models.ContainerV001SchemaData{},
+				},
+			},
+			expectUnmarshalSuccess: false,
+		},
+		{
+			caseDesc: "signature with only data hash",
+			entry: V001Entry{
+				ContainerObj: models.ContainerV001Schema{
+					Signature: &models.ContainerV001SchemaSignature{
+						Content: strfmt.Base64(sigBytes),
+						PublicKey: &models.ContainerV001SchemaSignaturePublicKey{
+							Content: strfmt.Base64(keyBytes),
+						},
+					},
+					Data: &models.ContainerV001SchemaData{
+						Hash: &models.ContainerV001SchemaDataHash{
+							Algorithm: swag.String(models.ContainerV001SchemaDataHashAlgorithmSha256),
+							Value:     swag.String(dataSHA),
+						},
+					},
+				},
+			},
+			expectUnmarshalSuccess:    false,
+			expectCanonicalizeSuccess: false,
+		},
+		{
+			caseDesc: "signature with invalid sig content, key content & with data with content",
+			entry: V001Entry{
+				ContainerObj: models.ContainerV001Schema{
+					Signature: &models.ContainerV001SchemaSignature{
+						Content: strfmt.Base64(dataBytes),
+						PublicKey: &models.ContainerV001SchemaSignaturePublicKey{
+							Content: strfmt.Base64(keyBytes),
+						},
+					},
+					Data: &models.ContainerV001SchemaData{
+						Content: dataContent,
+					},
+				},
+			},
+			expectUnmarshalSuccess:    false,
+			expectCanonicalizeSuccess: false,
+		},
+		{
+			caseDesc: "signature with invalid sig content, key content & with data with content & hash",
+			entry: V001Entry{
+				ContainerObj: models.ContainerV001Schema{
+					Signature: &models.ContainerV001SchemaSignature{
+						Content: strfmt.Base64(dataBytes),
+						PublicKey: &models.ContainerV001SchemaSignaturePublicKey{
+							Content: strfmt.Base64(keyBytes),
+						},
+					},
+					Data: &models.ContainerV001SchemaData{
+						Content: dataContent,
+						Hash: &models.ContainerV001SchemaDataHash{
+							Algorithm: swag.String(models.ContainerV001SchemaDataHashAlgorithmSha256),
+							Value:     swag.String(dataSHA),
+						},
+					},
+				},
+			},
+			expectUnmarshalSuccess:    false,
+			expectCanonicalizeSuccess: false,
+		},
+		{
+			caseDesc: "signature with sig content, invalid key content & with data with content",
+			entry: V001Entry{
+				ContainerObj: models.ContainerV001Schema{
+					Signature: &models.ContainerV001SchemaSignature{
+						Content: strfmt.Base64(sigBytes),
+						PublicKey: &models.ContainerV001SchemaSignaturePublicKey{
+							Content: strfmt.Base64(dataBytes),
+						},
+					},
+					Data: &models.ContainerV001SchemaData{
+						Content: dataContent,
+					},
+				},
+			},
+			expectUnmarshalSuccess:    false,
+			expectCanonicalizeSuccess: false,
+		},
+		{
+			caseDesc: "signature with data content & hash",
+			entry: V001Entry{
+				ContainerObj: models.ContainerV001Schema{
+					Signature: &models.ContainerV001SchemaSignature{
+						Content: strfmt.Base64(sigBytes),
+						PublicKey: &models.ContainerV001SchemaSignaturePublicKey{
+							Content: strfmt.Base64(keyBytes),
+						},
+					},
+					Data: &models.ContainerV001SchemaData{
+						Content: dataContent,
+						Hash: &models.ContainerV001SchemaDataHash{
+							Algorithm: swag.String(models.ContainerV001SchemaDataHashAlgorithmSha256),
+							Value:     swag.String(dataSHA),
+						},
+					},
+				},
+			},
+			expectUnmarshalSuccess:    true,
+			expectCanonicalizeSuccess: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		v := &V001Entry{}
+		r := models.Container{
+			APIVersion: swag.String(tc.entry.APIVersion()),
+			Spec:       tc.entry.ContainerObj,
+		}
+
+		if err := v.Unmarshal(&r); (err == nil) != tc.expectUnmarshalSuccess {
+			t.Fatalf("unexpected result in '%v': %v", tc.caseDesc, err)
+		}
+		// No need to continue here if we didn't unmarshal
+		if !tc.expectUnmarshalSuccess {
+			continue
+		}
+
+		b, err := v.Canonicalize(context.TODO())
+		if (err == nil) != tc.expectCanonicalizeSuccess {
+			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
+		} else if err != nil {
+			if _, ok := err.(types.ValidationError); !ok {
+				t.Errorf("canonicalize returned an unexpected error that isn't of type types.ValidationError: %v", err)
+			}
+		}
+		if b != nil {
+			pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
+			if err != nil {
+				t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
+			}
+			if _, err := types.NewEntry(pe); err != nil {
+				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+			}
+		}
+	}
+}

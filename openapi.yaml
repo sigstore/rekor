@@ -544,6 +544,9 @@ definitions:
       email:
         type: string
         format: email
+      reference:
+        type: string
+        format: reference
       publicKey:
         type: object
         properties:

@@ -46,6 +46,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
@@ -61,6 +62,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
 func getUUIDFromUploadOutput(t *testing.T, out string) string {
@@ -165,6 +167,62 @@ func TestUploadVerifyHashedRekord(t *testing.T) {
 	// Now we should be able to verify it.
 	out = runCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Inclusion Proof:")
+}
+
+// upload a container image, search for image digest and reference
+func TestUploadVerifyContainer(t *testing.T) {
+	reference := "example.com/test/image"
+	validDigest := reference + "@sha256:d34db33fd34db33fd34db33fd34db33fd34db33fd34db33fd34db33fd34db33f"
+	digest, err := name.NewDigest(validDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	artifact := payload.Cosign{
+		Image: digest,
+	}
+	artifactBytes, err := artifact.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a signed container payload and sign it with x509
+	artifactPath := filepath.Join(t.TempDir(), "artifact")
+	if err := ioutil.WriteFile(artifactPath, []byte(artifactBytes), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Sign it with our key and write that to a file
+	sigPath := filepath.Join(t.TempDir(), "signature.asc")
+	signature, err := SignX509Cert(artifactBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(sigPath, []byte(signature), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Write the public key to a file
+	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
+	if err := ioutil.WriteFile(pubPath, []byte(rsaCert), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify should fail initially
+	runCliErr(t, "verify", "--type=container", "--pki-format=x509", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+
+	// It should upload successfully.
+	out := runCli(t, "upload", "--type=container", "--pki-format=x509", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	outputContains(t, out, "Created entry at")
+
+	uuid := getUUIDFromUploadOutput(t, out)
+
+	// Now we should be able to verify it.
+	out = runCli(t, "verify", "--type=container", "--pki-format=x509", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	outputContains(t, out, "Inclusion Proof:")
+
+	// Now we should search by the docker reference
+	out = runCli(t, "search", "--reference", reference)
+	outputContains(t, out, uuid)
 }
 
 func TestUploadVerifyRpm(t *testing.T) {

@@ -56,6 +56,8 @@ func addSearchPFlags(cmd *cobra.Command) error {
 
 	cmd.Flags().Var(NewFlagValue(shaFlag, ""), "sha", "the SHA256 or SHA1 sum of the artifact")
 
+	cmd.Flags().String("reference", "", "reference used to refer to or download the image ")
+
 	cmd.Flags().Var(NewFlagValue(emailFlag, ""), "email", "email associated with the public key's subject")
 	return nil
 }
@@ -66,8 +68,9 @@ func validateSearchPFlags() error {
 	publicKey := viper.GetString("public-key")
 	sha := viper.GetString("sha")
 	email := viper.GetString("email")
+	reference := viper.GetString("reference")
 
-	if artifactStr == "" && publicKey == "" && sha == "" && email == "" {
+	if artifactStr == "" && publicKey == "" && sha == "" && email == "" && reference == "" {
 		return errors.New("either 'sha' or 'artifact' or 'public-key' or 'email' must be specified")
 	}
 	if publicKey != "" {
@@ -82,7 +85,7 @@ func validateSearchPFlags() error {
 var searchCmd = &cobra.Command{
 	Use:   "search",
 	Short: "Rekor search command",
-	Long:  `Searches the Rekor index to find entries by sha, artifact,  public key, or e-mail`,
+	Long:  `Searches the Rekor index to find entries by sha, artifact, docker reference, public key, or e-mail`,
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
@@ -177,6 +180,10 @@ var searchCmd = &cobra.Command{
 				}
 				params.Query.PublicKey.Content = strfmt.Base64(keyBytes)
 			}
+		}
+		referenceStr := viper.GetString("reference")
+		if referenceStr != "" {
+			params.Query.Reference = referenceStr
 		}
 
 		emailStr := viper.GetString("email")

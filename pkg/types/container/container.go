@@ -28,7 +28,7 @@ const (
 	KIND = "container"
 )
 
-type BaseRekordType struct {
+type BaseContainerType struct {
 	types.RekorType
 }
 
@@ -37,7 +37,7 @@ func init() {
 }
 
 func New() types.TypeImpl {
-	brt := BaseRekordType{}
+	brt := BaseContainerType{}
 	brt.Kind = KIND
 	brt.VersionMap = VersionMap
 	return &brt
@@ -45,7 +45,7 @@ func New() types.TypeImpl {
 
 var VersionMap = types.NewSemVerEntryFactoryMap()
 
-func (rt BaseRekordType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
+func (rt BaseContainerType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
 	if pe == nil {
 		return nil, errors.New("proposed entry cannot be nil")
 	}
@@ -58,7 +58,7 @@ func (rt BaseRekordType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImp
 	return rt.VersionedUnmarshal(container, *container.APIVersion)
 }
 
-func (rt *BaseRekordType) CreateProposedEntry(ctx context.Context, version string, props types.ArtifactProperties) (models.ProposedEntry, error) {
+func (rt *BaseContainerType) CreateProposedEntry(ctx context.Context, version string, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	if version == "" {
 		version = rt.DefaultVersion()
 	}
@@ -70,6 +70,6 @@ func (rt *BaseRekordType) CreateProposedEntry(ctx context.Context, version strin
 	return ei.CreateFromArtifactProperties(ctx, props)
 }
 
-func (rt BaseRekordType) DefaultVersion() string {
+func (rt BaseContainerType) DefaultVersion() string {
 	return "0.0.1"
 }

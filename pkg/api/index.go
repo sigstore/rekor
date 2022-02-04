@@ -71,6 +71,13 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 		}
 		result = append(result, resultUUIDs...)
 	}
+	if params.Query.Reference != "" {
+		var resultUUIDs []string
+		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(params.Query.Reference), "0", "-1")); err != nil {
+			return handleRekorAPIError(params, http.StatusInternalServerError, err, redisUnexpectedResult)
+		}
+		result = append(result, resultUUIDs...)
+	}
 	if params.Query.Email != "" {
 		var resultUUIDs []string
 		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(params.Query.Email.String()), "0", "-1")); err != nil {

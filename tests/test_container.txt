@@ -1,0 +1,1 @@
+{"critical":{"identity":{"docker-reference":"gcr.io/asra-ali/busybox/demo"},"image":{"docker-manifest-digest":"sha256:37e5287945774f27b418ce567cd77f4bbc9ef44a1bcd1a2312369f31f9cce567"},"type":"cosign container image signature"},"optional":null}

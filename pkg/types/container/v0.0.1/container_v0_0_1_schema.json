@@ -9,11 +9,6 @@
             "description": "Information about the signature associated with the entry",
             "type": "object",
             "properties": {
-                "format": {
-                    "description": "Specifies the format of the signature",
-                    "type": "string",
-                    "enum": [ "pgp", "minisign", "x509", "ssh" ]
-                },
                 "content": {
                     "description": "Specifies the content of the signature inline within the document",
                     "type": "string",
@@ -36,8 +31,13 @@
             "description": "Information about the JSON payload associated with the entry",
             "type": "object",
             "properties": {
+                "content": {
+                    "description": "Specifies the JSON payload inline within the document",
+                    "type": "object",
+                    "additionalProperties": true
+                },
                 "hash": {
-                    "description": "Specifies the hash algorithm and value for the payload",
+                    "description": "Specifies the hash algorithm and value for the content",
                     "type": "object",
                     "properties": {
                         "algorithm": {
@@ -46,33 +46,14 @@
                             "enum": [ "sha256" ]
                         },
                         "value": {
-                            "description": "The hash value for the payload",
+                            "description": "The hash value for the content",
                             "type": "string"
                         }
                     },
                     "required": [ "algorithm", "value" ]
-                },
-                "url": {
-                    "description": "Specifies the location of the payload",
-                    "type": "string",
-                    "format": "uri",
-                    "writeOnly": true
-                },
-                "content": {
-                    "description": "Specifies the JSON payload inline within the document",
-                    "type": "object",
-                    "additionalProperties": true,
-                    "writeOnly": true
                 }
             },
-            "oneOf": [
-                {
-                    "required": [ "url" ]
-                },
-                {
-                    "required": [ "content" ]
-                }
-            ]
+            "required": [ "content" ]
         }
     },
     "required": [ "signature", "data" ]

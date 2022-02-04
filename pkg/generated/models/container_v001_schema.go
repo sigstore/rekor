@@ -179,31 +179,37 @@ func (m *ContainerV001Schema) UnmarshalBinary(b []byte) error {
 type ContainerV001SchemaData struct {
 
 	// Specifies the JSON payload inline within the document
-	Content interface{} `json:"content,omitempty"`
+	// Required: true
+	Content interface{} `json:"content"`
 
 	// hash
 	Hash *ContainerV001SchemaDataHash `json:"hash,omitempty"`
-
-	// Specifies the location of the payload
-	// Format: uri
-	URL strfmt.URI `json:"url,omitempty"`
 }
 
 // Validate validates this container v001 schema data
 func (m *ContainerV001SchemaData) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateHash(formats); err != nil {
+	if err := m.validateContent(formats); err != nil {
 		res = append(res, err)
 	}
 
-	if err := m.validateURL(formats); err != nil {
+	if err := m.validateHash(formats); err != nil {
 		res = append(res, err)
 	}
 
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *ContainerV001SchemaData) validateContent(formats strfmt.Registry) error {
+
+	if m.Content == nil {
+		return errors.Required("data"+"."+"content", "body", nil)
+	}
+
 	return nil
 }
 
@@ -221,18 +227,6 @@ func (m *ContainerV001SchemaData) validateHash(formats strfmt.Registry) error {
 			}
 			return err
 		}
-	}
-
-	return nil
-}
-
-func (m *ContainerV001SchemaData) validateURL(formats strfmt.Registry) error {
-	if swag.IsZero(m.URL) { // not required
-		return nil
-	}
-
-	if err := validate.FormatOf("data"+"."+"url", "body", "uri", m.URL.String(), formats); err != nil {
-		return err
 	}
 
 	return nil
@@ -286,7 +280,7 @@ func (m *ContainerV001SchemaData) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-// ContainerV001SchemaDataHash Specifies the hash algorithm and value for the payload
+// ContainerV001SchemaDataHash Specifies the hash algorithm and value for the content
 //
 // swagger:model ContainerV001SchemaDataHash
 type ContainerV001SchemaDataHash struct {
@@ -296,7 +290,7 @@ type ContainerV001SchemaDataHash struct {
 	// Enum: [sha256]
 	Algorithm *string `json:"algorithm"`
 
-	// The hash value for the payload
+	// The hash value for the content
 	// Required: true
 	Value *string `json:"value"`
 }
@@ -400,10 +394,6 @@ type ContainerV001SchemaSignature struct {
 	// Format: byte
 	Content strfmt.Base64 `json:"content,omitempty"`
 
-	// Specifies the format of the signature
-	// Enum: [pgp minisign x509 ssh]
-	Format string `json:"format,omitempty"`
-
 	// public key
 	PublicKey *ContainerV001SchemaSignaturePublicKey `json:"publicKey,omitempty"`
 }
@@ -412,10 +402,6 @@ type ContainerV001SchemaSignature struct {
 func (m *ContainerV001SchemaSignature) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateFormat(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validatePublicKey(formats); err != nil {
 		res = append(res, err)
 	}
@@ -423,54 +409,6 @@ func (m *ContainerV001SchemaSignature) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-var containerV001SchemaSignatureTypeFormatPropEnum []interface{}
-
-func init() {
-	var res []string
-	if err := json.Unmarshal([]byte(`["pgp","minisign","x509","ssh"]`), &res); err != nil {
-		panic(err)
-	}
-	for _, v := range res {
-		containerV001SchemaSignatureTypeFormatPropEnum = append(containerV001SchemaSignatureTypeFormatPropEnum, v)
-	}
-}
-
-const (
-
-	// ContainerV001SchemaSignatureFormatPgp captures enum value "pgp"
-	ContainerV001SchemaSignatureFormatPgp string = "pgp"
-
-	// ContainerV001SchemaSignatureFormatMinisign captures enum value "minisign"
-	ContainerV001SchemaSignatureFormatMinisign string = "minisign"
-
-	// ContainerV001SchemaSignatureFormatX509 captures enum value "x509"
-	ContainerV001SchemaSignatureFormatX509 string = "x509"
-
-	// ContainerV001SchemaSignatureFormatSSH captures enum value "ssh"
-	ContainerV001SchemaSignatureFormatSSH string = "ssh"
-)
-
-// prop value enum
-func (m *ContainerV001SchemaSignature) validateFormatEnum(path, location string, value string) error {
-	if err := validate.EnumCase(path, location, value, containerV001SchemaSignatureTypeFormatPropEnum, true); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (m *ContainerV001SchemaSignature) validateFormat(formats strfmt.Registry) error {
-	if swag.IsZero(m.Format) { // not required
-		return nil
-	}
-
-	// value enum
-	if err := m.validateFormatEnum("signature"+"."+"format", "body", m.Format); err != nil {
-		return err
-	}
-
 	return nil
 }
 

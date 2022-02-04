@@ -46,6 +46,9 @@ type SearchIndex struct {
 
 	// public key
 	PublicKey *SearchIndexPublicKey `json:"publicKey,omitempty"`
+
+	// reference
+	Reference string `json:"reference,omitempty"`
 }
 
 // Validate validates this search index
