@@ -1,4 +1,12 @@
-@sigstore/rekor-codeowners
+*			@sigstore/rekor-codeowners
+
+/.github/ 		@cpanato
+/release/ 		@cpanato
+
+/pkg/types/		@bobcallaway
+
+/pkg/api/timestamp.go	@asraa @loosebazooka
+/pkg/types/rfc3161/	@asraa @loosebazooka
 
 # The CODEOWNERS are managed via a GitHub team, but the current list is (in alphabetical order):
 
