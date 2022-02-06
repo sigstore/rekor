@@ -22,9 +22,10 @@ extensible to working with different manifest schemas and PKI tooling.
 
 ## Public Instance
 
-**IMPORTANT**: This instance is currently operated on a best-effort basis.  
-We **will take the log down** and reset it with zero notice.
-We will improve the stability and publish SLOs over time.
+We're currently working hard on cutting a 1.0 release and productionizing the public instance.
+We don't have a date yet, but follow along on the [GitHub project](https://github.com/orgs/sigstore/projects/5).
+
+We will improve the stability and publish SLOs soon!
 
 More details on the public instance can be found at [docs.sigstore.dev](https://docs.sigstore.dev/rekor/public-instance).
 
