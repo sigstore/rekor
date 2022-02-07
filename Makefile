@@ -15,7 +15,7 @@
 
 .PHONY: all test clean clean-gen lint gosec ko ko-local sign-container cross-cli
 
-all: rekor-cli rekor-server 
+all: rekor-cli rekor-server
 
 GENSRC = pkg/generated/client/%.go pkg/generated/models/%.go pkg/generated/restapi/%.go
 OPENAPIDEPS = openapi.yaml $(shell find pkg/types -iname "*.json")
@@ -49,8 +49,10 @@ export KO_DOCKER_REPO=$(KO_PREFIX)
 SWAGGER := $(TOOLS_BIN_DIR)/swagger
 GO-FUZZ-BUILD := $(TOOLS_BIN_DIR)/go-fuzz-build
 
-FLAG_PKG=github.com/sigstore/rekor/pkg/api
-REKOR_LDFLAGS=-X $(FLAG_PKG).GitVersion=$(GIT_VERSION) -X $(FLAG_PKG).GitCommit=$(GIT_HASH) -X $(FLAG_PKG).GitTreeState=$(GIT_TREESTATE) -X $(FLAG_PKG).BuildDate=$(BUILD_DATE)
+REKOR_LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
+              -X sigs.k8s.io/release-utils/version.gitCommit=$(GIT_HASH) \
+              -X sigs.k8s.io/release-utils/version.gitTreeState=$(GIT_TREESTATE) \
+              -X sigs.k8s.io/release-utils/version.buildDate=$(BUILD_DATE)
 
 CLI_LDFLAGS=$(REKOR_LDFLAGS)
 SERVER_LDFLAGS=$(REKOR_LDFLAGS)
@@ -66,7 +68,7 @@ validate-openapi: $(SWAGGER)
 
 # this exists to override pattern match rule above since this file is in the generated directory but should not be treated as generated code
 pkg/generated/restapi/configure_rekor_server.go: $(OPENAPIDEPS)
-	
+
 
 lint:
 	$(GOBIN)/golangci-lint run -v ./...

@@ -17,32 +17,18 @@ package api
 
 import (
 	"github.com/go-openapi/runtime/middleware"
+	"sigs.k8s.io/release-utils/version"
+
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/server"
 )
 
-// Base version information.
-//
-// This is the fallback data used when version information from git is not
-// provided via go ldflags (e.g. via Makefile).
-var (
-	// Output of "git describe". The prerequisite is that the branch should be
-	// tagged using the correct versioning strategy.
-	GitVersion string = "devel"
-	// SHA1 from git, output of $(git rev-parse HEAD)
-	GitCommit = "unknown"
-	// State of git tree, either "clean" or "dirty"
-	GitTreeState = "unknown"
-	// Build date in ISO8601 format, output of $(date -u +'%Y-%m-%dT%H:%M:%SZ')
-	BuildDate = "unknown"
-)
-
 func GetRekorVersionHandler(params server.GetRekorVersionParams) middleware.Responder {
-	ver := &models.RekorVersion{
-		Version:   &GitVersion,
-		Commit:    &GitCommit,
-		Treestate: &GitTreeState,
-		Builddate: &BuildDate,
-	}
-	return server.NewGetRekorVersionOK().WithPayload(ver)
+	v := version.GetVersionInfo()
+	return server.NewGetRekorVersionOK().WithPayload(&models.RekorVersion{
+		Version:   &v.GitVersion,
+		Commit:    &v.GitCommit,
+		Treestate: &v.GitTreeState,
+		Builddate: &v.BuildDate,
+	})
 }
