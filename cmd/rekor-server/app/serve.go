@@ -23,6 +23,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"sigs.k8s.io/release-utils/version"
 
 	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/generated/restapi"
@@ -62,7 +63,7 @@ var serveCmd = &cobra.Command{
 		// from https://github.com/golang/glog/commit/fca8c8854093a154ff1eb580aae10276ad6b1b5f
 		_ = flag.CommandLine.Parse([]string{})
 
-		vi := VersionInfo()
+		vi := version.GetVersionInfo()
 		viStr, err := vi.JSONString()
 		if err != nil {
 			viStr = vi.String()
