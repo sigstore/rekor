@@ -103,6 +103,14 @@ var serveCmd = &cobra.Command{
 		server.Port = int(viper.GetUint("port"))
 		server.EnabledListeners = []string{"http"}
 
+		// Update logRangeMap if flag was passed in
+		rangeMap := viper.GetString("trillian_log_server.log_id_ranges")
+		if rangeMap != "" {
+			if err := logRangeMap.Set(rangeMap); err != nil {
+				log.Logger.Fatal("unable to set logRangeMap from flag: %v", err)
+			}
+		}
+
 		api.ConfigureAPI(logRangeMap.Ranges)
 		server.ConfigureAPI()
 
