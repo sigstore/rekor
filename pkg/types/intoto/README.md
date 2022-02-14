@@ -1,4 +1,4 @@
-in-toto Type Data Documentation
+**in-toto Type Data Documentation**
 
 This document provides a definition for each field that is not otherwise described in the [in-toto schema](https://github.com/sigstore/rekor/blob/main/pkg/types/intoto/v0.0.1/intoto_v0_0_1_schema.json). This document also notes any additional information about the values associated with each field such as the format in which the data is stored and any necessary transformations.
 
@@ -8,6 +8,6 @@ This document provides a definition for each field that is not otherwise describ
 
 **AttestationType:** Identifies the type of attestation being made, such as a provenance attestation or a vulnerability scan attestation.
 
-How do you identify an object as an in-toto object?
+**How do you identify an object as an in-toto object?**
 
 The "Body" field will include an "IntotoObj" field.
