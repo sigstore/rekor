@@ -48,6 +48,14 @@ func NewTrillianClient(ctx context.Context) TrillianClient {
 	}
 }
 
+func NewTrillianClientFromTreeID(ctx context.Context, tid int64) TrillianClient {
+	return TrillianClient{
+		client:  api.logClient,
+		logID:   tid,
+		context: ctx,
+	}
+}
+
 type Response struct {
 	status                    codes.Code
 	err                       error

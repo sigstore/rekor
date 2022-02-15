@@ -112,22 +112,28 @@ var getCmd = &cobra.Command{
 			}
 		}
 
+		// Note: this UUID may be an EntryID
 		if uuid != "" {
 			params := entries.NewGetLogEntryByUUIDParams()
 			params.SetTimeout(viper.GetDuration("timeout"))
 
-			params.EntryUUID, err = sharding.GetUUIDFromIDString(uuid)
-			if err != nil {
-				return nil, fmt.Errorf("unable to parse uuid: %w", err)
-			}
+			// NOTE: This undoes the change that let people pass in longer UUIDs without
+			// trouble even if their client is old, a.k.a. it will be able to use the TreeID
+			// (if present) for routing in the GetLogEntryByUUIDHandler
+			params.EntryUUID = uuid
 
 			resp, err := rekorClient.Entries.GetLogEntryByUUID(params)
 			if err != nil {
 				return nil, err
 			}
 
+			u, err := sharding.GetUUIDFromIDString(params.EntryUUID)
+			if err != nil {
+				return nil, err
+			}
+
 			for k, entry := range resp.Payload {
-				if k != params.EntryUUID {
+				if k != u {
 					continue
 				}
 
