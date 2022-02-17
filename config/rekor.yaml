@@ -16,6 +16,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: rekor
   name: rekor-server
   labels:
     app: rekor-server
@@ -82,6 +83,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  namespace: rekor
   name: rekor-server
 spec:
   selector:

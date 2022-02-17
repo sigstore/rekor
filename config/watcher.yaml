@@ -16,6 +16,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: rekor
   name: rekor-watcher
   labels:
     app: rekor-watcher
