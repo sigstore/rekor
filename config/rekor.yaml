@@ -13,6 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rekor-system
+  labels:
+    name: rekor-system
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
