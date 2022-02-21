@@ -35,7 +35,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
-      - uses: sigstore/cosign-installer@51f8e5c6fce54e46006ae97d73b2b6315f518752 #v2.0.0
+      - uses: sigstore/cosign-installer@179e0f15e70e22ca2e7254fc12d68a9fbab35614 #v2.0.0
 
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
