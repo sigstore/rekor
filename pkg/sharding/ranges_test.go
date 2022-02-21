@@ -29,8 +29,8 @@ func TestLogRanges_ResolveVirtualIndex(t *testing.T) {
 
 	for _, tt := range []struct {
 		Index      int
-		WantTreeID uint64
-		WantIndex  uint64
+		WantTreeID int64
+		WantIndex  int64
 	}{
 		{
 			Index:      3,
