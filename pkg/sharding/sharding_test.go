@@ -15,15 +15,12 @@
 
 package sharding
 
-import (
-	"strconv"
-	"testing"
-)
+import "testing"
 
 // Create some test data
 // Good data
-const validTreeID1 = "FFFFFFFFFFFFFFFF"
-const validTreeID2 = "0000000000000000"
+const validTreeID1 = "0FFFFFFFFFFFFFFF"
+const validTreeID2 = "3315648d077a9f02"
 const validTreeID3 = "7241b7903737211c"
 const shortTreeID = "12345"
 
@@ -37,6 +34,10 @@ var validTreeIDs = []string{validTreeID1, validTreeID2, validTreeID3, shortTreeI
 var validEntryIDs = []string{validEntryID1, validEntryID2, validEntryID3}
 
 // Bad data
+// Unknown TreeID
+const invalidTreeID = "0000000000000000"
+const invalidEntryID = invalidTreeID + validUUID
+
 // Wrong length
 const tooLongTreeID = validTreeID1 + "e"
 
@@ -70,7 +71,7 @@ var notHexUUIDs = []string{notHexUUID1, notHexUUID2, notHexUUID3}
 var notHexEntryandUUIDs = []string{notHexEntryID1, notHexEntryID2, notHexEntryID3, notHexUUID1, notHexUUID2, notHexUUID3}
 
 // Test functions
-func TestCreateEntryID(t *testing.T) {
+func TestCreateEntryIDFromParts(t *testing.T) {
 	for _, s := range wrongLengthTreeIDs {
 		if _, err := CreateEntryIDFromParts(s, validUUID); err == nil {
 			t.Errorf("expected length error for wrong TreeID of invalid len: %v", s)
@@ -121,27 +122,6 @@ func TestCreateEmptyEntryID(t *testing.T) {
 
 	if emptyEntryID.UUID != "" {
 		t.Errorf("expected empty EntryID.UUID but got %v", emptyEntryID.UUID)
-	}
-}
-
-func TestCreateEntryIDWithActiveTreeID(t *testing.T) {
-	entryID, err := CreateEntryIDWithActiveTreeID(validUUID)
-	if err != nil {
-		t.Errorf("unable to create entryID: %v", err)
-	}
-
-	// TODO: Update dummy to be the global LogRanges struct
-	activeIndexString := strconv.FormatUint(dummyLogRanges.ActiveIndex(), 10)
-	expectedTreeID, err := PadToTreeIDLen(activeIndexString)
-	if err != nil {
-		t.Errorf("unable to pad %v to treeIDLen: %v", activeIndexString, err)
-	}
-	if entryID.TreeID != expectedTreeID {
-		t.Errorf("expected entryID.TreeID %v but got %v", dummyLogRanges.ActiveIndex(), entryID.TreeID)
-	}
-
-	if entryID.UUID != validUUID {
-		t.Errorf("expected entryID.TreeID %v but got %v", validUUID, entryID.UUID)
 	}
 }
 
@@ -210,5 +190,33 @@ func TestGetUUIDFromIDString(t *testing.T) {
 		if res != validUUID {
 			t.Errorf("expected result %v for GetUUIDFromIDString(%v) but got %v", validUUID, s, res)
 		}
+	}
+}
+
+func TestGetTreeIDFromIDString(t *testing.T) {
+	valid1, err := GetTreeIDFromIDString(validEntryID1)
+	if valid1 != validTreeID1 || err != nil {
+		t.Errorf("expected TreeID %v with nil error, got: %v with error %v", validTreeID1, valid1, err)
+	}
+	valid2, err := GetTreeIDFromIDString(validEntryID2)
+	if valid2 != validTreeID2 || err != nil {
+		t.Errorf("expected TreeID %v with nil error, got: %v with error %v", validTreeID2, valid2, err)
+	}
+	valid3, err := GetTreeIDFromIDString(validEntryID3)
+	if valid3 != validTreeID3 || err != nil {
+		t.Errorf("expected TreeID %v with nil error, got: %v with error %v", validTreeID3, valid3, err)
+	}
+
+	// tree IDs of zero should return an error
+	invalid, err := GetTreeIDFromIDString(invalidEntryID)
+	if invalid != "" || err.Error() != "0 is not a valid TreeID" {
+		t.Errorf("expected err 'unknown treeID', got: %v with error %v", invalid, err)
+	}
+
+	// invalid UUID should also return an error because we test inclusively for
+	// malformed parts of EntryID
+	_, e := GetTreeIDFromIDString(notHexEntryID2)
+	if e == nil {
+		t.Errorf("expected error for invalid UUID, but got none")
 	}
 }

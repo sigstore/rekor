@@ -38,20 +38,12 @@ const TreeIDHexStringLen = 16
 const UUIDHexStringLen = 64
 const EntryIDHexStringLen = TreeIDHexStringLen + UUIDHexStringLen
 
-// TODO: replace this with the actual LogRanges struct when logic is hooked up
-var dummyLogRanges = LogRanges{
-	Ranges: []LogRange{
-		{
-			TreeID:     0,
-			TreeLength: 0}},
-}
-
 type EntryID struct {
 	TreeID string
 	UUID   string
 }
 
-// This function can take a TreeID of equal or greater length than TreeIDHexStringLen. In
+// This function can take a TreeID of equal or lesser length than TreeIDHexStringLen. In
 // case the TreeID length is less than TreeIDHexStringLen, it will be padded to the correct
 // length.
 func CreateEntryIDFromParts(treeid string, uuid string) (EntryID, error) {
@@ -70,13 +62,7 @@ func CreateEntryIDFromParts(treeid string, uuid string) (EntryID, error) {
 		return createEmptyEntryID(), err
 	}
 
-	if _, err := hex.DecodeString(treeidFormatted); err != nil {
-		err := fmt.Errorf("treeid %v is not a valid hex string: %v", treeidFormatted, err)
-		return createEmptyEntryID(), err
-	}
-
-	if _, err := hex.DecodeString(uuid); err != nil {
-		err := fmt.Errorf("uuid %v is not a valid hex string: %v", uuid, err)
+	if err := ValidateEntryID(treeidFormatted + uuid); err != nil {
 		return createEmptyEntryID(), err
 	}
 
@@ -89,12 +75,6 @@ func createEmptyEntryID() EntryID {
 	return EntryID{
 		TreeID: "",
 		UUID:   ""}
-}
-
-func CreateEntryIDWithActiveTreeID(uuid string) (EntryID, error) {
-	// TODO: Update this to be the global LogRanges struct
-	treeid := strconv.FormatUint(dummyLogRanges.ActiveIndex(), 10)
-	return CreateEntryIDFromParts(treeid, uuid)
 }
 
 func (e EntryID) ReturnEntryIDString() string {
@@ -112,15 +92,106 @@ func PadToTreeIDLen(t string) (string, error) {
 	}
 }
 
-// Returns UUID (with no prepended TreeID) from a UUID or EntryID string
+// Returns UUID (with no prepended TreeID) from a UUID or EntryID string.
+// Validates UUID and also TreeID if present.
 func GetUUIDFromIDString(id string) (string, error) {
-	if len(id) != UUIDHexStringLen && len(id) != EntryIDHexStringLen {
+	switch len(id) {
+	case UUIDHexStringLen:
+		if err := ValidateUUID(id); err != nil {
+			return "", err
+		}
+		return id, nil
+
+	case EntryIDHexStringLen:
+		if err := ValidateEntryID(id); err != nil {
+			if err.Error() == "0 is not a valid TreeID" {
+				return id[len(id)-UUIDHexStringLen:], nil
+			}
+			return "", err
+		}
+		return id[len(id)-UUIDHexStringLen:], nil
+
+	default:
 		return "", fmt.Errorf("invalid ID len %v for %v", len(id), id)
 	}
+}
 
-	if _, err := hex.DecodeString(id); err != nil {
-		return "", fmt.Errorf("id %v is not a valid hex string: %v", id, err)
+// This is permissive in that if passed an EntryID, it will find the UUID and validate it.
+func ValidateUUID(u string) error {
+	switch len(u) {
+	// If u is an EntryID, call validate on just the UUID
+	case EntryIDHexStringLen:
+		uid := u[len(u)-UUIDHexStringLen:]
+		if err := ValidateUUID(uid); err != nil {
+			return err
+		}
+		return nil
+	case UUIDHexStringLen:
+		if _, err := hex.DecodeString(u); err != nil {
+			return fmt.Errorf("id %v is not a valid hex string: %v", u, err)
+		}
+		return nil
+	default:
+		return fmt.Errorf("invalid ID len %v for %v", len(u), u)
+	}
+}
+
+// This is permissive in that if passed an EntryID, it will find the TreeID and validate it.
+func ValidateTreeID(t string) error {
+	switch len(t) {
+	// If t is an EntryID, call validate on just the TreeID
+	case EntryIDHexStringLen:
+		tid := t[:TreeIDHexStringLen]
+		err := ValidateTreeID(tid)
+		if err != nil {
+			return err
+		}
+		return nil
+	case TreeIDHexStringLen:
+		// Check that it's a valid int64 in hex (base 16)
+		i, err := strconv.ParseInt(t, 16, 64)
+		if err != nil {
+			return fmt.Errorf("could not convert treeID %v to int64: %v", t, err)
+		}
+
+		// Check for invalid TreeID values
+		// TODO: test for more of these
+		if i == 0 {
+			return fmt.Errorf("0 is not a valid TreeID")
+		}
+
+		return nil
+	default:
+		return fmt.Errorf("TreeID len expected to be %v but got %v", TreeIDHexStringLen, len(t))
+	}
+}
+
+func ValidateEntryID(id string) error {
+	UUIDErr := ValidateUUID(id)
+	if UUIDErr != nil {
+		return UUIDErr
 	}
 
-	return id[len(id)-UUIDHexStringLen:], nil
+	treeIDErr := ValidateTreeID(id)
+	if treeIDErr != nil {
+		return treeIDErr
+	}
+
+	return nil
+}
+
+// Returns TreeID (with no appended UUID) from a TreeID or EntryID string.
+// Validates TreeID and also UUID if present.
+func GetTreeIDFromIDString(id string) (string, error) {
+	switch len(id) {
+	case UUIDHexStringLen:
+		return "", fmt.Errorf("cannot get treeID from plain UUID")
+	case EntryIDHexStringLen, TreeIDHexStringLen:
+		if err := ValidateEntryID(id); err != nil {
+			return "", err
+		}
+		return id[:TreeIDHexStringLen], nil
+	default:
+		return "", fmt.Errorf("invalid ID len %v for %v", len(id), id)
+	}
 }
