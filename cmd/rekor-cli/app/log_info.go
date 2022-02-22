@@ -43,6 +43,7 @@ type logInfoCmdOutput struct {
 	TreeSize       int64
 	RootHash       string
 	TimestampNanos uint64
+	TreeID         int64
 }
 
 func (l *logInfoCmdOutput) String() string {
@@ -52,7 +53,8 @@ func (l *logInfoCmdOutput) String() string {
 Tree Size: %v
 Root Hash: %s
 Timestamp: %s
-`, l.TreeSize, l.RootHash, ts)
+TreeID:    %v
+`, l.TreeSize, l.RootHash, ts, l.TreeID)
 }
 
 // logInfoCmd represents the current information about the transparency log
@@ -114,6 +116,7 @@ var logInfoCmd = &cobra.Command{
 			TreeSize:       *logInfo.TreeSize,
 			RootHash:       *logInfo.RootHash,
 			TimestampNanos: sth.GetTimestamp(),
+			TreeID:         *logInfo.TreeID,
 		}
 
 		oldState := state.Load(serverURL)
