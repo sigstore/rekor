@@ -14,11 +14,11 @@ require (
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-openapi/errors v0.20.2
 	github.com/go-openapi/loads v0.21.1
-	github.com/go-openapi/runtime v0.23.0
+	github.com/go-openapi/runtime v0.23.1
 	github.com/go-openapi/spec v0.20.4
 	github.com/go-openapi/strfmt v0.21.2
 	github.com/go-openapi/swag v0.21.1
-	github.com/go-openapi/validate v0.20.3
+	github.com/go-openapi/validate v0.21.0
 	github.com/go-playground/validator/v10 v10.10.0
 	github.com/golang/glog v0.0.0-20210429001901-424d2337a529 // indirect
 	github.com/google/go-cmp v0.5.7
@@ -26,7 +26,6 @@ require (
 	github.com/google/trillian v1.4.0
 	github.com/in-toto/in-toto-golang v0.3.4-0.20211211042327-af1f9fb822bf
 	github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b
-	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mediocregopher/radix/v4 v4.0.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.4.3
@@ -51,7 +50,7 @@ require (
 	gocloud.dev v0.24.1-0.20211119014450-028788aaaa4c
 	golang.org/x/crypto v0.0.0-20220131195533-30dcbda58838
 	golang.org/x/mod v0.5.1
-	golang.org/x/net v0.0.0-20211208012354-db4efeb81f4b
+	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20220128215802-99c3d69c2c27 // indirect
 	golang.org/x/tools v0.1.7 // indirect
