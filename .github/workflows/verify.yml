@@ -17,6 +17,9 @@ name: Verify
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   license-check:
     name: license boilerplate check
