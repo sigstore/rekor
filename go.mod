@@ -33,7 +33,7 @@ require (
 	github.com/prometheus/client_golang v1.12.1
 	github.com/rs/cors v1.8.2
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
-	github.com/secure-systems-lab/go-securesystemslib v0.3.0
+	github.com/secure-systems-lab/go-securesystemslib v0.3.1
 	github.com/sigstore/sigstore v1.0.2-0.20211210190220-04746d994282
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/pflag v1.0.5
