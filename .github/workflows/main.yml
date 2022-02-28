@@ -29,10 +29,10 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
+      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.2.0
+      - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v3.0.0
         with:
           go-version: ${{ env.GOVERSION }}
       - name: Validate OpenAPI with Swagger
@@ -49,13 +49,13 @@ jobs:
   container-build:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
+      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.2.0
+      - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v3.0.0
         with:
           go-version: ${{ env.GOVERSION }}
-      - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 #v0.4
+      - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
         with:
           version: v0.9.3
       - name: container
@@ -70,18 +70,18 @@ jobs:
     steps:
       - name: download minisign
         run: sudo add-apt-repository ppa:dysfunctionalprogramming/minisign && sudo apt-get update && sudo apt-get install minisign
-      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2.4.0
+      - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.4.0
       - name: Docker Build
         run: docker-compose build
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.2.0
+      - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v3.0.0
         with:
           go-version: ${{ env.GOVERSION }}
       - name: CLI
         run: ./tests/e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 #v2.3.1
+        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
         if: failure()
         with:
           name: Docker Compose logs
