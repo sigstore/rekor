@@ -125,13 +125,13 @@ deploy:
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) ko apply -f config/
 
 sign-container: ko
-	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}/rekor-server:$(GIT_HASH)
-	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}/rekor-cli:$(GIT_HASH)
+	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
+	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-cli:$(GIT_HASH)
 
 .PHONY: sign-keyless-ci
 sign-keyless-ci: ko
-	cosign sign --force -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}/rekor-server:$(GIT_HASH)
-	cosign sign --force -a GIT_HASH=$(GIT_HASH) ${KO_DOCKER_REPO}/rekor-cli:$(GIT_HASH)
+	cosign sign --force -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
+	cosign sign --force -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-cli:$(GIT_HASH)
 
 .PHONY: ko-local
 ko-local:
@@ -173,8 +173,8 @@ $(SWAGGER): $(TOOLS_DIR)/go.mod
 
 help: # Display help
 	@awk -F ':|##' \
-		'/^[^\t].+?:.*?##/ {\
+		'/^[^\t].+?:.*?##/ (\
 			printf "\033[36m%-30s\033[0m %s\n", $$1, $$NF \
-		}' $(MAKEFILE_LIST) | sort
+		)' $(MAKEFILE_LIST) | sort
 
 include release/release.mk
