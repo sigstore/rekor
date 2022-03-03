@@ -42,6 +42,21 @@ sign-keyless-rekor-cli-release:
 .PHONY: sign-keyless-release
 sign-keyless-release: sign-keyless-rekor-server-release sign-keyless-rekor-cli-release
 
+####################
+# copy image to GHCR
+####################
+
+.PHONY: copy-rekor-server-signed-release-to-ghcr
+copy-cosign-signed-release-to-ghcr:
+	cosign copy $(KO_PREFIX)/rekor-server:$(GIT_VERSION) $(GHCR_PREFIX)/rekor-server:$(GIT_VERSION)
+
+.PHONY: copy-rekor-cli-signed-release-to-ghcr
+copy-cosigned-signed-release-to-ghcr:
+	cosign copy $(KO_PREFIX)/rekor-cli:$(GIT_VERSION) $(GHCR_PREFIX)/rekor-cli:$(GIT_VERSION)
+
+.PHONY: copy-signed-release-to-ghcr
+copy-signed-release-to-ghcr: copy-rekor-server-signed-release-to-ghcr copy-rekor-cli-signed-release-to-ghcr
+
 ## --------------------------------------
 ## Dist / maybe we can deprecate
 ## --------------------------------------
