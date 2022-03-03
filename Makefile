@@ -29,6 +29,7 @@ RUNTIME_IMAGE ?= gcr.io/distroless/static
 # Set version variables for LDFLAGS
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
 GIT_HASH ?= $(shell git rev-parse HEAD)
+GIT_TAG ?= dirty-tag
 DATE_FMT = +'%Y-%m-%dT%H:%M:%SZ'
 SOURCE_DATE_EPOCH ?= $(shell git log -1 --pretty=%ct)
 ifdef SOURCE_DATE_EPOCH
@@ -44,6 +45,7 @@ endif
 
 KO_PREFIX ?= gcr.io/projectsigstore
 export KO_DOCKER_REPO=$(KO_PREFIX)
+REKOR_YAML ?= rekor-$(GIT_TAG).yaml
 
 # Binaries
 SWAGGER := $(TOOLS_BIN_DIR)/swagger
@@ -111,13 +113,13 @@ debug:
 ko:
 	# rekor-server
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths --bare \
+	ko resolve --base-import-paths \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		github.com/sigstore/rekor/cmd/rekor-server
+		--filename config/ > $(REKOR_YAML)
 
 	# rekor-cli
 	LDFLAGS="$(CLI_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths --bare \
+	ko publish --base-import-paths \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/sigstore/rekor/cmd/rekor-cli
 
@@ -136,12 +138,12 @@ sign-keyless-ci: ko
 .PHONY: ko-local
 ko-local:
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths --bare \
+	ko publish --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
 		github.com/sigstore/rekor/cmd/rekor-server
 
 	LDFLAGS="$(CLI_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths --bare \
+	ko publish --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
 		github.com/sigstore/rekor/cmd/rekor-cli
 
@@ -149,10 +151,10 @@ ko-local:
 .PHONY: ko-trillian
 ko-trillian:
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths --bare \
+	ko publish --base-import-paths \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/google/trillian/cmd/trillian_log_signer
-	ko publish --base-import-paths --bare \
+	ko publish --base-import-paths \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		github.com/google/trillian/cmd/trillian_log_server
 

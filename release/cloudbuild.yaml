@@ -97,6 +97,7 @@ artifacts:
     paths:
     - "go/src/sigstore/rekor/dist/rekor*"
     - "go/src/sigstore/rekor/release/release-cosign.pub"
+    - "go/src/sigstore/rekor/rekor*.yaml"
 
 options:
   machineType: E2_HIGHCPU_8
