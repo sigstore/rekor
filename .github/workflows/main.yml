@@ -83,7 +83,7 @@ jobs:
       - name: CLI
         run: ./tests/e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2.3.1
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535 # v3
         if: failure()
         with:
           name: Docker Compose logs
