@@ -39,9 +39,9 @@ steps:
   - TUF_ROOT=/tmp
   args:
   - 'verify'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.7-0@sha256:949325ffc52c16867d78412ce70f5ce531812c20e7528ae70dc9e718d72223e8'
+  - 'ghcr.io/gythialy/golang-cross:v1.17.8-0@sha256:b5b14c6a61099af5a69864f242766a0dca978d2aea97e311d051ee4f4b7d19ba'
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.7-0@sha256:949325ffc52c16867d78412ce70f5ce531812c20e7528ae70dc9e718d72223e8
+- name: ghcr.io/gythialy/golang-cross:v1.17.8-0@sha256:b5b14c6a61099af5a69864f242766a0dca978d2aea97e311d051ee4f4b7d19ba
   entrypoint: /bin/sh
   dir: "go/src/sigstore/rekor"
   env:
@@ -62,7 +62,7 @@ steps:
     - |
       make release
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.7-0@sha256:949325ffc52c16867d78412ce70f5ce531812c20e7528ae70dc9e718d72223e8
+- name: ghcr.io/gythialy/golang-cross:v1.17.8-0@sha256:b5b14c6a61099af5a69864f242766a0dca978d2aea97e311d051ee4f4b7d19ba
   entrypoint: 'bash'
   dir: "go/src/sigstore/rekor"
   env:
