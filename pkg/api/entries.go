@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/runtime/middleware"
@@ -117,9 +118,11 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 // GetLogEntryAndProofByIndexHandler returns the entry and inclusion proof for a specified log index
 func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middleware.Responder {
 	ctx := params.HTTPRequest.Context()
-	tc := NewTrillianClient(ctx)
+	tid, resolvedIndex := api.logRanges.ResolveVirtualIndex(int(params.LogIndex))
+	tc := NewTrillianClientFromTreeID(ctx, tid)
+	log.RequestIDLogger(params.HTTPRequest).Debugf("Retrieving resolved index %v from TreeID %v", resolvedIndex, tid)
 
-	resp := tc.getLeafAndProofByIndex(params.LogIndex)
+	resp := tc.getLeafAndProofByIndex(resolvedIndex)
 	switch resp.status {
 	case codes.OK:
 	case codes.NotFound, codes.OutOfRange, codes.InvalidArgument:
@@ -268,12 +271,30 @@ func getEntryURL(locationURL url.URL, uuid string) strfmt.URI {
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
 	ctx := params.HTTPRequest.Context()
 
-	entryUUID, err := sharding.GetUUIDFromIDString(params.EntryUUID)
+	uuid, err := sharding.GetUUIDFromIDString(params.EntryUUID)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusBadRequest, err, "")
 	}
-	hashValue, _ := hex.DecodeString(entryUUID)
-	tc := NewTrillianClient(params.HTTPRequest.Context())
+	var tid int64
+	tidString, err := sharding.GetTreeIDFromIDString(params.EntryUUID)
+	if err != nil {
+		// If EntryID is plain UUID, assume no sharding and use ActiveIndex. The ActiveIndex
+		// will == the tlog_id if a tlog_id is passed in at server startup.
+		if err.Error() == "cannot get treeID from plain UUID" {
+			tid = api.logRanges.ActiveIndex()
+		} else {
+			return handleRekorAPIError(params, http.StatusBadRequest, err, "")
+		}
+	} else {
+		tid, err = strconv.ParseInt(tidString, 16, 64)
+		if err != nil {
+			return handleRekorAPIError(params, http.StatusBadRequest, err, "")
+		}
+	}
+	hashValue, _ := hex.DecodeString(uuid)
+
+	tc := NewTrillianClientFromTreeID(params.HTTPRequest.Context(), tid)
+	log.RequestIDLogger(params.HTTPRequest).Debugf("Retrieving UUID %v from TreeID %v", uuid, tid)
 
 	resp := tc.getLeafAndProofByHash(hashValue)
 	switch resp.status {

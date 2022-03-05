@@ -41,11 +41,11 @@ func (l *LogRangesFlag) Set(s string) error {
 			return fmt.Errorf("invalid range flag, expected two parts separated by an =, got %s", r)
 		}
 		lr := sharding.LogRange{}
-		lr.TreeID, err = strconv.ParseUint(split[0], 10, 64)
+		lr.TreeID, err = strconv.ParseInt(split[0], 10, 64)
 		if err != nil {
 			return err
 		}
-		lr.TreeLength, err = strconv.ParseUint(split[1], 10, 64)
+		lr.TreeLength, err = strconv.ParseInt(split[1], 10, 64)
 		if err != nil {
 			return err
 		}
@@ -55,7 +55,7 @@ func (l *LogRangesFlag) Set(s string) error {
 
 	// The last entry is special and should not have a terminating range, because this is active.
 	lastRangeStr := ranges[len(ranges)-1]
-	lastTreeID, err := strconv.ParseUint(lastRangeStr, 10, 64)
+	lastTreeID, err := strconv.ParseInt(lastRangeStr, 10, 64)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (l *LogRangesFlag) Set(s string) error {
 	})
 
 	// Look for duplicate tree ids
-	TreeIDs := map[uint64]struct{}{}
+	TreeIDs := map[int64]struct{}{}
 	for _, lr := range inputRanges {
 		if _, ok := TreeIDs[lr.TreeID]; ok {
 			return fmt.Errorf("duplicate tree id: %d", lr.TreeID)

@@ -44,6 +44,10 @@ type LogInfo struct {
 	// Required: true
 	SignedTreeHead *string `json:"signedTreeHead"`
 
+	// The current treeID
+	// Required: true
+	TreeID *int64 `json:"treeID"`
+
 	// The current number of nodes in the merkle tree
 	// Required: true
 	// Minimum: 1
@@ -59,6 +63,10 @@ func (m *LogInfo) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateSignedTreeHead(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateTreeID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -88,6 +96,15 @@ func (m *LogInfo) validateRootHash(formats strfmt.Registry) error {
 func (m *LogInfo) validateSignedTreeHead(formats strfmt.Registry) error {
 
 	if err := validate.Required("signedTreeHead", "body", m.SignedTreeHead); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *LogInfo) validateTreeID(formats strfmt.Registry) error {
+
+	if err := validate.Required("treeID", "body", m.TreeID); err != nil {
 		return err
 	}
 

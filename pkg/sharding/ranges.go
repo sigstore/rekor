@@ -20,24 +20,24 @@ type LogRanges struct {
 }
 
 type LogRange struct {
-	TreeID     uint64
-	TreeLength uint64
+	TreeID     int64
+	TreeLength int64
 }
 
-func (l *LogRanges) ResolveVirtualIndex(index int) (uint64, uint64) {
+func (l *LogRanges) ResolveVirtualIndex(index int) (int64, int64) {
 	indexLeft := index
 	for _, l := range l.Ranges {
 		if indexLeft < int(l.TreeLength) {
-			return l.TreeID, uint64(indexLeft)
+			return l.TreeID, int64(indexLeft)
 		}
 		indexLeft -= int(l.TreeLength)
 	}
 
 	// Return the last one!
-	return l.Ranges[len(l.Ranges)-1].TreeID, uint64(indexLeft)
+	return l.Ranges[len(l.Ranges)-1].TreeID, int64(indexLeft)
 }
 
 // ActiveIndex returns the active shard index, always the last shard in the range
-func (l *LogRanges) ActiveIndex() uint64 {
+func (l *LogRanges) ActiveIndex() int64 {
 	return l.Ranges[len(l.Ranges)-1].TreeID
 }

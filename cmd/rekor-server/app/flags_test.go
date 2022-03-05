@@ -27,7 +27,7 @@ func TestLogRanges_Set(t *testing.T) {
 		name   string
 		arg    string
 		want   []sharding.LogRange
-		active uint64
+		active int64
 	}{
 		{
 			name: "one, no length",

@@ -258,7 +258,13 @@ func TestGet(t *testing.T) {
 	outputContains(t, out, uuid)
 
 	// Exercise GET with the new EntryID (TreeID + UUID)
-	entryID, err := sharding.CreateEntryIDFromParts("0", uuid)
+	out = runCli(t, "loginfo")
+	tidStr := strings.TrimSpace(strings.Split(out, "TreeID: ")[1])
+	tid, err := strconv.ParseInt(tidStr, 10, 64)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	entryID, err := sharding.CreateEntryIDFromParts(fmt.Sprintf("%x", tid), uuid)
 	if err != nil {
 		t.Error(err)
 	}
