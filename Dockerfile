@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.17.8@sha256:0168c352a2be96f4bcc5856fe6e03ee665b187593f574cecb5cd2712c2b20cab AS builder
+FROM golang:1.17.8@sha256:ca709802394f4744685c1ecc083965656c3633799a005e90c75c62cafbaf3cee AS builder
 ENV APP_ROOT=/opt/app-root
 ENV GOPATH=$APP_ROOT
 
@@ -30,7 +30,7 @@ RUN go build -ldflags "${SERVER_LDFLAGS}" ./cmd/rekor-server
 RUN CGO_ENABLED=0 go build -gcflags "all=-N -l" -ldflags "${SERVER_LDFLAGS}" -o rekor-server_debug ./cmd/rekor-server
 
 # Multi-Stage production build
-FROM golang:1.17.8@sha256:0168c352a2be96f4bcc5856fe6e03ee665b187593f574cecb5cd2712c2b20cab as deploy
+FROM golang:1.17.8@sha256:ca709802394f4744685c1ecc083965656c3633799a005e90c75c62cafbaf3cee as deploy
 
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
