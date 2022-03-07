@@ -76,10 +76,14 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 		RootHash:       &hashString,
 		TreeSize:       &treeSize,
 		SignedTreeHead: &scString,
-		TreeID:         &tc.logID,
+		TreeID:         stringPointer(fmt.Sprintf("%d", tc.logID)),
 	}
 
 	return tlog.NewGetLogInfoOK().WithPayload(&logInfo)
+}
+
+func stringPointer(s string) *string {
+	return &s
 }
 
 // GetLogProofHandler returns information required to compute a consistency proof between two snapshots of log

@@ -24,6 +24,7 @@ import (
 	"github.com/google/trillian/merkle/logverifier"
 	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/pkg/errors"
+	"github.com/sigstore/rekor/pkg/log"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -324,6 +325,7 @@ func createAndInitTree(ctx context.Context, adminClient trillian.TrillianAdminCl
 
 	for _, t := range trees.Tree {
 		if t.TreeType == trillian.TreeType_LOG {
+			log.Logger.Infof("Found existing tree with ID: %v", t.TreeId)
 			return t, nil
 		}
 	}
