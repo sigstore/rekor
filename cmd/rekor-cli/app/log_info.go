@@ -43,7 +43,7 @@ type logInfoCmdOutput struct {
 	TreeSize       int64
 	RootHash       string
 	TimestampNanos uint64
-	TreeID         int64
+	TreeID         string
 }
 
 func (l *logInfoCmdOutput) String() string {
@@ -53,7 +53,7 @@ func (l *logInfoCmdOutput) String() string {
 Tree Size: %v
 Root Hash: %s
 Timestamp: %s
-TreeID:    %v
+TreeID:    %s
 `, l.TreeSize, l.RootHash, ts, l.TreeID)
 }
 

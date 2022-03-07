@@ -46,7 +46,8 @@ type LogInfo struct {
 
 	// The current treeID
 	// Required: true
-	TreeID *int64 `json:"treeID"`
+	// Pattern: ^[0-9]+$
+	TreeID *string `json:"treeID"`
 
 	// The current number of nodes in the merkle tree
 	// Required: true
@@ -105,6 +106,10 @@ func (m *LogInfo) validateSignedTreeHead(formats strfmt.Registry) error {
 func (m *LogInfo) validateTreeID(formats strfmt.Registry) error {
 
 	if err := validate.Required("treeID", "body", m.TreeID); err != nil {
+		return err
+	}
+
+	if err := validate.Pattern("treeID", "body", *m.TreeID, `^[0-9]+$`); err != nil {
 		return err
 	}
 
