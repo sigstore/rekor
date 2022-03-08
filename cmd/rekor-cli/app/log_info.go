@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-openapi/swag"
 	"github.com/google/trillian/merkle/logverifier"
 	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/spf13/cobra"
@@ -113,18 +114,11 @@ var logInfoCmd = &cobra.Command{
 			return nil, errors.New("signature on tree head did not verify")
 		}
 
-		pToInt := func(p *int64) int64 {
-			if p == nil {
-				return 0
-			}
-			return *p
-		}
-
 		cmdOutput := &logInfoCmdOutput{
-			TreeSize:       pToInt(logInfo.TreeSize),
-			RootHash:       *logInfo.RootHash,
+			TreeSize:       swag.Int64Value(logInfo.TreeSize),
+			RootHash:       swag.StringValue(logInfo.RootHash),
 			TimestampNanos: sth.GetTimestamp(),
-			TreeID:         pToInt(logInfo.TreeID),
+			TreeID:         swag.Int64Value(logInfo.TreeID),
 		}
 
 		oldState := state.Load(serverURL)
