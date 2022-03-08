@@ -24,8 +24,16 @@ sign-rekor-server-release:
 sign-rekor-cli-release:
 	cosign sign --key "gcpkms://projects/$(PROJECT_ID)/locations/$(KEY_LOCATION)/keyRings/$(KEY_RING)/cryptoKeys/$(KEY_NAME)/versions/$(KEY_VERSION)" -a GIT_HASH=$(GIT_HASH) -a GIT_VERSION=$(GIT_VERSION) $(KO_PREFIX)/rekor-cli:$(GIT_VERSION)
 
+.PHONY: sign-trillian-server-release
+sign-trillian-server-release:
+	cosign sign --key "gcpkms://projects/$(PROJECT_ID)/locations/$(KEY_LOCATION)/keyRings/$(KEY_RING)/cryptoKeys/$(KEY_NAME)/versions/$(KEY_VERSION)" -a GIT_HASH=$(GIT_HASH) -a GIT_VERSION=$(GIT_VERSION) $(KO_PREFIX)/trillian_log_server:$(GIT_VERSION)
+
+.PHONY: sign-trillian-signer-release
+sign-trillian-signer-release:
+	cosign sign --key "gcpkms://projects/$(PROJECT_ID)/locations/$(KEY_LOCATION)/keyRings/$(KEY_RING)/cryptoKeys/$(KEY_NAME)/versions/$(KEY_VERSION)" -a GIT_HASH=$(GIT_HASH) -a GIT_VERSION=$(GIT_VERSION) $(KO_PREFIX)/trillian_log_signer:$(GIT_VERSION)
+
 .PHONY: sign-container-release
-sign-container-release: ko sign-rekor-server-release sign-rekor-cli-release
+sign-container-release: ko sign-rekor-server-release sign-rekor-cli-release ko-trillian sign-trillian-server-release sign-trillian-signer-release
 
 ######################
 # sign keyless section
@@ -39,8 +47,16 @@ sign-keyless-rekor-server-release:
 sign-keyless-rekor-cli-release:
 	cosign sign --force -a GIT_HASH=$(GIT_HASH) -a GIT_VERSION=$(GIT_VERSION) $(KO_PREFIX)/rekor-cli:$(GIT_VERSION)
 
+.PHONY: sign-keyless-trillian-server-release
+sign-keyless-trillian-server-release:
+	cosign sign --force -a GIT_HASH=$(GIT_HASH) -a GIT_VERSION=$(GIT_VERSION) $(KO_PREFIX)/trillian_log_server:$(GIT_VERSION)
+
+.PHONY: sign-keyless-trillian-signer-release
+sign-keyless-trillian-signer-release:
+	cosign sign --force -a GIT_HASH=$(GIT_HASH) -a GIT_VERSION=$(GIT_VERSION) $(KO_PREFIX)/trillian_log_signer:$(GIT_VERSION)
+
 .PHONY: sign-keyless-release
-sign-keyless-release: sign-keyless-rekor-server-release sign-keyless-rekor-cli-release
+sign-keyless-release: sign-keyless-rekor-server-release sign-keyless-rekor-cli-release sign-keyless-trillian-server-release sign-keyless-trillian-signer-release
 
 ####################
 # copy image to GHCR
