@@ -49,6 +49,7 @@ type logInfoCmdOutput struct {
 func (l *logInfoCmdOutput) String() string {
 	// Verification is always successful if we return an object.
 	ts := time.Unix(0, int64(l.TimestampNanos)).UTC().Format(time.RFC3339)
+
 	return fmt.Sprintf(`Verification Successful!
 Tree Size: %v
 Root Hash: %s
@@ -112,11 +113,18 @@ var logInfoCmd = &cobra.Command{
 			return nil, errors.New("signature on tree head did not verify")
 		}
 
+		pToInt := func(p *int64) int64 {
+			if p == nil {
+				return 0
+			}
+			return *p
+		}
+
 		cmdOutput := &logInfoCmdOutput{
-			TreeSize:       *logInfo.TreeSize,
+			TreeSize:       pToInt(logInfo.TreeSize),
 			RootHash:       *logInfo.RootHash,
 			TimestampNanos: sth.GetTimestamp(),
-			TreeID:         *logInfo.TreeID,
+			TreeID:         pToInt(logInfo.TreeID),
 		}
 
 		oldState := state.Load(serverURL)
