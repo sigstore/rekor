@@ -118,7 +118,7 @@ var logInfoCmd = &cobra.Command{
 			TreeSize:       swag.Int64Value(logInfo.TreeSize),
 			RootHash:       swag.StringValue(logInfo.RootHash),
 			TimestampNanos: sth.GetTimestamp(),
-			TreeID:         swag.Int64Value(logInfo.TreeID),
+			TreeID:         swag.StringValue(logInfo.TreeID),
 		}
 
 		oldState := state.Load(serverURL)
