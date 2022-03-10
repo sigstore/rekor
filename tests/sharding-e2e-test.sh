@@ -145,6 +145,22 @@ fi
 # from Shard 0
 $REKOR_CLI get --log-index 2 --rekor_server http://localhost:3000
 
+# Add in a new entry to this shard
+pushd tests/sharding-testdata
+$REKOR_CLI upload --artifact file2 --signature file2.sig --pki-format=x509 --public-key=ec_public.pem --rekor_server http://localhost:3000
+popd
+# Pass in the universal log_index & make sure it resolves 
+$REKOR_CLI get --log-index 3 --rekor_server http://localhost:3000
+
+# Get the virtual log index, which should be universal. Since we have four entries across two shards, the virtual index is 3.
+VIRTUAL_INDEX=$($REKOR_CLI get --log-index 3 --rekor_server http://localhost:3000 --format json | jq -r .LogIndex)
+if [[ "$VIRTUAL_INDEX" == "3" ]]; then
+  echo "New entry has expected virtual log index $VIRTUAL_INDEX"
+else
+  echo "New entry does not have expected virtual log index, index instead is $VIRTUAL_INDEX"
+  exit 1
+fi
+
 # TODO: Try to get the entry via Entry ID (Tree ID in hex + UUID)
 UUID=$($REKOR_CLI get --log-index 2 --rekor_server http://localhost:3000 --format json | jq -r .UUID)
 
