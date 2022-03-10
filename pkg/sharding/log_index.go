@@ -15,16 +15,11 @@
 package sharding
 
 // VirtualLogIndex returns the virtual log index for a given leaf index
-func VirtualLogIndex(leafIndex int64, ranges *LogRanges) int64 {
+func VirtualLogIndex(leafIndex int64, ranges LogRanges) int64 {
 	// if we have no ranges, we have just one log! return the leafIndex as is
-	if ranges == nil {
+	if ranges.Empty() {
 		return leafIndex
 	}
 	// otherwise, calculate the universal index
-	var universal int64
-	for _, r := range ranges.Ranges {
-		universal += r.TreeLength
-	}
-	universal += leafIndex
-	return universal
+	return ranges.TotalLength() + leafIndex
 }

@@ -64,7 +64,7 @@ func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEnt
 
 // logEntryFromLeaf creates a signed LogEntry struct from trillian structs
 func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianClient, leaf *trillian.LogLeaf,
-	signedLogRoot *trillian.SignedLogRoot, proof *trillian.Proof, ranges *sharding.LogRanges) (models.LogEntry, error) {
+	signedLogRoot *trillian.SignedLogRoot, proof *trillian.Proof, ranges sharding.LogRanges) (models.LogEntry, error) {
 
 	root := &ttypes.LogRootV1{}
 	if err := root.UnmarshalBinary(signedLogRoot.LogRoot); err != nil {

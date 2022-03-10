@@ -28,6 +28,7 @@ func TestVirtualLogIndex(t *testing.T) {
 		{
 			description:   "no ranges",
 			leafIndex:     5,
+			ranges:        LogRanges{},
 			expectedIndex: 5,
 		},
 		// Log 100: 0 1 2 3 4
@@ -36,7 +37,7 @@ func TestVirtualLogIndex(t *testing.T) {
 			description: "two shards",
 			leafIndex:   2,
 			ranges: LogRanges{
-				Ranges: []LogRange{
+				ranges: []LogRange{
 					{
 						TreeID:     100,
 						TreeLength: 5,
@@ -50,7 +51,7 @@ func TestVirtualLogIndex(t *testing.T) {
 			description: "three shards",
 			leafIndex:   0,
 			ranges: LogRanges{
-				Ranges: []LogRange{
+				ranges: []LogRange{
 					{
 						TreeID:     100,
 						TreeLength: 5,
@@ -67,7 +68,7 @@ func TestVirtualLogIndex(t *testing.T) {
 			description: "ranges is empty but not-nil",
 			leafIndex:   2,
 			ranges: LogRanges{
-				Ranges: []LogRange{
+				ranges: []LogRange{
 					{
 						TreeID: 30,
 					},
@@ -79,7 +80,7 @@ func TestVirtualLogIndex(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			got := VirtualLogIndex(test.leafIndex, &test.ranges)
+			got := VirtualLogIndex(test.leafIndex, test.ranges)
 			if got != test.expectedIndex {
 				t.Fatalf("expected %v got %v", test.expectedIndex, got)
 			}

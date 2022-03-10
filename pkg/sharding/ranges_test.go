@@ -19,7 +19,7 @@ import "testing"
 
 func TestLogRanges_ResolveVirtualIndex(t *testing.T) {
 	lrs := LogRanges{
-		Ranges: []LogRange{
+		ranges: []LogRange{
 			{TreeID: 1, TreeLength: 17},
 			{TreeID: 2, TreeLength: 1},
 			{TreeID: 3, TreeLength: 100},

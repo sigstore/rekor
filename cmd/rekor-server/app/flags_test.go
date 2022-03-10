@@ -62,8 +62,7 @@ func TestLogRanges_Set(t *testing.T) {
 			if err := l.Set(tt.arg); err != nil {
 				t.Errorf("LogRanges.Set() expected no error, got %v", err)
 			}
-
-			if diff := cmp.Diff(tt.want, l.Ranges.Ranges); diff != "" {
+			if diff := cmp.Diff(tt.want, l.Ranges.GetRanges()); diff != "" {
 				t.Errorf(diff)
 			}
 

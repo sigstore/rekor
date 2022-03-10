@@ -72,19 +72,12 @@ func (l *LogRangesFlag) Set(s string) error {
 		}
 		TreeIDs[lr.TreeID] = struct{}{}
 	}
-
-	l.Ranges = sharding.LogRanges{
-		Ranges: inputRanges,
-	}
+	l.Ranges.SetRanges(inputRanges)
 	return nil
 }
 
 func (l *LogRangesFlag) String() string {
-	ranges := []string{}
-	for _, r := range l.Ranges.Ranges {
-		ranges = append(ranges, fmt.Sprintf("%d=%d", r.TreeID, r.TreeLength))
-	}
-	return strings.Join(ranges, ",")
+	return l.Ranges.String()
 }
 
 func (l *LogRangesFlag) Type() string {

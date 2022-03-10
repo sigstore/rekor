@@ -15,8 +15,13 @@
 
 package sharding
 
+import (
+	"fmt"
+	"strings"
+)
+
 type LogRanges struct {
-	Ranges []LogRange
+	ranges []LogRange
 }
 
 type LogRange struct {
@@ -26,7 +31,7 @@ type LogRange struct {
 
 func (l *LogRanges) ResolveVirtualIndex(index int) (int64, int64) {
 	indexLeft := index
-	for _, l := range l.Ranges {
+	for _, l := range l.ranges {
 		if indexLeft < int(l.TreeLength) {
 			return l.TreeID, int64(indexLeft)
 		}
@@ -34,10 +39,43 @@ func (l *LogRanges) ResolveVirtualIndex(index int) (int64, int64) {
 	}
 
 	// Return the last one!
-	return l.Ranges[len(l.Ranges)-1].TreeID, int64(indexLeft)
+	return l.ranges[len(l.ranges)-1].TreeID, int64(indexLeft)
 }
 
 // ActiveIndex returns the active shard index, always the last shard in the range
 func (l *LogRanges) ActiveIndex() int64 {
-	return l.Ranges[len(l.Ranges)-1].TreeID
+	return l.ranges[len(l.ranges)-1].TreeID
+}
+
+func (l *LogRanges) Empty() bool {
+	return l.ranges == nil
+}
+
+// TotalLength returns the total length across all shards
+func (l *LogRanges) TotalLength() int64 {
+	var total int64
+	for _, r := range l.ranges {
+		total += r.TreeLength
+	}
+	return total
+}
+
+func (l *LogRanges) SetRanges(r []LogRange) {
+	l.ranges = r
+}
+
+func (l *LogRanges) GetRanges() []LogRange {
+	return l.ranges
+}
+
+func (l *LogRanges) AppendRange(r LogRange) {
+	l.ranges = append(l.ranges, r)
+}
+
+func (l *LogRanges) String() string {
+	ranges := []string{}
+	for _, r := range l.ranges {
+		ranges = append(ranges, fmt.Sprintf("%d=%d", r.TreeID, r.TreeLength))
+	}
+	return strings.Join(ranges, ",")
 }
