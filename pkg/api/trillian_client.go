@@ -330,6 +330,7 @@ func createAndInitTree(ctx context.Context, adminClient trillian.TrillianAdminCl
 		}
 	}
 
+	log.Logger.Infof("No existing tree found, attempting to create a new one")
 	// Otherwise create and initialize one
 	t, err := adminClient.CreateTree(ctx, &trillian.CreateTreeRequest{
 		Tree: &trillian.Tree{
@@ -345,5 +346,6 @@ func createAndInitTree(ctx context.Context, adminClient trillian.TrillianAdminCl
 	if err := client.InitLog(ctx, t, logClient); err != nil {
 		return nil, errors.Wrap(err, "init log")
 	}
+	log.Logger.Infof("Created new tree with ID: %v", t.TreeId)
 	return t, nil
 }
