@@ -281,7 +281,7 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 	var tid int64
 	tidString, err := sharding.GetTreeIDFromIDString(params.EntryUUID)
 	if err != nil {
-		// If EntryID is plain UUID, assume no sharding and use ActiveIndex. The ActiveIndex
+		// If EntryID is plain UUID, assume no sharding and use ActiveTreeID. The ActiveTreeID
 		// will == the tlog_id if a tlog_id is passed in at server startup.
 		if err.Error() == "cannot get treeID from plain UUID" {
 			tid = api.logRanges.ActiveTreeID()
