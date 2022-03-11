@@ -34,6 +34,20 @@ go build -o rekor-cli ./cmd/rekor-cli
 REKOR_CLI=$(pwd)/rekor-cli
 go build -o rekor-server ./cmd/rekor-server
 
+function check_log_index () {
+  logIndex=$1
+  # make sure we can get this log index from rekor
+  $REKOR_CLI get --log-index $logIndex --rekor_server http://localhost:3000
+  # make sure the entry index matches the log index
+  gotIndex=$($REKOR_CLI get --log-index $logIndex --rekor_server http://localhost:3000 --format json | jq -r .LogIndex)
+  if [[ "$gotIndex" == $logIndex ]]; then
+    echo "New entry has expected virtual log index $gotIndex"
+  else
+    echo "FAIL: expected virtual log index $logIndex, got $gotIndex"
+    exit 1
+  fi
+}
+
 count=0
 
 echo -n "waiting up to 60 sec for system to start"
@@ -66,7 +80,7 @@ $REKOR_CLI upload --artifact file2 --signature file2.sig --pki-format=x509 --pub
 cd ../..
 
 # Make sure we have three entries in the log
-$REKOR_CLI get --log-index 2 --rekor_server http://localhost:3000
+check_log_index 2
 
 # Now, we want to shard the log.
 # Create a new tree
@@ -143,7 +157,14 @@ fi
 
 # Now, if we run $REKOR_CLI get --log_index 2 again, it should grab the log index
 # from Shard 0
-$REKOR_CLI get --log-index 2 --rekor_server http://localhost:3000
+check_log_index 2
+
+# Add in a new entry to this shard
+pushd tests/sharding-testdata
+$REKOR_CLI upload --artifact file2 --signature file2.sig --pki-format=x509 --public-key=ec_public.pem --rekor_server http://localhost:3000
+popd
+# Pass in the universal log_index & make sure it resolves 
+check_log_index 3
 
 # TODO: Try to get the entry via Entry ID (Tree ID in hex + UUID)
 UUID=$($REKOR_CLI get --log-index 2 --rekor_server http://localhost:3000 --format json | jq -r .UUID)

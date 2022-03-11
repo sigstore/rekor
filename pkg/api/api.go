@@ -57,7 +57,7 @@ func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
 type API struct {
 	logClient    trillian.TrillianLogClient
 	logID        int64
-	logRanges    *sharding.LogRanges
+	logRanges    sharding.LogRanges
 	pubkey       string // PEM encoded public key
 	pubkeyHash   string // SHA256 hash of DER-encoded public key
 	signer       signature.Signer
@@ -88,7 +88,7 @@ func NewAPI(ranges sharding.LogRanges) (*API, error) {
 		tLogID = t.TreeId
 	}
 	// append the active treeID to the API's logRangeMap for lookups
-	ranges.Ranges = append(ranges.Ranges, sharding.LogRange{TreeID: tLogID})
+	ranges.AppendRange(sharding.LogRange{TreeID: tLogID})
 
 	rekorSigner, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
 	if err != nil {
@@ -142,7 +142,7 @@ func NewAPI(ranges sharding.LogRanges) (*API, error) {
 		// Transparency Log Stuff
 		logClient: logClient,
 		logID:     tLogID,
-		logRanges: &ranges,
+		logRanges: ranges,
 		// Signing/verifying fields
 		pubkey:     string(pubkey),
 		pubkeyHash: hex.EncodeToString(pubkeyHashBytes[:]),
