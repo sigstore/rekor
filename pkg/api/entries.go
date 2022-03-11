@@ -64,7 +64,7 @@ func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEnt
 
 // logEntryFromLeaf creates a signed LogEntry struct from trillian structs
 func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianClient, leaf *trillian.LogLeaf,
-	signedLogRoot *trillian.SignedLogRoot, proof *trillian.Proof, ranges sharding.LogRanges) (models.LogEntry, error) {
+	signedLogRoot *trillian.SignedLogRoot, proof *trillian.Proof, tid int64, ranges sharding.LogRanges) (models.LogEntry, error) {
 
 	root := &ttypes.LogRootV1{}
 	if err := root.UnmarshalBinary(signedLogRoot.LogRoot); err != nil {
@@ -75,7 +75,7 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 		hashes = append(hashes, hex.EncodeToString(hash))
 	}
 
-	virtualIndex := sharding.VirtualLogIndex(leaf.GetLeafIndex(), ranges)
+	virtualIndex := sharding.VirtualLogIndex(leaf.GetLeafIndex(), tid, ranges)
 	logEntryAnon := models.LogEntryAnon{
 		LogID:          swag.String(api.pubkeyHash),
 		LogIndex:       &virtualIndex,
@@ -138,7 +138,7 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 		return handleRekorAPIError(params, http.StatusNotFound, errors.New("grpc returned 0 leaves with success code"), "")
 	}
 
-	logEntry, err := logEntryFromLeaf(ctx, api.signer, tc, leaf, result.SignedLogRoot, result.Proof, api.logRanges)
+	logEntry, err := logEntryFromLeaf(ctx, api.signer, tc, leaf, result.SignedLogRoot, result.Proof, tid, api.logRanges)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
 	}
@@ -190,7 +190,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	uuid := hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
 
 	// The log index should be the virtual log index across all shards
-	virtualIndex := sharding.VirtualLogIndex(queuedLeaf.LeafIndex, api.logRanges)
+	virtualIndex := sharding.VirtualLogIndex(queuedLeaf.LeafIndex, api.logRanges.ActiveTreeID(), api.logRanges)
 	logEntryAnon := models.LogEntryAnon{
 		LogID:          swag.String(api.pubkeyHash),
 		LogIndex:       swag.Int64(virtualIndex),
@@ -284,7 +284,7 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 		// If EntryID is plain UUID, assume no sharding and use ActiveIndex. The ActiveIndex
 		// will == the tlog_id if a tlog_id is passed in at server startup.
 		if err.Error() == "cannot get treeID from plain UUID" {
-			tid = api.logRanges.ActiveIndex()
+			tid = api.logRanges.ActiveTreeID()
 		} else {
 			return handleRekorAPIError(params, http.StatusBadRequest, err, "")
 		}
@@ -314,7 +314,7 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 		return handleRekorAPIError(params, http.StatusNotFound, errors.New("grpc returned 0 leaves with success code"), "")
 	}
 
-	logEntry, err := logEntryFromLeaf(ctx, api.signer, tc, leaf, result.SignedLogRoot, result.Proof, api.logRanges)
+	logEntry, err := logEntryFromLeaf(ctx, api.signer, tc, leaf, result.SignedLogRoot, result.Proof, tid, api.logRanges)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
 	}
@@ -390,7 +390,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 
 		for _, leafResp := range searchByHashResults {
 			if leafResp != nil {
-				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tc, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof, api.logRanges)
+				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tc, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof, api.logRanges.ActiveTreeID(), api.logRanges)
 				if err != nil {
 					return handleRekorAPIError(params, code, err, err.Error())
 				}
@@ -427,7 +427,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 
 		for _, result := range leafResults {
 			if result != nil {
-				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tc, result.Leaf, result.SignedLogRoot, result.Proof, api.logRanges)
+				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tc, result.Leaf, result.SignedLogRoot, result.Proof, api.logRanges.ActiveTreeID(), api.logRanges)
 				if err != nil {
 					return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 				}

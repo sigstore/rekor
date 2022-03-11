@@ -66,7 +66,7 @@ func TestLogRanges_Set(t *testing.T) {
 				t.Errorf(diff)
 			}
 
-			active := l.Ranges.ActiveIndex()
+			active := l.Ranges.ActiveTreeID()
 			if active != tt.active {
 				t.Errorf("LogRanges.Active() expected %d no error, got %d", tt.active, active)
 			}

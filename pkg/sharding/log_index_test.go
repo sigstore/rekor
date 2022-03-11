@@ -22,6 +22,7 @@ func TestVirtualLogIndex(t *testing.T) {
 	tests := []struct {
 		description   string
 		leafIndex     int64
+		tid           int64
 		ranges        LogRanges
 		expectedIndex int64
 	}{
@@ -36,6 +37,7 @@ func TestVirtualLogIndex(t *testing.T) {
 		{
 			description: "two shards",
 			leafIndex:   2,
+			tid:         300,
 			ranges: LogRanges{
 				ranges: []LogRange{
 					{
@@ -49,7 +51,8 @@ func TestVirtualLogIndex(t *testing.T) {
 			expectedIndex: 7,
 		}, {
 			description: "three shards",
-			leafIndex:   0,
+			leafIndex:   1,
+			tid:         300,
 			ranges: LogRanges{
 				ranges: []LogRange{
 					{
@@ -57,16 +60,17 @@ func TestVirtualLogIndex(t *testing.T) {
 						TreeLength: 5,
 					}, {
 						TreeID:     300,
-						TreeLength: 0,
+						TreeLength: 4,
 					}, {
 						TreeID: 400,
 					},
 				},
 			},
-			expectedIndex: 5,
+			expectedIndex: 6,
 		}, {
 			description: "ranges is empty but not-nil",
 			leafIndex:   2,
+			tid:         30,
 			ranges: LogRanges{
 				ranges: []LogRange{
 					{
@@ -75,12 +79,24 @@ func TestVirtualLogIndex(t *testing.T) {
 				},
 			},
 			expectedIndex: 2,
+		}, {
+			description: "invalid tid passed in",
+			leafIndex:   2,
+			tid:         4,
+			ranges: LogRanges{
+				ranges: []LogRange{
+					{
+						TreeID: 30,
+					},
+				},
+			},
+			expectedIndex: -1,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			got := VirtualLogIndex(test.leafIndex, test.ranges)
+			got := VirtualLogIndex(test.leafIndex, test.tid, test.ranges)
 			if got != test.expectedIndex {
 				t.Fatalf("expected %v got %v", test.expectedIndex, got)
 			}
