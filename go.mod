@@ -45,6 +45,7 @@ require (
 	github.com/tilinna/clock v1.1.0 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/urfave/negroni v1.0.0
+	github.com/veraison/go-cose v0.0.0-20211126173600-dee3b3e54910
 	github.com/zalando/go-keyring v0.1.1 // indirect
 	go.uber.org/goleak v1.1.12
 	go.uber.org/zap v1.21.0

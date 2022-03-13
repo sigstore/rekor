@@ -32,6 +32,8 @@ import (
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types/alpine"
 	alpine_v001 "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
+	"github.com/sigstore/rekor/pkg/types/cose"
+	cose_v001 "github.com/sigstore/rekor/pkg/types/cose/v0.0.1"
 	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/helm"
@@ -88,6 +90,7 @@ var serveCmd = &cobra.Command{
 			rpm.KIND:          rpm_v001.APIVERSION,
 			jar.KIND:          jar_v001.APIVERSION,
 			intoto.KIND:       intoto_v001.APIVERSION,
+			cose.KIND:         cose_v001.APIVERSION,
 			rfc3161.KIND:      rfc3161_v001.APIVERSION,
 			alpine.KIND:       alpine_v001.APIVERSION,
 			helm.KIND:         helm_v001.APIVERSION,
