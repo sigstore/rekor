@@ -67,8 +67,8 @@ echo
 
 # rekor-cli loginfo should work
 $REKOR_CLI loginfo --rekor_server http://localhost:3000 --store_tree_state=false
-CURRENT_TREE_ID=$($REKOR_CLI loginfo --rekor_server http://localhost:3000  --format json --store_tree_state=false | jq -r .TreeID)
-echo "current Tree ID is $CURRENT_TREE_ID"
+INITIAL_TREE_ID=$($REKOR_CLI loginfo --rekor_server http://localhost:3000  --format json --store_tree_state=false | jq -r .TreeID)
+echo "Initial Tree ID is $INITIAL_TREE_ID"
 
 
 # Add some things to the tlog :)
@@ -81,6 +81,7 @@ cd ../..
 
 # Make sure we have three entries in the log
 check_log_index 2
+$REKOR_CLI logproof --rekor_server http://localhost:3000 --last-size 2
 
 # Now, we want to shard the log.
 # Create a new tree
@@ -120,7 +121,7 @@ services:
       "--enable_attestation_storage",
       "--attestation_storage_bucket=file:///var/run/attestations",
       "--trillian_log_server.tlog_id=$SHARD_TREE_ID",
-      "--trillian_log_server.log_id_ranges=$CURRENT_TREE_ID=3,$SHARD_TREE_ID"
+      "--trillian_log_server.log_id_ranges=$INITIAL_TREE_ID=3,$SHARD_TREE_ID"
       # Uncomment this for production logging
       # "--log_type=prod",
       ]
@@ -165,6 +166,11 @@ $REKOR_CLI upload --artifact file2 --signature file2.sig --pki-format=x509 --pub
 popd
 # Pass in the universal log_index & make sure it resolves 
 check_log_index 3
+
+# Make sure we can still get logproof for the now-inactive shard
+$REKOR_CLI logproof --last-size 2 --tree-id $INITIAL_TREE_ID --rekor_server http://localhost:3000
+# And the logproof for the now active shard
+$REKOR_CLI logproof --last-size 1 --rekor_server http://localhost:3000
 
 # TODO: Try to get the entry via Entry ID (Tree ID in hex + UUID)
 UUID=$($REKOR_CLI get --log-index 2 --rekor_server http://localhost:3000 --format json | jq -r .UUID)
