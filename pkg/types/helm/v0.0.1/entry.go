@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -65,7 +66,7 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
-	keyObj, err := pgp.NewPublicKey(bytes.NewReader(v.HelmObj.PublicKey.Content))
+	keyObj, err := pgp.NewPublicKey(bytes.NewReader(*v.HelmObj.PublicKey.Content))
 	if err != nil {
 		return nil, err
 	}
@@ -116,17 +117,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return v.validate()
 }
 
-func (v V001Entry) hasExternalEntities() bool {
-	if v.HelmObj.PublicKey != nil && v.HelmObj.PublicKey.URL.String() != "" {
-		return true
-	}
-	if v.HelmObj.Chart != nil && v.HelmObj.Chart.Provenance != nil && v.HelmObj.Chart.Provenance.URL.String() != "" {
-		return true
-	}
-
-	return false
-}
-
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*helm.Provenance, *pgp.PublicKey, *pgp.Signature, error) {
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -138,11 +128,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*helm.Provenance
 	g.Go(func() error {
 		defer provenanceW.Close()
 
-		dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.HelmObj.Chart.Provenance.URL.String(), v.HelmObj.Chart.Provenance.Content)
-		if err != nil {
-			return closePipesOnError(err)
-		}
-		defer dataReadCloser.Close()
+		dataReadCloser := bytes.NewReader(v.HelmObj.Chart.Provenance.Content)
 
 		/* #nosec G110 */
 		if _, err := io.Copy(provenanceW, dataReadCloser); err != nil {
@@ -155,12 +141,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*helm.Provenance
 
 	g.Go(func() error {
 		defer close(keyResult)
-		keyReadCloser, err := util.FileOrURLReadCloser(ctx, v.HelmObj.PublicKey.URL.String(),
-			v.HelmObj.PublicKey.Content)
-		if err != nil {
-			return closePipesOnError(err)
-		}
-		defer keyReadCloser.Close()
+		keyReadCloser := bytes.NewReader(*v.HelmObj.PublicKey.Content)
 
 		keyObj, err := pgp.NewPublicKey(keyReadCloser)
 		if err != nil {
@@ -234,7 +215,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 
-	canonicalEntry.PublicKey.Content = (strfmt.Base64)(keyContent)
+	canonicalEntry.PublicKey.Content = (*strfmt.Base64)(&keyContent)
 
 	canonicalEntry.Chart = &models.HelmV001SchemaChart{}
 
@@ -275,8 +256,8 @@ func (v V001Entry) validate() error {
 		return errors.New("missing public key")
 	}
 
-	if len(key.Content) == 0 && key.URL.String() == "" {
-		return errors.New("one of 'content' or 'url' must be specified for publicKey")
+	if key.Content == nil || len(*key.Content) == 0 {
+		return errors.New("'content' must be specified for publicKey")
 	}
 
 	chart := v.HelmObj.Chart
@@ -292,8 +273,8 @@ func (v V001Entry) validate() error {
 	}
 
 	if provenance.Signature == nil || provenance.Signature.Content == nil {
-		if len(provenance.Content) == 0 && provenance.URL.String() == "" {
-			return errors.New("one of 'content' or 'url' must be specified for provenance")
+		if len(provenance.Content) == 0 {
+			return errors.New("'content' must be specified for provenance")
 		}
 	}
 
@@ -317,43 +298,43 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	var err error
 	artifactBytes := props.ArtifactBytes
 	if artifactBytes == nil {
+		var artifactReader io.ReadCloser
 		if props.ArtifactPath.IsAbs() {
-			re.HelmObj.Chart.Provenance.URL = strfmt.URI(props.ArtifactPath.String())
-		} else {
-			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+			artifactReader, err = util.FileOrURLReadCloser(ctx, props.ArtifactPath.String(), nil)
 			if err != nil {
-				return nil, fmt.Errorf("error reading artifact file: %w", err)
+				return nil, fmt.Errorf("error reading chart file: %w", err)
 			}
-			re.HelmObj.Chart.Provenance.Content = strfmt.Base64(artifactBytes)
+		} else {
+			artifactReader, err = os.Open(filepath.Clean(props.ArtifactPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error opening chart file: %w", err)
+			}
 		}
-	} else {
-		re.HelmObj.Chart.Provenance.Content = strfmt.Base64(artifactBytes)
+		artifactBytes, err = ioutil.ReadAll(artifactReader)
+		if err != nil {
+			return nil, fmt.Errorf("error reading chart file: %w", err)
+		}
 	}
+	re.HelmObj.Chart.Provenance.Content = strfmt.Base64(artifactBytes)
 
 	re.HelmObj.PublicKey = &models.HelmV001SchemaPublicKey{}
 	publicKeyBytes := props.PublicKeyBytes
 	if publicKeyBytes == nil {
-		if props.PublicKeyPath.IsAbs() {
-			re.HelmObj.PublicKey.URL = strfmt.URI(props.PublicKeyPath.String())
-		} else {
-			publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
-			if err != nil {
-				return nil, fmt.Errorf("error reading public key file: %w", err)
-			}
-			re.HelmObj.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+		publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
+		if err != nil {
+			return nil, fmt.Errorf("error reading public key file: %w", err)
 		}
+		re.HelmObj.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes)
 	} else {
-		re.HelmObj.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+		re.HelmObj.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes)
 	}
 
 	if err := re.validate(); err != nil {
 		return nil, err
 	}
 
-	if re.hasExternalEntities() {
-		if _, _, _, err := re.fetchExternalEntities(ctx); err != nil {
-			return nil, fmt.Errorf("error retrieving external entities: %v", err)
-		}
+	if _, _, _, err := re.fetchExternalEntities(ctx); err != nil {
+		return nil, fmt.Errorf("error retrieving external entities: %v", err)
 	}
 
 	returnVal.APIVersion = swag.String(re.APIVersion())

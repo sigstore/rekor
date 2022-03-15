@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -138,18 +139,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 }
 
-func (v V001Entry) hasExternalEntities() bool {
-	if v.TufObj.Metadata != nil && v.TufObj.Metadata.URL.String() != "" {
-		return true
-	}
-
-	if v.TufObj.Root != nil && v.TufObj.Root.URL.String() != "" {
-		return true
-	}
-
-	return false
-}
-
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, pki.Signature, error) {
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -175,12 +164,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, p
 			}
 		}
 
-		sigReadCloser, err := util.FileOrURLReadCloser(ctx, v.TufObj.Metadata.URL.String(),
-			contentBytes)
-		if err != nil {
-			return closePipesOnError(err)
-		}
-		defer sigReadCloser.Close()
+		sigReadCloser := bytes.NewReader(contentBytes)
 
 		signature, err := ptuf.NewSignature(sigReadCloser)
 		if err != nil {
@@ -209,12 +193,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, p
 			}
 		}
 
-		keyReadCloser, err := util.FileOrURLReadCloser(ctx, v.TufObj.Root.URL.String(),
-			contentBytes)
-		if err != nil {
-			return closePipesOnError(err)
-		}
-		defer keyReadCloser.Close()
+		keyReadCloser := bytes.NewReader(contentBytes)
 
 		key, err := ptuf.NewPublicKey(keyReadCloser)
 		if err != nil {
@@ -301,7 +280,7 @@ func (v V001Entry) Validate() error {
 	if root == nil {
 		return errors.New("missing root")
 	}
-	if root.Content == nil && root.URL.String() == "" {
+	if root.Content == nil {
 		return errors.New("root must be specified")
 	}
 
@@ -309,7 +288,7 @@ func (v V001Entry) Validate() error {
 	if tufManifest == nil {
 		return errors.New("missing TUF metadata")
 	}
-	if tufManifest.Content == nil && tufManifest.URL.String() == "" {
+	if tufManifest.Content == nil {
 		return errors.New("TUF metadata must be specified")
 	}
 	return nil
@@ -330,49 +309,44 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	artifactBytes := props.ArtifactBytes
 	re.TufObj.Metadata = &models.TUFV001SchemaMetadata{}
 	if artifactBytes == nil {
-		if props.ArtifactPath == nil {
-			return nil, errors.New("path to manifest (file or URL) must be specified")
-		}
+		var artifactReader io.ReadCloser
 		if props.ArtifactPath.IsAbs() {
-			re.TufObj.Metadata.URL = strfmt.URI(props.ArtifactPath.String())
-		} else {
-			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+			artifactReader, err = util.FileOrURLReadCloser(ctx, props.ArtifactPath.String(), nil)
 			if err != nil {
-				return nil, fmt.Errorf("error reading manifest file: %w", err)
+				return nil, fmt.Errorf("error reading RPM file: %w", err)
 			}
-			s := &data.Signed{}
-			if err := json.Unmarshal(artifactBytes, s); err != nil {
-				return nil, err
+		} else {
+			artifactReader, err = os.Open(filepath.Clean(props.ArtifactPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error opening RPM file: %w", err)
 			}
-			re.TufObj.Metadata.Content = s
 		}
-	} else {
-		s := &data.Signed{}
-		if err := json.Unmarshal(artifactBytes, s); err != nil {
-			return nil, err
+		artifactBytes, err = ioutil.ReadAll(artifactReader)
+		if err != nil {
+			return nil, fmt.Errorf("error reading RPM file: %w", err)
 		}
-		re.TufObj.Metadata.Content = s
 	}
+	s := &data.Signed{}
+	if err := json.Unmarshal(artifactBytes, s); err != nil {
+		return nil, err
+	}
+	re.TufObj.Metadata.Content = s
 
 	rootBytes := props.PublicKeyBytes
 	re.TufObj.Root = &models.TUFV001SchemaRoot{}
 	if rootBytes == nil {
 		if props.PublicKeyPath == nil {
-			return nil, errors.New("path to root (file or URL) must be specified")
+			return nil, errors.New("path to root file must be specified")
 		}
-		if props.PublicKeyPath.IsAbs() {
-			re.TufObj.Root.URL = strfmt.URI(props.PublicKeyPath.String())
-		} else {
-			rootBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
-			if err != nil {
-				return nil, fmt.Errorf("error reading root file: %w", err)
-			}
-			s := &data.Signed{}
-			if err := json.Unmarshal(rootBytes, s); err != nil {
-				return nil, err
-			}
-			re.TufObj.Root.Content = s
+		rootBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
+		if err != nil {
+			return nil, fmt.Errorf("error reading root file: %w", err)
 		}
+		s := &data.Signed{}
+		if err := json.Unmarshal(rootBytes, s); err != nil {
+			return nil, err
+		}
+		re.TufObj.Root.Content = s
 	} else {
 		s := &data.Signed{}
 		if err := json.Unmarshal(rootBytes, s); err != nil {
@@ -385,10 +359,8 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		return nil, err
 	}
 
-	if re.hasExternalEntities() {
-		if _, _, err := re.fetchExternalEntities(ctx); err != nil {
-			return nil, fmt.Errorf("error retrieving external entities: %v", err)
-		}
+	if _, _, err := re.fetchExternalEntities(ctx); err != nil {
+		return nil, fmt.Errorf("error retrieving external entities: %v", err)
 	}
 
 	returnVal.APIVersion = swag.String(re.APIVersion())
