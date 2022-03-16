@@ -19,15 +19,18 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-openapi/runtime/middleware"
+	"github.com/go-openapi/swag"
 	"github.com/google/trillian/types"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc/codes"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
+	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
@@ -92,6 +95,14 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 		return handleRekorAPIError(params, http.StatusBadRequest, nil, fmt.Sprintf(firstSizeLessThanLastSize, *params.FirstSize, params.LastSize))
 	}
 	tc := NewTrillianClient(params.HTTPRequest.Context())
+	if treeID := swag.StringValue(params.TreeID); treeID != "" {
+		id, err := strconv.Atoi(treeID)
+		if err != nil {
+			log.Logger.Infof("Unable to convert %s to string, skipping initializing client with Tree ID: %v", treeID, err)
+		} else {
+			tc = NewTrillianClientFromTreeID(params.HTTPRequest.Context(), int64(id))
+		}
+	}
 
 	resp := tc.getConsistencyProof(*params.FirstSize, params.LastSize)
 	if resp.status != codes.OK {

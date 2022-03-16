@@ -33,6 +33,7 @@ import (
 type GetLogProofURL struct {
 	FirstSize *int64
 	LastSize  int64
+	TreeID    *string
 
 	_basePath string
 	// avoid unkeyed usage
@@ -76,6 +77,14 @@ func (o *GetLogProofURL) Build() (*url.URL, error) {
 	lastSizeQ := swag.FormatInt64(o.LastSize)
 	if lastSizeQ != "" {
 		qs.Set("lastSize", lastSizeQ)
+	}
+
+	var treeIDQ string
+	if o.TreeID != nil {
+		treeIDQ = *o.TreeID
+	}
+	if treeIDQ != "" {
+		qs.Set("treeID", treeIDQ)
 	}
 
 	_result.RawQuery = qs.Encode()
