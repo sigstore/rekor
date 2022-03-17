@@ -73,7 +73,7 @@ popd
 # Make sure we can prove consistency
 $REKOR_CLI loginfo --rekor_server http://localhost:3000 
 
-# Add 2 more entries to the logd
+# Add 2 more entries to the log
 pushd tests/sharding-testdata
 $REKOR_CLI upload --artifact file1 --signature file1.sig --pki-format=x509 --public-key=ec_public.pem --rekor_server http://localhost:3000
 $REKOR_CLI upload --artifact file2 --signature file2.sig --pki-format=x509 --public-key=ec_public.pem --rekor_server http://localhost:3000
