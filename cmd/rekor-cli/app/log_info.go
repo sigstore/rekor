@@ -21,14 +21,15 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/go-openapi/swag"
 	"github.com/google/trillian/merkle/logverifier"
 	"github.com/google/trillian/merkle/rfc6962"
+	"github.com/pkg/errors"
 	rclient "github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -81,13 +82,20 @@ var logInfoCmd = &cobra.Command{
 
 		logInfo := result.GetPayload()
 
+		// Verify inactive shards
+		if err := verifyInactiveTrees(rekorClient, serverURL, logInfo.InactiveShards); err != nil {
+			return nil, err
+		}
+
+		// Verify the active tree
 		sth := util.SignedCheckpoint{}
 		signedTreeHead := swag.StringValue(logInfo.SignedTreeHead)
 		if err := sth.UnmarshalText([]byte(signedTreeHead)); err != nil {
 			return nil, err
 		}
+		treeID := swag.StringValue(logInfo.TreeID)
 
-		if err := verifyTree(rekorClient, signedTreeHead, serverURL); err != nil {
+		if err := verifyTree(rekorClient, signedTreeHead, serverURL, treeID); err != nil {
 			return nil, err
 		}
 
@@ -101,8 +109,27 @@ var logInfoCmd = &cobra.Command{
 	}),
 }
 
-func verifyTree(rekorClient *rclient.Rekor, signedTreeHead, serverURL string) error {
+func verifyInactiveTrees(rekorClient *rclient.Rekor, serverURL string, inactiveShards []*models.InactiveShardLogInfo) error {
+	if inactiveShards == nil {
+		return nil
+	}
+	log.CliLogger.Infof("Validating inactive shards...")
+	for _, shard := range inactiveShards {
+		signedTreeHead := swag.StringValue(shard.SignedTreeHead)
+		treeID := swag.StringValue(shard.TreeID)
+		if err := verifyTree(rekorClient, signedTreeHead, serverURL, treeID); err != nil {
+			return errors.Wrapf(err, "verifying inactive shard with ID %s", treeID)
+		}
+	}
+	log.CliLogger.Infof("Successfully validated inactive shards")
+	return nil
+}
+
+func verifyTree(rekorClient *rclient.Rekor, signedTreeHead, serverURL, treeID string) error {
 	oldState := state.Load(serverURL)
+	if treeID != "" {
+		oldState = state.Load(treeID)
+	}
 	sth := util.SignedCheckpoint{}
 	if err := sth.UnmarshalText([]byte(signedTreeHead)); err != nil {
 		return err
@@ -115,11 +142,16 @@ func verifyTree(rekorClient *rclient.Rekor, signedTreeHead, serverURL string) er
 		return errors.New("signature on tree head did not verify")
 	}
 
-	if err := proveConsistency(rekorClient, oldState, sth); err != nil {
+	if err := proveConsistency(rekorClient, oldState, sth, treeID); err != nil {
 		return err
 	}
 
 	if viper.GetBool("store_tree_state") {
+		if treeID != "" {
+			if err := state.Dump(treeID, &sth); err != nil {
+				log.CliLogger.Infof("Unable to store previous state: %v", err)
+			}
+		}
 		if err := state.Dump(serverURL, &sth); err != nil {
 			log.CliLogger.Infof("Unable to store previous state: %v", err)
 		}
@@ -127,7 +159,7 @@ func verifyTree(rekorClient *rclient.Rekor, signedTreeHead, serverURL string) er
 	return nil
 }
 
-func proveConsistency(rekorClient *rclient.Rekor, oldState *util.SignedCheckpoint, sth util.SignedCheckpoint) error {
+func proveConsistency(rekorClient *rclient.Rekor, oldState *util.SignedCheckpoint, sth util.SignedCheckpoint, treeID string) error {
 	if oldState == nil {
 		log.CliLogger.Infof("No previous log state stored, unable to prove consistency")
 		return nil
@@ -140,6 +172,7 @@ func proveConsistency(rekorClient *rclient.Rekor, oldState *util.SignedCheckpoin
 		firstSize := int64(persistedSize)
 		params.FirstSize = &firstSize
 		params.LastSize = int64(sth.Size)
+		params.TreeID = &treeID
 		proof, err := rekorClient.Tlog.GetLogProof(params)
 		if err != nil {
 			return err

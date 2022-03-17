@@ -23,7 +23,6 @@ package models
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -31,13 +30,10 @@ import (
 	"github.com/go-openapi/validate"
 )
 
-// LogInfo log info
+// InactiveShardLogInfo inactive shard log info
 //
-// swagger:model LogInfo
-type LogInfo struct {
-
-	// inactive shards
-	InactiveShards []*InactiveShardLogInfo `json:"inactiveShards"`
+// swagger:model InactiveShardLogInfo
+type InactiveShardLogInfo struct {
 
 	// The current hash value stored at the root of the merkle tree
 	// Required: true
@@ -59,13 +55,9 @@ type LogInfo struct {
 	TreeSize *int64 `json:"treeSize"`
 }
 
-// Validate validates this log info
-func (m *LogInfo) Validate(formats strfmt.Registry) error {
+// Validate validates this inactive shard log info
+func (m *InactiveShardLogInfo) Validate(formats strfmt.Registry) error {
 	var res []error
-
-	if err := m.validateInactiveShards(formats); err != nil {
-		res = append(res, err)
-	}
 
 	if err := m.validateRootHash(formats); err != nil {
 		res = append(res, err)
@@ -89,33 +81,7 @@ func (m *LogInfo) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *LogInfo) validateInactiveShards(formats strfmt.Registry) error {
-	if swag.IsZero(m.InactiveShards) { // not required
-		return nil
-	}
-
-	for i := 0; i < len(m.InactiveShards); i++ {
-		if swag.IsZero(m.InactiveShards[i]) { // not required
-			continue
-		}
-
-		if m.InactiveShards[i] != nil {
-			if err := m.InactiveShards[i].Validate(formats); err != nil {
-				if ve, ok := err.(*errors.Validation); ok {
-					return ve.ValidateName("inactiveShards" + "." + strconv.Itoa(i))
-				} else if ce, ok := err.(*errors.CompositeError); ok {
-					return ce.ValidateName("inactiveShards" + "." + strconv.Itoa(i))
-				}
-				return err
-			}
-		}
-
-	}
-
-	return nil
-}
-
-func (m *LogInfo) validateRootHash(formats strfmt.Registry) error {
+func (m *InactiveShardLogInfo) validateRootHash(formats strfmt.Registry) error {
 
 	if err := validate.Required("rootHash", "body", m.RootHash); err != nil {
 		return err
@@ -128,7 +94,7 @@ func (m *LogInfo) validateRootHash(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *LogInfo) validateSignedTreeHead(formats strfmt.Registry) error {
+func (m *InactiveShardLogInfo) validateSignedTreeHead(formats strfmt.Registry) error {
 
 	if err := validate.Required("signedTreeHead", "body", m.SignedTreeHead); err != nil {
 		return err
@@ -137,7 +103,7 @@ func (m *LogInfo) validateSignedTreeHead(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *LogInfo) validateTreeID(formats strfmt.Registry) error {
+func (m *InactiveShardLogInfo) validateTreeID(formats strfmt.Registry) error {
 
 	if err := validate.Required("treeID", "body", m.TreeID); err != nil {
 		return err
@@ -150,7 +116,7 @@ func (m *LogInfo) validateTreeID(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *LogInfo) validateTreeSize(formats strfmt.Registry) error {
+func (m *InactiveShardLogInfo) validateTreeSize(formats strfmt.Registry) error {
 
 	if err := validate.Required("treeSize", "body", m.TreeSize); err != nil {
 		return err
@@ -163,42 +129,13 @@ func (m *LogInfo) validateTreeSize(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validate this log info based on the context it is used
-func (m *LogInfo) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateInactiveShards(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *LogInfo) contextValidateInactiveShards(ctx context.Context, formats strfmt.Registry) error {
-
-	for i := 0; i < len(m.InactiveShards); i++ {
-
-		if m.InactiveShards[i] != nil {
-			if err := m.InactiveShards[i].ContextValidate(ctx, formats); err != nil {
-				if ve, ok := err.(*errors.Validation); ok {
-					return ve.ValidateName("inactiveShards" + "." + strconv.Itoa(i))
-				} else if ce, ok := err.(*errors.CompositeError); ok {
-					return ce.ValidateName("inactiveShards" + "." + strconv.Itoa(i))
-				}
-				return err
-			}
-		}
-
-	}
-
+// ContextValidate validates this inactive shard log info based on context it is used
+func (m *InactiveShardLogInfo) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 
 // MarshalBinary interface implementation
-func (m *LogInfo) MarshalBinary() ([]byte, error) {
+func (m *InactiveShardLogInfo) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -206,8 +143,8 @@ func (m *LogInfo) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *LogInfo) UnmarshalBinary(b []byte) error {
-	var res LogInfo
+func (m *InactiveShardLogInfo) UnmarshalBinary(b []byte) error {
+	var res InactiveShardLogInfo
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

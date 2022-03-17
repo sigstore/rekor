@@ -49,6 +49,7 @@ const (
 	failedToGenerateTimestampResponse = "Error generating timestamp response"
 	sthGenerateError                  = "Error generating signed tree head"
 	unsupportedPKIFormat              = "The PKI format requested is not supported by this server"
+	unexpectedInactiveShardError      = "Unexpected error communicating with inactive shard"
 )
 
 func errorMsg(message string, code int) *models.Error {
