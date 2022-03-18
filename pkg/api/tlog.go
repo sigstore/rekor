@@ -157,7 +157,7 @@ func inactiveShardLogInfo(ctx context.Context, tid int64) (*models.InactiveShard
 	tc := NewTrillianClientFromTreeID(ctx, tid)
 	resp := tc.getLatest(0)
 	if resp.status != codes.OK {
-		return nil, fmt.Errorf("resp code is not OK")
+		return nil, fmt.Errorf("resp code is %d", resp.status)
 	}
 	result := resp.getLatestResult
 
