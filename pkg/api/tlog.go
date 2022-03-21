@@ -42,7 +42,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 
 	// for each inactive shard, get the loginfo
 	var inactiveShards []*models.InactiveShardLogInfo
-	for _, shard := range tc.ranges.GetRanges() {
+	for _, shard := range tc.ranges.GetInactive() {
 		if shard.TreeID == tc.ranges.ActiveTreeID() {
 			break
 		}

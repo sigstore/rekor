@@ -32,19 +32,17 @@ func TestNewLogRanges(t *testing.T) {
 	if err := ioutil.WriteFile(file, []byte(contents), 0644); err != nil {
 		t.Fatal(err)
 	}
-	treeID := "45"
+	treeID := uint(45)
 	expected := LogRanges{
-		ranges: []LogRange{
+		inactive: []LogRange{
 			{
 				TreeID:     1,
 				TreeLength: 3,
 			}, {
 				TreeID:     2,
 				TreeLength: 4,
-			}, {
-				TreeID: 45,
-			},
-		},
+			}},
+		active: int64(45),
 	}
 	got, err := NewLogRanges(file, treeID)
 	if err != nil {
@@ -53,19 +51,18 @@ func TestNewLogRanges(t *testing.T) {
 	if expected.ActiveTreeID() != got.ActiveTreeID() {
 		t.Fatalf("expected tree id %d got %d", expected.ActiveTreeID(), got.ActiveTreeID())
 	}
-	if !reflect.DeepEqual(expected.GetRanges(), got.GetRanges()) {
-		t.Fatalf("expected %v got %v", expected.GetRanges(), got.GetRanges())
+	if !reflect.DeepEqual(expected.GetInactive(), got.GetInactive()) {
+		t.Fatalf("expected %v got %v", expected.GetInactive(), got.GetInactive())
 	}
 }
 
 func TestLogRanges_ResolveVirtualIndex(t *testing.T) {
 	lrs := LogRanges{
-		ranges: []LogRange{
+		inactive: []LogRange{
 			{TreeID: 1, TreeLength: 17},
 			{TreeID: 2, TreeLength: 1},
-			{TreeID: 3, TreeLength: 100},
-			{TreeID: 4},
-		},
+			{TreeID: 3, TreeLength: 100}},
+		active: 4,
 	}
 
 	for _, tt := range []struct {

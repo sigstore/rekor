@@ -18,7 +18,6 @@ package sharding
 import (
 	"fmt"
 	"io/ioutil"
-	"strconv"
 	"strings"
 
 	"github.com/ghodss/yaml"
@@ -26,7 +25,8 @@ import (
 )
 
 type LogRanges struct {
-	ranges Ranges
+	inactive Ranges
+	active   int64
 }
 
 type Ranges []LogRange
@@ -36,13 +36,12 @@ type LogRange struct {
 	TreeLength int64 `yaml:"treeLength"`
 }
 
-func NewLogRanges(path string, treeID string) (LogRanges, error) {
+func NewLogRanges(path string, treeID uint) (LogRanges, error) {
 	if path == "" {
 		return LogRanges{}, nil
 	}
-	id, err := strconv.Atoi(treeID)
-	if err != nil {
-		return LogRanges{}, errors.Wrapf(err, "%s is not a valid int64", treeID)
+	if treeID == 0 {
+		return LogRanges{}, errors.New("non-zero tlog_id required when passing in shard config filepath; please set the active tree ID via the `--trillian_log_server.tlog_id` flag")
 	}
 	// otherwise, try to read contents of the sharding config
 	var ranges Ranges
@@ -53,59 +52,68 @@ func NewLogRanges(path string, treeID string) (LogRanges, error) {
 	if err := yaml.Unmarshal(contents, &ranges); err != nil {
 		return LogRanges{}, err
 	}
-	ranges = append(ranges, LogRange{TreeID: int64(id)})
 	return LogRanges{
-		ranges: ranges,
+		inactive: ranges,
+		active:   int64(treeID),
 	}, nil
 }
 
 func (l *LogRanges) ResolveVirtualIndex(index int) (int64, int64) {
 	indexLeft := index
-	for _, l := range l.ranges {
+	for _, l := range l.inactive {
 		if indexLeft < int(l.TreeLength) {
 			return l.TreeID, int64(indexLeft)
 		}
 		indexLeft -= int(l.TreeLength)
 	}
 
-	// Return the last one!
-	return l.ranges[len(l.ranges)-1].TreeID, int64(indexLeft)
+	// If index not found in inactive trees, return the active tree
+	return l.active, int64(indexLeft)
 }
 
-// ActiveTreeID returns the active shard index, always the last shard in the range
 func (l *LogRanges) ActiveTreeID() int64 {
-	return l.ranges[len(l.ranges)-1].TreeID
+	return l.active
 }
 
-func (l *LogRanges) Empty() bool {
-	return l.ranges == nil
+func (l *LogRanges) NoInactive() bool {
+	return l.inactive == nil
 }
 
-// TotalLength returns the total length across all shards
-func (l *LogRanges) TotalLength() int64 {
+// TotalInactiveLength returns the total length across all inactive shards;
+// we don't know the length of the active shard.
+func (l *LogRanges) TotalInactiveLength() int64 {
 	var total int64
-	for _, r := range l.ranges {
+	for _, r := range l.inactive {
 		total += r.TreeLength
 	}
 	return total
 }
 
-func (l *LogRanges) SetRanges(r []LogRange) {
-	l.ranges = r
+func (l *LogRanges) SetInactive(r []LogRange) {
+	l.inactive = r
 }
 
-func (l *LogRanges) GetRanges() []LogRange {
-	return l.ranges
+func (l *LogRanges) GetInactive() []LogRange {
+	return l.inactive
 }
 
-func (l *LogRanges) AppendRange(r LogRange) {
-	l.ranges = append(l.ranges, r)
+func (l *LogRanges) AppendInactive(r LogRange) {
+	l.inactive = append(l.inactive, r)
+}
+
+func (l *LogRanges) SetActive(i int64) {
+	l.active = i
+}
+
+func (l *LogRanges) GetActive() int64 {
+	return l.active
 }
 
 func (l *LogRanges) String() string {
 	ranges := []string{}
-	for _, r := range l.ranges {
+	for _, r := range l.inactive {
 		ranges = append(ranges, fmt.Sprintf("%d=%d", r.TreeID, r.TreeLength))
 	}
+	ranges = append(ranges, fmt.Sprintf("active=%d", l.active))
 	return strings.Join(ranges, ",")
 }
