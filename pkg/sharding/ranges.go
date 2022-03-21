@@ -17,16 +17,52 @@ package sharding
 
 import (
 	"fmt"
+	"io/ioutil"
+	"strconv"
 	"strings"
+
+	"github.com/ghodss/yaml"
+	"github.com/pkg/errors"
 )
 
 type LogRanges struct {
-	ranges []LogRange
+	activeTreeID int64
+	ranges       Ranges
 }
 
+type Ranges []LogRange
+
 type LogRange struct {
-	TreeID     int64
-	TreeLength int64
+	TreeID     int64 `yaml:"treeID"`
+	TreeLength int64 `yaml:"treeLength"`
+}
+
+func NewLogRanges(path string, treeID string) (LogRanges, error) {
+	id, err := strconv.Atoi(treeID)
+	if err != nil {
+		return LogRanges{}, errors.Wrapf(err, "%s is not a valid int64", treeID)
+	}
+	// if there are no shards, just return info about the active tree id
+	if path == "" {
+		return LogRanges{
+			activeTreeID: int64(id),
+			ranges:       []LogRange{{TreeID: int64(id)}},
+		}, nil
+	}
+
+	// otherwise, try to read contents of the sharding config
+	var ranges Ranges
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return LogRanges{}, err
+	}
+	if err := yaml.Unmarshal(contents, &ranges); err != nil {
+		return LogRanges{}, err
+	}
+	return LogRanges{
+		activeTreeID: int64(id),
+		ranges:       ranges,
+	}, nil
 }
 
 func (l *LogRanges) ResolveVirtualIndex(index int) (int64, int64) {
@@ -44,7 +80,7 @@ func (l *LogRanges) ResolveVirtualIndex(index int) (int64, int64) {
 
 // ActiveTreeID returns the active shard index, always the last shard in the range
 func (l *LogRanges) ActiveTreeID() int64 {
-	return l.ranges[len(l.ranges)-1].TreeID
+	return l.activeTreeID
 }
 
 func (l *LogRanges) Empty() bool {

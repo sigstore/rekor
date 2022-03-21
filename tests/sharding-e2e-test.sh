@@ -101,9 +101,14 @@ echo "stopping the rekor server..."
 REKOR_CONTAINER_ID=$(docker ps --filter name=rekor-server --format {{.ID}})
 docker stop $REKOR_CONTAINER_ID
 
-
 # Now we want to spin up the Rekor server again, but this time point
 # to the new tree
+SHARDING_CONFIG=sharding-config.yaml
+cat << EOF > $SHARDING_CONFIG
+- treeID: $INITIAL_TREE_ID
+  treeLength: 3
+EOF
+
 
 COMPOSE_FILE=docker-compose-sharding.yaml
 cat << EOF > $COMPOSE_FILE
@@ -125,12 +130,13 @@ services:
       "--enable_attestation_storage",
       "--attestation_storage_bucket=file:///var/run/attestations",
       "--trillian_log_server.tlog_id=$SHARD_TREE_ID",
-      "--trillian_log_server.log_id_ranges=$INITIAL_TREE_ID=3,$SHARD_TREE_ID"
+      "--trillian_log_server.sharding_config=/$SHARDING_CONFIG"
       # Uncomment this for production logging
       # "--log_type=prod",
       ]
     volumes:
     - "/var/run/attestations:/var/run/attestations:z"
+    - "./$SHARDING_CONFIG:/$SHARDING_CONFIG:z"
     restart: always # keep the server running
     ports:
       - "3000:3000"
