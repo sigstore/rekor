@@ -27,7 +27,7 @@ import (
 
 type persistedState map[string]*util.SignedCheckpoint
 
-func Dump(url string, sth *util.SignedCheckpoint) error {
+func Dump(key string, sth *util.SignedCheckpoint) error {
 	rekorDir, err := getRekorDir()
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func Dump(url string, sth *util.SignedCheckpoint) error {
 	if state == nil {
 		state = make(persistedState)
 	}
-	state[url] = sth
+	state[key] = sth
 
 	b, err := json.Marshal(&state)
 	if err != nil {
@@ -67,9 +67,9 @@ func loadStateFile() persistedState {
 	return result
 }
 
-func Load(url string) *util.SignedCheckpoint {
+func Load(key string) *util.SignedCheckpoint {
 	if state := loadStateFile(); state != nil {
-		return state[url]
+		return state[key]
 	}
 	return nil
 }

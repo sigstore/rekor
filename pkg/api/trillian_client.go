@@ -25,6 +25,7 @@ import (
 	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/sharding"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -37,6 +38,7 @@ import (
 
 type TrillianClient struct {
 	client  trillian.TrillianLogClient
+	ranges  sharding.LogRanges
 	logID   int64
 	context context.Context
 }
@@ -44,6 +46,7 @@ type TrillianClient struct {
 func NewTrillianClient(ctx context.Context) TrillianClient {
 	return TrillianClient{
 		client:  api.logClient,
+		ranges:  api.logRanges,
 		logID:   api.logID,
 		context: ctx,
 	}

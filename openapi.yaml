@@ -590,6 +590,35 @@ definitions:
         type: string
         description: The current treeID
         pattern: '^[0-9]+$'
+      inactiveShards:
+        type: array
+        items:
+          $ref: '#/definitions/InactiveShardLogInfo'
+
+    required:
+      - rootHash
+      - treeSize
+      - signedTreeHead
+      - treeID
+  InactiveShardLogInfo:
+    type: object
+    properties:
+      rootHash:
+        type: string
+        description: The current hash value stored at the root of the merkle tree
+        pattern: '^[0-9a-fA-F]{64}$'
+      treeSize:
+        type: integer
+        description: The current number of nodes in the merkle tree
+        minimum: 1
+      signedTreeHead:
+        type: string
+        format: signedCheckpoint
+        description: The current signed tree head
+      treeID:
+        type: string
+        description: The current treeID
+        pattern: '^[0-9]+$'
     required:
       - rootHash
       - treeSize
