@@ -17,16 +17,46 @@ package sharding
 
 import (
 	"fmt"
+	"io/ioutil"
+	"strconv"
 	"strings"
+
+	"github.com/ghodss/yaml"
+	"github.com/pkg/errors"
 )
 
 type LogRanges struct {
-	ranges []LogRange
+	ranges Ranges
 }
 
+type Ranges []LogRange
+
 type LogRange struct {
-	TreeID     int64
-	TreeLength int64
+	TreeID     int64 `yaml:"treeID"`
+	TreeLength int64 `yaml:"treeLength"`
+}
+
+func NewLogRanges(path string, treeID string) (LogRanges, error) {
+	if path == "" {
+		return LogRanges{}, nil
+	}
+	id, err := strconv.Atoi(treeID)
+	if err != nil {
+		return LogRanges{}, errors.Wrapf(err, "%s is not a valid int64", treeID)
+	}
+	// otherwise, try to read contents of the sharding config
+	var ranges Ranges
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return LogRanges{}, err
+	}
+	if err := yaml.Unmarshal(contents, &ranges); err != nil {
+		return LogRanges{}, err
+	}
+	ranges = append(ranges, LogRange{TreeID: int64(id)})
+	return LogRanges{
+		ranges: ranges,
+	}, nil
 }
 
 func (l *LogRanges) ResolveVirtualIndex(index int) (int64, int64) {

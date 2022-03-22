@@ -15,7 +15,48 @@
 
 package sharding
 
-import "testing"
+import (
+	"io/ioutil"
+	"path/filepath"
+	"reflect"
+	"testing"
+)
+
+func TestNewLogRanges(t *testing.T) {
+	contents := `
+- treeID: 0001
+  treeLength: 3
+- treeID: 0002
+  treeLength: 4`
+	file := filepath.Join(t.TempDir(), "sharding-config")
+	if err := ioutil.WriteFile(file, []byte(contents), 0644); err != nil {
+		t.Fatal(err)
+	}
+	treeID := "45"
+	expected := LogRanges{
+		ranges: []LogRange{
+			{
+				TreeID:     1,
+				TreeLength: 3,
+			}, {
+				TreeID:     2,
+				TreeLength: 4,
+			}, {
+				TreeID: 45,
+			},
+		},
+	}
+	got, err := NewLogRanges(file, treeID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if expected.ActiveTreeID() != got.ActiveTreeID() {
+		t.Fatalf("expected tree id %d got %d", expected.ActiveTreeID(), got.ActiveTreeID())
+	}
+	if !reflect.DeepEqual(expected.GetRanges(), got.GetRanges()) {
+		t.Fatalf("expected %v got %v", expected.GetRanges(), got.GetRanges())
+	}
+}
 
 func TestLogRanges_ResolveVirtualIndex(t *testing.T) {
 	lrs := LogRanges{

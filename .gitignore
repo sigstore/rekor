@@ -12,4 +12,4 @@ dist/*
 hack/tools/bin/*
 *fuzz.zip
 docker-compose-sharding.yaml
-
+sharding-config.yaml
