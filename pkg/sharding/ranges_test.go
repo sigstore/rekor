@@ -34,7 +34,6 @@ func TestNewLogRanges(t *testing.T) {
 	}
 	treeID := "45"
 	expected := LogRanges{
-		activeTreeID: 45,
 		ranges: []LogRange{
 			{
 				TreeID:     1,
@@ -42,6 +41,8 @@ func TestNewLogRanges(t *testing.T) {
 			}, {
 				TreeID:     2,
 				TreeLength: 4,
+			}, {
+				TreeID: 45,
 			},
 		},
 	}

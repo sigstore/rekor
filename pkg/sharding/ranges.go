@@ -26,8 +26,7 @@ import (
 )
 
 type LogRanges struct {
-	activeTreeID int64
-	ranges       Ranges
+	ranges Ranges
 }
 
 type Ranges []LogRange
@@ -38,18 +37,13 @@ type LogRange struct {
 }
 
 func NewLogRanges(path string, treeID string) (LogRanges, error) {
+	if path == "" {
+		return LogRanges{}, nil
+	}
 	id, err := strconv.Atoi(treeID)
 	if err != nil {
 		return LogRanges{}, errors.Wrapf(err, "%s is not a valid int64", treeID)
 	}
-	// if there are no shards, just return info about the active tree id
-	if path == "" {
-		return LogRanges{
-			activeTreeID: int64(id),
-			ranges:       []LogRange{{TreeID: int64(id)}},
-		}, nil
-	}
-
 	// otherwise, try to read contents of the sharding config
 	var ranges Ranges
 	contents, err := ioutil.ReadFile(path)
@@ -59,9 +53,9 @@ func NewLogRanges(path string, treeID string) (LogRanges, error) {
 	if err := yaml.Unmarshal(contents, &ranges); err != nil {
 		return LogRanges{}, err
 	}
+	ranges = append(ranges, LogRange{TreeID: int64(id)})
 	return LogRanges{
-		activeTreeID: int64(id),
-		ranges:       ranges,
+		ranges: ranges,
 	}, nil
 }
 
@@ -80,7 +74,7 @@ func (l *LogRanges) ResolveVirtualIndex(index int) (int64, int64) {
 
 // ActiveTreeID returns the active shard index, always the last shard in the range
 func (l *LogRanges) ActiveTreeID() int64 {
-	return l.activeTreeID
+	return l.ranges[len(l.ranges)-1].TreeID
 }
 
 func (l *LogRanges) Empty() bool {
