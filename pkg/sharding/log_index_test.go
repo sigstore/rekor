@@ -33,50 +33,48 @@ func TestVirtualLogIndex(t *testing.T) {
 			expectedIndex: 5,
 		},
 		// Log 100: 0 1 2 3 4
-		// Log 300: 5 6 7
+		// Log 300: 5 6 7...
 		{
 			description: "two shards",
 			leafIndex:   2,
 			tid:         300,
 			ranges: LogRanges{
-				ranges: []LogRange{
+				inactive: []LogRange{
 					{
 						TreeID:     100,
 						TreeLength: 5,
-					}, {
-						TreeID: 300,
-					},
-				},
+					}},
+				active: 300,
 			},
 			expectedIndex: 7,
-		}, {
+		},
+		// Log 100: 0 1 2 3 4
+		// Log 300: 5 6 7 8
+		// Log 400: ...
+		{
 			description: "three shards",
 			leafIndex:   1,
 			tid:         300,
 			ranges: LogRanges{
-				ranges: []LogRange{
+				inactive: []LogRange{
 					{
 						TreeID:     100,
 						TreeLength: 5,
 					}, {
 						TreeID:     300,
 						TreeLength: 4,
-					}, {
-						TreeID: 400,
-					},
-				},
+					}},
+				active: 400,
 			},
 			expectedIndex: 6,
-		}, {
-			description: "ranges is empty but not-nil",
+		},
+		// Log 30: 1 2 3...
+		{
+			description: "only active tree",
 			leafIndex:   2,
 			tid:         30,
 			ranges: LogRanges{
-				ranges: []LogRange{
-					{
-						TreeID: 30,
-					},
-				},
+				active: 30,
 			},
 			expectedIndex: 2,
 		}, {
@@ -84,11 +82,7 @@ func TestVirtualLogIndex(t *testing.T) {
 			leafIndex:   2,
 			tid:         4,
 			ranges: LogRanges{
-				ranges: []LogRange{
-					{
-						TreeID: 30,
-					},
-				},
+				active: 30,
 			},
 			expectedIndex: -1,
 		},
