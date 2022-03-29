@@ -60,22 +60,29 @@ function stringsMatch () {
   fi
 }
 
-count=0
+function waitForRekorServer () {
+  count=0
 
-echo -n "waiting up to 60 sec for system to start"
-until [ $(docker-compose ps | grep -c "(healthy)") == 3 ];
-do
-    if [ $count -eq 6 ]; then
-       echo "! timeout reached"
-       exit 1
-    else
-       echo -n "."
-       sleep 10
-       let 'count+=1'
-    fi
-done
+  echo -n "waiting up to 60 sec for system to start"
+  until [ $(docker-compose ps | grep -c "(healthy)") == 3 ];
+  do
+      if [ $count -eq 6 ]; then
+        echo "! timeout reached"
+        REKOR_CONTAINER_ID=$(docker ps --filter name=rekor-server --format {{.ID}})
+        docker logs $REKOR_CONTAINER_ID
+        exit 1
+      else
+        echo -n "."
+        sleep 10
+        let 'count+=1'
+      fi
+  done
 
-echo
+  echo
+}
+
+echo "Waiting for rekor server to come up..."
+waitForRekorServer
 
 # Add some things to the tlog :)
 pushd tests
@@ -168,7 +175,7 @@ EOF
 # Spin up the new Rekor
 
 docker-compose -f $COMPOSE_FILE up  -d
-sleep 15
+waitForRekorServer
 $REKOR_CLI loginfo --rekor_server http://localhost:3000 
 
 # Make sure we are pointing to the new tree now
