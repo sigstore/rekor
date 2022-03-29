@@ -116,7 +116,7 @@ echo "the new shard ID is $SHARD_TREE_ID"
 $REKOR_CLI loginfo --rekor_server http://localhost:3000
 
 # Get the public key for the active tree for later
-ENCODED_PUBLIC_KEY=$(curl http://localhost:3000/api/v1/log/publicKey | base64)
+ENCODED_PUBLIC_KEY=$(curl http://localhost:3000/api/v1/log/publicKey | base64 -w 0)
 
 # Spin down the rekor server
 echo "stopping the rekor server..."
@@ -132,6 +132,7 @@ cat << EOF > $SHARDING_CONFIG
   encodedPublicKey: $ENCODED_PUBLIC_KEY
 EOF
 
+cat $SHARDING_CONFIG
 
 COMPOSE_FILE=docker-compose-sharding.yaml
 cat << EOF > $COMPOSE_FILE
@@ -200,12 +201,12 @@ $REKOR_CLI logproof --last-size 2 --tree-id $INITIAL_TREE_ID --rekor_server http
 $REKOR_CLI logproof --last-size 1 --rekor_server http://localhost:3000
 
 echo "Getting public key for inactive shard..."
-GOT_PUB_KEY=$(curl "http://localhost:3000/api/v1/log/publicKey?treeID=$INITIAL_TREE_ID" | base64)
+GOT_PUB_KEY=$(curl "http://localhost:3000/api/v1/log/publicKey?treeID=$INITIAL_TREE_ID" | base64 -w 0)
 echo "Got encoded public key $GOT_PUB_KEY, making sure this matches the public key we got earlier..."
 stringsMatch $ENCODED_PUBLIC_KEY $GOT_PUB_KEY
 
 echo "Getting the public key for the active tree..."
-NEW_PUB_KEY=$(curl "http://localhost:3000/api/v1/log/publicKey" | base64)
+NEW_PUB_KEY=$(curl "http://localhost:3000/api/v1/log/publicKey" | base64 -w 0)
 echo "Making sure the public key for the active shard is different from the inactive shard..."
 if [[ "$ENCODED_PUBLIC_KEY" == "$NEW_PUB_KEY" ]]; then
     echo

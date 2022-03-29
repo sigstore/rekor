@@ -123,11 +123,11 @@ func TestPublicKey(t *testing.T) {
 			description:    "empty tree ID",
 			expectedPubKey: "activekey",
 		}, {
-			description:    "tree id with encoded public key",
+			description:    "tree id with decoded public key",
 			treeID:         "10",
 			expectedPubKey: "sharding",
 		}, {
-			description:    "tree id without encoded public key",
+			description:    "tree id without decoded public key",
 			treeID:         "20",
 			expectedPubKey: "activekey",
 		}, {
