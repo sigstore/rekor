@@ -320,21 +320,6 @@ func (t *TrillianClient) getConsistencyProof(firstSize, lastSize int64) *Respons
 }
 
 func createAndInitTree(ctx context.Context, adminClient trillian.TrillianAdminClient, logClient trillian.TrillianLogClient) (*trillian.Tree, error) {
-	// First look for and use an existing tree
-	trees, err := adminClient.ListTrees(ctx, &trillian.ListTreesRequest{})
-	if err != nil {
-		return nil, errors.Wrap(err, "list trees")
-	}
-
-	for _, t := range trees.Tree {
-		if t.TreeType == trillian.TreeType_LOG {
-			log.Logger.Infof("Found existing tree with ID: %v", t.TreeId)
-			return t, nil
-		}
-	}
-
-	log.Logger.Infof("No existing tree found, attempting to create a new one")
-	// Otherwise create and initialize one
 	t, err := adminClient.CreateTree(ctx, &trillian.CreateTreeRequest{
 		Tree: &trillian.Tree{
 			TreeType:        trillian.TreeType_LOG,

@@ -66,7 +66,7 @@ type API struct {
 	certChainPem string              // PEM encoded timestamping cert chain
 }
 
-func NewAPI(ranges sharding.LogRanges) (*API, error) {
+func NewAPI(ranges sharding.LogRanges, treeID uint) (*API, error) {
 	logRPCServer := fmt.Sprintf("%s:%d",
 		viper.GetString("trillian_log_server.address"),
 		viper.GetUint("trillian_log_server.port"))
@@ -78,16 +78,17 @@ func NewAPI(ranges sharding.LogRanges) (*API, error) {
 	logAdminClient := trillian.NewTrillianAdminClient(tConn)
 	logClient := trillian.NewTrillianLogClient(tConn)
 
-	tLogID := viper.GetInt64("trillian_log_server.tlog_id")
-	if tLogID == 0 {
-		log.Logger.Info("No tree ID specified, attempting to intitialize one")
+	tid := int64(treeID)
+	if tid == 0 {
+		log.Logger.Info("No tree ID specified, attempting to create a new tree")
 		t, err := createAndInitTree(ctx, logAdminClient, logClient)
 		if err != nil {
 			return nil, errors.Wrap(err, "create and init tree")
 		}
-		tLogID = t.TreeId
+		tid = t.TreeId
 	}
-	ranges.SetActive(tLogID)
+	log.Logger.Infof("Starting Rekor server with active tree %v", tid)
+	ranges.SetActive(tid)
 
 	rekorSigner, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
 	if err != nil {
@@ -140,7 +141,7 @@ func NewAPI(ranges sharding.LogRanges) (*API, error) {
 	return &API{
 		// Transparency Log Stuff
 		logClient: logClient,
-		logID:     tLogID,
+		logID:     tid,
 		logRanges: ranges,
 		// Signing/verifying fields
 		pubkey:     string(pubkey),
@@ -159,11 +160,11 @@ var (
 	storageClient storage.AttestationStorage
 )
 
-func ConfigureAPI(ranges sharding.LogRanges) {
+func ConfigureAPI(ranges sharding.LogRanges, treeID uint) {
 	cfg := radix.PoolConfig{}
 	var err error
 
-	api, err = NewAPI(ranges)
+	api, err = NewAPI(ranges, treeID)
 	if err != nil {
 		log.Logger.Panic(err)
 	}

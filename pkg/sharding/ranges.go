@@ -17,13 +17,14 @@ package sharding
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strconv"
 	"strings"
 
 	"github.com/ghodss/yaml"
-	"github.com/pkg/errors"
+	"github.com/sigstore/rekor/pkg/log"
 )
 
 type LogRanges struct {
@@ -42,6 +43,7 @@ type LogRange struct {
 
 func NewLogRanges(path string, treeID uint) (LogRanges, error) {
 	if path == "" {
+		log.Logger.Info("No config file specified, skipping init of logRange map")
 		return LogRanges{}, nil
 	}
 	if treeID == 0 {
