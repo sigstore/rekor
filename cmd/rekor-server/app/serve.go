@@ -113,7 +113,7 @@ var serveCmd = &cobra.Command{
 			log.Logger.Fatalf("unable get sharding details from sharding config: %v", err)
 		}
 
-		api.ConfigureAPI(ranges)
+		api.ConfigureAPI(ranges, treeID)
 		server.ConfigureAPI()
 
 		http.Handle("/metrics", promhttp.Handler())
