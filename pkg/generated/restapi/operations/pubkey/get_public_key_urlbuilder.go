@@ -29,7 +29,11 @@ import (
 
 // GetPublicKeyURL generates an URL for the get public key operation
 type GetPublicKeyURL struct {
+	TreeID *string
+
 	_basePath string
+	// avoid unkeyed usage
+	_ struct{}
 }
 
 // WithBasePath sets the base path for this url builder, only required when it's different from the
@@ -55,6 +59,18 @@ func (o *GetPublicKeyURL) Build() (*url.URL, error) {
 
 	_basePath := o._basePath
 	_result.Path = golangswaggerpaths.Join(_basePath, _path)
+
+	qs := make(url.Values)
+
+	var treeIDQ string
+	if o.TreeID != nil {
+		treeIDQ = *o.TreeID
+	}
+	if treeIDQ != "" {
+		qs.Set("treeID", treeIDQ)
+	}
+
+	_result.RawQuery = qs.Encode()
 
 	return &_result, nil
 }

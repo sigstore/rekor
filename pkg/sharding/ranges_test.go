@@ -26,6 +26,7 @@ func TestNewLogRanges(t *testing.T) {
 	contents := `
 - treeID: 0001
   treeLength: 3
+  encodedPublicKey: c2hhcmRpbmcK
 - treeID: 0002
   treeLength: 4`
 	file := filepath.Join(t.TempDir(), "sharding-config")
@@ -36,15 +37,18 @@ func TestNewLogRanges(t *testing.T) {
 	expected := LogRanges{
 		inactive: []LogRange{
 			{
-				TreeID:     1,
-				TreeLength: 3,
+				TreeID:           1,
+				TreeLength:       3,
+				EncodedPublicKey: "c2hhcmRpbmcK",
+				decodedPublicKey: "sharding\n",
 			}, {
 				TreeID:     2,
 				TreeLength: 4,
 			}},
 		active: int64(45),
 	}
-	got, err := NewLogRanges(file, treeID)
+	activePubKey := "mypub"
+	got, err := NewLogRanges(file, treeID, activePubKey)
 	if err != nil {
 		t.Fatal(err)
 	}

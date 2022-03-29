@@ -16,6 +16,7 @@
 package sharding
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -25,18 +26,21 @@ import (
 )
 
 type LogRanges struct {
-	inactive Ranges
-	active   int64
+	inactive        Ranges
+	activePublicKey string
+	active          int64
 }
 
 type Ranges []LogRange
 
 type LogRange struct {
-	TreeID     int64 `yaml:"treeID"`
-	TreeLength int64 `yaml:"treeLength"`
+	TreeID           int64  `yaml:"treeID"`
+	TreeLength       int64  `yaml:"treeLength"`
+	EncodedPublicKey string `yaml:"encodedPublicKey"`
+	decodedPublicKey string
 }
 
-func NewLogRanges(path string, treeID uint) (LogRanges, error) {
+func NewLogRanges(path string, treeID uint, activePublicKey string) (LogRanges, error) {
 	if path == "" {
 		return LogRanges{}, nil
 	}
@@ -51,6 +55,14 @@ func NewLogRanges(path string, treeID uint) (LogRanges, error) {
 	}
 	if err := yaml.Unmarshal(contents, &ranges); err != nil {
 		return LogRanges{}, err
+	}
+	for i, r := range ranges {
+		decoded, err := base64.StdEncoding.DecodeString(r.EncodedPublicKey)
+		if err != nil {
+			return LogRanges{}, err
+		}
+		r.decodedPublicKey = string(decoded)
+		ranges[i] = r
 	}
 	return LogRanges{
 		inactive: ranges,
@@ -116,4 +128,15 @@ func (l *LogRanges) String() string {
 	}
 	ranges = append(ranges, fmt.Sprintf("active=%d", l.active))
 	return strings.Join(ranges, ",")
+}
+
+// PublicKey returns the associated public key for the given Tree ID
+// and returns the active public key by default
+func (l *LogRanges) PublicKey(treeID int64) string {
+	for _, i := range l.inactive {
+		if i.TreeID == treeID && i.decodedPublicKey != "" {
+			return i.decodedPublicKey
+		}
+	}
+	return l.activePublicKey
 }

@@ -94,7 +94,10 @@ SHARD_TREE_ID=$(createtree --admin_server localhost:8090)
 echo "the new shard ID is $SHARD_TREE_ID"
 
 # Once more
-$REKOR_CLI loginfo --rekor_server http://localhost:3000 
+$REKOR_CLI loginfo --rekor_server http://localhost:3000
+
+# Get the public key for the active tree for later
+ENCODED_PUBLIC_KEY=$(curl http://localhost:3000/api/v1/log/publicKey | base64)
 
 # Spin down the rekor server
 echo "stopping the rekor server..."
@@ -107,6 +110,7 @@ SHARDING_CONFIG=sharding-config.yaml
 cat << EOF > $SHARDING_CONFIG
 - treeID: $INITIAL_TREE_ID
   treeLength: 3
+  encodedPublicKey: $ENCODED_PUBLIC_KEY
 EOF
 
 
@@ -181,7 +185,11 @@ $REKOR_CLI logproof --last-size 2 --tree-id $INITIAL_TREE_ID --rekor_server http
 # And the logproof for the now active shard
 $REKOR_CLI logproof --last-size 1 --rekor_server http://localhost:3000
 
+echo "Getting public key for inactive shard..."
+PUB_KEY=$(curl http://localhost:3000/api/v1/log/publicKey | base64)
+
 # TODO: Try to get the entry via Entry ID (Tree ID in hex + UUID)
 UUID=$($REKOR_CLI get --log-index 2 --rekor_server http://localhost:3000 --format json | jq -r .UUID)
+
 
 echo "Test passed successfully :)"
