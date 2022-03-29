@@ -18,7 +18,6 @@ package api
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/swag"
@@ -26,15 +25,12 @@ import (
 )
 
 func GetPublicKeyHandler(params pubkey.GetPublicKeyParams) middleware.Responder {
+	ctx := params.HTTPRequest.Context()
 	treeID := swag.StringValue(params.TreeID)
-	if treeID == "" {
-		return pubkey.NewGetPublicKeyOK().WithPayload(api.pubkey)
-	}
-	tid, err := strconv.Atoi(treeID)
+	tc := NewTrillianClient(ctx)
+	pk, err := tc.ranges.PublicKey(api.pubkey, treeID)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusBadRequest, err, "")
 	}
-	ctx := params.HTTPRequest.Context()
-	tc := NewTrillianClientFromTreeID(ctx, int64(tid))
-	return pubkey.NewGetPublicKeyOK().WithPayload(tc.ranges.PublicKey(int64(tid)))
+	return pubkey.NewGetPublicKeyOK().WithPayload(pk)
 }

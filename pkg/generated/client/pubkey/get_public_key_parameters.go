@@ -77,7 +77,7 @@ type GetPublicKeyParams struct {
 
 	/* TreeID.
 
-	   The tree ID of the tree that you wish to prove consistency for
+	   The tree ID of the tree you wish to get a public key for
 	*/
 	TreeID *string
 

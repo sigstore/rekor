@@ -48,7 +48,7 @@ type GetPublicKeyParams struct {
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 
-	/*The tree ID of the tree that you wish to prove consistency for
+	/*The tree ID of the tree you wish to get a public key for
 	  Pattern: ^[0-9]+$
 	  In: query
 	*/

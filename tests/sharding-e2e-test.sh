@@ -48,6 +48,18 @@ function check_log_index () {
   fi
 }
 
+function stringsMatch () {
+  one=$1
+  two=$2
+
+  if [[ "$one" == "$two" ]]; then
+    echo "Strings match"
+  else
+    echo "$one and $two don't match but should"
+    exit 1
+  fi
+}
+
 count=0
 
 echo -n "waiting up to 60 sec for system to start"
@@ -160,14 +172,9 @@ sleep 15
 $REKOR_CLI loginfo --rekor_server http://localhost:3000 
 
 # Make sure we are pointing to the new tree now
-TREE_ID=$($REKOR_CLI loginfo --rekor_server http://localhost:3000  --format json)
+TREE_ID=$($REKOR_CLI loginfo --rekor_server http://localhost:3000  --format json | jq -r .TreeID)
 # Check that the SHARD_TREE_ID is a substring of the `$REKOR_CLI loginfo` output
-if [[ "$TREE_ID" == *"$SHARD_TREE_ID"* ]]; then
-  echo "Rekor server is now pointing to the new shard"
-else
-  echo "Rekor server is not pointing to the new shard"
-  exit 1
-fi
+stringsMatch $TREE_ID $SHARD_TREE_ID
 
 # Now, if we run $REKOR_CLI get --log_index 2 again, it should grab the log index
 # from Shard 0
@@ -186,7 +193,21 @@ $REKOR_CLI logproof --last-size 2 --tree-id $INITIAL_TREE_ID --rekor_server http
 $REKOR_CLI logproof --last-size 1 --rekor_server http://localhost:3000
 
 echo "Getting public key for inactive shard..."
-PUB_KEY=$(curl http://localhost:3000/api/v1/log/publicKey | base64)
+GOT_PUB_KEY=$(curl "http://localhost:3000/api/v1/log/publicKey?treeID=$INITIAL_TREE_ID" | base64)
+echo "Got encoded public key $GOT_PUB_KEY, making sure this matches the public key we got earlier..."
+stringsMatch $ENCODED_PUBLIC_KEY $GOT_PUB_KEY
+
+echo "Getting the public key for the active tree..."
+NEW_PUB_KEY=$(curl "http://localhost:3000/api/v1/log/publicKey" | base64)
+echo "Making sure the public key for the active shard is different from the inactive shard..."
+if [[ "$ENCODED_PUBLIC_KEY" == "$NEW_PUB_KEY" ]]; then
+    echo
+    echo "Active tree public key should be different from inactive shard public key but isn't..."
+    echo "Inactive Shard Public Key: $ENCODED_PUBLIC_KEY"
+    echo "Active Shard Public Key: $NEW_PUB_KEY"
+    exit 1
+fi
+
 
 # TODO: Try to get the entry via Entry ID (Tree ID in hex + UUID)
 UUID=$($REKOR_CLI get --log-index 2 --rekor_server http://localhost:3000 --format json | jq -r .UUID)

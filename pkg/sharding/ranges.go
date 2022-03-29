@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"strings"
 
 	"github.com/ghodss/yaml"
@@ -26,9 +27,8 @@ import (
 )
 
 type LogRanges struct {
-	inactive        Ranges
-	activePublicKey string
-	active          int64
+	inactive Ranges
+	active   int64
 }
 
 type Ranges []LogRange
@@ -40,7 +40,7 @@ type LogRange struct {
 	decodedPublicKey string
 }
 
-func NewLogRanges(path string, treeID uint, activePublicKey string) (LogRanges, error) {
+func NewLogRanges(path string, treeID uint) (LogRanges, error) {
 	if path == "" {
 		return LogRanges{}, nil
 	}
@@ -132,11 +132,27 @@ func (l *LogRanges) String() string {
 
 // PublicKey returns the associated public key for the given Tree ID
 // and returns the active public key by default
-func (l *LogRanges) PublicKey(treeID int64) string {
+func (l *LogRanges) PublicKey(activePublicKey, treeID string) (string, error) {
+	// if no tree ID is specified, assume the active tree
+	if treeID == "" {
+		return activePublicKey, nil
+	}
+	tid, err := strconv.Atoi(treeID)
+	if err != nil {
+		return "", err
+	}
+
 	for _, i := range l.inactive {
-		if i.TreeID == treeID && i.decodedPublicKey != "" {
-			return i.decodedPublicKey
+		if int(i.TreeID) == tid {
+			if i.decodedPublicKey != "" {
+				return i.decodedPublicKey, nil
+			}
+			// assume the active public key if one wasn't provided
+			return activePublicKey, nil
 		}
 	}
-	return l.activePublicKey
+	if tid == int(l.active) {
+		return activePublicKey, nil
+	}
+	return "", fmt.Errorf("%d is not a valid tree ID and doesn't have an associated public key", tid)
 }

@@ -47,8 +47,7 @@ func TestNewLogRanges(t *testing.T) {
 			}},
 		active: int64(45),
 	}
-	activePubKey := "mypub"
-	got, err := NewLogRanges(file, treeID, activePubKey)
+	got, err := NewLogRanges(file, treeID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,5 +95,64 @@ func TestLogRanges_ResolveVirtualIndex(t *testing.T) {
 		if index != tt.WantIndex {
 			t.Errorf("LogRanges.ResolveVirtualIndex() index = %v, want %v", index, tt.WantIndex)
 		}
+	}
+}
+
+func TestPublicKey(t *testing.T) {
+	ranges := LogRanges{
+		active: 45,
+		inactive: []LogRange{
+			{
+				TreeID:           10,
+				TreeLength:       10,
+				decodedPublicKey: "sharding",
+			}, {
+				TreeID:     20,
+				TreeLength: 20,
+			},
+		},
+	}
+	activePubKey := "activekey"
+	tests := []struct {
+		description    string
+		treeID         string
+		expectedPubKey string
+		shouldErr      bool
+	}{
+		{
+			description:    "empty tree ID",
+			expectedPubKey: "activekey",
+		}, {
+			description:    "tree id with encoded public key",
+			treeID:         "10",
+			expectedPubKey: "sharding",
+		}, {
+			description:    "tree id without encoded public key",
+			treeID:         "20",
+			expectedPubKey: "activekey",
+		}, {
+			description: "invalid tree id",
+			treeID:      "34",
+			shouldErr:   true,
+		}, {
+			description:    "pass in active tree id",
+			treeID:         "45",
+			expectedPubKey: "activekey",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			got, err := ranges.PublicKey(activePubKey, test.treeID)
+			if err != nil && !test.shouldErr {
+				t.Fatal(err)
+			}
+			if test.shouldErr {
+				return
+			}
+			if got != test.expectedPubKey {
+				t.Fatalf("got %s doesn't match expected %s", got, test.expectedPubKey)
+			}
+		})
 	}
 }

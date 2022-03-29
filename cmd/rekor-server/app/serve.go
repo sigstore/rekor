@@ -16,13 +16,10 @@
 package app
 
 import (
-	"context"
-	"crypto/x509"
 	"flag"
 	"net/http"
 
 	"github.com/go-openapi/loads"
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -33,7 +30,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/sharding"
-	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/rekor/pkg/types/alpine"
 	alpine_v001 "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
 	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord"
@@ -52,8 +48,6 @@ import (
 	rpm_v001 "github.com/sigstore/rekor/pkg/types/rpm/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/tuf"
 	tuf_v001 "github.com/sigstore/rekor/pkg/types/tuf/v0.0.1"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // serveCmd represents the serve command
@@ -114,12 +108,7 @@ var serveCmd = &cobra.Command{
 		shardingConfig := viper.GetString("trillian_log_server.sharding_config")
 		treeID := viper.GetUint("trillian_log_server.tlog_id")
 
-		pubkey, err := getPublicKey()
-		if err != nil {
-			log.Logger.Fatalf("unable to get public key from rekor signer: %v", err)
-		}
-
-		ranges, err := sharding.NewLogRanges(shardingConfig, treeID, pubkey)
+		ranges, err := sharding.NewLogRanges(shardingConfig, treeID)
 		if err != nil {
 			log.Logger.Fatalf("unable get sharding details from sharding config: %v", err)
 		}
@@ -136,25 +125,6 @@ var serveCmd = &cobra.Command{
 			log.Logger.Fatal(err)
 		}
 	},
-}
-
-func getPublicKey() (string, error) {
-	ctx := context.TODO()
-	// Get the active public key
-	rekorSigner, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
-	if err != nil {
-		return "", errors.Wrap(err, "getting new signer")
-	}
-	pk, err := rekorSigner.PublicKey(options.WithContext(ctx))
-	if err != nil {
-		return "", errors.Wrap(err, "getting public key")
-	}
-	b, err := x509.MarshalPKIXPublicKey(pk)
-	if err != nil {
-		return "", errors.Wrap(err, "marshalling public key")
-	}
-	pubkey := cryptoutils.PEMEncode(cryptoutils.PublicKeyPEMType, b)
-	return string(pubkey), nil
 }
 
 func init() {
