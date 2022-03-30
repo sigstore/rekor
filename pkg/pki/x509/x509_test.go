@@ -19,10 +19,13 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/x509"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/sigstore/rekor/pkg/pki/x509/testutils"
 	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -240,5 +243,82 @@ func TestCertChain_Verify(t *testing.T) {
 		if !cert.Equal(certChain[idx]) {
 			t.Fatal("unexpected error comparing cert chain")
 		}
+	}
+}
+
+func TestPublicKeyWithCertChain(t *testing.T) {
+	rootCert, rootKey, _ := testutils.GenerateRootCa()
+	subCert, subKey, _ := testutils.GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, leafKey, _ := testutils.GenerateLeafCert("subject@example.com", "oidc-issuer", subCert, subKey)
+
+	pemCertChain, err := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, subCert, rootCert})
+	if err != nil {
+		t.Fatalf("unexpected error marshalling cert chain: %v", err)
+	}
+
+	pub, err := NewPublicKey(bytes.NewReader(pemCertChain))
+	if err != nil {
+		t.Fatalf("unexpected error generating public key: %v", err)
+	}
+	if pub.certs == nil || !pub.certs[0].Equal(leafCert) || !pub.certs[1].Equal(subCert) || !pub.certs[2].Equal(rootCert) {
+		t.Fatal("expected certificate chain to match provided certificate chain")
+	}
+
+	if !pub.CryptoPubKey().(*ecdsa.PublicKey).Equal(leafKey.Public()) {
+		t.Fatal("expected public keys to match")
+	}
+
+	if !reflect.DeepEqual(pub.EmailAddresses(), leafCert.EmailAddresses) {
+		t.Fatalf("expected matching email addresses, expected %v, got %v", leafCert.EmailAddresses, pub.EmailAddresses())
+	}
+
+	canonicalValue, err := pub.CanonicalValue()
+	if err != nil {
+		t.Fatalf("unexpected error fetching canonical value: %v", err)
+	}
+	if !reflect.DeepEqual(canonicalValue, pemCertChain) {
+		t.Fatalf("expected canonical value %v, got %v", pemCertChain, canonicalValue)
+	}
+
+	// Generate signature to verify
+	data := []byte("test")
+	signer, err := signature.LoadSigner(leafKey, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sigBytes, err := signer.SignMessage(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := NewSignature(bytes.NewReader(sigBytes))
+	if err != nil {
+		t.Fatalf("unexpected error generating signature: %v", err)
+	}
+	err = s.Verify(bytes.NewReader(data), pub)
+	if err != nil {
+		t.Fatalf("unexpected error verifying signature, %v", err)
+	}
+
+	// Verify error with invalid chain
+	pemCertChain, _ = cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, rootCert})
+	pub, _ = NewPublicKey(bytes.NewReader(pemCertChain))
+	signer, _ = signature.LoadSigner(leafKey, crypto.SHA256)
+	sigBytes, _ = signer.SignMessage(bytes.NewReader(data))
+	s, _ = NewSignature(bytes.NewReader(sigBytes))
+	err = s.Verify(bytes.NewReader(data), pub)
+	if err == nil || !strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {
+		t.Fatalf("expected error verifying signature, got %v", err)
+	}
+
+	// Verify works with chain without intermediate
+	leafCert, leafKey, _ = testutils.GenerateLeafCert("subject@example.com", "oidc-issuer", rootCert, rootKey)
+	pemCertChain, _ = cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, rootCert})
+	pub, _ = NewPublicKey(bytes.NewReader(pemCertChain))
+	signer, _ = signature.LoadSigner(leafKey, crypto.SHA256)
+	sigBytes, _ = signer.SignMessage(bytes.NewReader(data))
+	s, _ = NewSignature(bytes.NewReader(sigBytes))
+	err = s.Verify(bytes.NewReader(data), pub)
+	if err != nil {
+		t.Fatalf("unexpected error verifying signature, %v", err)
 	}
 }
