@@ -48,22 +48,41 @@ function check_log_index () {
   fi
 }
 
-count=0
+function stringsMatch () {
+  one=$1
+  two=$2
 
-echo -n "waiting up to 60 sec for system to start"
-until [ $(docker-compose ps | grep -c "(healthy)") == 3 ];
-do
-    if [ $count -eq 6 ]; then
-       echo "! timeout reached"
-       exit 1
-    else
-       echo -n "."
-       sleep 10
-       let 'count+=1'
-    fi
-done
+  if [[ "$one" == "$two" ]]; then
+    echo "Strings match"
+  else
+    echo "$one and $two don't match but should"
+    exit 1
+  fi
+}
 
-echo
+function waitForRekorServer () {
+  count=0
+
+  echo -n "waiting up to 60 sec for system to start"
+  until [ $(docker-compose ps | grep -c "(healthy)") == 3 ];
+  do
+      if [ $count -eq 6 ]; then
+        echo "! timeout reached"
+        REKOR_CONTAINER_ID=$(docker ps --filter name=rekor-server --format {{.ID}})
+        docker logs $REKOR_CONTAINER_ID
+        exit 1
+      else
+        echo -n "."
+        sleep 10
+        let 'count+=1'
+      fi
+  done
+
+  echo
+}
+
+echo "Waiting for rekor server to come up..."
+waitForRekorServer
 
 # Add some things to the tlog :)
 pushd tests
@@ -94,7 +113,10 @@ SHARD_TREE_ID=$(createtree --admin_server localhost:8090)
 echo "the new shard ID is $SHARD_TREE_ID"
 
 # Once more
-$REKOR_CLI loginfo --rekor_server http://localhost:3000 
+$REKOR_CLI loginfo --rekor_server http://localhost:3000
+
+# Get the public key for the active tree for later
+ENCODED_PUBLIC_KEY=$(curl http://localhost:3000/api/v1/log/publicKey | base64 -w 0)
 
 # Spin down the rekor server
 echo "stopping the rekor server..."
@@ -107,8 +129,10 @@ SHARDING_CONFIG=sharding-config.yaml
 cat << EOF > $SHARDING_CONFIG
 - treeID: $INITIAL_TREE_ID
   treeLength: 3
+  encodedPublicKey: $ENCODED_PUBLIC_KEY
 EOF
 
+cat $SHARDING_CONFIG
 
 COMPOSE_FILE=docker-compose-sharding.yaml
 cat << EOF > $COMPOSE_FILE
@@ -152,18 +176,13 @@ EOF
 # Spin up the new Rekor
 
 docker-compose -f $COMPOSE_FILE up  -d
-sleep 15
+waitForRekorServer
 $REKOR_CLI loginfo --rekor_server http://localhost:3000 
 
 # Make sure we are pointing to the new tree now
-TREE_ID=$($REKOR_CLI loginfo --rekor_server http://localhost:3000  --format json)
+TREE_ID=$($REKOR_CLI loginfo --rekor_server http://localhost:3000  --format json | jq -r .TreeID)
 # Check that the SHARD_TREE_ID is a substring of the `$REKOR_CLI loginfo` output
-if [[ "$TREE_ID" == *"$SHARD_TREE_ID"* ]]; then
-  echo "Rekor server is now pointing to the new shard"
-else
-  echo "Rekor server is not pointing to the new shard"
-  exit 1
-fi
+stringsMatch $TREE_ID $SHARD_TREE_ID
 
 # Now, if we run $REKOR_CLI get --log_index 2 again, it should grab the log index
 # from Shard 0
@@ -181,7 +200,25 @@ $REKOR_CLI logproof --last-size 2 --tree-id $INITIAL_TREE_ID --rekor_server http
 # And the logproof for the now active shard
 $REKOR_CLI logproof --last-size 1 --rekor_server http://localhost:3000
 
+echo "Getting public key for inactive shard..."
+GOT_PUB_KEY=$(curl "http://localhost:3000/api/v1/log/publicKey?treeID=$INITIAL_TREE_ID" | base64 -w 0)
+echo "Got encoded public key $GOT_PUB_KEY, making sure this matches the public key we got earlier..."
+stringsMatch $ENCODED_PUBLIC_KEY $GOT_PUB_KEY
+
+echo "Getting the public key for the active tree..."
+NEW_PUB_KEY=$(curl "http://localhost:3000/api/v1/log/publicKey" | base64 -w 0)
+echo "Making sure the public key for the active shard is different from the inactive shard..."
+if [[ "$ENCODED_PUBLIC_KEY" == "$NEW_PUB_KEY" ]]; then
+    echo
+    echo "Active tree public key should be different from inactive shard public key but isn't..."
+    echo "Inactive Shard Public Key: $ENCODED_PUBLIC_KEY"
+    echo "Active Shard Public Key: $NEW_PUB_KEY"
+    exit 1
+fi
+
+
 # TODO: Try to get the entry via Entry ID (Tree ID in hex + UUID)
 UUID=$($REKOR_CLI get --log-index 2 --rekor_server http://localhost:3000 --format json | jq -r .UUID)
+
 
 echo "Test passed successfully :)"

@@ -17,10 +17,20 @@ limitations under the License.
 package api
 
 import (
+	"net/http"
+
 	"github.com/go-openapi/runtime/middleware"
+	"github.com/go-openapi/swag"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/pubkey"
 )
 
 func GetPublicKeyHandler(params pubkey.GetPublicKeyParams) middleware.Responder {
-	return pubkey.NewGetPublicKeyOK().WithPayload(api.pubkey)
+	ctx := params.HTTPRequest.Context()
+	treeID := swag.StringValue(params.TreeID)
+	tc := NewTrillianClient(ctx)
+	pk, err := tc.ranges.PublicKey(api.pubkey, treeID)
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusBadRequest, err, "")
+	}
+	return pubkey.NewGetPublicKeyOK().WithPayload(pk)
 }

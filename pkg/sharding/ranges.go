@@ -16,9 +16,11 @@
 package sharding
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"strings"
 
 	"github.com/ghodss/yaml"
@@ -33,8 +35,10 @@ type LogRanges struct {
 type Ranges []LogRange
 
 type LogRange struct {
-	TreeID     int64 `yaml:"treeID"`
-	TreeLength int64 `yaml:"treeLength"`
+	TreeID           int64  `yaml:"treeID"`
+	TreeLength       int64  `yaml:"treeLength"`
+	EncodedPublicKey string `yaml:"encodedPublicKey"`
+	decodedPublicKey string
 }
 
 func NewLogRanges(path string, treeID uint) (LogRanges, error) {
@@ -53,6 +57,14 @@ func NewLogRanges(path string, treeID uint) (LogRanges, error) {
 	}
 	if err := yaml.Unmarshal(contents, &ranges); err != nil {
 		return LogRanges{}, err
+	}
+	for i, r := range ranges {
+		decoded, err := base64.StdEncoding.DecodeString(r.EncodedPublicKey)
+		if err != nil {
+			return LogRanges{}, err
+		}
+		r.decodedPublicKey = string(decoded)
+		ranges[i] = r
 	}
 	return LogRanges{
 		inactive: ranges,
@@ -118,4 +130,31 @@ func (l *LogRanges) String() string {
 	}
 	ranges = append(ranges, fmt.Sprintf("active=%d", l.active))
 	return strings.Join(ranges, ",")
+}
+
+// PublicKey returns the associated public key for the given Tree ID
+// and returns the active public key by default
+func (l *LogRanges) PublicKey(activePublicKey, treeID string) (string, error) {
+	// if no tree ID is specified, assume the active tree
+	if treeID == "" {
+		return activePublicKey, nil
+	}
+	tid, err := strconv.Atoi(treeID)
+	if err != nil {
+		return "", err
+	}
+
+	for _, i := range l.inactive {
+		if int(i.TreeID) == tid {
+			if i.decodedPublicKey != "" {
+				return i.decodedPublicKey, nil
+			}
+			// assume the active public key if one wasn't provided
+			return activePublicKey, nil
+		}
+	}
+	if tid == int(l.active) {
+		return activePublicKey, nil
+	}
+	return "", fmt.Errorf("%d is not a valid tree ID and doesn't have an associated public key", tid)
 }
