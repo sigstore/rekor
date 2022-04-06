@@ -272,54 +272,43 @@ func getEntryURL(locationURL url.URL, uuid string) strfmt.URI {
 
 // GetLogEntryByUUIDHandler gets log entry and inclusion proof for specified UUID aka merkle leaf hash
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
-	ctx := params.HTTPRequest.Context()
-
 	uuid, err := sharding.GetUUIDFromIDString(params.EntryUUID)
 	if err != nil {
-		return handleRekorAPIError(params, http.StatusBadRequest, err, "")
+		return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("could not get UUID from ID string %v", params.EntryUUID))
 	}
-	var tid int64
 	tidString, err := sharding.GetTreeIDFromIDString(params.EntryUUID)
-	if err != nil {
-		// If EntryID is plain UUID, assume no sharding and use ActiveTreeID. The ActiveTreeID
-		// will == the tlog_id if a tlog_id is passed in at server startup.
-		if err.Error() == "cannot get treeID from plain UUID" {
-			tid = api.logRanges.ActiveTreeID()
-		} else {
-			return handleRekorAPIError(params, http.StatusBadRequest, err, "")
-		}
-	} else {
-		tid, err = strconv.ParseInt(tidString, 16, 64)
+
+	// If treeID is found in EntryID, route to correct tree
+	if err == nil {
+		tid, err := strconv.ParseInt(tidString, 16, 64)
 		if err != nil {
-			return handleRekorAPIError(params, http.StatusBadRequest, err, "")
+			return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("could not convert treeID %v to int", tidString))
 		}
-	}
-	hashValue, _ := hex.DecodeString(uuid)
-
-	tc := NewTrillianClientFromTreeID(params.HTTPRequest.Context(), tid)
-	log.RequestIDLogger(params.HTTPRequest).Debugf("Retrieving UUID %v from TreeID %v", uuid, tid)
-
-	resp := tc.getLeafAndProofByHash(hashValue)
-	switch resp.status {
-	case codes.OK:
-	case codes.NotFound:
-		return handleRekorAPIError(params, http.StatusNotFound, fmt.Errorf("grpc error: %w", resp.err), "")
-	default:
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
+		logEntry, err := RetrieveUUID(params, uuid, tid)
+		if err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return handleRekorAPIError(params, http.StatusNotFound, err, "")
+			}
+			return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
+		}
+		return entries.NewGetLogEntryByUUIDOK().WithPayload(logEntry)
 	}
 
-	result := resp.getLeafAndProofResult
-	leaf := result.Leaf
-	if leaf == nil {
-		return handleRekorAPIError(params, http.StatusNotFound, errors.New("grpc returned 0 leaves with success code"), "")
-	}
+	// If EntryID is plain UUID (ex. from client v0.5), check all trees
+	if errors.Is(err, sharding.ErrPlainUUID) {
+		trees := []sharding.LogRange{{TreeID: api.logRanges.ActiveTreeID()}}
+		trees = append(trees, api.logRanges.GetInactive()...)
 
-	logEntry, err := logEntryFromLeaf(ctx, api.signer, tc, leaf, result.SignedLogRoot, result.Proof, tid, api.logRanges)
-	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, err, "")
+		for _, t := range trees {
+			logEntry, err := RetrieveUUID(params, uuid, t.TreeID)
+			if err != nil {
+				continue
+			}
+			return entries.NewGetLogEntryByUUIDOK().WithPayload(logEntry)
+		}
+		return handleRekorAPIError(params, http.StatusNotFound, err, "UUID not found in any known trees")
 	}
-
-	return entries.NewGetLogEntryByUUIDOK().WithPayload(logEntry)
+	return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("could not get treeID from ID string %v", params.EntryUUID))
 }
 
 // SearchLogQueryHandler searches log by index, UUID, or proposed entry and returns array of entries found with inclusion proofs
@@ -437,4 +426,39 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	}
 
 	return entries.NewSearchLogQueryOK().WithPayload(resultPayload)
+}
+
+var ErrNotFound = errors.New("grpc returned 0 leaves with success code")
+
+// Attempt to retrieve a UUID from a backend tree
+func RetrieveUUID(params entries.GetLogEntryByUUIDParams, uuid string, tid int64) (models.LogEntry, error) {
+	ctx := params.HTTPRequest.Context()
+	hashValue, err := hex.DecodeString(uuid)
+	if err != nil {
+		return models.LogEntry{}, err
+	}
+
+	tc := NewTrillianClientFromTreeID(params.HTTPRequest.Context(), tid)
+	log.RequestIDLogger(params.HTTPRequest).Debugf("Attempting to retrieve UUID %v from TreeID %v", uuid, tid)
+
+	resp := tc.getLeafAndProofByHash(hashValue)
+	switch resp.status {
+	case codes.OK:
+		result := resp.getLeafAndProofResult
+		leaf := result.Leaf
+		if leaf == nil {
+			return models.LogEntry{}, ErrNotFound
+		}
+
+		logEntry, err := logEntryFromLeaf(ctx, api.signer, tc, leaf, result.SignedLogRoot, result.Proof, tid, api.logRanges)
+		if err != nil {
+			return models.LogEntry{}, errors.New("could not create log entry from leaf")
+		}
+		return logEntry, nil
+
+	case codes.NotFound:
+		return models.LogEntry{}, ErrNotFound
+	default:
+		return models.LogEntry{}, errors.New("unexpected error")
+	}
 }
