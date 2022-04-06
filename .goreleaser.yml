@@ -14,7 +14,7 @@ before:
 # if running a release we will generate the images in this step
 # if running in the CI the CI env va is set by github action runner and we dont run the ko steps
 # this is needed because we are generating files that goreleaser was not aware to push to GH project release
-    - /bin/bash -c 'if [ -z "$CI" ]; then make sign-container-release && make sign-keyless-release; fi'
+    - /bin/bash -c 'if [ -z "$CI" ]; then make sign-container-release; fi'
 
 gomod:
   proxy: true
