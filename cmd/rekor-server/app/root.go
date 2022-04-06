@@ -81,6 +81,8 @@ func init() {
 	rootCmd.PersistentFlags().String("attestation_storage_bucket", "", "url for attestation storage bucket")
 	rootCmd.PersistentFlags().Int("max_attestation_size", 100*1024, "max size for attestation storage, in bytes")
 
+	rootCmd.PersistentFlags().Bool("create_tree", false, "creates a new tree (shard) for the server backend")
+
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)
 	}

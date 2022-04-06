@@ -107,13 +107,14 @@ var serveCmd = &cobra.Command{
 		// Update logRangeMap if flag was passed in
 		shardingConfig := viper.GetString("trillian_log_server.sharding_config")
 		treeID := viper.GetUint("trillian_log_server.tlog_id")
+		createTree := viper.GetBool("create_tree")
 
 		ranges, err := sharding.NewLogRanges(shardingConfig, treeID)
 		if err != nil {
 			log.Logger.Fatalf("unable get sharding details from sharding config: %v", err)
 		}
 
-		api.ConfigureAPI(ranges, treeID)
+		api.ConfigureAPI(ranges, treeID, createTree)
 		server.ConfigureAPI()
 
 		http.Handle("/metrics", promhttp.Handler())

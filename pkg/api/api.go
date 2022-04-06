@@ -66,7 +66,7 @@ type API struct {
 	certChainPem string              // PEM encoded timestamping cert chain
 }
 
-func NewAPI(ranges sharding.LogRanges, treeID uint) (*API, error) {
+func NewAPI(ranges sharding.LogRanges, treeID uint, createTree bool) (*API, error) {
 	logRPCServer := fmt.Sprintf("%s:%d",
 		viper.GetString("trillian_log_server.address"),
 		viper.GetUint("trillian_log_server.port"))
@@ -79,14 +79,31 @@ func NewAPI(ranges sharding.LogRanges, treeID uint) (*API, error) {
 	logClient := trillian.NewTrillianLogClient(tConn)
 
 	tid := int64(treeID)
-	if tid == 0 {
-		log.Logger.Info("No tree ID specified, attempting to create a new tree")
+	if createTree {
+		log.Logger.Info("createTree flag set to true, attempting to create a new tree")
 		t, err := createAndInitTree(ctx, logAdminClient, logClient)
 		if err != nil {
 			return nil, errors.Wrap(err, "create and init tree")
 		}
 		tid = t.TreeId
 	}
+
+	// If not creating a new tree, and no shard config passed in, find the
+	// active tree and use it
+	if tid == 0 {
+		trees, err := logAdminClient.ListTrees(ctx, &trillian.ListTreesRequest{})
+		if err != nil {
+			return nil, errors.Wrap(err, "list trees")
+		}
+
+		for _, t := range trees.Tree {
+			if t.TreeType == trillian.TreeType_LOG {
+				log.Logger.Infof("Using existing tree %v", t.TreeId)
+				tid = t.TreeId
+			}
+		}
+	}
+
 	log.Logger.Infof("Starting Rekor server with active tree %v", tid)
 	ranges.SetActive(tid)
 
@@ -160,11 +177,11 @@ var (
 	storageClient storage.AttestationStorage
 )
 
-func ConfigureAPI(ranges sharding.LogRanges, treeID uint) {
+func ConfigureAPI(ranges sharding.LogRanges, treeID uint, createTree bool) {
 	cfg := radix.PoolConfig{}
 	var err error
 
-	api, err = NewAPI(ranges, treeID)
+	api, err = NewAPI(ranges, treeID, createTree)
 	if err != nil {
 		log.Logger.Panic(err)
 	}

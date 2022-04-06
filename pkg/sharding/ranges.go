@@ -43,7 +43,7 @@ type LogRange struct {
 
 func NewLogRanges(path string, treeID uint) (LogRanges, error) {
 	if path == "" {
-		log.Logger.Info("No config file specified, skipping init of logRange map")
+		log.Logger.Info("No shard config file specified, skipping init of shard map")
 		return LogRanges{}, nil
 	}
 	if treeID == 0 {
