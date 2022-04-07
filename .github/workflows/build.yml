@@ -49,7 +49,7 @@ jobs:
 
       - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
         with:
-          version: v0.9.3
+          version: v0.11.2
 
       - name: Set up Cloud SDK
         uses: google-github-actions/auth@8d125895b958610ec414ca4dae010257eaa814d3 # v0.5.0

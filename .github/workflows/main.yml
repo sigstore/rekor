@@ -59,10 +59,10 @@ jobs:
           go-version: ${{ env.GOVERSION }}
       - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
         with:
-          version: v0.9.3
+          version: v0.11.2
       - name: container
         run: |
-          KO_PREFIX=ko.local make ko 2>&1 | tee output.txt
+          make ko-local 2>&1 | tee output.txt
           docker run --rm $(tail -1 output.txt) version
 
   e2e:
