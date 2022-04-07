@@ -38,22 +38,15 @@ type SumCollection struct {
 }
 
 func (p *Provenance) Unmarshal(reader io.Reader) error {
-
 	buf := &bytes.Buffer{}
 	read, err := buf.ReadFrom(reader)
-
 	if err != nil {
 		return errors.New("Failed to read from buffer")
-	}
-
-	if read == 0 {
+	} else if read == 0 {
 		return errors.New("Provenance file contains no content")
 	}
 
-	rawProvenanceFile := buf.Bytes()
-
-	block, _ := clearsign.Decode(rawProvenanceFile)
-
+	block, _ := clearsign.Decode(buf.Bytes())
 	if block == nil {
 		return errors.New("Unable to decode provenance file")
 	}
@@ -62,16 +55,12 @@ func (p *Provenance) Unmarshal(reader io.Reader) error {
 		return errors.New("Unable to locate armored signature in provenance file")
 	}
 
-	p.Block = block
-
-	err = p.parseMessageBlock(block.Plaintext)
-
-	if err != nil {
+	if err = p.parseMessageBlock(block.Plaintext); err != nil {
 		return errors.Wrap(err, "Error occurred parsing message block")
 	}
 
+	p.Block = block
 	return nil
-
 }
 
 func (p *Provenance) parseMessageBlock(data []byte) error {
@@ -83,9 +72,7 @@ func (p *Provenance) parseMessageBlock(data []byte) error {
 
 	sc := &SumCollection{}
 
-	err := yaml.Unmarshal(parts[1], sc)
-
-	if err != nil {
+	if err := yaml.Unmarshal(parts[1], sc); err != nil {
 		return errors.Wrap(err, "Error occurred parsing SumCollection")
 	}
 
@@ -98,15 +85,10 @@ func (p *Provenance) GetChartAlgorithmHash() (string, string, error) {
 
 	if p.SumCollection == nil || p.SumCollection.Files == nil {
 		return "", "", errors.New("Unable to locate chart hash")
-
 	}
 
-	files := p.SumCollection.Files
-
-	for _, value := range files {
-
+	for _, value := range p.SumCollection.Files {
 		parts := strings.Split(value, ":")
-
 		if len(parts) != 2 {
 			return "", "", errors.New("Invalid hash found in Provenance file")
 		}
