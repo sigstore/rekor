@@ -13,3 +13,7 @@ hack/tools/bin/*
 *fuzz.zip
 docker-compose-sharding.yaml
 sharding-config.yaml
+rekorServerImagerefs
+rekorCliImagerefs
+trillianServerImagerefs
+trillianSignerImagerefs
