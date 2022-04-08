@@ -34,6 +34,26 @@
                         "value"
                     ],
                     "readOnly": true
+                },
+                "attestationHash": {
+                    "description": "Specifies the hash algorithm and value encompassing the stored attestation",
+                    "type": "object",
+                    "properties": {
+                        "algorithm": {
+                            "description": "The hashing function used to compute the hash value",
+                            "type": "string",
+                            "enum": [ "sha256" ]
+                        },
+                        "value": {
+                            "description": "The hash value for the archive",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "algorithm",
+                        "value"
+                    ],
+                    "readOnly": true
                 }
             }
         },

@@ -56,6 +56,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
+	"github.com/sigstore/rekor/pkg/types"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/util"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -449,7 +450,7 @@ func TestIntoto(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Fatal(err)
 	}
-	// The atteestation should be stored at /var/run/attestations/$uuid
+	// The attestation should be stored at /var/run/attestations/$uuid
 
 	got := in_toto.ProvenanceStatement{}
 	if err := json.Unmarshal(g.Attestation, &got); err != nil {
@@ -457,6 +458,31 @@ func TestIntoto(t *testing.T) {
 	}
 	if diff := cmp.Diff(it, got); diff != "" {
 		t.Errorf("diff: %s", diff)
+	}
+
+	attHash := sha256.Sum256(g.Attestation)
+	bHash := sha256.Sum256(g.Attestation)
+	fmt.Printf("len of g.Attestation %d, len of b %d\n", len(g.Attestation), len(b))
+	fmt.Printf("g %v\n", string(g.Attestation))
+	fmt.Printf("b %v\n", string(b))
+	fmt.Printf("g %v\n", hex.EncodeToString(attHash[:]))
+	fmt.Printf("b %v\n", hex.EncodeToString(bHash[:]))
+
+	intotoModel := &models.IntotoV001Schema{}
+	if err := types.DecodeEntry(g.Body.(map[string]interface{})["IntotoObj"], intotoModel); err != nil {
+		t.Errorf("could not convert body into intoto type: %v", err)
+	}
+	if intotoModel.Content == nil || intotoModel.Content.AttestationHash == nil {
+		t.Errorf("could not find hash over attestation %v", intotoModel)
+	}
+	recordedAttHash, err := hex.DecodeString(*intotoModel.Content.AttestationHash.Value)
+	if err != nil {
+		t.Errorf("error converting attestation hash to []byte: %v", err)
+	}
+
+	if !bytes.Equal(attHash[:], recordedAttHash) {
+		t.Fatal(fmt.Errorf("attestation hash %v doesnt match the one we sent %v", hex.EncodeToString(attHash[:]),
+		 *intotoModel.Content.AttestationHash.Value))
 	}
 
 	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)

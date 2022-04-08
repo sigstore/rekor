@@ -221,6 +221,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 				log.RequestIDLogger(params.HTTPRequest).Infof("no attestation for %s", uuid)
 				return
 			}
+			//TODO stop using uuid and use attestation hash
 			if err := storeAttestation(context.Background(), uuid, attestation); err != nil {
 				log.RequestIDLogger(params.HTTPRequest).Errorf("error storing attestation: %s", err)
 			}

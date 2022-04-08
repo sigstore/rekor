@@ -148,6 +148,9 @@ func (m *IntotoV001Schema) UnmarshalBinary(b []byte) error {
 // swagger:model IntotoV001SchemaContent
 type IntotoV001SchemaContent struct {
 
+	// attestation hash
+	AttestationHash *IntotoV001SchemaContentAttestationHash `json:"attestationHash,omitempty"`
+
 	// envelope
 	Envelope string `json:"envelope,omitempty"`
 
@@ -159,6 +162,10 @@ type IntotoV001SchemaContent struct {
 func (m *IntotoV001SchemaContent) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateAttestationHash(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateHash(formats); err != nil {
 		res = append(res, err)
 	}
@@ -166,6 +173,25 @@ func (m *IntotoV001SchemaContent) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *IntotoV001SchemaContent) validateAttestationHash(formats strfmt.Registry) error {
+	if swag.IsZero(m.AttestationHash) { // not required
+		return nil
+	}
+
+	if m.AttestationHash != nil {
+		if err := m.AttestationHash.Validate(formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("content" + "." + "attestationHash")
+			} else if ce, ok := err.(*errors.CompositeError); ok {
+				return ce.ValidateName("content" + "." + "attestationHash")
+			}
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -192,6 +218,10 @@ func (m *IntotoV001SchemaContent) validateHash(formats strfmt.Registry) error {
 func (m *IntotoV001SchemaContent) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.contextValidateAttestationHash(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateHash(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -199,6 +229,22 @@ func (m *IntotoV001SchemaContent) ContextValidate(ctx context.Context, formats s
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *IntotoV001SchemaContent) contextValidateAttestationHash(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.AttestationHash != nil {
+		if err := m.AttestationHash.ContextValidate(ctx, formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("content" + "." + "attestationHash")
+			} else if ce, ok := err.(*errors.CompositeError); ok {
+				return ce.ValidateName("content" + "." + "attestationHash")
+			}
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -229,6 +275,116 @@ func (m *IntotoV001SchemaContent) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary interface implementation
 func (m *IntotoV001SchemaContent) UnmarshalBinary(b []byte) error {
 	var res IntotoV001SchemaContent
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// IntotoV001SchemaContentAttestationHash Specifies the hash algorithm and value encompassing the stored attestation
+//
+// swagger:model IntotoV001SchemaContentAttestationHash
+type IntotoV001SchemaContentAttestationHash struct {
+
+	// The hashing function used to compute the hash value
+	// Required: true
+	// Enum: [sha256]
+	Algorithm *string `json:"algorithm"`
+
+	// The hash value for the archive
+	// Required: true
+	Value *string `json:"value"`
+}
+
+// Validate validates this intoto v001 schema content attestation hash
+func (m *IntotoV001SchemaContentAttestationHash) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateAlgorithm(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateValue(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+var intotoV001SchemaContentAttestationHashTypeAlgorithmPropEnum []interface{}
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["sha256"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		intotoV001SchemaContentAttestationHashTypeAlgorithmPropEnum = append(intotoV001SchemaContentAttestationHashTypeAlgorithmPropEnum, v)
+	}
+}
+
+const (
+
+	// IntotoV001SchemaContentAttestationHashAlgorithmSha256 captures enum value "sha256"
+	IntotoV001SchemaContentAttestationHashAlgorithmSha256 string = "sha256"
+)
+
+// prop value enum
+func (m *IntotoV001SchemaContentAttestationHash) validateAlgorithmEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, intotoV001SchemaContentAttestationHashTypeAlgorithmPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *IntotoV001SchemaContentAttestationHash) validateAlgorithm(formats strfmt.Registry) error {
+
+	if err := validate.Required("content"+"."+"attestationHash"+"."+"algorithm", "body", m.Algorithm); err != nil {
+		return err
+	}
+
+	// value enum
+	if err := m.validateAlgorithmEnum("content"+"."+"attestationHash"+"."+"algorithm", "body", *m.Algorithm); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *IntotoV001SchemaContentAttestationHash) validateValue(formats strfmt.Registry) error {
+
+	if err := validate.Required("content"+"."+"attestationHash"+"."+"value", "body", m.Value); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ContextValidate validate this intoto v001 schema content attestation hash based on the context it is used
+func (m *IntotoV001SchemaContentAttestationHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *IntotoV001SchemaContentAttestationHash) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *IntotoV001SchemaContentAttestationHash) UnmarshalBinary(b []byte) error {
+	var res IntotoV001SchemaContentAttestationHash
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

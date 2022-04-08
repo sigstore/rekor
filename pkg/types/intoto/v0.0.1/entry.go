@@ -150,6 +150,14 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 			},
 		},
 	}
+	attestation := v.Attestation()
+	if attestation != nil {
+		attH := sha256.Sum256(attestation)
+		canonicalEntry.Content.AttestationHash = &models.IntotoV001SchemaContentAttestationHash{
+			Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+			Value:     swag.String(hex.EncodeToString(attH[:])),
+		}
+	}
 
 	itObj := models.Intoto{}
 	itObj.APIVersion = swag.String(APIVERSION)
