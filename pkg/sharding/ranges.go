@@ -55,6 +55,10 @@ func NewLogRanges(path string, treeID uint) (LogRanges, error) {
 	if err != nil {
 		return LogRanges{}, err
 	}
+	if string(contents) == "" {
+		log.Logger.Info("Sharding config file contents empty, skipping init of logRange map")
+		return LogRanges{}, nil
+	}
 	if err := yaml.Unmarshal(contents, &ranges); err != nil {
 		return LogRanges{}, err
 	}

@@ -57,10 +57,14 @@ spec:
           "--trillian_log_server.tlog_id=3904496407287907110",
           "--log_type=prod",
           "--rekor_server.signer=$(KMS)",
+          "--trillian_log_server.sharding_config=/sharding/sharding-config.yaml",
           "--enable_attestation_storage=$(ENABLE_ATTESTATION_STORAGE)",
           "--attestation_storage_bucket=$(ATTESTATION_BUCKET)",
           "--rekor_server.timestamp_chain=$(TIMESTAMP_CHAIN)"
         ]
+        volumeMounts:
+        - name: sharding-config
+          mountPath: /sharding
         env:
         - name: KMS
           valueFrom:
@@ -92,6 +96,10 @@ spec:
           capabilities:
             drop:
             - all
+      volumes:
+        - name: sharding-config
+          configMap:
+            name: sharding-config
 ---
 apiVersion: v1
 kind: Service
@@ -106,4 +114,12 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 3000
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sharding-config
+  namespace: rekor-system
+data:
+  sharding-config.yaml: "" 
 ---
