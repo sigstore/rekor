@@ -23,7 +23,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -34,6 +33,8 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+
+	"github.com/pkg/errors"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -150,6 +151,18 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 			},
 		},
 	}
+	attestation := v.Attestation()
+	if attestation != nil {
+		decodedAttestation, err := base64.StdEncoding.DecodeString(string(attestation))
+		if err != nil {
+			return nil, errors.Wrap(err, "decoding attestation")
+		}
+		attH := sha256.Sum256(decodedAttestation)
+		canonicalEntry.Content.PayloadHash = &models.IntotoV001SchemaContentPayloadHash{
+			Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+			Value:     swag.String(hex.EncodeToString(attH[:])),
+		}
+	}
 
 	itObj := models.Intoto{}
 	itObj.APIVersion = swag.String(APIVERSION)
@@ -194,8 +207,9 @@ func (v *V001Entry) validate() error {
 }
 
 func (v *V001Entry) Attestation() []byte {
-	if len(v.env.Payload) > viper.GetInt("max_attestation_size") {
-		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", len(v.env.Payload), viper.GetInt("max_attestation_size"))
+	storageSize := base64.StdEncoding.DecodedLen(len(v.env.Payload))
+	if storageSize > viper.GetInt("max_attestation_size") {
+		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, viper.GetInt("max_attestation_size"))
 		return nil
 	}
 	return []byte(v.env.Payload)
