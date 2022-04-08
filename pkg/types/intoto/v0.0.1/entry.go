@@ -266,18 +266,18 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	}
 	kb := strfmt.Base64(publicKeyBytes)
 
-	h := sha256.Sum256([]byte(v.IntotoObj.Content.Envelope))
 	re := V001Entry{
 		IntotoObj: models.IntotoV001Schema{
 			Content: &models.IntotoV001SchemaContent{
 				Envelope: string(artifactBytes),
-				Hash: &models.IntotoV001SchemaContentHash{
-					Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-					Value:     swag.String(hex.EncodeToString(h[:])),
-				},
 			},
 			PublicKey: &kb,
 		},
+	}
+	h := sha256.Sum256([]byte(re.IntotoObj.Content.Envelope))
+	re.IntotoObj.Content.Hash = &models.IntotoV001SchemaContentHash{
+		Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+		Value:     swag.String(hex.EncodeToString(h[:])),
 	}
 
 	returnVal.Spec = re.IntotoObj
