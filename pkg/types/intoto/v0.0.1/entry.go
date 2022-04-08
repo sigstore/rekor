@@ -158,7 +158,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 			return nil, errors.Wrap(err, "decoding attestation")
 		}
 		attH := sha256.Sum256(decodedAttestation)
-		canonicalEntry.Content.AttestationHash = &models.IntotoV001SchemaContentAttestationHash{
+		canonicalEntry.Content.PayloadHash = &models.IntotoV001SchemaContentPayloadHash{
 			Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
 			Value:     swag.String(hex.EncodeToString(attH[:])),
 		}

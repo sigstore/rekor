@@ -35,8 +35,8 @@
                     ],
                     "readOnly": true
                 },
-                "attestationHash": {
-                    "description": "Specifies the hash algorithm and value encompassing the stored attestation",
+                "payloadHash": {
+                    "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
                     "type": "object",
                     "properties": {
                         "algorithm": {
@@ -45,7 +45,7 @@
                             "enum": [ "sha256" ]
                         },
                         "value": {
-                            "description": "The hash value for the archive",
+                            "description": "The hash value for the envelope's payload",
                             "type": "string"
                         }
                     },
