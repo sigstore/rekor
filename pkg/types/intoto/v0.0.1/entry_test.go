@@ -29,9 +29,13 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
+	"github.com/google/go-cmp/cmp"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -156,6 +160,9 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p(pub),
 				Content: &models.IntotoV001SchemaContent{
 					Envelope: envelope(t, key, validPayload, "text"),
+					Hash: &models.IntotoV001SchemaContentHash{
+						Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+					},
 				},
 			},
 			wantErr: false,
@@ -166,6 +173,9 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p([]byte(pemBytes)),
 				Content: &models.IntotoV001SchemaContent{
 					Envelope: envelope(t, priv, validPayload, "text"),
+					Hash: &models.IntotoV001SchemaContentHash{
+						Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+					},
 				},
 			},
 			wantErr: false,
@@ -176,6 +186,9 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p(pub),
 				Content: &models.IntotoV001SchemaContent{
 					Envelope: string(invalid),
+					Hash: &models.IntotoV001SchemaContentHash{
+						Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+					},
 				},
 			},
 			wantErr: true,
@@ -186,6 +199,9 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p([]byte("notavalidkey")),
 				Content: &models.IntotoV001SchemaContent{
 					Envelope: envelope(t, key, validPayload, "text"),
+					Hash: &models.IntotoV001SchemaContentHash{
+						Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+					},
 				},
 			},
 			wantErr: true,
@@ -194,9 +210,15 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := &V001Entry{}
+			if tt.it.Content != nil {
+				h := sha256.Sum256([]byte(tt.it.Content.Envelope))
+				tt.it.Content.Hash.Value = swag.String(hex.EncodeToString(h[:]))
+			}
+
 			it := &models.Intoto{
 				Spec: tt.it,
 			}
+
 			var uv = func() error {
 				if err := v.Unmarshal(it); err != nil {
 					return err
@@ -204,12 +226,15 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				if err := v.validate(); err != nil {
 					return err
 				}
-				keys, _ := v.IndexKeys()
-				h := sha256.Sum256([]byte(v.env.Payload))
-				sha := "sha256:" + hex.EncodeToString(h[:])
-				if keys[0] != sha {
-					return fmt.Errorf("expected index key: %s, got %s", sha, keys[0])
+				sha := sha256.Sum256([]byte(v.env.Payload))
+				// Always start with the hash
+				want := []string{"sha256:" + hex.EncodeToString(sha[:])}
+				hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *tt.it.Content.Hash.Algorithm, *tt.it.Content.Hash.Value))
+				want = append(want, hashkey)
+				if got, _ := v.IndexKeys(); !reflect.DeepEqual(got, want) {
+					t.Errorf("V001Entry.IndexKeys() = %v, want %v", got, tt.want)
 				}
+
 				return nil
 			}
 			if err := uv(); (err != nil) != tt.wantErr {
@@ -220,6 +245,9 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 }
 
 func TestV001Entry_IndexKeys(t *testing.T) {
+	h := sha256.Sum256([]byte("foo"))
+	dataSHA := hex.EncodeToString(h[:])
+	hashkey := strings.ToLower(fmt.Sprintf("%s:%s", "sha256", dataSHA))
 
 	tests := []struct {
 		name      string
@@ -228,14 +256,14 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 	}{
 		{
 			name: "standard",
-			want: []string{},
+			want: []string{hashkey},
 			statement: in_toto.Statement{
 				Predicate: "hello",
 			},
 		},
 		{
 			name: "subject",
-			want: []string{"sha256:foo"},
+			want: []string{"sha256:foo", hashkey},
 			statement: in_toto.Statement{
 				StatementHeader: in_toto.StatementHeader{
 					Subject: []in_toto.Subject{
@@ -259,6 +287,14 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 			}
 			payload := base64.StdEncoding.EncodeToString(b)
 			v := V001Entry{
+				IntotoObj: models.IntotoV001Schema{
+					Content: &models.IntotoV001SchemaContent{
+						Hash: &models.IntotoV001SchemaContentHash{
+							Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+							Value:     swag.String(dataSHA),
+						},
+					},
+				},
 				env: dsse.Envelope{
 					Payload:     payload,
 					PayloadType: in_toto.PayloadType,
@@ -268,8 +304,11 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 			// Always start with the hash
 			want := []string{"sha256:" + hex.EncodeToString(sha[:])}
 			want = append(want, tt.want...)
-			if got, _ := v.IndexKeys(); !reflect.DeepEqual(got, want) {
-				t.Errorf("V001Entry.IndexKeys() = %v, want %v", got, tt.want)
+			got, _ := v.IndexKeys()
+			sort.Strings(got)
+			sort.Strings(want)
+			if !cmp.Equal(got, want) {
+				t.Errorf("V001Entry.IndexKeys() = %v, want %v", got, want)
 			}
 		})
 	}

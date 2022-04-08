@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
@@ -79,6 +80,9 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 
 	switch v.env.PayloadType {
 	case in_toto.PayloadType:
+		hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.Hash.Algorithm, *v.IntotoObj.Content.Hash.Value))
+		result = append(result, hashkey)
+
 		statement, err := parseStatement(v.env.Payload)
 		if err != nil {
 			return result, err
@@ -283,6 +287,11 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 			},
 			PublicKey: &kb,
 		},
+	}
+	h := sha256.Sum256([]byte(re.IntotoObj.Content.Envelope))
+	re.IntotoObj.Content.Hash = &models.IntotoV001SchemaContentHash{
+		Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+		Value:     swag.String(hex.EncodeToString(h[:])),
 	}
 
 	returnVal.Spec = re.IntotoObj
