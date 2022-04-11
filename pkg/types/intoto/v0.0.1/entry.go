@@ -155,16 +155,11 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 			},
 		},
 	}
-	attestation := v.Attestation()
-	if attestation != nil {
-		decodedAttestation, err := base64.StdEncoding.DecodeString(string(attestation))
-		if err != nil {
-			return nil, errors.Wrap(err, "decoding attestation")
-		}
-		attH := sha256.Sum256(decodedAttestation)
+	attKey, attValue := v.AttestationKeyValue()
+	if attValue != nil {
 		canonicalEntry.Content.PayloadHash = &models.IntotoV001SchemaContentPayloadHash{
 			Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-			Value:     swag.String(hex.EncodeToString(attH[:])),
+			Value:     swag.String(strings.Replace(attKey, fmt.Sprintf("%s:", models.IntotoV001SchemaContentHashAlgorithmSha256), "", 1)),
 		}
 	}
 
@@ -210,13 +205,25 @@ func (v *V001Entry) validate() error {
 	return nil
 }
 
-func (v *V001Entry) Attestation() []byte {
+// AttestationKey returns the digest of the attestation that was uploaded, to be used to lookup the attestation from storage
+func (v *V001Entry) AttestationKey() string {
+	if v.IntotoObj.Content != nil && v.IntotoObj.Content.PayloadHash != nil {
+		return fmt.Sprintf("%s:%s", *v.IntotoObj.Content.PayloadHash.Algorithm, *v.IntotoObj.Content.PayloadHash.Value)
+	}
+	return ""
+}
+
+// AttestationKeyValue returns both the key and value to be persisted into attestation storage
+func (v *V001Entry) AttestationKeyValue() (string, []byte) {
 	storageSize := base64.StdEncoding.DecodedLen(len(v.env.Payload))
 	if storageSize > viper.GetInt("max_attestation_size") {
 		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, viper.GetInt("max_attestation_size"))
-		return nil
+		return "", nil
 	}
-	return []byte(v.env.Payload)
+	attBytes, _ := base64.StdEncoding.DecodeString(v.env.Payload)
+	attHash := sha256.Sum256(attBytes)
+	attKey := fmt.Sprintf("%s:%s", models.IntotoV001SchemaContentHashAlgorithmSha256, hex.EncodeToString(attHash[:]))
+	return attKey, attBytes
 }
 
 type verifier struct {

@@ -35,7 +35,8 @@ type EntryImpl interface {
 	IndexKeys() ([]string, error)                     // the keys that should be added to the external index for this entry
 	Canonicalize(ctx context.Context) ([]byte, error) // marshal the canonical entry to be put into the tlog
 	Unmarshal(e models.ProposedEntry) error           // unmarshal the abstract entry into the specific struct for this versioned type
-	Attestation() []byte
+	AttestationKey() string                           // returns the key used to look up the attestation from storage (should be sha256:digest)
+	AttestationKeyValue() (string, []byte)            // returns the key to be used when storing the attestation as well as the attestation itself
 	CreateFromArtifactProperties(context.Context, ArtifactProperties) (models.ProposedEntry, error)
 }
 

@@ -48,8 +48,12 @@ func (u BaseUnmarshalTester) Validate() error {
 	return nil
 }
 
-func (u BaseUnmarshalTester) Attestation() []byte {
-	return nil
+func (u BaseUnmarshalTester) AttestationKey() string {
+	return ""
+}
+
+func (u BaseUnmarshalTester) AttestationKeyValue() (string, []byte) {
+	return "", nil
 }
 
 func (u BaseUnmarshalTester) CreateFromArtifactProperties(_ context.Context, _ ArtifactProperties) (models.ProposedEntry, error) {
