@@ -38,8 +38,9 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 	var result []string
 	if params.Query.Hash != "" {
 		// This must be a valid sha256 hash
+		sha := util.PrefixSHA(params.Query.Hash)
 		var resultUUIDs []string
-		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(params.Query.Hash), "0", "-1")); err != nil {
+		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(sha), "0", "-1")); err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, err, redisUnexpectedResult)
 		}
 		result = append(result, resultUUIDs...)

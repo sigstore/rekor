@@ -37,6 +37,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/index"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
 type searchCmdOutput struct {
@@ -108,15 +109,7 @@ var searchCmd = &cobra.Command{
 		artifactStr := viper.GetString("artifact")
 		sha := viper.GetString("sha")
 		if sha != "" {
-			var prefix string
-			if !strings.HasPrefix(sha, "sha256:") && !strings.HasPrefix(sha, "sha1:") {
-				if len(sha) == 40 {
-					prefix = "sha1:"
-				} else {
-					prefix = "sha256:"
-				}
-			}
-			params.Query.Hash = fmt.Sprintf("%v%v", prefix, sha)
+			params.Query.Hash = util.PrefixSHA(sha)
 		} else if artifactStr != "" {
 			hasher := sha256.New()
 			var tee io.Reader
