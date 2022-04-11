@@ -450,7 +450,7 @@ func TestIntoto(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Fatal(err)
 	}
-	// The attestation should be stored at /var/run/attestations/sha256_digest
+	// The attestation should be stored at /var/run/attestations/sha256:digest
 
 	got := in_toto.ProvenanceStatement{}
 	if err := json.Unmarshal([]byte(g.Attestation), &got); err != nil {
