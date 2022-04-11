@@ -17,6 +17,7 @@ package sharding
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 )
@@ -180,12 +181,14 @@ func ValidateEntryID(id string) error {
 	return nil
 }
 
+var ErrPlainUUID = errors.New("cannot get treeID from plain UUID")
+
 // Returns TreeID (with no appended UUID) from a TreeID or EntryID string.
 // Validates TreeID and also UUID if present.
 func GetTreeIDFromIDString(id string) (string, error) {
 	switch len(id) {
 	case UUIDHexStringLen:
-		return "", fmt.Errorf("cannot get treeID from plain UUID")
+		return "", ErrPlainUUID
 	case EntryIDHexStringLen, TreeIDHexStringLen:
 		if err := ValidateEntryID(id); err != nil {
 			return "", err
