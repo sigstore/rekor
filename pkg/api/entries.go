@@ -187,7 +187,15 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	metricNewEntries.Inc()
 
 	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
+
 	uuid := hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
+	activeTree := fmt.Sprintf("%x", tc.logID)
+	entryIDstruct, err := sharding.CreateEntryIDFromParts(activeTree, uuid)
+	if err != nil {
+		err := fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, uuid, err)
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, fmt.Sprintf(validationError, err))
+	}
+	entryID := entryIDstruct.ReturnEntryIDString()
 
 	// The log index should be the virtual log index across all shards
 	virtualIndex := sharding.VirtualLogIndex(queuedLeaf.LeafIndex, api.logRanges.ActiveTreeID(), api.logRanges)
@@ -206,7 +214,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 				return
 			}
 			for _, key := range keys {
-				if err := addToIndex(context.Background(), key, uuid); err != nil {
+				if err := addToIndex(context.Background(), key, entryID); err != nil {
 					log.RequestIDLogger(params.HTTPRequest).Error(err)
 				}
 			}
@@ -218,11 +226,11 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		go func() {
 			attestation := entry.Attestation()
 			if attestation == nil {
-				log.RequestIDLogger(params.HTTPRequest).Infof("no attestation for %s", uuid)
+				log.RequestIDLogger(params.HTTPRequest).Infof("no attestation for %s", entryID)
 				return
 			}
 			// TODO stop using uuid and use attestation hash
-			if err := storeAttestation(context.Background(), uuid, attestation); err != nil {
+			if err := storeAttestation(context.Background(), entryIDstruct.UUID, attestation); err != nil {
 				log.RequestIDLogger(params.HTTPRequest).Errorf("error storing attestation: %s", err)
 			}
 		}()
