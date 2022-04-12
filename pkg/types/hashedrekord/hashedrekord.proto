@@ -35,11 +35,11 @@ message ProposedHashedRekord {
     /*
      * Digital signature and public key
      */
-    dev.sigstore.rekor.v2.Signature signature = 1 [(google.api.field_behavior) = REQUIRED];
+    dev.sigstore.rekor.v2.common.Signature signature = 1 [(google.api.field_behavior) = REQUIRED];
     /*
      * Digest over entire artifact
      */
-    dev.sigstore.rekor.v2.Hash hash           = 2 [(google.api.field_behavior) = REQUIRED];
+    dev.sigstore.rekor.v2.common.Hash hash           = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 /*
@@ -50,9 +50,9 @@ message HashedRekord {
     /*
      * Digital signature and public key
      */
-    dev.sigstore.rekor.v2.Signature signature = 1;
+    dev.sigstore.rekor.v2.common.Signature signature = 1;
     /*
      * Digest over entire artifact
      */
-    dev.sigstore.rekor.v2.Hash hash           = 2;
+    dev.sigstore.rekor.v2.common.Hash hash           = 2;
 }

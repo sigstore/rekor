@@ -32,15 +32,15 @@ message ProposedHelmChart {
     /*
      * Public key used to verify signed provenance file (currently PGP only)
      */
-    dev.sigstore.rekor.v2.PublicKey public_key = 1 [(google.api.field_behavior) = REQUIRED];
+    dev.sigstore.rekor.v2.common.PublicKey public_key = 1 [(google.api.field_behavior) = REQUIRED];
     /*
      * Helm chart contents (not stored in log, but needed to verify integrity of provenance)
      */
-    bytes chart                                = 2 [(google.api.field_behavior) = REQUIRED];
+    bytes chart                                       = 2 [(google.api.field_behavior) = REQUIRED];
     /*
      * Helm provenance file (this will be stored in transparency log entry)
      */
-    bytes provenance_file                      = 3 [(google.api.field_behavior) = REQUIRED];
+    bytes provenance_file                             = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
 /*
@@ -51,9 +51,9 @@ message HelmChart {
     /*
      * Digital signature and public key
      */
-    dev.sigstore.rekor.v2.Signature signature = 1;
+    dev.sigstore.rekor.v2.common.Signature signature = 1;
     /*
      * Hash over entire helm chart
      */
-    dev.sigstore.rekor.v2.Hash hash           = 2;
+    dev.sigstore.rekor.v2.common.Hash hash           = 2;
 }

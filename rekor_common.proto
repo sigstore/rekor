@@ -14,10 +14,10 @@
 // limitations under the License.
 
 syntax = "proto3";
-package dev.sigstore.rekor.v2;
+package dev.sigstore.rekor.v2.common;
 
-option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf";
-option java_package = "dev.sigstore.rekor.v2";
+option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf/common";
+option java_package = "dev.sigstore.rekor.v2.common";
 option java_multiple_files = true;
 option java_outer_classname = "RekorCommonProto";
 

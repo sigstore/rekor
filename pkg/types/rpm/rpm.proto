@@ -32,11 +32,11 @@ message ProposedRPMPackage {
     /*
      * Public key (currently only PGP supported)
      */
-    dev.sigstore.rekor.v2.PublicKey public_key = 1 [(google.api.field_behavior) = REQUIRED];
+    dev.sigstore.rekor.v2.common.PublicKey public_key = 1 [(google.api.field_behavior) = REQUIRED];
     /*
      * RPM package which contains an embedded signature (this will not be persisted into the log)
      */
-    bytes content                              = 2 [(google.api.field_behavior) = REQUIRED];
+    bytes content                                     = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 /*
@@ -47,13 +47,13 @@ message RPMPackage {
     /*
      * Digital signature and public key
      */
-    dev.sigstore.rekor.v2.Signature signature = 1;
+    dev.sigstore.rekor.v2.common.Signature signature = 1;
     /*
      * Hash over entire RPM package
      */
-    dev.sigstore.rekor.v2.Hash hash           = 2;
+    dev.sigstore.rekor.v2.common.Hash hash           = 2;
     /*
      * Key / value pairs from RPM headers
      */
-    map<string, string> headers               = 3;
+    map<string, string> headers                      = 3;
 }

@@ -32,11 +32,11 @@ message ProposedJAR {
     /*
      * Public key used to verify embedded signature
      */
-    dev.sigstore.rekor.v2.PublicKey public_key = 1 [(google.api.field_behavior) = REQUIRED];
+    dev.sigstore.rekor.v2.common.PublicKey public_key = 1 [(google.api.field_behavior) = REQUIRED];
     /*
      * Content of JAR file with embedded signature
      */
-    bytes content                              = 2 [(google.api.field_behavior) = REQUIRED];
+    bytes content                                     = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 /*
@@ -47,9 +47,9 @@ message JAR {
     /*
      * Digital signature and public key
      */
-    dev.sigstore.rekor.v2.Signature signature = 1;
+    dev.sigstore.rekor.v2.common.Signature signature = 1;
     /*
      * Hash over entire JAR file
      */
-    dev.sigstore.rekor.v2.Hash hash           = 2;
+    dev.sigstore.rekor.v2.common.Hash hash           = 2;
 }
