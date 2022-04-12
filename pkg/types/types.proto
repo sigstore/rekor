@@ -1,0 +1,65 @@
+//
+// Copyright 2022 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package dev.sigstore.rekor.v2.types;
+
+import "pkg/types/hashedrekord/hashedrekord.proto";
+import "pkg/types/rekord/rekord.proto";
+import "pkg/types/alpine/alpine.proto";
+import "pkg/types/helm/helm.proto";
+import "pkg/types/jar/jar.proto";
+import "pkg/types/rfc3161/rfc3161.proto";
+import "pkg/types/rpm/rpm.proto";
+import "pkg/types/tuf/tuf.proto";
+
+option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf/types";
+option java_package = "dev.sigstore.rekor.v2.types";
+option java_multiple_files = true;
+option java_outer_classname = "RekorTypesProto";
+
+message ProposedLogEntry {
+    oneof proposed_log_entry {
+        dev.sigstore.rekor.v2.types.hashedrekord.ProposedHashedRekord proposed_hashed_rekord    = 1;
+        dev.sigstore.rekor.v2.types.rekord.ProposedRekord proposed_rekord                       = 2;
+        dev.sigstore.rekor.v2.types.alpine.ProposedAlpinePackage proposed_alpine_package        = 3;
+        dev.sigstore.rekor.v2.types.helm.ProposedHelmChart proposed_helm_chart                  = 4;
+        dev.sigstore.rekor.v2.types.jar.ProposedJAR proposed_jar                                = 5;
+        dev.sigstore.rekor.v2.types.rfc3161.ProposedTimestampRequest proposed_timestamp_request = 6;
+        dev.sigstore.rekor.v2.types.rpm.ProposedRPMPackage proposed_rpm_package                 = 7;
+        dev.sigstore.rekor.v2.types.tuf.ProposedTUFMetadata proposed_tuf_metadata               = 8;
+    }
+}
+
+message TypedEntry {
+    /*
+     * Actual bytes as persisted in transparency log; we provide this separately
+     * due to the potential for changes in marshalling behavior across systems and
+     * protocols
+     *
+     * persisted_entry should be a JSON object that was canonicalized according to RFC8785
+     */
+    bytes persisted_entry = 1;
+    oneof typed_entry {
+        dev.sigstore.rekor.v2.types.hashedrekord.HashedRekord hashed_rekord    = 2;
+        dev.sigstore.rekor.v2.types.rekord.Rekord rekord                       = 3;
+        dev.sigstore.rekor.v2.types.alpine.AlpinePackage alpine_package        = 4;
+        dev.sigstore.rekor.v2.types.helm.HelmChart helm_chart                  = 5;
+        dev.sigstore.rekor.v2.types.jar.JAR jar                                = 6;
+        dev.sigstore.rekor.v2.types.rfc3161.TimestampRequest timestamp_request = 7;
+        dev.sigstore.rekor.v2.types.rpm.RPMPackage rpm_package                 = 8;
+        dev.sigstore.rekor.v2.types.tuf.TUFMetadata tuf_metadata               = 9;
+    }
+}

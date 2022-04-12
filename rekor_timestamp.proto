@@ -1,0 +1,78 @@
+//
+// Copyright 2022 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package dev.sigstore.rekor.v2;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/api/httpbody.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf";
+option java_package = "dev.sigstore.rekor.v2";
+option java_multiple_files = true;
+option java_outer_classname = "RekorTimestampProto";
+
+service Timestamp {
+    /**
+     * Returns information about the current state of the transparency log
+     */
+    rpc CreateTimestamp(CreateTimestampRequest) returns (TimestampResponse){
+        option (google.api.http) = {
+          post: "/api/v2/timestamp"
+          body: "*"
+        };
+    }
+    /**
+     * Returns the public key that can be used to validate the signed tree head
+     */
+    rpc GetTimestampTrustBundle(google.protobuf.Empty) returns (TimestampTrustBundle){
+        option (google.api.http) = {
+          get: "/api/v2/timestamp/certchain"
+        };
+    }
+}
+
+message CreateTimestampRequest {
+    /*
+     * The raw HTTP body is bound to this field; this is an RFC3161 compliant blob.
+     */
+    google.api.HttpBody http_body = 1 [(google.api.field_behavior) = REQUIRED];
+    
+}
+
+message TimestampResponse {
+    /*
+     * The raw HTTP body is bound to this field; this is an RFC3161 compliant blob.
+     */
+    google.api.HttpBody http_body = 1;
+}
+
+message TimestampTrustBundle {
+    /*
+     * The set of PEM-encoded certificate chains for the timestamp service;
+     * the chain will start with any intermediate certificates (if present),
+     * and finishwith the root certificate.
+     */
+    CertificateChain chain = 1;
+}
+
+message CertificateChain {
+    /*
+     * The PEM-encoded certificate chain, ordered from leaf to intermediate to root as applicable.
+     */
+    repeated string certificates = 1;
+}

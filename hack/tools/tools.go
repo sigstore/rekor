@@ -29,4 +29,11 @@ import (
 	// These are so we can build these two binaries into containers with ko
 	_ "github.com/google/trillian/cmd/trillian_log_server"
 	_ "github.com/google/trillian/cmd/trillian_log_signer"
+
+	// These are for gRPC code generation
+	_ "github.com/googleapis/api-linter/cmd/api-linter"
+	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway"
+	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2"
+	_ "google.golang.org/grpc/cmd/protoc-gen-go-grpc"
+	_ "google.golang.org/protobuf/cmd/protoc-gen-go"
 )

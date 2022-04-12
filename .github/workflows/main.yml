@@ -35,6 +35,8 @@ jobs:
       - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v3.0.0
         with:
           go-version: ${{ env.GOVERSION }}
+      - name: deps
+        run: sudo apt-get update && sudo apt-get install -yq protobuf-compiler
       - name: Validate OpenAPI with Swagger
         run: make validate-openapi
       - name: Build

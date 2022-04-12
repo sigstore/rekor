@@ -8,5 +8,9 @@ require (
 	github.com/elazarl/go-bindata-assetfs v1.0.1 // indirect
 	github.com/go-swagger/go-swagger v0.29.0
 	github.com/google/trillian v1.4.0
+	github.com/googleapis/api-linter v1.30.1
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.10.0
 	github.com/stephens2424/writerset v1.0.2 // indirect
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
+	google.golang.org/protobuf v1.27.1
 )

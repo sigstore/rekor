@@ -19,10 +19,14 @@ all: rekor-cli rekor-server
 
 GENSRC = pkg/generated/client/%.go pkg/generated/models/%.go pkg/generated/restapi/%.go
 OPENAPIDEPS = openapi.yaml $(shell find pkg/types -iname "*.json")
-SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go"|grep -v pkg/generated) pkg/generated/restapi/configure_rekor_server.go $(GENSRC)
+SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go"|grep -v pkg/generated) pkg/generated/restapi/configure_rekor_server.go $(GENSRC) $(GENPROTOSRC)
 TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
 BIN_DIR := $(abspath $(ROOT_DIR)/bin)
+
+GENPROTOSRC = pkg/generated/protobuf/%.go
+PROTOBUF_DEPS = $(shell find . -iname "*.proto" | grep -v "third_party")
+GO_MODULE=$(shell head -1 go.mod | cut -f2 -d ' ')
 
 PROJECT_ID ?= projectsigstore
 RUNTIME_IMAGE ?= gcr.io/distroless/static
@@ -51,6 +55,22 @@ GHCR_PREFIX ?= ghcr.io/sigstore/rekor
 # Binaries
 SWAGGER := $(TOOLS_BIN_DIR)/swagger
 GO-FUZZ-BUILD := $(TOOLS_BIN_DIR)/go-fuzz-build
+PROTOC-GEN-GO := $(TOOLS_BIN_DIR)/protoc-gen-go
+PROTOC-GEN-GO-GRPC := $(TOOLS_BIN_DIR)/protoc-gen-go-grpc
+PROTOC-GEN-GRPC-GATEWAY := $(TOOLS_BIN_DIR)/protoc-gen-grpc-gateway
+PROTOC-API-LINTER := $(TOOLS_BIN_DIR)/api-linter
+
+$(GENPROTOSRC): $(PROTOC-GEN-GO) $(PROTOC-GEN-GO-GRPC) $(PROTOC-GEN-GRPC-GATEWAY) $(PROTOC-API-LINTER) $(PROTOBUF_DEPS)
+	mkdir -p pkg/generated/protobuf
+	$(PROTOC-API-LINTER) -I third_party/googleapis/ -I . $(PROTOBUF_DEPS) #--set-exit-status # TODO: add strict checking
+	protoc --plugin=protoc-gen-go=$(TOOLS_BIN_DIR)/protoc-gen-go \
+	       --go_opt=module=$(GO_MODULE) --go_out=. \
+	       --plugin=protoc-gen-go-grpc=$(TOOLS_BIN_DIR)/protoc-gen-go-grpc \
+	       --go-grpc_opt=module=$(GO_MODULE) --go-grpc_out=. \
+	       --plugin=protoc-gen-grpc-gateway=$(TOOLS_BIN_DIR)/protoc-gen-grpc-gateway \
+	       --grpc-gateway_opt=module=$(GO_MODULE) --grpc-gateway_opt=logtostderr=true --grpc-gateway_out=. \
+		   -I third_party/googleapis/ -I . $(PROTOBUF_DEPS)
+
 
 REKOR_LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
               -X sigs.k8s.io/release-utils/version.gitCommit=$(GIT_HASH) \
@@ -79,7 +99,7 @@ lint:
 gosec:
 	$(GOBIN)/gosec ./...
 
-gen: $(GENSRC)
+gen: $(GENSRC) $(GENPROTOSRC)
 
 rekor-cli: $(SRCS)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(CLI_LDFLAGS)" -o rekor-cli ./cmd/rekor-cli
@@ -174,6 +194,18 @@ $(GO-FUZZ-BUILD): $(TOOLS_DIR)/go.mod
 
 $(SWAGGER): $(TOOLS_DIR)/go.mod
 	cd $(TOOLS_DIR); go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/swagger github.com/go-swagger/go-swagger/cmd/swagger
+
+$(PROTOC-GEN-GO): $(TOOLS_DIR)/go.mod
+	cd $(TOOLS_DIR); go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/protoc-gen-go google.golang.org/protobuf/cmd/protoc-gen-go
+
+$(PROTOC-GEN-GO-GRPC): $(TOOLS_DIR)/go.mod
+	cd $(TOOLS_DIR); go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/protoc-gen-go-grpc google.golang.org/grpc/cmd/protoc-gen-go-grpc
+
+$(PROTOC-GEN-GRPC-GATEWAY): $(TOOLS_DIR)/go.mod
+	cd $(TOOLS_DIR); go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/protoc-gen-grpc-gateway github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway
+
+$(PROTOC-API-LINTER): $(TOOLS_DIR)/go.mod
+	cd $(TOOLS_DIR); go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/api-linter github.com/googleapis/api-linter/cmd/api-linter
 
 ##################
 # help
