@@ -223,7 +223,10 @@ func TestGet(t *testing.T) {
 	out := runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
 
-	uuid := getUUIDFromUploadOutput(t, out)
+	uuid, err := sharding.GetUUIDFromIDString(getUUIDFromUploadOutput(t, out))
+	if err != nil {
+		t.Error(err)
+	}
 
 	// since we at least have 1 valid entry, check the log at index 0
 	runCli(t, "get", "--log-index", "0")

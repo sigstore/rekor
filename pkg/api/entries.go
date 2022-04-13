@@ -112,9 +112,15 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 			if err != nil {
 				log.Logger.Errorf("error fetching attestation by key, trying by UUID: %s %s", attKey, err)
 				// the original attestation implementation stored this by uuid instead of by digest
-				att, err = storageClient.FetchAttestation(ctx, uuid)
+				activeTree := fmt.Sprintf("%x", tc.logID)
+				entryIDstruct, err := sharding.CreateEntryIDFromParts(activeTree, uuid)
 				if err != nil {
-					log.Logger.Errorf("error fetching attestation by uuid: %s %s", uuid, err)
+					err := fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, uuid, err)
+					return nil, err
+				}
+				att, err = storageClient.FetchAttestation(ctx, entryIDstruct.UUID)
+				if err != nil {
+					log.Logger.Errorf("error fetching attestation by uuid: %s %s", entryIDstruct.UUID, err)
 				}
 			}
 			if err == nil {
@@ -205,7 +211,15 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	metricNewEntries.Inc()
 
 	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
+
 	uuid := hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
+	activeTree := fmt.Sprintf("%x", tc.logID)
+	entryIDstruct, err := sharding.CreateEntryIDFromParts(activeTree, uuid)
+	if err != nil {
+		err := fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, uuid, err)
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, fmt.Sprintf(validationError, err))
+	}
+	entryID := entryIDstruct.ReturnEntryIDString()
 
 	// The log index should be the virtual log index across all shards
 	virtualIndex := sharding.VirtualLogIndex(queuedLeaf.LeafIndex, api.logRanges.ActiveTreeID(), api.logRanges)
@@ -224,7 +238,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 				return
 			}
 			for _, key := range keys {
-				if err := addToIndex(context.Background(), key, uuid); err != nil {
+				if err := addToIndex(context.Background(), key, entryID); err != nil {
 					log.RequestIDLogger(params.HTTPRequest).Error(err)
 				}
 			}
@@ -240,9 +254,10 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 				return
 			}
 			if err := storeAttestation(context.Background(), attKey, attVal); err != nil {
+				// entryIDstruct.UUID
 				log.RequestIDLogger(params.HTTPRequest).Errorf("error storing attestation: %s", err)
 			} else {
-				log.RequestIDLogger(params.HTTPRequest).Infof("stored attestation for uuid %s with filename %s", uuid, attKey)
+				log.RequestIDLogger(params.HTTPRequest).Infof("stored attestation for uuid %s with filename %s", entryIDstruct.UUID, attKey)
 			}
 		}()
 	}
