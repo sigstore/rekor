@@ -18,10 +18,7 @@ package helm
 import (
 	"bytes"
 	"context"
-	"errors"
 	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"testing"
 
@@ -49,35 +46,12 @@ func TestCrossFieldValidation(t *testing.T) {
 	type TestCase struct {
 		caseDesc                  string
 		entry                     V001Entry
-		hasExtEntities            bool
 		expectUnmarshalSuccess    bool
 		expectCanonicalizeSuccess bool
 	}
 
 	keyBytes, _ := ioutil.ReadFile("../../../../tests/test_helm_armor.pub")
 	provenanceBytes, _ := ioutil.ReadFile("../../../../tests/test-0.1.0.tgz.prov")
-
-	testServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			var file *[]byte
-			var err error
-
-			switch r.URL.Path {
-			case "/key":
-				file = &keyBytes
-			case "/provenance":
-				file = &provenanceBytes
-			default:
-				err = errors.New("unknown URL")
-			}
-			if err != nil {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(*file)
-		}))
-	defer testServer.Close()
 
 	testCases := []TestCase{
 		{
@@ -104,7 +78,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				HelmObj: models.HelmV001Schema{
 					PublicKey: &models.HelmV001SchemaPublicKey{
-						Content: strfmt.Base64(keyBytes),
+						Content: (*strfmt.Base64)(&keyBytes),
 					},
 				},
 			},
@@ -115,7 +89,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				HelmObj: models.HelmV001Schema{
 					PublicKey: &models.HelmV001SchemaPublicKey{
-						URL: strfmt.URI(testServer.URL + "/key"),
+						Content: (*strfmt.Base64)(&keyBytes),
 					},
 					Chart: &models.HelmV001SchemaChart{
 						Provenance: &models.HelmV001SchemaChartProvenance{},
@@ -123,50 +97,13 @@ func TestCrossFieldValidation(t *testing.T) {
 				},
 			},
 			expectUnmarshalSuccess: false,
-			hasExtEntities:         true,
-		},
-		{
-			caseDesc: "provenance file with 404 on public key",
-			entry: V001Entry{
-				HelmObj: models.HelmV001Schema{
-					PublicKey: &models.HelmV001SchemaPublicKey{
-						URL: strfmt.URI(testServer.URL + "/404"),
-					},
-					Chart: &models.HelmV001SchemaChart{
-						Provenance: &models.HelmV001SchemaChartProvenance{
-							Content: strfmt.Base64(provenanceBytes),
-						},
-					},
-				},
-			},
-			expectUnmarshalSuccess:    true,
-			hasExtEntities:            true,
-			expectCanonicalizeSuccess: false,
-		},
-		{
-			caseDesc: "public key with 404 on provenance file",
-			entry: V001Entry{
-				HelmObj: models.HelmV001Schema{
-					PublicKey: &models.HelmV001SchemaPublicKey{
-						Content: strfmt.Base64(keyBytes),
-					},
-					Chart: &models.HelmV001SchemaChart{
-						Provenance: &models.HelmV001SchemaChartProvenance{
-							URL: strfmt.URI(testServer.URL + "/404"),
-						},
-					},
-				},
-			},
-			expectUnmarshalSuccess:    true,
-			hasExtEntities:            true,
-			expectCanonicalizeSuccess: false,
 		},
 		{
 			caseDesc: "public key and invalid provenance content",
 			entry: V001Entry{
 				HelmObj: models.HelmV001Schema{
 					PublicKey: &models.HelmV001SchemaPublicKey{
-						Content: strfmt.Base64(keyBytes),
+						Content: (*strfmt.Base64)(&keyBytes),
 					},
 					Chart: &models.HelmV001SchemaChart{
 						Provenance: &models.HelmV001SchemaChartProvenance{
@@ -176,7 +113,6 @@ func TestCrossFieldValidation(t *testing.T) {
 				},
 			},
 			expectUnmarshalSuccess:    true,
-			hasExtEntities:            false,
 			expectCanonicalizeSuccess: false,
 		},
 		{
@@ -184,7 +120,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				HelmObj: models.HelmV001Schema{
 					PublicKey: &models.HelmV001SchemaPublicKey{
-						Content: strfmt.Base64(provenanceBytes),
+						Content: (*strfmt.Base64)(&provenanceBytes),
 					},
 					Chart: &models.HelmV001SchemaChart{
 						Provenance: &models.HelmV001SchemaChartProvenance{
@@ -194,7 +130,6 @@ func TestCrossFieldValidation(t *testing.T) {
 				},
 			},
 			expectUnmarshalSuccess:    true,
-			hasExtEntities:            false,
 			expectCanonicalizeSuccess: false,
 		},
 		{
@@ -202,7 +137,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				HelmObj: models.HelmV001Schema{
 					PublicKey: &models.HelmV001SchemaPublicKey{
-						Content: strfmt.Base64(keyBytes),
+						Content: (*strfmt.Base64)(&keyBytes),
 					},
 					Chart: &models.HelmV001SchemaChart{
 						Provenance: &models.HelmV001SchemaChartProvenance{
@@ -212,7 +147,6 @@ func TestCrossFieldValidation(t *testing.T) {
 				},
 			},
 			expectUnmarshalSuccess:    true,
-			hasExtEntities:            false,
 			expectCanonicalizeSuccess: true,
 		},
 	}
@@ -239,10 +173,6 @@ func TestCrossFieldValidation(t *testing.T) {
 			}
 			if err := v.validate(); err != nil {
 				return
-			}
-
-			if tc.entry.hasExternalEntities() != tc.hasExtEntities {
-				t.Errorf("unexpected result from HasExternalEntities for '%v'", tc.caseDesc)
 			}
 
 			b, err := v.Canonicalize(context.TODO())

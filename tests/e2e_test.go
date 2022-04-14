@@ -31,9 +31,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"net"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -378,9 +375,8 @@ func TestAPK(t *testing.T) {
 	outputContains(t, out, "Created entry at")
 	out = runCli(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", pubPath)
 	outputContains(t, out, "Entry already exists")
-	// pass invalid public key, ensure we see a 400 error with helpful message
+	// pass invalid public key, ensure we see an error with helpful message
 	out = runCliErr(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", artifactPath)
-	outputContains(t, out, "400")
 	outputContains(t, out, "invalid public key")
 }
 
@@ -521,41 +517,6 @@ func TestTimestampArtifact(t *testing.T) {
 	outputContains(t, out, "Created entry at")
 }
 
-func TestJARURL(t *testing.T) {
-	td := t.TempDir()
-	artifactPath := filepath.Join(td, "artifact.jar")
-
-	createSignedJar(t, artifactPath)
-	jarBytes, _ := ioutil.ReadFile(artifactPath)
-	jarSHA := sha256.Sum256(jarBytes)
-	testServer := httptest.NewUnstartedServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path != "/jar" {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(jarBytes)
-		}))
-	defer testServer.Close()
-	l, err := net.Listen("tcp", "172.17.0.1:0")
-	if err != nil {
-		t.Skipf("unable to forward port to rekor server: %s", err)
-	}
-	testServer.Listener.Close()
-	testServer.Listener = l
-	testServer.Start()
-	// ensure hash is required for JAR since signature/public key are embedded
-	out := runCliErr(t, "upload", "--artifact", testServer.URL+"/jar", "--type", "jar")
-	outputContains(t, out, "hash value must be provided if URL is specified")
-	// ensure valid JAR can be fetched over URL and inserted
-	out = runCli(t, "upload", "--artifact", testServer.URL+"/jar", "--type", "jar", "--artifact-hash="+hex.EncodeToString(jarSHA[:]))
-	outputContains(t, out, "Created entry at")
-	// ensure a 404 is handled correctly
-	out = runCliErr(t, "upload", "--artifact", testServer.URL+"/not_found", "--type", "jar", "--artifact-hash="+hex.EncodeToString(jarSHA[:]))
-	outputContains(t, out, "404")
-}
-
 func TestX509(t *testing.T) {
 	td := t.TempDir()
 	artifactPath := filepath.Join(td, "artifact")
@@ -688,10 +649,10 @@ func TestSignedEntryTimestamp(t *testing.T) {
 				Content: strfmt.Base64(payload),
 			},
 			Signature: &models.RekordV001SchemaSignature{
-				Content: strfmt.Base64(sig),
-				Format:  models.RekordV001SchemaSignatureFormatX509,
+				Content: (*strfmt.Base64)(&sig),
+				Format:  swag.String(models.RekordV001SchemaSignatureFormatX509),
 				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
-					Content: strfmt.Base64(pemBytes),
+					Content: (*strfmt.Base64)(&pemBytes),
 				},
 			},
 		},
@@ -846,16 +807,18 @@ func TestEntryUpload(t *testing.T) {
 	// Create the entry file
 	entryPath := filepath.Join(t.TempDir(), "entry.json")
 
+	pubKeyBytes := []byte(publicKey)
+
 	re := rekord.V001Entry{
 		RekordObj: models.RekordV001Schema{
 			Data: &models.RekordV001SchemaData{
 				Content: strfmt.Base64(payload),
 			},
 			Signature: &models.RekordV001SchemaSignature{
-				Content: strfmt.Base64(sig),
-				Format:  models.RekordV001SchemaSignatureFormatPgp,
+				Content: (*strfmt.Base64)(&sig),
+				Format:  swag.String(models.RekordV001SchemaSignatureFormatPgp),
 				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
-					Content: strfmt.Base64([]byte(publicKey)),
+					Content: (*strfmt.Base64)(&pubKeyBytes),
 				},
 			},
 		},

@@ -51,12 +51,6 @@
                     },
                     "required": [ "algorithm", "value" ]
                 },
-                "url": {
-                    "description": "Specifies the location of the archive; if this is specified, a hash value must also be provided",
-                    "type": "string",
-                    "format": "uri",
-                    "writeOnly": true
-                },
                 "content": {
                     "description": "Specifies the archive inline within the document",
                     "type": "string",
@@ -66,7 +60,7 @@
             },
             "oneOf": [
                 {
-                    "required": [ "url" ]
+                    "required": [ "hash" ]
                 },
                 {
                     "required": [ "content" ]
