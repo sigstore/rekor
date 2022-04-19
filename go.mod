@@ -27,7 +27,7 @@ require (
 	github.com/google/trillian v1.4.0
 	github.com/in-toto/in-toto-golang v0.3.4-0.20211211042327-af1f9fb822bf
 	github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b
-	github.com/mediocregopher/radix/v4 v4.0.0
+	github.com/mediocregopher/radix/v4 v4.1.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/pkg/errors v0.9.1
