@@ -44,7 +44,7 @@ jobs:
       - name: Test
         run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
       - name: Upload Coverage Report
-        uses: codecov/codecov-action@e3c560433a6cc60aec8812599b7844a7b4fa0d71 # v3.0.0
+        uses: codecov/codecov-action@81cd2dc8148241f03f5839d295e000b8f761e378 # v3.0.0
       - name: Ensure no files were modified as a result of the build
         run: git update-index --refresh && git diff-index --quiet HEAD -- || git diff --exit-code
 
