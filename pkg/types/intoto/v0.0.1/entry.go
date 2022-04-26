@@ -92,11 +92,15 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 				result = append(result, alg+":"+ds)
 			}
 		}
-		predicate, err := parseSlsaPredicate(v.env.Payload)
-		if err == nil {
-			for _, s := range predicate.Predicate.Materials {
-				for alg, ds := range s.Digest {
-					result = append(result, alg+":"+ds)
+		// Not all in-toto statements will contain a SLSA provenance predicate.
+		// See https://github.com/in-toto/attestation/blob/main/spec/README.md#predicate
+		// for other predicates.
+		if predicate, err := parseSlsaPredicate(v.env.Payload); err == nil {
+			if predicate.Predicate.Materials != nil {
+				for _, s := range predicate.Predicate.Materials {
+					for alg, ds := range s.Digest {
+						result = append(result, alg+":"+ds)
+					}
 				}
 			}
 		}
