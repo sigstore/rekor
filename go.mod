@@ -22,7 +22,7 @@ require (
 	github.com/go-openapi/validate v0.21.0
 	github.com/go-playground/validator/v10 v10.10.1
 	github.com/golang/glog v0.0.0-20210429001901-424d2337a529 // indirect
-	github.com/google/go-cmp v0.5.7
+	github.com/google/go-cmp v0.5.8
 	github.com/google/rpmpack v0.0.0-20210518075352-dc539ef4f2ea
 	github.com/google/trillian v1.4.0
 	github.com/in-toto/in-toto-golang v0.3.4-0.20211211042327-af1f9fb822bf
