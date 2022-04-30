@@ -80,6 +80,10 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 
 	switch v.env.PayloadType {
 	case in_toto.PayloadType:
+		if v.IntotoObj.Content == nil || v.IntotoObj.Content.Hash == nil {
+			log.Logger.Info("IntotoObj content or hash is nil")
+			return result, nil
+		}
 		hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.Hash.Algorithm, *v.IntotoObj.Content.Hash.Value))
 		result = append(result, hashkey)
 
