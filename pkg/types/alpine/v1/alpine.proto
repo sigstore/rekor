@@ -1,0 +1,55 @@
+//
+// Copyright 2022 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package dev.sigstore.rekor.types.alpine.v1;
+
+import "google/api/field_behavior.proto";
+import "rekor_common.proto";
+
+option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf/types/alpine/v1";
+option java_package = "dev.sigstore.rekor.types.alpine.v1";
+option java_multiple_files = true;
+option java_outer_classname = "AlpineV1Proto";
+
+/*
+ * ProposedAlpinePackage represents the structure of the message required to present to Rekor
+ * to make an entry of the AlpinePackage type.
+ */
+message ProposedAlpinePackage {
+    /*
+     * Digital signature and public key
+     */
+    dev.sigstore.rekor.common.PublicKey public_key = 1 [(google.api.field_behavior) = REQUIRED];
+    /*
+     * Alpine package (that contains embedded signature)
+     */
+    bytes content                                  = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+/*
+ * AlpinePackage represents the structure of the entry persisted in the transparency log for
+ * the AlpinePackage type.
+ */
+message AlpinePackage {
+    /*
+     * Digital signature and public key
+     */
+    dev.sigstore.rekor.common.Signature signature = 1;
+    /*
+     * Hash over entire alpine package
+     */
+    dev.sigstore.rekor.common.Hash hash           = 2;
+}

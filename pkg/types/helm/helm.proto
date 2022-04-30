@@ -14,33 +14,23 @@
 // limitations under the License.
 
 syntax = "proto3";
-package dev.sigstore.rekor.v2.types.helm;
+package dev.sigstore.rekor.types.helm;
 
-import "google/api/field_behavior.proto";
-import "rekor_common.proto";
+import "pkg/types/helm/v1/helm.proto";
 
 option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf/types/helm";
-option java_package = "dev.sigstore.rekor.v2.types.helm";
+option java_package = "dev.sigstore.rekor.types.helm";
 option java_multiple_files = true;
-option java_outer_classname = "RekorHelmProto";
+option java_outer_classname = "HelmProto";
 
 /*
  * ProposedHelmChart represents the structure of the message required to present to Rekor
  * to make an entry of the HelmChart type.
  */
 message ProposedHelmChart {
-    /*
-     * Public key used to verify signed provenance file (currently PGP only)
-     */
-    dev.sigstore.rekor.v2.common.PublicKey public_key = 1 [(google.api.field_behavior) = REQUIRED];
-    /*
-     * Helm chart contents (not stored in log, but needed to verify integrity of provenance)
-     */
-    bytes chart                                       = 2 [(google.api.field_behavior) = REQUIRED];
-    /*
-     * Helm provenance file (this will be stored in transparency log entry)
-     */
-    bytes provenance_file                             = 3 [(google.api.field_behavior) = REQUIRED];
+    oneof proposed_helm_chart {
+        dev.sigstore.rekor.types.helm.v1.ProposedHelmChart proposed_helm_chart_v1 = 1;
+    }
 }
 
 /*
@@ -48,12 +38,7 @@ message ProposedHelmChart {
  * the HelmChart type.
  */
 message HelmChart {
-    /*
-     * Digital signature and public key
-     */
-    dev.sigstore.rekor.v2.common.Signature signature = 1;
-    /*
-     * Hash over entire helm chart
-     */
-    dev.sigstore.rekor.v2.common.Hash hash           = 2;
+    oneof helm_chart {
+        dev.sigstore.rekor.types.helm.v1.HelmChart helm_chart_v1 = 1;
+    }
 }

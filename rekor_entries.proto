@@ -14,7 +14,7 @@
 // limitations under the License.
 
 syntax = "proto3";
-package dev.sigstore.rekor.v2;
+package dev.sigstore.rekor;
 
 import "google/api/annotations.proto";
 import "google/api/client.proto";
@@ -22,7 +22,7 @@ import "google/api/field_behavior.proto";
 import "pkg/types/types.proto";
 
 option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf";
-option java_package = "dev.sigstore.rekor.v2";
+option java_package = "dev.sigstore.rekor";
 option java_multiple_files = true;
 option java_outer_classname = "RekorEntriesProto";
 
@@ -58,14 +58,37 @@ service Entries {
     }
 }
 
+/*
+ * Represents a proposed log entry; Rekor will verify the validity of the digital signature contained within
+ * before committing the entry into the log
+ */
 message CreateLogEntryRequest {
     /*
      * The proposed entry to be made into the log
      */
-    dev.sigstore.rekor.v2.types.ProposedLogEntry proposed_entry = 1 [(google.api.field_behavior) = REQUIRED];
+    dev.sigstore.rekor.types.ProposedLogEntry proposed_entry = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
+/*
+ * Represents an envelope that contains both a log entry as well as the material required to prove inclusion
+ * in the transparency log
+ */
 message LogEntry {
+    /*
+     * The log entry object
+     */
+    LogEntryObject entry      = 1;
+    /*
+     * Contains information that can be used to prove the inclusion of the entry into the transparency log
+     * along with a digital signature over the log entry content
+     */
+    Verification verification = 2;
+}
+
+/*
+ * Represents a log entry (with relevant metadata) that has been written to the log
+ */
+message LogEntryObject {
     /*
      * The log ID, which is computed as the SHA256 digest of the DER-encoded public key of the log
      */
@@ -77,7 +100,7 @@ message LogEntry {
     /*
      * The fields of the entry
      */
-    dev.sigstore.rekor.v2.types.TypedEntry body = 3;
+    dev.sigstore.rekor.types.TypedEntry body = 3;
     /*
      * The time that the entry was integrated into the transparency log
      */
@@ -86,12 +109,11 @@ message LogEntry {
      * The attestation provided at the time of insertion (if present)
      */
     Attestation attestation                     = 5;
-    /*
-     * The proof that the entry exists in the transparency log
-     */
-    Verification verification                   = 6;
 }
 
+/*
+ * Represents an attestation related to a particular log entry
+ */
 message Attestation {
     /*
      * The attestation content
@@ -99,17 +121,25 @@ message Attestation {
     bytes payload = 1;
 }
 
+/*
+ * Verification contains both an inclusion proof for the entry within the log, as
+ * well as a digitally signed 
+ */
 message Verification {
     /*
      * The proof that the entry exists in the transparency log
      */
     InclusionProof inclusion_proof = 1;
     /*
-     * The proof that the entry exists in the transparency log
+     * A digital signature over the RFC8785 canonicalized JSON version of LogEntryObject
      */
     bytes signed_entry_timestamp   = 2;
 }
 
+/*
+ * Inclusion proof includes the entire set of information required to compute a proof
+ * of inclusion for an entry in an RFC6962-defined Merkle tree
+ */
 message InclusionProof {
     /*
      * The index of the entry within the log
@@ -129,6 +159,9 @@ message InclusionProof {
     repeated string hashes = 4;
 }
 
+/*
+ * Represents a request to fetch an entry from the transparency log
+ */
 message GetLogEntryRequest {
     /*
      * The universally unique identifier for the entry within the log shard
@@ -140,21 +173,27 @@ message GetLogEntryRequest {
     int64 log_index = 2;
 }
 
+/*
+ * Represents a request to find all matching entries from within the transparency log
+ */
 message ListLogEntriesRequest {
     /*
      * A list of candidate entries to search for
      */
-    repeated dev.sigstore.rekor.v2.types.ProposedLogEntry proposed_entries = 1;
+    repeated dev.sigstore.rekor.types.ProposedLogEntry proposed_entries = 1;
     /*
      * A list of UUIDs to search for
      */
-    repeated string uuids                                                  = 2;
+    repeated string uuids                                               = 2;
     /*
      * A list of log indices to search for
      */
-    repeated int64 log_indices                                             = 3;
+    repeated int64 log_indices                                          = 3;
 }
 
+/*
+ * Represents a response of all matching entries from within the transparency log
+ */
 message ListLogEntriesResponse {
     /*
      * A list of entries found in the log

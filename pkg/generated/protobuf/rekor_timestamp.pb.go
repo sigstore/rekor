@@ -144,7 +144,7 @@ type TimestampTrustBundle struct {
 	//
 	// The set of PEM-encoded certificate chains for the timestamp service;
 	// the chain will start with any intermediate certificates (if present),
-	// and finishwith the root certificate.
+	// and finish with the root certificate.
 	Chain *CertificateChain `protobuf:"bytes,1,opt,name=chain,proto3" json:"chain,omitempty"`
 }
 

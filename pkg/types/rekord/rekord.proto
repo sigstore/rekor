@@ -14,30 +14,23 @@
 // limitations under the License.
 
 syntax = "proto3";
-package dev.sigstore.rekor.v2.types.rekord;
+package dev.sigstore.rekor.types.rekord;
 
-import "google/api/field_behavior.proto";
-import "rekor_common.proto";
+import "pkg/types/rekord/v1/rekord.proto";
 
 option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf/types/rekord";
-option java_package = "dev.sigstore.rekor.v2.types.rekord";
+option java_package = "dev.sigstore.rekor.types.rekord";
 option java_multiple_files = true;
-option java_outer_classname = "RekorRekordProto";
+option java_outer_classname = "RekordProto";
 
 /*
  * ProposedRekord represents the structure of the message required to present to Rekor
  * to make an entry of the Rekord type.
  */
 message ProposedRekord {
-    /*
-     * Digital signature and public key
-     */
-    dev.sigstore.rekor.v2.common.Signature signature = 1 [(google.api.field_behavior) = REQUIRED];
-    /*
-     * Content of artifact to be used during verification of digital signature only
-     * ** This value is not persisted into the log **
-     */
-    bytes content                                    = 2 [(google.api.field_behavior) = REQUIRED];
+    oneof proposed_rekord {
+        dev.sigstore.rekor.types.rekord.v1.ProposedRekord proposed_rekord_v1 = 1;
+    }
 }
 
 /*
@@ -45,12 +38,7 @@ message ProposedRekord {
  * the Rekord type.
  */
 message Rekord {
-    /*
-     * Digital signature and public key
-     */
-    dev.sigstore.rekor.v2.common.Signature signature = 1;
-    /*
-     * Digest over content
-     */
-    dev.sigstore.rekor.v2.common.Hash hash           = 2;
+    oneof rekord {
+        dev.sigstore.rekor.types.rekord.v1.Rekord rekord_v1 = 1;
+    }
 }

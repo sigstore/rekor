@@ -39,7 +39,7 @@ func NewEntriesClient(cc grpc.ClientConnInterface) EntriesClient {
 
 func (c *entriesClient) CreateLogEntry(ctx context.Context, in *CreateLogEntryRequest, opts ...grpc.CallOption) (*LogEntry, error) {
 	out := new(LogEntry)
-	err := c.cc.Invoke(ctx, "/dev.sigstore.rekor.v2.Entries/CreateLogEntry", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/dev.sigstore.rekor.Entries/CreateLogEntry", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (c *entriesClient) CreateLogEntry(ctx context.Context, in *CreateLogEntryRe
 
 func (c *entriesClient) GetLogEntry(ctx context.Context, in *GetLogEntryRequest, opts ...grpc.CallOption) (*LogEntry, error) {
 	out := new(LogEntry)
-	err := c.cc.Invoke(ctx, "/dev.sigstore.rekor.v2.Entries/GetLogEntry", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/dev.sigstore.rekor.Entries/GetLogEntry", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (c *entriesClient) GetLogEntry(ctx context.Context, in *GetLogEntryRequest,
 
 func (c *entriesClient) ListLogEntries(ctx context.Context, in *ListLogEntriesRequest, opts ...grpc.CallOption) (*ListLogEntriesResponse, error) {
 	out := new(ListLogEntriesResponse)
-	err := c.cc.Invoke(ctx, "/dev.sigstore.rekor.v2.Entries/ListLogEntries", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/dev.sigstore.rekor.Entries/ListLogEntries", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func _Entries_CreateLogEntry_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/dev.sigstore.rekor.v2.Entries/CreateLogEntry",
+		FullMethod: "/dev.sigstore.rekor.Entries/CreateLogEntry",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EntriesServer).CreateLogEntry(ctx, req.(*CreateLogEntryRequest))
@@ -134,7 +134,7 @@ func _Entries_GetLogEntry_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/dev.sigstore.rekor.v2.Entries/GetLogEntry",
+		FullMethod: "/dev.sigstore.rekor.Entries/GetLogEntry",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EntriesServer).GetLogEntry(ctx, req.(*GetLogEntryRequest))
@@ -152,7 +152,7 @@ func _Entries_ListLogEntries_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/dev.sigstore.rekor.v2.Entries/ListLogEntries",
+		FullMethod: "/dev.sigstore.rekor.Entries/ListLogEntries",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EntriesServer).ListLogEntries(ctx, req.(*ListLogEntriesRequest))
@@ -164,7 +164,7 @@ func _Entries_ListLogEntries_Handler(srv interface{}, ctx context.Context, dec f
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Entries_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "dev.sigstore.rekor.v2.Entries",
+	ServiceName: "dev.sigstore.rekor.Entries",
 	HandlerType: (*EntriesServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

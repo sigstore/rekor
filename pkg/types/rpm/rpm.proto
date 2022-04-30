@@ -14,29 +14,23 @@
 // limitations under the License.
 
 syntax = "proto3";
-package dev.sigstore.rekor.v2.types.rpm;
+package dev.sigstore.rekor.types.rpm;
 
-import "google/api/field_behavior.proto";
-import "rekor_common.proto";
+import "pkg/types/rpm/v1/rpm.proto";
 
 option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf/types/rpm";
-option java_package = "dev.sigstore.rekor.v2.types.rpm";
+option java_package = "dev.sigstore.rekor.types.rpm";
 option java_multiple_files = true;
-option java_outer_classname = "RekorRPMProto";
+option java_outer_classname = "RPMProto";
 
 /*
  * ProposedRPMPackage represents the structure of the message required to present to Rekor
  * to make an entry of the RPMPackage type.
  */
 message ProposedRPMPackage {
-    /*
-     * Public key (currently only PGP supported)
-     */
-    dev.sigstore.rekor.v2.common.PublicKey public_key = 1 [(google.api.field_behavior) = REQUIRED];
-    /*
-     * RPM package which contains an embedded signature (this will not be persisted into the log)
-     */
-    bytes content                                     = 2 [(google.api.field_behavior) = REQUIRED];
+    oneof proposed_rpm_package {
+        dev.sigstore.rekor.types.rpm.v1.ProposedRPMPackage proposed_rpm_package_v1 = 1;
+    }
 }
 
 /*
@@ -44,16 +38,7 @@ message ProposedRPMPackage {
  * the RPMPackage type.
  */
 message RPMPackage {
-    /*
-     * Digital signature and public key
-     */
-    dev.sigstore.rekor.v2.common.Signature signature = 1;
-    /*
-     * Hash over entire RPM package
-     */
-    dev.sigstore.rekor.v2.common.Hash hash           = 2;
-    /*
-     * Key / value pairs from RPM headers
-     */
-    map<string, string> headers                      = 3;
+    oneof proposed_rpm_package {
+        dev.sigstore.rekor.types.rpm.v1.RPMPackage rpm_package_v1 = 1;
+    }
 }

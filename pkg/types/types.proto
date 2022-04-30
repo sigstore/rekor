@@ -14,7 +14,7 @@
 // limitations under the License.
 
 syntax = "proto3";
-package dev.sigstore.rekor.v2.types;
+package dev.sigstore.rekor.types;
 
 import "pkg/types/hashedrekord/hashedrekord.proto";
 import "pkg/types/rekord/rekord.proto";
@@ -26,20 +26,23 @@ import "pkg/types/rpm/rpm.proto";
 import "pkg/types/tuf/tuf.proto";
 
 option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf/types";
-option java_package = "dev.sigstore.rekor.v2.types";
+option java_package = "dev.sigstore.rekor.types";
 option java_multiple_files = true;
-option java_outer_classname = "RekorTypesProto";
+option java_outer_classname = "TypesProto";
 
+/*
+ * Represents a proposed log entry; this is built on a oneof to help 
+ */
 message ProposedLogEntry {
     oneof proposed_log_entry {
-        dev.sigstore.rekor.v2.types.hashedrekord.ProposedHashedRekord proposed_hashed_rekord    = 1;
-        dev.sigstore.rekor.v2.types.rekord.ProposedRekord proposed_rekord                       = 2;
-        dev.sigstore.rekor.v2.types.alpine.ProposedAlpinePackage proposed_alpine_package        = 3;
-        dev.sigstore.rekor.v2.types.helm.ProposedHelmChart proposed_helm_chart                  = 4;
-        dev.sigstore.rekor.v2.types.jar.ProposedJAR proposed_jar                                = 5;
-        dev.sigstore.rekor.v2.types.rfc3161.ProposedTimestampRequest proposed_timestamp_request = 6;
-        dev.sigstore.rekor.v2.types.rpm.ProposedRPMPackage proposed_rpm_package                 = 7;
-        dev.sigstore.rekor.v2.types.tuf.ProposedTUFMetadata proposed_tuf_metadata               = 8;
+        dev.sigstore.rekor.types.hashedrekord.ProposedHashedRekord proposed_hashed_rekord      = 1;
+        dev.sigstore.rekor.types.rekord.ProposedRekord proposed_rekord                         = 2;
+        dev.sigstore.rekor.types.alpine.ProposedAlpinePackage proposed_alpine_package          = 3;
+        dev.sigstore.rekor.types.helm.ProposedHelmChart proposed_helm_chart                    = 4;
+        dev.sigstore.rekor.types.jar.ProposedJAR proposed_jar                                  = 5;
+        dev.sigstore.rekor.types.rfc3161.ProposedTimestampResponse proposed_timestamp_response = 6;
+        dev.sigstore.rekor.types.rpm.ProposedRPMPackage proposed_rpm_package                   = 7;
+        dev.sigstore.rekor.types.tuf.ProposedTUFMetadata proposed_tuf_metadata                 = 8;
     }
 }
 
@@ -53,13 +56,13 @@ message TypedEntry {
      */
     bytes persisted_entry = 1;
     oneof typed_entry {
-        dev.sigstore.rekor.v2.types.hashedrekord.HashedRekord hashed_rekord    = 2;
-        dev.sigstore.rekor.v2.types.rekord.Rekord rekord                       = 3;
-        dev.sigstore.rekor.v2.types.alpine.AlpinePackage alpine_package        = 4;
-        dev.sigstore.rekor.v2.types.helm.HelmChart helm_chart                  = 5;
-        dev.sigstore.rekor.v2.types.jar.JAR jar                                = 6;
-        dev.sigstore.rekor.v2.types.rfc3161.TimestampRequest timestamp_request = 7;
-        dev.sigstore.rekor.v2.types.rpm.RPMPackage rpm_package                 = 8;
-        dev.sigstore.rekor.v2.types.tuf.TUFMetadata tuf_metadata               = 9;
+        dev.sigstore.rekor.types.hashedrekord.HashedRekord hashed_rekord      = 2;
+        dev.sigstore.rekor.types.rekord.Rekord rekord                         = 3;
+        dev.sigstore.rekor.types.alpine.AlpinePackage alpine_package          = 4;
+        dev.sigstore.rekor.types.helm.HelmChart helm_chart                    = 5;
+        dev.sigstore.rekor.types.jar.JAR jar                                  = 6;
+        dev.sigstore.rekor.types.rfc3161.TimestampResponse timestamp_response = 7;
+        dev.sigstore.rekor.types.rpm.RPMPackage rpm_package                   = 8;
+        dev.sigstore.rekor.types.tuf.TUFMetadata tuf_metadata                 = 9;
     }
 }

@@ -14,10 +14,10 @@
 // limitations under the License.
 
 syntax = "proto3";
-package dev.sigstore.rekor.v2.common;
+package dev.sigstore.rekor.common;
 
 option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf/common";
-option java_package = "dev.sigstore.rekor.v2.common";
+option java_package = "dev.sigstore.rekor.common";
 option java_multiple_files = true;
 option java_outer_classname = "RekorCommonProto";
 
@@ -25,7 +25,7 @@ message Signature {
     /*
      * The crypto algorithm used to generate the signature
      */
-    PKIAlgorithm algorithm = 1;
+    PKIType type           = 1;
     /*
      * The value of the digital signature
      */
@@ -36,7 +36,7 @@ message Signature {
     PublicKey public_key   = 3;
 }
 
-enum PKIAlgorithm {
+enum PKIType {
     PKI_ALGORITHM_UNSPECIFIED = 0;
     PGP                       = 1;
     MINISIGN                  = 2;

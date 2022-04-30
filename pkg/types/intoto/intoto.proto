@@ -14,29 +14,23 @@
 // limitations under the License.
 
 syntax = "proto3";
-package dev.sigstore.rekor.v2.types.intoto;
+package dev.sigstore.rekor.types.intoto;
 
-import "google/api/field_behavior.proto";
-import "rekor_common.proto";
+import "pkg/types/intoto/v1/intoto.proto";
 
 option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf/types/intoto";
-option java_package = "dev.sigstore.rekor.v2.types.intoto";
+option java_package = "dev.sigstore.rekor.types.intoto";
 option java_multiple_files = true;
-option java_outer_classname = "RekorIntotoProto";
+option java_outer_classname = "IntotoProto";
 
 /*
  * ProposedIntoto represents the structure of the message required to present to Rekor
  * to make an entry of the Intoto type.
  */
 message ProposedIntoto {
-    /*
-     * DSSE envelope encompassing the entire Intoto statement
-     */
-    bytes envelope                                    = 1 [(google.api.field_behavior) = REQUIRED];
-    /*
-     * Public key used to verify signature(s) over envelope
-     */
-    dev.sigstore.rekor.v2.common.PublicKey public_key = 2 [(google.api.field_behavior) = REQUIRED];
+    oneof proposed_intoto {
+        dev.sigstore.rekor.types.intoto.v1.ProposedIntoto proposed_intoto_v1 = 1;
+    }
 }
 
 /*
@@ -44,16 +38,7 @@ message ProposedIntoto {
  * the Intoto type.
  */
 message Intoto {
-    /*
-     * Public key used to verify signature(s) over envelope
-     */
-    dev.sigstore.rekor.v2.common.PublicKey public_key = 1;
-    /*
-     * Digest over entire envelope
-     */
-    dev.sigstore.rekor.v2.common.Hash envelope_hash   = 2;
-    /*
-     * Digest over envelope payload
-     */
-    dev.sigstore.rekor.v2.common.Hash payload_hash    = 3;
+    oneof intoto {
+        dev.sigstore.rekor.types.intoto.v1.Intoto intoto_v1 = 1;
+    }
 }

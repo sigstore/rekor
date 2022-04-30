@@ -14,15 +14,14 @@
 // limitations under the License.
 
 syntax = "proto3";
-package dev.sigstore.rekor.v2.types.hashedrekord;
+package dev.sigstore.rekor.types.hashedrekord;
 
-import "google/api/field_behavior.proto";
-import "rekor_common.proto";
+import "pkg/types/hashedrekord/v1/hashedrekord.proto";
 
 option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf/types/hashedrekord";
-option java_package = "dev.sigstore.rekor.v2.types.hashedrekord";
+option java_package = "dev.sigstore.rekor.types.hashedrekord";
 option java_multiple_files = true;
-option java_outer_classname = "RekorHashedRekordProto";
+option java_outer_classname = "HashedRekordProto";
 
 /*
  * ProposedHashedRekord represents the structure of the message required to present to Rekor
@@ -32,14 +31,9 @@ option java_outer_classname = "RekorHashedRekordProto";
  * this also makes the assignment more explicit
  */
 message ProposedHashedRekord {
-    /*
-     * Digital signature and public key
-     */
-    dev.sigstore.rekor.v2.common.Signature signature = 1 [(google.api.field_behavior) = REQUIRED];
-    /*
-     * Digest over entire artifact
-     */
-    dev.sigstore.rekor.v2.common.Hash hash           = 2 [(google.api.field_behavior) = REQUIRED];
+    oneof proposed_hashed_rekord {
+        dev.sigstore.rekor.types.hashedrekord.v1.ProposedHashedRekord proposed_hashed_rekord_v1 = 1;
+    }
 }
 
 /*
@@ -47,12 +41,7 @@ message ProposedHashedRekord {
  * the HashedRekord type.
  */
 message HashedRekord {
-    /*
-     * Digital signature and public key
-     */
-    dev.sigstore.rekor.v2.common.Signature signature = 1;
-    /*
-     * Digest over entire artifact
-     */
-    dev.sigstore.rekor.v2.common.Hash hash           = 2;
+    oneof hashed_rekord {
+        dev.sigstore.rekor.types.hashedrekord.v1.HashedRekord hashed_rekord_v1 = 1;
+    }
 }

@@ -220,7 +220,7 @@ func RegisterEntriesHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Entries/CreateLogEntry", runtime.WithHTTPPathPattern("/api/v2/log/entries"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.Entries/CreateLogEntry", runtime.WithHTTPPathPattern("/api/v2/log/entries"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -244,7 +244,7 @@ func RegisterEntriesHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Entries/GetLogEntry", runtime.WithHTTPPathPattern("/api/v2/log/entries/{uuid}"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.Entries/GetLogEntry", runtime.WithHTTPPathPattern("/api/v2/log/entries/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -268,7 +268,7 @@ func RegisterEntriesHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Entries/GetLogEntry", runtime.WithHTTPPathPattern("/api/v2/log/entries"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.Entries/GetLogEntry", runtime.WithHTTPPathPattern("/api/v2/log/entries"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -292,7 +292,7 @@ func RegisterEntriesHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Entries/ListLogEntries", runtime.WithHTTPPathPattern("/api/v2/log/entries/retrieve"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.Entries/ListLogEntries", runtime.WithHTTPPathPattern("/api/v2/log/entries/retrieve"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -355,7 +355,7 @@ func RegisterEntriesHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Entries/CreateLogEntry", runtime.WithHTTPPathPattern("/api/v2/log/entries"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.Entries/CreateLogEntry", runtime.WithHTTPPathPattern("/api/v2/log/entries"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -376,7 +376,7 @@ func RegisterEntriesHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Entries/GetLogEntry", runtime.WithHTTPPathPattern("/api/v2/log/entries/{uuid}"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.Entries/GetLogEntry", runtime.WithHTTPPathPattern("/api/v2/log/entries/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -397,7 +397,7 @@ func RegisterEntriesHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Entries/GetLogEntry", runtime.WithHTTPPathPattern("/api/v2/log/entries"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.Entries/GetLogEntry", runtime.WithHTTPPathPattern("/api/v2/log/entries"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -418,7 +418,7 @@ func RegisterEntriesHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Entries/ListLogEntries", runtime.WithHTTPPathPattern("/api/v2/log/entries/retrieve"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.Entries/ListLogEntries", runtime.WithHTTPPathPattern("/api/v2/log/entries/retrieve"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return

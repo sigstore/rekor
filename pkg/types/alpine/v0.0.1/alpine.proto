@@ -1,0 +1,67 @@
+//
+// Copyright 2022 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package dev.sigstore.rekor.types.alpine.v001;
+
+import "google/api/field_behavior.proto";
+
+option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf/types/alpine/v001";
+option java_package = "dev.sigstore.rekor.types.alpine.v001";
+option java_multiple_files = true;
+option java_outer_classname = "AlpineV001Proto";
+
+/*
+ * AlpinePackage represents the structure of the message required to present to Rekor
+ * to make an entry of the AlpinePackage type, AND also the structure of the message
+ * as persisted in the transparency log
+ */
+message AlpinePackage {
+    /*
+     * Digital signature and public key
+     */
+    message PublicKey {
+        bytes content = 1;
+    }
+    PublicKey public_key = 1 [
+        deprecated = true,
+        (google.api.field_behavior) = REQUIRED
+    ];
+    /*
+     * Alpine package (that contains embedded signature)
+     */
+    message Package {
+        /*
+        * map of key/value pairs from .PKGINFO file
+        */
+        map<string, string> pkginfo = 1;
+        /*
+        * Hash over entire alpine package
+        */
+        message Hash {
+            string algorithm = 1;
+            string value     = 2;
+        }
+        Hash hash                   = 2;
+        /*
+        * Content of alpine package; this is not persisted into the log
+        */
+        bytes content               = 3;
+    }
+    Package package = 2 [
+        deprecated = true,
+        (google.api.field_behavior) = REQUIRED
+    ];
+}

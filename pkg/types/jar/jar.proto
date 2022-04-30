@@ -14,29 +14,23 @@
 // limitations under the License.
 
 syntax = "proto3";
-package dev.sigstore.rekor.v2.types.jar;
+package dev.sigstore.rekor.types.jar;
 
-import "google/api/field_behavior.proto";
-import "rekor_common.proto";
+import "pkg/types/jar/v1/jar.proto";
 
 option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf/types/jar";
-option java_package = "dev.sigstore.rekor.v2.types.jar";
+option java_package = "dev.sigstore.rekor.types.jar";
 option java_multiple_files = true;
-option java_outer_classname = "RekorJARProto";
+option java_outer_classname = "JARProto";
 
 /*
  * ProposedJAR represents the structure of the message required to present to Rekor
  * to make an entry of the JAR type.
  */
 message ProposedJAR {
-    /*
-     * Public key used to verify embedded signature
-     */
-    dev.sigstore.rekor.v2.common.PublicKey public_key = 1 [(google.api.field_behavior) = REQUIRED];
-    /*
-     * Content of JAR file with embedded signature
-     */
-    bytes content                                     = 2 [(google.api.field_behavior) = REQUIRED];
+    oneof proposed_jar {
+        dev.sigstore.rekor.types.jar.v1.ProposedJAR proposed_jar_v1 = 1;
+    }
 }
 
 /*
@@ -44,12 +38,7 @@ message ProposedJAR {
  * the JAR type.
  */
 message JAR {
-    /*
-     * Digital signature and public key
-     */
-    dev.sigstore.rekor.v2.common.Signature signature = 1;
-    /*
-     * Hash over entire JAR file
-     */
-    dev.sigstore.rekor.v2.common.Hash hash           = 2;
+    oneof jar {
+        dev.sigstore.rekor.types.jar.v1.JAR jar_v1 = 1;
+    }
 }

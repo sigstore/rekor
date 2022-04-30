@@ -55,14 +55,17 @@ GHCR_PREFIX ?= ghcr.io/sigstore/rekor
 # Binaries
 SWAGGER := $(TOOLS_BIN_DIR)/swagger
 GO-FUZZ-BUILD := $(TOOLS_BIN_DIR)/go-fuzz-build
-PROTOC-GEN-GO := $(TOOLS_BIN_DIR)/protoc-gen-go
-PROTOC-GEN-GO-GRPC := $(TOOLS_BIN_DIR)/protoc-gen-go-grpc
-PROTOC-GEN-GRPC-GATEWAY := $(TOOLS_BIN_DIR)/protoc-gen-grpc-gateway
-PROTOC-API-LINTER := $(TOOLS_BIN_DIR)/api-linter
+PROTOC_GEN_GO := $(TOOLS_BIN_DIR)/protoc-gen-go
+PROTOC_GEN_GO_GRPC := $(TOOLS_BIN_DIR)/protoc-gen-go-grpc
+PROTOC_GEN_GRPC-GATEWAY := $(TOOLS_BIN_DIR)/protoc-gen-grpc-gateway
+PROTOC_API_LINTER := $(TOOLS_BIN_DIR)/api-linter
 
-$(GENPROTOSRC): $(PROTOC-GEN-GO) $(PROTOC-GEN-GO-GRPC) $(PROTOC-GEN-GRPC-GATEWAY) $(PROTOC-API-LINTER) $(PROTOBUF_DEPS)
+.phony: proto-lint
+proto-lint: $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(PROTOC_GEN_GRPC_GATEWAY) $(PROTOC_API_LINTER) $(PROTOBUF_DEPS)
 	mkdir -p pkg/generated/protobuf
-	$(PROTOC-API-LINTER) -I third_party/googleapis/ -I . $(PROTOBUF_DEPS) #--set-exit-status # TODO: add strict checking
+	$(PROTOC_API_LINTER) -I third_party/googleapis/ -I . $(PROTOBUF_DEPS) #--set-exit-status # TODO: add strict checking
+
+$(GENPROTOSRC): $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC) $(PROTOC_GEN_GRPC_GATEWAY) $(PROTOC_API_LINTER) $(PROTOBUF_DEPS) proto-lint
 	protoc --plugin=protoc-gen-go=$(TOOLS_BIN_DIR)/protoc-gen-go \
 	       --go_opt=module=$(GO_MODULE) --go_out=. \
 	       --plugin=protoc-gen-go-grpc=$(TOOLS_BIN_DIR)/protoc-gen-go-grpc \

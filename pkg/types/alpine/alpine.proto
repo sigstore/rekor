@@ -14,29 +14,23 @@
 // limitations under the License.
 
 syntax = "proto3";
-package dev.sigstore.rekor.v2.types.alpine;
+package dev.sigstore.rekor.types.alpine;
 
-import "google/api/field_behavior.proto";
-import "rekor_common.proto";
+import "pkg/types/alpine/v1/alpine.proto";
 
 option go_package = "github.com/sigstore/rekor/pkg/generated/protobuf/types/alpine";
-option java_package = "dev.sigstore.rekor.v2.types.alpine";
+option java_package = "dev.sigstore.rekor.types.alpine";
 option java_multiple_files = true;
-option java_outer_classname = "RekorAlpineProto";
+option java_outer_classname = "AlpineProto";
 
 /*
  * ProposedAlpinePackage represents the structure of the message required to present to Rekor
  * to make an entry of the AlpinePackage type.
  */
 message ProposedAlpinePackage {
-    /*
-     * Digital signature and public key
-     */
-    dev.sigstore.rekor.v2.common.PublicKey public_key = 1 [(google.api.field_behavior) = REQUIRED];
-    /*
-     * Alpine package (that contains embedded signature)
-     */
-    bytes content                                     = 2 [(google.api.field_behavior) = REQUIRED];
+    oneof proposed_alpine_package {
+        dev.sigstore.rekor.types.alpine.v1.ProposedAlpinePackage proposed_alpine_package_v1 = 1;
+    }
 }
 
 /*
@@ -44,16 +38,7 @@ message ProposedAlpinePackage {
  * the AlpinePackage type.
  */
 message AlpinePackage {
-    /*
-     * Digital signature and public key
-     */
-    dev.sigstore.rekor.v2.common.Signature signature = 1;
-    /*
-     * Hash over entire alpine package
-     */
-    dev.sigstore.rekor.v2.common.Hash hash           = 2;
-    /*
-     * Key / value pairs from .PKGINFO file inside alpine package
-     */
-    map<string, string> pkginfo                      = 3;
+    oneof alpine_package {
+        dev.sigstore.rekor.types.alpine.v1.AlpinePackage alpine_package_v1 = 1;
+    }
 }
