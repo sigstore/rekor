@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://rekor.sigstore.dev/types/package/package_v0_0_1_schema.json",
+  "title": "Package v0.0.1 Schema",
+  "description": "Schema for Package object",
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "object",
+      "properties": {
+        "payloadHash": {
+          "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
+          "type": "object",
+          "properties": {
+            "algorithm": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [ "sha256" ]
+            },
+            "value": {
+              "description": "The hash value for the envelope's payload",
+              "type": "string"
+            }
+          },
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "readOnly": true
+        },
+        "purl": {
+          "description": "The Package URL string of this package. See https://github.com/package-url/purl-spec.",
+          "type": "string"
+        }
+      },
+      "required": ["purl"]
+    },
+    "signature": {
+      "description": "Information about the detached signature associated with the entry",
+      "type": "object",
+      "properties": {
+        "content": {
+          "description": "Specifies the content of the signature inline within the document",
+          "type": "string",
+          "format": "byte"
+        },
+        "publicKey" : {
+          "description": "The public key that can verify the signature",
+          "type": "object",
+          "properties": {
+            "content": {
+              "description": "Specifies the content of the public key inline within the document",
+              "type": "string",
+              "format": "byte"
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "publicKey",
+    "content"
+  ]
+}

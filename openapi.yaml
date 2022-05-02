@@ -455,6 +455,23 @@ definitions:
         - spec
       additionalProperties: false
 
+  package:
+    type: object
+    description: Package in a package manager
+    allOf:
+      - $ref: '#/definitions/ProposedEntry'
+      - properties:
+          apiVersion:
+            type: string
+            pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
+          spec:
+            type: object
+            $ref: 'pkg/types/package/package_schema.json'
+        required:
+          - apiVersion
+          - spec
+        additionalProperties: false
+
   rfc3161:
     type: object
     description: RFC3161 Timestamp
