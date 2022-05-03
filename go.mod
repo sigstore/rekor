@@ -43,6 +43,7 @@ require (
 	github.com/theupdateframework/go-tuf v0.0.0-20211203210025-7ded50136bf9
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tilinna/clock v1.1.0 // indirect
+	github.com/transparency-dev/merkle v0.0.0-20220427153749-09877c5f5967
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/urfave/negroni v1.0.0
 	github.com/zalando/go-keyring v0.1.1 // indirect

@@ -24,10 +24,10 @@ import (
 	"math/bits"
 	"strconv"
 
-	"github.com/google/trillian/merkle/logverifier"
-	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/transparency-dev/merkle/proof"
+	"github.com/transparency-dev/merkle/rfc6962"
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
 	"github.com/sigstore/rekor/pkg/client"
@@ -170,8 +170,7 @@ var verifyCmd = &cobra.Command{
 
 		rootHash, _ := hex.DecodeString(o.RootHash)
 
-		v := logverifier.New(rfc6962.DefaultHasher)
-		if err := v.VerifyInclusionProof(o.Index, o.Size, hashes, rootHash, leafHash); err != nil {
+		if err := proof.VerifyInclusion(rfc6962.DefaultHasher, uint64(o.Index), uint64(o.Size), leafHash, hashes, rootHash); err != nil {
 			return nil, err
 		}
 		return o, err
