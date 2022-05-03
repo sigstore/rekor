@@ -21,11 +21,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/trillian/merkle/logverifier"
-	"github.com/google/trillian/merkle/rfc6962"
 	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/sharding"
+	"github.com/transparency-dev/merkle/proof"
+	"github.com/transparency-dev/merkle/rfc6962"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -227,8 +227,7 @@ func (t *TrillianClient) getLeafAndProofByIndex(index int64) *Response {
 		})
 
 	if resp != nil && resp.Proof != nil {
-		logVerifier := logverifier.New(rfc6962.DefaultHasher)
-		if err := logVerifier.VerifyInclusionProof(index, int64(root.TreeSize), resp.Proof.Hashes, root.RootHash, resp.GetLeaf().MerkleLeafHash); err != nil {
+		if err := proof.VerifyInclusion(rfc6962.DefaultHasher, uint64(index), root.TreeSize, resp.GetLeaf().MerkleLeafHash, resp.Proof.Hashes, root.RootHash); err != nil {
 			return &Response{
 				status: status.Code(err),
 				err:    err,
