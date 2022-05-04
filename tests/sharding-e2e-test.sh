@@ -128,7 +128,6 @@ docker stop $REKOR_CONTAINER_ID
 SHARDING_CONFIG=sharding-config.yaml
 cat << EOF > $SHARDING_CONFIG
 - treeID: $INITIAL_TREE_ID
-  treeLength: 3
   encodedPublicKey: $ENCODED_PUBLIC_KEY
 EOF
 

@@ -79,7 +79,7 @@ func NewAPI(treeID uint) (*API, error) {
 	logClient := trillian.NewTrillianLogClient(tConn)
 
 	shardingConfig := viper.GetString("trillian_log_server.sharding_config")
-	ranges, err := sharding.NewLogRanges(shardingConfig, treeID)
+	ranges, err := sharding.NewLogRanges(ctx, logClient, shardingConfig, treeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable get sharding details from sharding config")
 	}
