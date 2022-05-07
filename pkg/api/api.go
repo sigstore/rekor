@@ -66,7 +66,7 @@ type API struct {
 	certChainPem string              // PEM encoded timestamping cert chain
 }
 
-func NewAPI(ranges sharding.LogRanges, treeID uint) (*API, error) {
+func NewAPI(treeID uint) (*API, error) {
 	logRPCServer := fmt.Sprintf("%s:%d",
 		viper.GetString("trillian_log_server.address"),
 		viper.GetUint("trillian_log_server.port"))
@@ -77,6 +77,12 @@ func NewAPI(ranges sharding.LogRanges, treeID uint) (*API, error) {
 	}
 	logAdminClient := trillian.NewTrillianAdminClient(tConn)
 	logClient := trillian.NewTrillianLogClient(tConn)
+
+	shardingConfig := viper.GetString("trillian_log_server.sharding_config")
+	ranges, err := sharding.NewLogRanges(ctx, logClient, shardingConfig, treeID)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable get sharding details from sharding config")
+	}
 
 	tid := int64(treeID)
 	if tid == 0 {
@@ -160,11 +166,11 @@ var (
 	storageClient storage.AttestationStorage
 )
 
-func ConfigureAPI(ranges sharding.LogRanges, treeID uint) {
+func ConfigureAPI(treeID uint) {
 	cfg := radix.PoolConfig{}
 	var err error
 
-	api, err = NewAPI(ranges, treeID)
+	api, err = NewAPI(treeID)
 	if err != nil {
 		log.Logger.Panic(err)
 	}

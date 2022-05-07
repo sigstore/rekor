@@ -29,7 +29,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations"
 	"github.com/sigstore/rekor/pkg/log"
-	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types/alpine"
 	alpine_v001 "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
 	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord"
@@ -104,16 +103,9 @@ var serveCmd = &cobra.Command{
 		server.Port = int(viper.GetUint("port"))
 		server.EnabledListeners = []string{"http"}
 
-		// Update logRangeMap if flag was passed in
-		shardingConfig := viper.GetString("trillian_log_server.sharding_config")
 		treeID := viper.GetUint("trillian_log_server.tlog_id")
 
-		ranges, err := sharding.NewLogRanges(shardingConfig, treeID)
-		if err != nil {
-			log.Logger.Fatalf("unable get sharding details from sharding config: %v", err)
-		}
-
-		api.ConfigureAPI(ranges, treeID)
+		api.ConfigureAPI(treeID)
 		server.ConfigureAPI()
 
 		http.Handle("/metrics", promhttp.Handler())

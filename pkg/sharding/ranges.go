@@ -16,14 +16,17 @@
 package sharding
 
 import (
+	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"strconv"
 	"strings"
 
 	"github.com/ghodss/yaml"
+	"github.com/google/trillian"
+	"github.com/google/trillian/types"
+	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/log"
 )
 
@@ -41,7 +44,7 @@ type LogRange struct {
 	decodedPublicKey string
 }
 
-func NewLogRanges(path string, treeID uint) (LogRanges, error) {
+func NewLogRanges(ctx context.Context, logClient trillian.TrillianLogClient, path string, treeID uint) (LogRanges, error) {
 	if path == "" {
 		log.Logger.Info("No config file specified, skipping init of logRange map")
 		return LogRanges{}, nil
@@ -50,30 +53,63 @@ func NewLogRanges(path string, treeID uint) (LogRanges, error) {
 		return LogRanges{}, errors.New("non-zero tlog_id required when passing in shard config filepath; please set the active tree ID via the `--trillian_log_server.tlog_id` flag")
 	}
 	// otherwise, try to read contents of the sharding config
-	var ranges Ranges
-	contents, err := ioutil.ReadFile(path)
+	ranges, err := logRangesFromPath(path)
 	if err != nil {
-		return LogRanges{}, err
-	}
-	if string(contents) == "" {
-		log.Logger.Info("Sharding config file contents empty, skipping init of logRange map")
-		return LogRanges{}, nil
-	}
-	if err := yaml.Unmarshal(contents, &ranges); err != nil {
-		return LogRanges{}, err
+		return LogRanges{}, errors.Wrap(err, "log ranges from path")
 	}
 	for i, r := range ranges {
-		decoded, err := base64.StdEncoding.DecodeString(r.EncodedPublicKey)
+		r, err := updateRange(ctx, logClient, r)
 		if err != nil {
-			return LogRanges{}, err
+			return LogRanges{}, errors.Wrapf(err, "updating range for tree id %d", r.TreeID)
 		}
-		r.decodedPublicKey = string(decoded)
 		ranges[i] = r
 	}
+	log.Logger.Info("Ranges: %v", ranges)
 	return LogRanges{
 		inactive: ranges,
 		active:   int64(treeID),
 	}, nil
+}
+
+func logRangesFromPath(path string) (Ranges, error) {
+	var ranges Ranges
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return Ranges{}, err
+	}
+	if string(contents) == "" {
+		log.Logger.Info("Sharding config file contents empty, skipping init of logRange map")
+		return Ranges{}, nil
+	}
+	if err := yaml.Unmarshal(contents, &ranges); err != nil {
+		return Ranges{}, err
+	}
+	return ranges, nil
+}
+
+// updateRange fills in any missing information about the range
+func updateRange(ctx context.Context, logClient trillian.TrillianLogClient, r LogRange) (LogRange, error) {
+	// If a tree length wasn't passed in, get it ourselves
+	if r.TreeLength == 0 {
+		resp, err := logClient.GetLatestSignedLogRoot(ctx, &trillian.GetLatestSignedLogRootRequest{LogId: r.TreeID})
+		if err != nil {
+			return LogRange{}, errors.Wrapf(err, "getting signed log root for tree %d", r.TreeID)
+		}
+		var root types.LogRootV1
+		if err := root.UnmarshalBinary(resp.SignedLogRoot.LogRoot); err != nil {
+			return LogRange{}, err
+		}
+		r.TreeLength = int64(root.TreeSize)
+	}
+	// If a public key was provided, decode it
+	if r.EncodedPublicKey != "" {
+		decoded, err := base64.StdEncoding.DecodeString(r.EncodedPublicKey)
+		if err != nil {
+			return LogRange{}, err
+		}
+		r.decodedPublicKey = string(decoded)
+	}
+	return r, nil
 }
 
 func (l *LogRanges) ResolveVirtualIndex(index int) (int64, int64) {
