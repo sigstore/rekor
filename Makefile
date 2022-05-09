@@ -90,9 +90,11 @@ rekor-server: $(SRCS)
 test:
 	go test ./...
 
-fuzz: $(GO-FUZZ-BUILD)
-	# This is a hack because of this bug https://github.com/golang/go/issues/44129
-	cd tests/fuzz;GOFLAGS=-mod=mod $(GO-FUZZ-BUILD);cd ../../;go mod tidy
+# there is no fuzzing currently
+fuzz: ;
+# Once fuzzing is added, uncomment below
+# This is a hack because of this bug https://github.com/golang/go/issues/44129
+# cd tests/fuzz;GOFLAGS=-mod=mod $(GO-FUZZ-BUILD);cd ../../;go mod tidy
 
 clean:
 	rm -rf dist

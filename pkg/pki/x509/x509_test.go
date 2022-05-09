@@ -17,7 +17,6 @@ package x509
 
 import (
 	"bytes"
-	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/x509"
@@ -26,10 +25,8 @@ import (
 	"testing"
 
 	"github.com/sigstore/rekor/pkg/pki/x509/testutils"
-	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // Generated with:
@@ -197,52 +194,6 @@ func TestSignature_VerifyFail(t *testing.T) {
 				t.Error("Signature.Verify() expected error!")
 			}
 		})
-	}
-}
-
-func TestNilCertChainToPEM(t *testing.T) {
-	certChain := []*x509.Certificate{}
-	if _, err := CertChainToPEM(certChain); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestCertChain_Verify(t *testing.T) {
-	caSigner, err := signer.NewMemory()
-	if err != nil {
-		t.Fatal(err)
-	}
-	// A properly created cert chain should encode to PEM OK.
-	ctx := context.Background()
-	mem, err := signer.NewMemory()
-	if err != nil {
-		t.Fatal(err)
-	}
-	pk, err := mem.PublicKey(options.WithContext(ctx))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	certChain, err := signer.NewTimestampingCertWithChain(ctx, pk, caSigner, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	certChainBytes, err := CertChainToPEM(certChain)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Parse and verify timestamping cert chain
-	parsedCertChain, err := ParseTimestampCertChain(certChainBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Compare with original
-	for idx, cert := range parsedCertChain {
-		if !cert.Equal(certChain[idx]) {
-			t.Fatal("unexpected error comparing cert chain")
-		}
 	}
 }
 

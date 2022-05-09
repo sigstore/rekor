@@ -59,8 +59,7 @@ spec:
           "--rekor_server.signer=$(KMS)",
           "--trillian_log_server.sharding_config=/sharding/sharding-config.yaml",
           "--enable_attestation_storage=$(ENABLE_ATTESTATION_STORAGE)",
-          "--attestation_storage_bucket=$(ATTESTATION_BUCKET)",
-          "--rekor_server.timestamp_chain=$(TIMESTAMP_CHAIN)"
+          "--attestation_storage_bucket=$(ATTESTATION_BUCKET)"
         ]
         volumeMounts:
         - name: sharding-config
@@ -81,11 +80,6 @@ spec:
             configMapKeyRef:
               name: rekor-config
               key: attestation_bucket
-        - name: TIMESTAMP_CHAIN
-          valueFrom:
-            configMapKeyRef:
-              name: rekor-config
-              key: timestamp_chain
         resources:
           requests:
             memory: "1G"
