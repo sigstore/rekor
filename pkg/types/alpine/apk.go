@@ -217,7 +217,7 @@ func (p Package) VerifySignature(pub crypto.PublicKey) error {
 		return errors.New("no digest value for data.tar.gz known")
 	}
 
-	verifier, err := signature.LoadVerifier(pub, crypto.SHA1)
+	verifier, err := signature.LoadUnsafeVerifier(pub)
 	if err != nil {
 		return err
 	}

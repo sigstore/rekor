@@ -35,12 +35,12 @@ require (
 	github.com/rs/cors v1.8.2
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
 	github.com/secure-systems-lab/go-securesystemslib v0.3.1
-	github.com/sigstore/sigstore v1.0.2-0.20211210190220-04746d994282
+	github.com/sigstore/sigstore v1.2.1-0.20220512194100-3ed986cc9758
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.11.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
-	github.com/theupdateframework/go-tuf v0.0.0-20211203210025-7ded50136bf9
+	github.com/theupdateframework/go-tuf v0.0.0-20220127213825-87caa18db2a6
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tilinna/clock v1.1.0 // indirect
 	github.com/transparency-dev/merkle v0.0.1

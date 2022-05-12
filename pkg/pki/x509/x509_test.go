@@ -321,4 +321,15 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error verifying signature, %v", err)
 	}
+
+	// Verify error with long chain
+	chain := []*x509.Certificate{}
+	for i := 0; i < 11; i++ {
+		chain = append(chain, leafCert)
+	}
+	pemCertChain, _ = cryptoutils.MarshalCertificatesToPEM(chain)
+	_, err = NewPublicKey(bytes.NewReader(pemCertChain))
+	if err == nil || !strings.Contains(err.Error(), "too many certificates specified in PEM block") {
+		t.Fatalf("expected error with long cert chain, got %v", err)
+	}
 }

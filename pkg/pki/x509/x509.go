@@ -115,7 +115,8 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 
 	// Handle certificate chain, concatenated PEM-encoded certificates
 	if len(rest) > 0 {
-		certs, err := cryptoutils.UnmarshalCertificatesFromPEM(rawPub)
+		// Support up to 10 certificates in a chain, to avoid parsing extremely long chains
+		certs, err := cryptoutils.UnmarshalCertificatesFromPEMLimited(rawPub, 10)
 		if err != nil {
 			return nil, err
 		}
