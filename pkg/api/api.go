@@ -19,7 +19,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"time"
@@ -32,7 +31,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/sigstore/rekor/pkg/log"
-	pki "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/rekor/pkg/storage"
@@ -55,15 +53,12 @@ func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
 }
 
 type API struct {
-	logClient    trillian.TrillianLogClient
-	logID        int64
-	logRanges    sharding.LogRanges
-	pubkey       string // PEM encoded public key
-	pubkeyHash   string // SHA256 hash of DER-encoded public key
-	signer       signature.Signer
-	tsaSigner    signature.Signer    // the signer to use for timestamping
-	certChain    []*x509.Certificate // timestamping cert chain
-	certChainPem string              // PEM encoded timestamping cert chain
+	logClient  trillian.TrillianLogClient
+	logID      int64
+	logRanges  sharding.LogRanges
+	pubkey     string // PEM encoded public key
+	pubkeyHash string // SHA256 hash of DER-encoded public key
+	signer     signature.Signer
 }
 
 func NewAPI(treeID uint) (*API, error) {
@@ -112,38 +107,6 @@ func NewAPI(treeID uint) (*API, error) {
 
 	pubkey := cryptoutils.PEMEncode(cryptoutils.PublicKeyPEMType, b)
 
-	// Use an in-memory key for timestamping
-	tsaSigner, err := signer.New(ctx, signer.MemoryScheme)
-	if err != nil {
-		return nil, errors.Wrap(err, "getting new tsa signer")
-	}
-	tsaPk, err := tsaSigner.PublicKey(options.WithContext(ctx))
-	if err != nil {
-		return nil, errors.Wrap(err, "getting public key")
-	}
-
-	var certChain []*x509.Certificate
-	b64CertChainStr := viper.GetString("rekor_server.timestamp_chain")
-	if b64CertChainStr != "" {
-		certChainStr, err := base64.StdEncoding.DecodeString(b64CertChainStr)
-		if err != nil {
-			return nil, errors.Wrap(err, "decoding timestamping cert")
-		}
-		if certChain, err = pki.ParseTimestampCertChain([]byte(certChainStr)); err != nil {
-			return nil, errors.Wrap(err, "parsing timestamp cert chain")
-		}
-	}
-
-	// Generate a tsa certificate from the rekor signer and provided certificate chain
-	certChain, err = signer.NewTimestampingCertWithChain(ctx, tsaPk, rekorSigner, certChain)
-	if err != nil {
-		return nil, errors.Wrap(err, "generating timestamping cert chain")
-	}
-	certChainPem, err := pki.CertChainToPEM(certChain)
-	if err != nil {
-		return nil, errors.Wrap(err, "timestamping cert chain")
-	}
-
 	return &API{
 		// Transparency Log Stuff
 		logClient: logClient,
@@ -153,10 +116,6 @@ func NewAPI(treeID uint) (*API, error) {
 		pubkey:     string(pubkey),
 		pubkeyHash: hex.EncodeToString(pubkeyHashBytes[:]),
 		signer:     rekorSigner,
-		// TSA signing stuff
-		tsaSigner:    tsaSigner,
-		certChain:    certChain,
-		certChainPem: string(certChainPem),
 	}, nil
 }
 
