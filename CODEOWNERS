@@ -5,6 +5,8 @@
 
 /pkg/types/		@bobcallaway
 
+/pkg/types/rfc3161/	@asraa @loosebazooka
+
 # The CODEOWNERS are managed via a GitHub team, but the current list is (in alphabetical order):
 
 # asraa
