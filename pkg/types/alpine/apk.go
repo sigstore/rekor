@@ -94,7 +94,7 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 	sha1BufReader := newSHA1Reader(bufReader)
 	gzipReader, err := gzip.NewReader(sha1BufReader)
 	if err != nil {
-		return errors.Wrap(err, "create gzip reader")
+		return fmt.Errorf("create gzip reader: %w", err)
 	}
 	defer func() {
 		_ = gzipReader.Close()
@@ -108,7 +108,7 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 	sigBuf := bytes.Buffer{}
 	// #nosec G110
 	if _, err := io.Copy(&sigBuf, gzipReader); err != nil {
-		return errors.Wrap(err, "reading signature.tar.gz")
+		return fmt.Errorf("reading signature.tar.gz: %w", err)
 	}
 
 	// the SHA1 sum used in the signature is over the entire file control.tar.gz so we need to
@@ -119,14 +119,14 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 
 	// we reset the reader since we've found the end of signature.tar.gz
 	if err := gzipReader.Reset(sha1BufReader); err != nil && err != io.EOF {
-		return errors.Wrap(err, "resetting to control.tar.gz")
+		return fmt.Errorf("resetting to control.tar.gz: %w", err)
 	}
 	gzipReader.Multistream(false)
 
 	controlTar := bytes.Buffer{}
 	// #nosec G110
 	if _, err = io.Copy(&controlTar, gzipReader); err != nil {
-		return errors.Wrap(err, "reading control.tar.gz")
+		return fmt.Errorf("reading control.tar.gz: %w", err)
 	}
 
 	// signature uses sha1 digest hardcoded in abuild-sign tool
@@ -145,13 +145,13 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 			}
 			break
 		} else if err != nil {
-			return errors.Wrap(err, "getting next entry in tar archive")
+			return fmt.Errorf("getting next entry in tar archive: %w", err)
 		}
 
 		if strings.HasPrefix(header.Name, ".SIGN") && pkg.Signature == nil {
 			sigBytes := make([]byte, header.Size)
 			if _, err = sigReader.Read(sigBytes); err != nil && err != io.EOF {
-				return errors.Wrap(err, "reading signature")
+				return fmt.Errorf("reading signature: %w", err)
 			}
 			// we're not sure whether this is PEM encoded or not, so handle both cases
 			block, _ := pem.Decode(sigBytes)
@@ -172,22 +172,22 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 			}
 			break
 		} else if err != nil {
-			return errors.Wrap(err, "getting next entry in tar archive")
+			return fmt.Errorf("getting next entry in tar archive: %w", err)
 		}
 
 		if header.Name == ".PKGINFO" {
 			pkginfoContent := make([]byte, header.Size)
 			if _, err = ctlReader.Read(pkginfoContent); err != nil && err != io.EOF {
-				return errors.Wrap(err, "reading .PKGINFO")
+				return fmt.Errorf("reading .PKGINFO: %w: %w", err)
 			}
 
 			pkg.Pkginfo, err = parsePkginfo(pkginfoContent)
 			if err != nil {
-				return errors.Wrap(err, "parsing .PKGINFO")
+				return fmt.Errorf("parsing .PKGINFO: %w: %w", err)
 			}
 			pkg.Datahash, err = hex.DecodeString(pkg.Pkginfo["datahash"])
 			if err != nil {
-				return errors.Wrap(err, "parsing datahash")
+				return fmt.Errorf("parsing datahash: %w", err)
 			}
 		}
 	}
@@ -196,7 +196,7 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 	// datahash value from .PKGINFO is sha256 sum of data.tar.gz
 	sha256 := sha256.New()
 	if _, err := io.Copy(sha256, bufReader); err != nil {
-		return errors.Wrap(err, "computing SHA256 sum of data.tar.gz")
+		return fmt.Errorf("computing SHA256 sum of data.tar.gz: %w", err)
 	}
 	computedSum := sha256.Sum(nil)
 

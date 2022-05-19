@@ -161,11 +161,11 @@ func TimestampNoteValidator(strToValidate string) bool {
 func (r *SignedTimestampNote) UnmarshalText(data []byte) error {
 	s := SignedNote{}
 	if err := s.UnmarshalText([]byte(data)); err != nil {
-		return errors.Wrap(err, "unmarshalling signed note")
+		return fmt.Errorf("unmarshalling signed note: %w", err)
 	}
 	t := TimestampNote{}
 	if err := t.UnmarshalText([]byte(s.Note)); err != nil {
-		return errors.Wrap(err, "unmarshalling timestamp note")
+		return fmt.Errorf("unmarshalling timestamp note: %w", err)
 	}
 	*r = SignedTimestampNote{TimestampNote: t, SignedNote: s}
 	return nil

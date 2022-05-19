@@ -17,6 +17,7 @@ package alpine
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -63,7 +64,7 @@ func (bat *BaseAlpineType) CreateProposedEntry(ctx context.Context, version stri
 	}
 	ei, err := bat.VersionedUnmarshal(nil, version)
 	if err != nil {
-		return nil, errors.Wrap(err, "fetching Intoto version implementation")
+		return nil, fmt.Errorf("fetching Intoto version implementation: %w", err)
 	}
 	return ei.CreateFromArtifactProperties(ctx, props)
 }

@@ -55,12 +55,12 @@ func NewLogRanges(ctx context.Context, logClient trillian.TrillianLogClient, pat
 	// otherwise, try to read contents of the sharding config
 	ranges, err := logRangesFromPath(path)
 	if err != nil {
-		return LogRanges{}, errors.Wrap(err, "log ranges from path")
+		return LogRanges{}, fmt.Errorf("log ranges from path: %w: %w", err)
 	}
 	for i, r := range ranges {
 		r, err := updateRange(ctx, logClient, r)
 		if err != nil {
-			return LogRanges{}, errors.Wrapf(err, "updating range for tree id %d", r.TreeID)
+			return LogRanges{}, fmt.Errorf("updating range for tree id %d: %w: %w", r.TreeID, err)
 		}
 		ranges[i] = r
 	}
@@ -93,7 +93,7 @@ func updateRange(ctx context.Context, logClient trillian.TrillianLogClient, r Lo
 	if r.TreeLength == 0 {
 		resp, err := logClient.GetLatestSignedLogRoot(ctx, &trillian.GetLatestSignedLogRootRequest{LogId: r.TreeID})
 		if err != nil {
-			return LogRange{}, errors.Wrapf(err, "getting signed log root for tree %d", r.TreeID)
+			return LogRange{}, fmt.Errorf("getting signed log root for tree %d: %w: %w", r.TreeID, err)
 		}
 		var root types.LogRootV1
 		if err := root.UnmarshalBinary(resp.SignedLogRoot.LogRoot); err != nil {

@@ -25,7 +25,6 @@ import (
 
 	"github.com/google/trillian"
 	radix "github.com/mediocregopher/radix/v4"
-	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -68,7 +67,7 @@ func NewAPI(treeID uint) (*API, error) {
 	ctx := context.Background()
 	tConn, err := dial(ctx, logRPCServer)
 	if err != nil {
-		return nil, errors.Wrap(err, "dial")
+		return nil, fmt.Errorf("dial: %w", err)
 	}
 	logAdminClient := trillian.NewTrillianAdminClient(tConn)
 	logClient := trillian.NewTrillianLogClient(tConn)
@@ -76,7 +75,7 @@ func NewAPI(treeID uint) (*API, error) {
 	shardingConfig := viper.GetString("trillian_log_server.sharding_config")
 	ranges, err := sharding.NewLogRanges(ctx, logClient, shardingConfig, treeID)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable get sharding details from sharding config")
+		return nil, fmt.Errorf("unable get sharding details from sharding config: %w", err)
 	}
 
 	tid := int64(treeID)
@@ -84,7 +83,7 @@ func NewAPI(treeID uint) (*API, error) {
 		log.Logger.Info("No tree ID specified, attempting to create a new tree")
 		t, err := createAndInitTree(ctx, logAdminClient, logClient)
 		if err != nil {
-			return nil, errors.Wrap(err, "create and init tree")
+			return nil, fmt.Errorf("create and init tree: %w", err)
 		}
 		tid = t.TreeId
 	}
@@ -93,15 +92,15 @@ func NewAPI(treeID uint) (*API, error) {
 
 	rekorSigner, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
 	if err != nil {
-		return nil, errors.Wrap(err, "getting new signer")
+		return nil, fmt.Errorf("getting new signer: %w", err)
 	}
 	pk, err := rekorSigner.PublicKey(options.WithContext(ctx))
 	if err != nil {
-		return nil, errors.Wrap(err, "getting public key")
+		return nil, fmt.Errorf("getting public key: %w", err)
 	}
 	b, err := x509.MarshalPKIXPublicKey(pk)
 	if err != nil {
-		return nil, errors.Wrap(err, "marshalling public key")
+		return nil, fmt.Errorf("marshalling public key: %w", err)
 	}
 	pubkeyHashBytes := sha256.Sum256(b)
 

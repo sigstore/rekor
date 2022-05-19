@@ -118,7 +118,7 @@ func verifyInactiveTrees(rekorClient *rclient.Rekor, serverURL string, inactiveS
 		signedTreeHead := swag.StringValue(shard.SignedTreeHead)
 		treeID := swag.StringValue(shard.TreeID)
 		if err := verifyTree(rekorClient, signedTreeHead, serverURL, treeID); err != nil {
-			return errors.Wrapf(err, "verifying inactive shard with ID %s", treeID)
+			return fmt.Errorf("verifying inactive shard with ID %s: %w", treeID, err)
 		}
 	}
 	log.CliLogger.Infof("Successfully validated inactive shards")

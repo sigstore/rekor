@@ -65,7 +65,7 @@ func (btt *BaseTufType) CreateProposedEntry(ctx context.Context, version string,
 	}
 	ei, err := btt.VersionedUnmarshal(nil, version)
 	if err != nil {
-		return nil, errors.Wrap(err, "fetching TUF version implementation")
+		return nil, fmt.Errorf("fetching TUF version implementation: %w", err)
 	}
 	return ei.CreateFromArtifactProperties(ctx, props)
 }

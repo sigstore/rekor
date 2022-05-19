@@ -17,6 +17,7 @@ package helm
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -63,7 +64,7 @@ func (it *BaseHelmType) CreateProposedEntry(ctx context.Context, version string,
 	}
 	ei, err := it.VersionedUnmarshal(nil, version)
 	if err != nil {
-		return nil, errors.Wrap(err, "fetching Rekord version implementation")
+		return nil, fmt.Errorf("fetching Rekord version implementation: %w", err)
 	}
 	return ei.CreateFromArtifactProperties(ctx, props)
 }

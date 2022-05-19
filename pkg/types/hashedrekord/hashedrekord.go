@@ -64,7 +64,7 @@ func (rt *BaseRekordType) CreateProposedEntry(ctx context.Context, version strin
 	}
 	ei, err := rt.VersionedUnmarshal(nil, version)
 	if err != nil {
-		return nil, errors.Wrap(err, "fetching hashed Rekord version implementation")
+		return nil, fmt.Errorf("fetching hashed Rekord version implementation: %w: %w", err)
 	}
 
 	return ei.CreateFromArtifactProperties(ctx, props)

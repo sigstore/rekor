@@ -17,6 +17,7 @@ package rpm
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -63,7 +64,7 @@ func (brt *BaseRPMType) CreateProposedEntry(ctx context.Context, version string,
 	}
 	ei, err := brt.VersionedUnmarshal(nil, version)
 	if err != nil {
-		return nil, errors.Wrap(err, "fetching RPM version implementation")
+		return nil, fmt.Errorf("fetching RPM version implementation: %w", err)
 	}
 	return ei.CreateFromArtifactProperties(ctx, props)
 }

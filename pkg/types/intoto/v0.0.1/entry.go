@@ -187,7 +187,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	if attestation != nil {
 		decodedAttestation, err := base64.StdEncoding.DecodeString(string(attestation))
 		if err != nil {
-			return nil, errors.Wrap(err, "decoding attestation")
+			return nil, fmt.Errorf("decoding attestation: %w", err)
 		}
 		attH := sha256.Sum256(decodedAttestation)
 		canonicalEntry.Content.PayloadHash = &models.IntotoV001SchemaContentPayloadHash{
