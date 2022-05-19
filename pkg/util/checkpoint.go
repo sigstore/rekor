@@ -18,11 +18,10 @@ package util
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 // heavily borrowed from https://github.com/google/trillian-examples/blob/master/formats/log/checkpoint.go

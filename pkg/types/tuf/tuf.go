@@ -17,9 +17,9 @@ package tuf
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/types"
 
 	"github.com/sigstore/rekor/pkg/generated/models"

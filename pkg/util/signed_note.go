@@ -25,10 +25,10 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	"golang.org/x/mod/sumdb/note"

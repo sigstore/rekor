@@ -21,11 +21,11 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/go-openapi/swag"
-	"github.com/pkg/errors"
 	rclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/spf13/cobra"

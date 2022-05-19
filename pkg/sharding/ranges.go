@@ -18,6 +18,7 @@ package sharding
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strconv"
@@ -26,7 +27,6 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/google/trillian"
 	"github.com/google/trillian/types"
-	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/log"
 )
 
@@ -55,12 +55,12 @@ func NewLogRanges(ctx context.Context, logClient trillian.TrillianLogClient, pat
 	// otherwise, try to read contents of the sharding config
 	ranges, err := logRangesFromPath(path)
 	if err != nil {
-		return LogRanges{}, fmt.Errorf("log ranges from path: %w: %w", err)
+		return LogRanges{}, fmt.Errorf("log ranges from path: %w", err)
 	}
 	for i, r := range ranges {
 		r, err := updateRange(ctx, logClient, r)
 		if err != nil {
-			return LogRanges{}, fmt.Errorf("updating range for tree id %d: %w: %w", r.TreeID, err)
+			return LogRanges{}, fmt.Errorf("updating range for tree id %d: %w", r.TreeID, err)
 		}
 		ranges[i] = r
 	}
@@ -93,7 +93,7 @@ func updateRange(ctx context.Context, logClient trillian.TrillianLogClient, r Lo
 	if r.TreeLength == 0 {
 		resp, err := logClient.GetLatestSignedLogRoot(ctx, &trillian.GetLatestSignedLogRootRequest{LogId: r.TreeID})
 		if err != nil {
-			return LogRange{}, fmt.Errorf("getting signed log root for tree %d: %w: %w", r.TreeID, err)
+			return LogRange{}, fmt.Errorf("getting signed log root for tree %d: %w", r.TreeID, err)
 		}
 		var root types.LogRootV1
 		if err := root.UnmarshalBinary(resp.SignedLogRoot.LogRoot); err != nil {

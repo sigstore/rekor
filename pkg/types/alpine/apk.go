@@ -25,12 +25,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	"gopkg.in/ini.v1"
@@ -178,12 +178,12 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 		if header.Name == ".PKGINFO" {
 			pkginfoContent := make([]byte, header.Size)
 			if _, err = ctlReader.Read(pkginfoContent); err != nil && err != io.EOF {
-				return fmt.Errorf("reading .PKGINFO: %w: %w", err)
+				return fmt.Errorf("reading .PKGINFO: %w", err)
 			}
 
 			pkg.Pkginfo, err = parsePkginfo(pkginfoContent)
 			if err != nil {
-				return fmt.Errorf("parsing .PKGINFO: %w: %w", err)
+				return fmt.Errorf("parsing .PKGINFO: %w", err)
 			}
 			pkg.Datahash, err = hex.DecodeString(pkg.Pkginfo["datahash"])
 			if err != nil {

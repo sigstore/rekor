@@ -17,12 +17,12 @@ package helm
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
 
 	"github.com/ghodss/yaml"
-	"github.com/pkg/errors"
 
 	"golang.org/x/crypto/openpgp/clearsign"
 )

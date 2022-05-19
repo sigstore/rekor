@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -29,7 +30,6 @@ import (
 	_ "gocloud.dev/blob/fileblob" // fileblob
 	_ "gocloud.dev/blob/gcsblob"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gocloud.dev/blob"

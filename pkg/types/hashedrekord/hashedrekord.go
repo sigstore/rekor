@@ -17,9 +17,9 @@ package hashedrekord
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 )
@@ -64,7 +64,7 @@ func (rt *BaseRekordType) CreateProposedEntry(ctx context.Context, version strin
 	}
 	ei, err := rt.VersionedUnmarshal(nil, version)
 	if err != nil {
-		return nil, fmt.Errorf("fetching hashed Rekord version implementation: %w: %w", err)
+		return nil, fmt.Errorf("fetching hashed Rekord version implementation: %w", err)
 	}
 
 	return ei.CreateFromArtifactProperties(ctx, props)

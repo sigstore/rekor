@@ -18,13 +18,12 @@ package util
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // Signed note based timestamp responses
