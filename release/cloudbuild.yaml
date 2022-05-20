@@ -32,16 +32,16 @@ steps:
     echo "Checking out ${_GIT_TAG}"
     git checkout ${_GIT_TAG}
 
-- name: 'gcr.io/projectsigstore/cosign:v1.7.1@sha256:7d735456ae0c6489d088981a228b944e8a729c2aa979d824a74e44ab843d6ad2'
+- name: 'gcr.io/projectsigstore/cosign:v1.8.0@sha256:12b4d428529654c95a7550a936cbb5c6fe93a046ea7454676cb6fb0ce566d78c'
   dir: "go/src/sigstore/rekor"
   env:
   - COSIGN_EXPERIMENTAL=true
   - TUF_ROOT=/tmp
   args:
   - 'verify'
-  - 'ghcr.io/gythialy/golang-cross:v1.17.8-1@sha256:38effe76e69a728f6c2e76b290c0d5e09fdff439926e3bbe7e69978c84c185f3'
+  - 'ghcr.io/gythialy/golang-cross:v1.17.10-0@sha256:62c64ee6c74285839db86ae0814d2411bfe4bc2cdc025b10122e4bb8d27b1418'
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.8-1@sha256:38effe76e69a728f6c2e76b290c0d5e09fdff439926e3bbe7e69978c84c185f3
+- name: ghcr.io/gythialy/golang-cross:v1.17.10-0@sha256:62c64ee6c74285839db86ae0814d2411bfe4bc2cdc025b10122e4bb8d27b1418
   entrypoint: /bin/sh
   dir: "go/src/sigstore/rekor"
   env:
@@ -64,7 +64,7 @@ steps:
       gcloud auth configure-docker \
       && make release
 
-- name: ghcr.io/gythialy/golang-cross:v1.17.8-1@sha256:38effe76e69a728f6c2e76b290c0d5e09fdff439926e3bbe7e69978c84c185f3
+- name: ghcr.io/gythialy/golang-cross:v1.17.10-0@sha256:62c64ee6c74285839db86ae0814d2411bfe4bc2cdc025b10122e4bb8d27b1418
   entrypoint: 'bash'
   dir: "go/src/sigstore/rekor"
   env:

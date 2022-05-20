@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -66,7 +67,7 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
-	keyObj, err := x509.NewPublicKey(bytes.NewReader(v.AlpineModel.PublicKey.Content))
+	keyObj, err := x509.NewPublicKey(bytes.NewReader(*v.AlpineModel.PublicKey.Content))
 	if err != nil {
 		return nil, err
 	}
@@ -105,16 +106,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return v.validate()
 }
 
-func (v V001Entry) hasExternalEntities() bool {
-	if v.AlpineModel.Package != nil && v.AlpineModel.Package.URL.String() != "" {
-		return true
-	}
-	if v.AlpineModel.PublicKey != nil && v.AlpineModel.PublicKey.URL.String() != "" {
-		return true
-	}
-	return false
-}
-
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*x509.PublicKey, *alpine.Package, error) {
 	if err := v.validate(); err != nil {
 		return nil, nil, types.ValidationError(err)
@@ -138,11 +129,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*x509.PublicKey,
 		defer hashW.Close()
 		defer apkW.Close()
 
-		dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.AlpineModel.Package.URL.String(), v.AlpineModel.Package.Content)
-		if err != nil {
-			return closePipesOnError(err)
-		}
-		defer dataReadCloser.Close()
+		dataReadCloser := bytes.NewReader(v.AlpineModel.Package.Content)
 
 		/* #nosec G110 */
 		if _, err := io.Copy(io.MultiWriter(hashW, apkW), dataReadCloser); err != nil {
@@ -178,12 +165,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*x509.PublicKey,
 
 	g.Go(func() error {
 		defer close(keyResult)
-		keyReadCloser, err := util.FileOrURLReadCloser(ctx, v.AlpineModel.PublicKey.URL.String(),
-			v.AlpineModel.PublicKey.Content)
-		if err != nil {
-			return closePipesOnError(err)
-		}
-		defer keyReadCloser.Close()
+		keyReadCloser := bytes.NewReader(*v.AlpineModel.PublicKey.Content)
 
 		keyObj, err := x509.NewPublicKey(keyReadCloser)
 		if err != nil {
@@ -250,12 +232,14 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	canonicalEntry := models.AlpineV001Schema{}
 
+	var content []byte
 	// need to canonicalize key content
 	canonicalEntry.PublicKey = &models.AlpineV001SchemaPublicKey{}
-	canonicalEntry.PublicKey.Content, err = key.CanonicalValue()
+	content, err = key.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
+	canonicalEntry.PublicKey.Content = (*strfmt.Base64)(&content)
 
 	canonicalEntry.Package = &models.AlpineV001SchemaPackage{}
 	canonicalEntry.Package.Hash = &models.AlpineV001SchemaPackageHash{}
@@ -282,8 +266,8 @@ func (v V001Entry) validate() error {
 	if key == nil {
 		return errors.New("missing public key")
 	}
-	if len(key.Content) == 0 && key.URL.String() == "" {
-		return errors.New("one of 'content' or 'url' must be specified for publicKey")
+	if key.Content == nil || len(*key.Content) == 0 {
+		return errors.New("'content' must be specified for publicKey")
 	}
 
 	pkg := v.AlpineModel.Package
@@ -296,8 +280,8 @@ func (v V001Entry) validate() error {
 		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
 			return errors.New("invalid value for hash")
 		}
-	} else if len(pkg.Content) == 0 && pkg.URL.String() == "" {
-		return errors.New("one of 'content' or 'url' must be specified for package")
+	} else if len(pkg.Content) == 0 {
+		return errors.New("'content' must be specified for package")
 	}
 
 	return nil
@@ -322,49 +306,43 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	var err error
 	artifactBytes := props.ArtifactBytes
 	if artifactBytes == nil {
+		var artifactReader io.ReadCloser
 		if props.ArtifactPath.IsAbs() {
-			re.AlpineModel.Package.URL = strfmt.URI(props.ArtifactPath.String())
-			if props.ArtifactHash != "" {
-				re.AlpineModel.Package.Hash = &models.AlpineV001SchemaPackageHash{
-					Algorithm: swag.String(models.AlpineV001SchemaPackageHashAlgorithmSha256),
-					Value:     swag.String(props.ArtifactHash),
-				}
-			}
-		} else {
-			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+			artifactReader, err = util.FileOrURLReadCloser(ctx, props.ArtifactPath.String(), nil)
 			if err != nil {
 				return nil, fmt.Errorf("error reading artifact file: %w", err)
 			}
-			re.AlpineModel.Package.Content = strfmt.Base64(artifactBytes)
+		} else {
+			artifactReader, err = os.Open(filepath.Clean(props.ArtifactPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error opening artifact file: %w", err)
+			}
 		}
-	} else {
-		re.AlpineModel.Package.Content = strfmt.Base64(artifactBytes)
+		artifactBytes, err = ioutil.ReadAll(artifactReader)
+		if err != nil {
+			return nil, fmt.Errorf("error reading artifact file: %w", err)
+		}
 	}
+	re.AlpineModel.Package.Content = strfmt.Base64(artifactBytes)
 
 	re.AlpineModel.PublicKey = &models.AlpineV001SchemaPublicKey{}
 	publicKeyBytes := props.PublicKeyBytes
 	if publicKeyBytes == nil {
-		if props.PublicKeyPath.IsAbs() {
-			re.AlpineModel.PublicKey.URL = strfmt.URI(props.PublicKeyPath.String())
-		} else {
-			publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
-			if err != nil {
-				return nil, fmt.Errorf("error reading public key file: %w", err)
-			}
-			re.AlpineModel.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+		publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
+		if err != nil {
+			return nil, fmt.Errorf("error reading public key file: %w", err)
 		}
+		re.AlpineModel.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes)
 	} else {
-		re.AlpineModel.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+		re.AlpineModel.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes)
 	}
 
 	if err := re.validate(); err != nil {
 		return nil, err
 	}
 
-	if re.hasExternalEntities() {
-		if _, _, err := re.fetchExternalEntities(ctx); err != nil {
-			return nil, fmt.Errorf("error retrieving external entities: %v", err)
-		}
+	if _, _, err := re.fetchExternalEntities(ctx); err != nil {
+		return nil, fmt.Errorf("error retrieving external entities: %v", err)
 	}
 
 	returnVal.APIVersion = swag.String(re.APIVersion())

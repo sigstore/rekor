@@ -20,16 +20,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/go-openapi/runtime"
-	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
@@ -67,13 +63,13 @@ func TestCrossFieldValidation(t *testing.T) {
 	type TestCase struct {
 		caseDesc                  string
 		entry                     V001Entry
-		hasExtEntities            bool
 		expectUnmarshalSuccess    bool
 		expectCanonicalizeSuccess bool
 	}
 
 	keyBytes, _ := ioutil.ReadFile("../../../../tests/test_root.json")
 	dataBytes, _ := ioutil.ReadFile("../../../../tests/test_timestamp.json")
+	anyBytes, _ := ioutil.ReadFile("../../../../tests/test_any.json")
 
 	keyContent := &data.Signed{}
 	if err := json.Unmarshal(keyBytes, keyContent); err != nil {
@@ -83,32 +79,14 @@ func TestCrossFieldValidation(t *testing.T) {
 	if err := json.Unmarshal(dataBytes, dataContent); err != nil {
 		t.Errorf("unexpected error")
 	}
-
-	testServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			file := &keyBytes
-			var err error
-
-			switch r.URL.Path {
-			case "/key":
-				file = &keyBytes
-			case "/data":
-				file = &dataBytes
-			default:
-				err = errors.New("unknown URL")
-			}
-			if err != nil {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(*file)
-		}))
-	defer testServer.Close()
+	anyContent := &data.Signed{}
+	if err := json.Unmarshal(anyBytes, anyContent); err != nil {
+		t.Errorf("unexpected error")
+	}
 
 	testCases := []TestCase{
 		{
-			caseDesc: "root without url or content",
+			caseDesc: "root without content",
 			entry: V001Entry{
 				TufObj: models.TUFV001Schema{
 					Root:     &models.TUFV001SchemaRoot{},
@@ -122,74 +100,42 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				TufObj: models.TUFV001Schema{
 					Root: &models.TUFV001SchemaRoot{
-						URL: strfmt.URI(testServer.URL + "/key"),
+						Content: keyContent,
 					},
 					Metadata: &models.TUFV001SchemaMetadata{},
 				},
 			},
-			hasExtEntities:         true,
 			expectUnmarshalSuccess: false,
 		},
 		{
-			caseDesc: "root with empty manifest",
+			caseDesc: "root with invalid manifest & valid metadata",
 			entry: V001Entry{
 				TufObj: models.TUFV001Schema{
 					Root: &models.TUFV001SchemaRoot{
-						URL: strfmt.URI(testServer.URL + "/key"),
-					},
-					Metadata: &models.TUFV001SchemaMetadata{},
-				},
-			},
-			hasExtEntities:         true,
-			expectUnmarshalSuccess: false,
-		},
-		{
-			caseDesc: "root with manifest & url",
-			entry: V001Entry{
-				TufObj: models.TUFV001Schema{
-					Root: &models.TUFV001SchemaRoot{
-						URL: strfmt.URI(testServer.URL + "/key"),
+						Content: anyContent,
 					},
 					Metadata: &models.TUFV001SchemaMetadata{
-						URL: strfmt.URI(testServer.URL + "/data"),
+						Content: dataContent,
 					},
 				},
 			},
-			hasExtEntities:            true,
+			expectUnmarshalSuccess:    true,
+			expectCanonicalizeSuccess: false,
+		},
+		{
+			caseDesc: "root with manifest & content",
+			entry: V001Entry{
+				TufObj: models.TUFV001Schema{
+					Root: &models.TUFV001SchemaRoot{
+						Content: keyContent,
+					},
+					Metadata: &models.TUFV001SchemaMetadata{
+						Content: dataContent,
+					},
+				},
+			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
-		},
-		{
-			caseDesc: "root with manifest & url with 404 error on root",
-			entry: V001Entry{
-				TufObj: models.TUFV001Schema{
-					Root: &models.TUFV001SchemaRoot{
-						URL: strfmt.URI(testServer.URL + "/404"),
-					},
-					Metadata: &models.TUFV001SchemaMetadata{
-						URL: strfmt.URI(testServer.URL + "/data"),
-					},
-				},
-			},
-			hasExtEntities:            true,
-			expectUnmarshalSuccess:    true,
-			expectCanonicalizeSuccess: false,
-		},
-		{
-			caseDesc: "root with data & url with 404 error on manifest",
-			entry: V001Entry{
-				TufObj: models.TUFV001Schema{
-					Root: &models.TUFV001SchemaRoot{
-						URL: strfmt.URI(testServer.URL + "/key"),
-					},
-					Metadata: &models.TUFV001SchemaMetadata{
-						URL: strfmt.URI(testServer.URL + "/404"),
-					},
-				},
-			},
-			hasExtEntities:            true,
-			expectUnmarshalSuccess:    true,
-			expectCanonicalizeSuccess: false,
 		},
 		{
 			caseDesc: "root with invalid key content & with manifest with content",
@@ -203,41 +149,23 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			hasExtEntities:            false,
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
 		},
 		{
-			caseDesc: "root with data & url and valid manifest",
-			entry: V001Entry{
-				TufObj: models.TUFV001Schema{
-					Root: &models.TUFV001SchemaRoot{
-						URL: strfmt.URI(testServer.URL + "/key"),
-					},
-					Metadata: &models.TUFV001SchemaMetadata{
-						URL: strfmt.URI(testServer.URL + "/data"),
-					},
-				},
-			},
-			hasExtEntities:            true,
-			expectUnmarshalSuccess:    true,
-			expectCanonicalizeSuccess: true,
-		},
-		{
-			caseDesc: "public key with key content & with data with content",
+			caseDesc: "public key with key content & with invalid data with content",
 			entry: V001Entry{
 				TufObj: models.TUFV001Schema{
 					Root: &models.TUFV001SchemaRoot{
 						Content: keyContent,
 					},
 					Metadata: &models.TUFV001SchemaMetadata{
-						Content: dataContent,
+						Content: anyContent,
 					},
 				},
 			},
-			hasExtEntities:            false,
 			expectUnmarshalSuccess:    true,
-			expectCanonicalizeSuccess: true,
+			expectCanonicalizeSuccess: false,
 		},
 	}
 
@@ -264,10 +192,6 @@ func TestCrossFieldValidation(t *testing.T) {
 		}
 		if err := unmarshalAndValidate(); (err == nil) != tc.expectUnmarshalSuccess {
 			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
-		}
-
-		if tc.entry.hasExternalEntities() != tc.hasExtEntities {
-			t.Errorf("unexpected result from HasExternalEntities for '%v'", tc.caseDesc)
 		}
 
 		b, err := v.Canonicalize(context.TODO())

@@ -34,13 +34,13 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846 # v3
-      - uses: sigstore/cosign-installer@d6a3abf1bdea83574e28d40543793018b6035605 # v2.1.0
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+      - uses: sigstore/cosign-installer@536b37ec5d5b543420bdfd9b744c5965bd4d8730 # v2.3.0
 
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v3.0.0
+      - uses: actions/setup-go@fcdc43634adb5f7ae75a9d7a9b9361790f7293e2 # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
 
@@ -52,7 +52,7 @@ jobs:
           version: v0.11.2
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/auth@50dbfd0907520dcccbd51e965728eb32e592b8fa # v0.7.0
+        uses: google-github-actions/auth@81012c2689e66f7f020ed6d8ab43596a0f8b503a # v0.7.1
         with:
           workload_identity_provider: 'projects/498091336538/locations/global/workloadIdentityPools/githubactions/providers/sigstore-rekor'
           service_account: 'github-actions-rekor@projectsigstore.iam.gserviceaccount.com'

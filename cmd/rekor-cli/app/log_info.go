@@ -21,17 +21,17 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/go-openapi/swag"
-	"github.com/google/trillian/merkle/logverifier"
-	"github.com/google/trillian/merkle/rfc6962"
-	"github.com/pkg/errors"
 	rclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/transparency-dev/merkle/proof"
+	"github.com/transparency-dev/merkle/rfc6962"
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/state"
@@ -118,7 +118,7 @@ func verifyInactiveTrees(rekorClient *rclient.Rekor, serverURL string, inactiveS
 		signedTreeHead := swag.StringValue(shard.SignedTreeHead)
 		treeID := swag.StringValue(shard.TreeID)
 		if err := verifyTree(rekorClient, signedTreeHead, serverURL, treeID); err != nil {
-			return errors.Wrapf(err, "verifying inactive shard with ID %s", treeID)
+			return fmt.Errorf("verifying inactive shard with ID %s: %w", treeID, err)
 		}
 	}
 	log.CliLogger.Infof("Successfully validated inactive shards")
@@ -173,18 +173,17 @@ func proveConsistency(rekorClient *rclient.Rekor, oldState *util.SignedCheckpoin
 		params.FirstSize = &firstSize
 		params.LastSize = int64(sth.Size)
 		params.TreeID = &treeID
-		proof, err := rekorClient.Tlog.GetLogProof(params)
+		logProof, err := rekorClient.Tlog.GetLogProof(params)
 		if err != nil {
 			return err
 		}
 		hashes := [][]byte{}
-		for _, h := range proof.Payload.Hashes {
+		for _, h := range logProof.Payload.Hashes {
 			b, _ := hex.DecodeString(h)
 			hashes = append(hashes, b)
 		}
-		v := logverifier.New(rfc6962.DefaultHasher)
-		if err := v.VerifyConsistencyProof(firstSize, int64(sth.Size), oldState.Hash,
-			sth.Hash, hashes); err != nil {
+		if err := proof.VerifyConsistency(rfc6962.DefaultHasher, persistedSize, sth.Size, hashes, oldState.Hash,
+			sth.Hash); err != nil {
 			return err
 		}
 		log.CliLogger.Infof("Consistency proof valid!")

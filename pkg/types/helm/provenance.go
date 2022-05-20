@@ -17,11 +17,12 @@ package helm
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"strings"
 
 	"github.com/ghodss/yaml"
-	"github.com/pkg/errors"
 
 	"golang.org/x/crypto/openpgp/clearsign"
 )
@@ -56,7 +57,7 @@ func (p *Provenance) Unmarshal(reader io.Reader) error {
 	}
 
 	if err = p.parseMessageBlock(block.Plaintext); err != nil {
-		return errors.Wrap(err, "Error occurred parsing message block")
+		return fmt.Errorf("Error occurred parsing message block: %w", err)
 	}
 
 	p.Block = block
@@ -73,7 +74,7 @@ func (p *Provenance) parseMessageBlock(data []byte) error {
 	sc := &SumCollection{}
 
 	if err := yaml.Unmarshal(parts[1], sc); err != nil {
-		return errors.Wrap(err, "Error occurred parsing SumCollection")
+		return fmt.Errorf("Error occurred parsing SumCollection: %w", err)
 	}
 
 	p.SumCollection = sc

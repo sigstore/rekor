@@ -9,26 +9,13 @@
             "description": "The public key that can verify the package signature",
             "type": "object",
             "properties": {
-                "url": {
-                    "description": "Specifies the location of the public key",
-                    "type": "string",
-                    "format": "uri",
-                    "writeOnly": true
-                },
                 "content": {
                     "description": "Specifies the content of the public key inline within the document",
                     "type": "string",
                     "format": "byte"
                 }
             },
-            "oneOf": [
-                {
-                    "required": [ "url" ]
-                },
-                {
-                    "required": [ "content" ]
-                }
-            ]
+            "required": [ "content" ]
         },
         "package": {
             "description": "Information about the package associated with the entry",
@@ -56,13 +43,8 @@
                             "type": "string"
                         }
                     },
+                    "readOnly": true,
                     "required": [ "algorithm", "value" ]
-                },
-                "url": {
-                    "description": "Specifies the location of the package; if this is specified, a hash value must also be provided",
-                    "type": "string",
-                    "format": "uri",
-                    "writeOnly": true
                 },
                 "content": {
                     "description": "Specifies the package inline within the document",
@@ -73,7 +55,7 @@
             },
             "oneOf": [
                 {
-                    "required": [ "url" ]
+                    "required": [ "hash" ]
                 },
                 {
                     "required": [ "content" ]

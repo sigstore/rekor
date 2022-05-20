@@ -32,7 +32,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
 	"github.com/sigstore/rekor/pkg/client"
 	genclient "github.com/sigstore/rekor/pkg/generated/client"
@@ -140,7 +139,7 @@ var uploadCmd = &cobra.Command{
 
 		// verify log entry
 		if verified, err := verifyLogEntry(ctx, rekorClient, logEntry); err != nil || !verified {
-			return nil, errors.Wrap(err, "unable to verify entry was added to log")
+			return nil, fmt.Errorf("unable to verify entry was added to log: %w", err)
 		}
 
 		return &uploadCmdOutput{

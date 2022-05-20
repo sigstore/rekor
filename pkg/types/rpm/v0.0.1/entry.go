@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -68,7 +69,7 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
-	keyObj, err := pgp.NewPublicKey(bytes.NewReader(v.RPMModel.PublicKey.Content))
+	keyObj, err := pgp.NewPublicKey(bytes.NewReader(*v.RPMModel.PublicKey.Content))
 	if err != nil {
 		return nil, err
 	}
@@ -107,17 +108,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return v.validate()
 }
 
-func (v V001Entry) hasExternalEntities() bool {
-
-	if v.RPMModel.Package != nil && v.RPMModel.Package.URL.String() != "" {
-		return true
-	}
-	if v.RPMModel.PublicKey != nil && v.RPMModel.PublicKey.URL.String() != "" {
-		return true
-	}
-	return false
-}
-
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pgp.PublicKey, *rpmutils.PackageFile, error) {
 
 	if err := v.validate(); err != nil {
@@ -145,11 +135,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pgp.PublicKey, 
 		defer sigW.Close()
 		defer rpmW.Close()
 
-		dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.RPMModel.Package.URL.String(), v.RPMModel.Package.Content)
-		if err != nil {
-			return closePipesOnError(err)
-		}
-		defer dataReadCloser.Close()
+		dataReadCloser := bytes.NewReader(v.RPMModel.Package.Content)
 
 		/* #nosec G110 */
 		if _, err := io.Copy(io.MultiWriter(hashW, sigW, rpmW), dataReadCloser); err != nil {
@@ -183,13 +169,9 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pgp.PublicKey, 
 
 	var keyObj *pgp.PublicKey
 	g.Go(func() error {
-		keyReadCloser, err := util.FileOrURLReadCloser(ctx, v.RPMModel.PublicKey.URL.String(),
-			v.RPMModel.PublicKey.Content)
-		if err != nil {
-			return closePipesOnError(err)
-		}
-		defer keyReadCloser.Close()
+		keyReadCloser := bytes.NewReader(*v.RPMModel.PublicKey.Content)
 
+		var err error
 		keyObj, err = pgp.NewPublicKey(keyReadCloser)
 		if err != nil {
 			return closePipesOnError(types.ValidationError(err))
@@ -259,11 +241,13 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	// need to canonicalize key content
 
+	var pubKeyContent []byte
 	canonicalEntry.PublicKey = &models.RpmV001SchemaPublicKey{}
-	canonicalEntry.PublicKey.Content, err = keyObj.CanonicalValue()
+	pubKeyContent, err = keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
+	canonicalEntry.PublicKey.Content = (*strfmt.Base64)(&pubKeyContent)
 
 	canonicalEntry.Package = &models.RpmV001SchemaPackage{}
 	canonicalEntry.Package.Hash = &models.RpmV001SchemaPackageHash{}
@@ -302,8 +286,8 @@ func (v V001Entry) validate() error {
 	if key == nil {
 		return errors.New("missing public key")
 	}
-	if len(key.Content) == 0 && key.URL.String() == "" {
-		return errors.New("one of 'content' or 'url' must be specified for publicKey")
+	if key.Content == nil || len(*key.Content) == 0 {
+		return errors.New("'content' must be specified for publicKey")
 	}
 
 	pkg := v.RPMModel.Package
@@ -316,8 +300,8 @@ func (v V001Entry) validate() error {
 		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
 			return errors.New("invalid value for hash")
 		}
-	} else if len(pkg.Content) == 0 && pkg.URL.String() == "" {
-		return errors.New("one of 'content' or 'url' must be specified for package")
+	} else if len(pkg.Content) == 0 {
+		return errors.New("'content' must be specified for package")
 	}
 
 	return nil
@@ -342,21 +326,24 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	var err error
 	artifactBytes := props.ArtifactBytes
 	if artifactBytes == nil {
-		if props.ArtifactPath == nil {
-			return nil, errors.New("path to RPM file (file or URL) must be specified")
-		}
+		var artifactReader io.ReadCloser
 		if props.ArtifactPath.IsAbs() {
-			re.RPMModel.Package.URL = strfmt.URI(props.ArtifactPath.String())
-		} else {
-			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+			artifactReader, err = util.FileOrURLReadCloser(ctx, props.ArtifactPath.String(), nil)
 			if err != nil {
 				return nil, fmt.Errorf("error reading RPM file: %w", err)
 			}
-			re.RPMModel.Package.Content = strfmt.Base64(artifactBytes)
+		} else {
+			artifactReader, err = os.Open(filepath.Clean(props.ArtifactPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error opening RPM file: %w", err)
+			}
 		}
-	} else {
-		re.RPMModel.Package.Content = strfmt.Base64(artifactBytes)
+		artifactBytes, err = ioutil.ReadAll(artifactReader)
+		if err != nil {
+			return nil, fmt.Errorf("error reading RPM file: %w", err)
+		}
 	}
+	re.RPMModel.Package.Content = strfmt.Base64(artifactBytes)
 
 	re.RPMModel.PublicKey = &models.RpmV001SchemaPublicKey{}
 	publicKeyBytes := props.PublicKeyBytes
@@ -364,27 +351,21 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		if props.PublicKeyPath == nil {
 			return nil, errors.New("public key must be provided to verify RPM signature")
 		}
-		if props.PublicKeyPath.IsAbs() {
-			re.RPMModel.PublicKey.URL = strfmt.URI(props.PublicKeyPath.String())
-		} else {
-			publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
-			if err != nil {
-				return nil, fmt.Errorf("error reading public key file: %w", err)
-			}
-			re.RPMModel.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+		publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
+		if err != nil {
+			return nil, fmt.Errorf("error reading public key file: %w", err)
 		}
+		re.RPMModel.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes)
 	} else {
-		re.RPMModel.PublicKey.Content = strfmt.Base64(publicKeyBytes)
+		re.RPMModel.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes)
 	}
 
 	if err := re.validate(); err != nil {
 		return nil, err
 	}
 
-	if re.hasExternalEntities() {
-		if _, _, err := re.fetchExternalEntities(context.Background()); err != nil {
-			return nil, fmt.Errorf("error retrieving external entities: %v", err)
-		}
+	if _, _, err := re.fetchExternalEntities(context.Background()); err != nil {
+		return nil, fmt.Errorf("error retrieving external entities: %v", err)
 	}
 
 	returnVal.APIVersion = swag.String(re.APIVersion())

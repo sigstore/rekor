@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -29,7 +30,6 @@ import (
 	_ "gocloud.dev/blob/fileblob" // fileblob
 	_ "gocloud.dev/blob/gcsblob"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gocloud.dev/blob"
@@ -133,11 +133,11 @@ func init() {
 func doCheck(c *genclient.Rekor, pub crypto.PublicKey) (*SignedAndUnsignedLogRoot, error) {
 	li, err := c.Tlog.GetLogInfo(nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "getting log info")
+		return nil, fmt.Errorf("getting log info: %w", err)
 	}
 	sth := util.SignedCheckpoint{}
 	if err := sth.UnmarshalText([]byte(*li.Payload.SignedTreeHead)); err != nil {
-		return nil, errors.Wrap(err, "unmarshalling tree head")
+		return nil, fmt.Errorf("unmarshalling tree head: %w", err)
 	}
 
 	verifier, err := signature.LoadVerifier(pub, crypto.SHA256)
@@ -146,7 +146,7 @@ func doCheck(c *genclient.Rekor, pub crypto.PublicKey) (*SignedAndUnsignedLogRoo
 	}
 
 	if !sth.Verify(verifier) {
-		return nil, errors.Wrap(err, "signed tree head failed verification")
+		return nil, fmt.Errorf("signed tree head failed verification: %w", err)
 	}
 
 	return &SignedAndUnsignedLogRoot{

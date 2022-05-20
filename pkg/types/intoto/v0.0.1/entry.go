@@ -23,6 +23,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -34,8 +35,6 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-
-	"github.com/pkg/errors"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -80,6 +79,10 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 
 	switch v.env.PayloadType {
 	case in_toto.PayloadType:
+		if v.IntotoObj.Content == nil || v.IntotoObj.Content.Hash == nil {
+			log.Logger.Info("IntotoObj content or hash is nil")
+			return result, nil
+		}
 		hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.Hash.Algorithm, *v.IntotoObj.Content.Hash.Value))
 		result = append(result, hashkey)
 
@@ -90,6 +93,18 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 		for _, s := range statement.Subject {
 			for alg, ds := range s.Digest {
 				result = append(result, alg+":"+ds)
+			}
+		}
+		// Not all in-toto statements will contain a SLSA provenance predicate.
+		// See https://github.com/in-toto/attestation/blob/main/spec/README.md#predicate
+		// for other predicates.
+		if predicate, err := parseSlsaPredicate(v.env.Payload); err == nil {
+			if predicate.Predicate.Materials != nil {
+				for _, s := range predicate.Predicate.Materials {
+					for alg, ds := range s.Digest {
+						result = append(result, alg+":"+ds)
+					}
+				}
 			}
 		}
 	default:
@@ -108,6 +123,18 @@ func parseStatement(p string) (*in_toto.Statement, error) {
 		return nil, err
 	}
 	return &ps, nil
+}
+
+func parseSlsaPredicate(p string) (*in_toto.ProvenanceStatement, error) {
+	predicate := in_toto.ProvenanceStatement{}
+	payload, err := base64.StdEncoding.DecodeString(p)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(payload, &predicate); err != nil {
+		return nil, err
+	}
+	return &predicate, nil
 }
 
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {

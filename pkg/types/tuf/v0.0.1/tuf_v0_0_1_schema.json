@@ -14,37 +14,25 @@
             "description": "TUF metadata",
             "type": "object",
             "properties": {
-                "url": {
-                    "description": "Specifies the location of the archive",
-                    "type": "string",
-                    "format": "uri",
-                    "writeOnly": true
-                },
                 "content": {
-                    "description": "Specifies the archive inline within the document",
+                    "description": "Specifies the metadata inline within the document",
                     "type": "object",
-                    "additionalProperties": true,
-                    "writeOnly": true
+                    "additionalProperties": true
                 }
-            }
+            },
+            "required": [ "metadata" ]
         },
         "root" : {
             "description": "root metadata containing about the public keys used to sign the manifest",
             "type": "object",
             "properties": {
-                "url": {
-                    "description": "Specifies the location of the archive",
-                    "type": "string",
-                    "format": "uri",
-                    "writeOnly": true
-                },
                 "content": {
-                    "description": "Specifies the archive inline within the document",
+                    "description": "Specifies the metadata inline within the document",
                     "type": "object",
-                    "additionalProperties": true,
-                    "writeOnly": true
+                    "additionalProperties": true
                 }
-            }
+            },
+            "required": [ "content" ]
         }
     },
     "required": [ "metadata" , "root"]

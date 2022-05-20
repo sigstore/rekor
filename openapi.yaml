@@ -250,66 +250,6 @@ paths:
         default:
           $ref: '#/responses/InternalServerError'
   
-  /api/v1/timestamp:
-    post:
-      summary: Generates a new timestamp response and creates a new log entry for the timestamp in the transparency log
-      operationId: getTimestampResponse
-      tags:
-        - timestamp
-      consumes:
-        - application/timestamp-query
-      produces:
-        - application/timestamp-reply
-      parameters:
-        - in: body
-          name: request
-          required: true
-          schema:
-            type: string
-            format: binary
-      responses:
-        201:
-          description: Returns a timestamp response and the location of the log entry in the transprency log
-          schema:
-            type: string
-            format: binary
-          headers:
-            ETag:
-              type: string
-              description: UUID of the log entry made for the timestamp response
-            Location:
-              type: string
-              description: URI location of the log entry made for the timestamp response
-              format: uri
-            Index:
-              type: integer
-              description: Log index of the log entry made for the timestamp response
-        400:
-          $ref: '#/responses/BadContent'
-        501:
-          $ref: '#/responses/NotImplemented'
-        default:
-          $ref: '#/responses/InternalServerError'
-
-  /api/v1/timestamp/certchain:
-    get:
-      summary: Retrieve the certfiicate chain for timestamping that can be used to validate trusted timestamps
-      description: Returns the certfiicate chain for timestamping that can be used to validate trusted timestamps
-      operationId: getTimestampCertChain
-      tags:
-        - timestamp
-      produces:
-        - application/pem-certificate-chain
-      responses:
-        200:
-          description: The PEM encoded cert chain
-          schema:
-            type: string
-        404:
-          $ref: '#/responses/NotFound'
-        default:
-          $ref: '#/responses/InternalServerError'
-
 definitions:
   ProposedEntry:
     type: object
@@ -699,8 +639,6 @@ responses:
         format: uri
   NotFound:
     description: The content requested could not be found
-  NotImplemented:
-    description: The content requested is not implemented
   InternalServerError:
     description: There was an internal error in the server while processing the request
     schema:

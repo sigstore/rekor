@@ -29,7 +29,6 @@ import (
 	"github.com/spf13/pflag"
 
 	validator "github.com/go-playground/validator/v10"
-	"github.com/pkg/errors"
 )
 
 type FlagType string
@@ -116,7 +115,7 @@ func NewFlagValue(flagType FlagType, defaultVal string) pflag.Value {
 	val := valFunc()
 	if defaultVal != "" {
 		if err := val.Set(defaultVal); err != nil {
-			log.Fatal(errors.Wrap(err, "initializing flag"))
+			log.Fatal(fmt.Errorf("initializing flag: %w", err))
 		}
 	}
 	return val

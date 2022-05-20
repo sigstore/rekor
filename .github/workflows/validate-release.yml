@@ -39,17 +39,17 @@ jobs:
       statuses: none
 
     env:
-      CROSS_BUILDER_IMAGE: ghcr.io/gythialy/golang-cross:v1.17.8-1@sha256:38effe76e69a728f6c2e76b290c0d5e09fdff439926e3bbe7e69978c84c185f3
-      COSIGN_IMAGE: gcr.io/projectsigstore/cosign:v1.7.1@sha256:7d735456ae0c6489d088981a228b944e8a729c2aa979d824a74e44ab843d6ad2
+      CROSS_BUILDER_IMAGE: ghcr.io/gythialy/golang-cross:v1.17.10-0@sha256:62c64ee6c74285839db86ae0814d2411bfe4bc2cdc025b10122e4bb8d27b1418
+      COSIGN_IMAGE: gcr.io/projectsigstore/cosign:v1.8.0@sha256:12b4d428529654c95a7550a936cbb5c6fe93a046ea7454676cb6fb0ce566d78c
 
     steps:
-      - uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846 # v3
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@f6164bd8c8acb4a71fb2791a8b6c4024ff038dab # v3.0.0
+      - uses: actions/setup-go@fcdc43634adb5f7ae75a9d7a9b9361790f7293e2 # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
-      - uses: anchore/sbom-action/download-syft@407a3ec314b07e326eff3ba171091cbc150460a8 # v0.10.0
+      - uses: anchore/sbom-action/download-syft@bb716408e75840bbb01e839347cd213767269d4a # v0.10.0
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@b953231f81b8dfd023c58e0854a721e35037f28b # v2.9.1
         with:

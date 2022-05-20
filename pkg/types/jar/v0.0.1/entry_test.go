@@ -18,12 +18,7 @@ package jar
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"errors"
 	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"testing"
 
@@ -50,35 +45,11 @@ func TestCrossFieldValidation(t *testing.T) {
 	type TestCase struct {
 		caseDesc                  string
 		entry                     V001Entry
-		hasExtEntities            bool
 		expectUnmarshalSuccess    bool
 		expectCanonicalizeSuccess bool
 	}
 
 	jarBytes, _ := ioutil.ReadFile("../../../../tests/test.jar")
-
-	h := sha256.Sum256(jarBytes)
-	dataSHA := hex.EncodeToString(h[:])
-
-	testServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			var file *[]byte
-			var err error
-
-			switch r.URL.Path {
-			case "/data":
-				file = &jarBytes
-			default:
-				err = errors.New("unknown URL")
-			}
-			if err != nil {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(*file)
-		}))
-	defer testServer.Close()
 
 	testCases := []TestCase{
 		{
@@ -96,63 +67,6 @@ func TestCrossFieldValidation(t *testing.T) {
 			expectUnmarshalSuccess: false,
 		},
 		{
-			caseDesc: "archive with url but no hash",
-			entry: V001Entry{
-				JARModel: models.JarV001Schema{
-					Archive: &models.JarV001SchemaArchive{
-						URL: strfmt.URI(testServer.URL + "/data"),
-					},
-				},
-			},
-			hasExtEntities:         true,
-			expectUnmarshalSuccess: false,
-		},
-		{
-			caseDesc: "archive with url and empty hash",
-			entry: V001Entry{
-				JARModel: models.JarV001Schema{
-					Archive: &models.JarV001SchemaArchive{
-						Hash: &models.JarV001SchemaArchiveHash{},
-						URL:  strfmt.URI(testServer.URL + "/data"),
-					},
-				},
-			},
-			hasExtEntities:         true,
-			expectUnmarshalSuccess: false,
-		},
-		{
-			caseDesc: "archive with url and hash alg but missing value",
-			entry: V001Entry{
-				JARModel: models.JarV001Schema{
-					Archive: &models.JarV001SchemaArchive{
-						Hash: &models.JarV001SchemaArchiveHash{
-							Algorithm: swag.String(models.JarV001SchemaArchiveHashAlgorithmSha256),
-						},
-						URL: strfmt.URI(testServer.URL + "/data"),
-					},
-				},
-			},
-			hasExtEntities:         true,
-			expectUnmarshalSuccess: false,
-		},
-		{
-			caseDesc: "archive with valid url with matching hash",
-			entry: V001Entry{
-				JARModel: models.JarV001Schema{
-					Archive: &models.JarV001SchemaArchive{
-						Hash: &models.JarV001SchemaArchiveHash{
-							Algorithm: swag.String(models.JarV001SchemaArchiveHashAlgorithmSha256),
-							Value:     swag.String(dataSHA),
-						},
-						URL: strfmt.URI(testServer.URL + "/data"),
-					},
-				},
-			},
-			hasExtEntities:            true,
-			expectUnmarshalSuccess:    true,
-			expectCanonicalizeSuccess: true,
-		},
-		{
 			caseDesc: "archive with inline content",
 			entry: V001Entry{
 				JARModel: models.JarV001Schema{
@@ -161,26 +75,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			hasExtEntities:            false,
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
-		},
-		{
-			caseDesc: "archive with url and incorrect hash value",
-			entry: V001Entry{
-				JARModel: models.JarV001Schema{
-					Archive: &models.JarV001SchemaArchive{
-						Hash: &models.JarV001SchemaArchiveHash{
-							Algorithm: swag.String(models.JarV001SchemaArchiveHashAlgorithmSha256),
-							Value:     swag.String("3030303030303030303030303030303030303030303030303030303030303030"),
-						},
-						URL: strfmt.URI(testServer.URL + "/data"),
-					},
-				},
-			},
-			hasExtEntities:            true,
-			expectUnmarshalSuccess:    true,
-			expectCanonicalizeSuccess: false,
 		},
 	}
 
@@ -197,10 +93,6 @@ func TestCrossFieldValidation(t *testing.T) {
 		// No need to continue here if unmarshal failed
 		if !tc.expectUnmarshalSuccess {
 			continue
-		}
-
-		if tc.entry.hasExternalEntities() != tc.hasExtEntities {
-			t.Errorf("unexpected result from HasExternalEntities for '%v'", tc.caseDesc)
 		}
 
 		b, err := v.Canonicalize(context.TODO())

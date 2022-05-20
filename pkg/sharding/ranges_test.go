@@ -16,10 +16,14 @@
 package sharding
 
 import (
+	"context"
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/google/trillian"
+	"google.golang.org/grpc"
 )
 
 func TestNewLogRanges(t *testing.T) {
@@ -47,7 +51,9 @@ func TestNewLogRanges(t *testing.T) {
 			}},
 		active: int64(45),
 	}
-	got, err := NewLogRanges(file, treeID)
+	ctx := context.Background()
+	tc := trillian.NewTrillianLogClient(&grpc.ClientConn{})
+	got, err := NewLogRanges(ctx, tc, file, treeID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,6 +62,37 @@ func TestNewLogRanges(t *testing.T) {
 	}
 	if !reflect.DeepEqual(expected.GetInactive(), got.GetInactive()) {
 		t.Fatalf("expected %v got %v", expected.GetInactive(), got.GetInactive())
+	}
+}
+
+func TestLogRangesFromPath(t *testing.T) {
+	contents := `
+- treeID: 0001
+  treeLength: 3
+  encodedPublicKey: c2hhcmRpbmcK
+- treeID: 0002
+  treeLength: 4`
+	file := filepath.Join(t.TempDir(), "sharding-config")
+	if err := ioutil.WriteFile(file, []byte(contents), 0644); err != nil {
+		t.Fatal(err)
+	}
+	expected := Ranges{
+		{
+			TreeID:           1,
+			TreeLength:       3,
+			EncodedPublicKey: "c2hhcmRpbmcK",
+		}, {
+			TreeID:     2,
+			TreeLength: 4,
+		},
+	}
+
+	got, err := logRangesFromPath(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(expected, got) {
+		t.Fatalf("expected %v got %v", expected, got)
 	}
 }
 

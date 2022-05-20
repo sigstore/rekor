@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -107,24 +108,13 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return v.validate()
 }
 
-func (v *V001Entry) hasExternalEntities() bool {
-	if v.JARModel.Archive != nil && v.JARModel.Archive.URL.String() != "" {
-		return true
-	}
-	return false
-}
-
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pkcs7.PublicKey, *pkcs7.Signature, error) {
 	oldSHA := ""
 	if v.JARModel.Archive.Hash != nil && v.JARModel.Archive.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.JARModel.Archive.Hash.Value)
 	}
 
-	dataReadCloser, err := util.FileOrURLReadCloser(ctx, v.JARModel.Archive.URL.String(), v.JARModel.Archive.Content)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer dataReadCloser.Close()
+	dataReadCloser := bytes.NewReader(v.JARModel.Archive.Content)
 
 	hasher := sha256.New()
 	b := &bytes.Buffer{}
@@ -236,8 +226,8 @@ func (v *V001Entry) validate() error {
 
 	// if the signature isn't present, then we need content to extract
 	if v.JARModel.Signature == nil || v.JARModel.Signature.Content == nil {
-		if len(archive.Content) == 0 && archive.URL.String() == "" {
-			return errors.New("one of 'content' or 'url' must be specified for package")
+		if len(archive.Content) == 0 {
+			return errors.New("'content' must be specified for package")
 		}
 	}
 
@@ -246,8 +236,6 @@ func (v *V001Entry) validate() error {
 		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
 			return errors.New("invalid value for hash")
 		}
-	} else if archive.URL.String() != "" {
-		return errors.New("hash value must be provided if URL is specified")
 	}
 
 	return nil
@@ -302,37 +290,31 @@ func (v *V001Entry) CreateFromArtifactProperties(ctx context.Context, props type
 	var err error
 	artifactBytes := props.ArtifactBytes
 	if artifactBytes == nil {
-		if props.ArtifactPath == nil {
-			return nil, errors.New("path to JAR archive (file or URL) must be specified")
-		}
+		var artifactReader io.ReadCloser
 		if props.ArtifactPath.IsAbs() {
-			re.JARModel.Archive.URL = strfmt.URI(props.ArtifactPath.String())
-			if props.ArtifactHash != "" {
-				re.JARModel.Archive.Hash = &models.JarV001SchemaArchiveHash{
-					Algorithm: swag.String(models.JarV001SchemaArchiveHashAlgorithmSha256),
-					Value:     swag.String(props.ArtifactHash),
-				}
-			}
-		} else {
-			artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+			artifactReader, err = util.FileOrURLReadCloser(ctx, props.ArtifactPath.String(), nil)
 			if err != nil {
 				return nil, fmt.Errorf("error reading JAR file: %w", err)
 			}
-			//TODO: ensure this is a valid JAR file; look for META-INF/MANIFEST.MF?
-			re.JARModel.Archive.Content = strfmt.Base64(artifactBytes)
+		} else {
+			artifactReader, err = os.Open(filepath.Clean(props.ArtifactPath.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error opening JAR file: %w", err)
+			}
 		}
-	} else {
-		re.JARModel.Archive.Content = strfmt.Base64(artifactBytes)
+		artifactBytes, err = ioutil.ReadAll(artifactReader)
+		if err != nil {
+			return nil, fmt.Errorf("error reading JAR file: %w", err)
+		}
 	}
+	re.JARModel.Archive.Content = (strfmt.Base64)(artifactBytes)
 
 	if err := re.validate(); err != nil {
 		return nil, err
 	}
 
-	if re.hasExternalEntities() {
-		if _, _, err := re.fetchExternalEntities(ctx); err != nil {
-			return nil, fmt.Errorf("error retrieving external entities: %v", err)
-		}
+	if _, _, err := re.fetchExternalEntities(ctx); err != nil {
+		return nil, fmt.Errorf("error retrieving external entities: %v", err)
 	}
 
 	returnVal.APIVersion = swag.String(re.APIVersion())

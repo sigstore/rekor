@@ -31,9 +31,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"net"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -50,9 +47,7 @@ import (
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/client"
-	genclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
-	"github.com/sigstore/rekor/pkg/generated/client/timestamp"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
@@ -378,9 +373,8 @@ func TestAPK(t *testing.T) {
 	outputContains(t, out, "Created entry at")
 	out = runCli(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", pubPath)
 	outputContains(t, out, "Entry already exists")
-	// pass invalid public key, ensure we see a 400 error with helpful message
+	// pass invalid public key, ensure we see an error with helpful message
 	out = runCliErr(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", artifactPath)
-	outputContains(t, out, "400")
 	outputContains(t, out, "invalid public key")
 }
 
@@ -488,72 +482,25 @@ func TestIntoto(t *testing.T) {
 }
 
 func TestTimestampArtifact(t *testing.T) {
-	payload := []byte("tell me when to go")
-	filePath := filepath.Join(t.TempDir(), "file.txt")
-	tsrPath := filepath.Join(t.TempDir(), "file.tsr")
-	tsr2Path := filepath.Join(t.TempDir(), "file2.tsr")
-	if err := ioutil.WriteFile(filePath, payload, 0644); err != nil {
-		t.Fatal(err)
-	}
-
 	var out string
-	out = runCli(t, "timestamp", "--artifact", filePath, "--out", tsrPath)
+	out = runCli(t, "upload", "--type", "rfc3161", "--artifact", "test.tsr")
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromTimestampOutput(t, out)
 
-	artifactBytes, err := ioutil.ReadFile(tsrPath)
+	artifactBytes, err := ioutil.ReadFile("test.tsr")
 	if err != nil {
 		t.Error(err)
 	}
 	sha := sha256.Sum256(artifactBytes)
 
-	out = runCli(t, "upload", "--type", "rfc3161", "--artifact", tsrPath)
+	out = runCli(t, "upload", "--type", "rfc3161", "--artifact", "test.tsr")
 	outputContains(t, out, "Entry already exists")
 
-	out = runCli(t, "search", "--artifact", tsrPath)
+	out = runCli(t, "search", "--artifact", "test.tsr")
 	outputContains(t, out, uuid)
 
 	out = runCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
 	outputContains(t, out, uuid)
-
-	// Generates a fresh timestamp on the same artifact
-	out = runCli(t, "timestamp", "--artifact", filePath, "--out", tsr2Path)
-	outputContains(t, out, "Created entry at")
-}
-
-func TestJARURL(t *testing.T) {
-	td := t.TempDir()
-	artifactPath := filepath.Join(td, "artifact.jar")
-
-	createSignedJar(t, artifactPath)
-	jarBytes, _ := ioutil.ReadFile(artifactPath)
-	jarSHA := sha256.Sum256(jarBytes)
-	testServer := httptest.NewUnstartedServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path != "/jar" {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(jarBytes)
-		}))
-	defer testServer.Close()
-	l, err := net.Listen("tcp", "172.17.0.1:0")
-	if err != nil {
-		t.Skipf("unable to forward port to rekor server: %s", err)
-	}
-	testServer.Listener.Close()
-	testServer.Listener = l
-	testServer.Start()
-	// ensure hash is required for JAR since signature/public key are embedded
-	out := runCliErr(t, "upload", "--artifact", testServer.URL+"/jar", "--type", "jar")
-	outputContains(t, out, "hash value must be provided if URL is specified")
-	// ensure valid JAR can be fetched over URL and inserted
-	out = runCli(t, "upload", "--artifact", testServer.URL+"/jar", "--type", "jar", "--artifact-hash="+hex.EncodeToString(jarSHA[:]))
-	outputContains(t, out, "Created entry at")
-	// ensure a 404 is handled correctly
-	out = runCliErr(t, "upload", "--artifact", testServer.URL+"/not_found", "--type", "jar", "--artifact-hash="+hex.EncodeToString(jarSHA[:]))
-	outputContains(t, out, "404")
 }
 
 func TestX509(t *testing.T) {
@@ -688,10 +635,10 @@ func TestSignedEntryTimestamp(t *testing.T) {
 				Content: strfmt.Base64(payload),
 			},
 			Signature: &models.RekordV001SchemaSignature{
-				Content: strfmt.Base64(sig),
-				Format:  models.RekordV001SchemaSignatureFormatX509,
+				Content: (*strfmt.Base64)(&sig),
+				Format:  swag.String(models.RekordV001SchemaSignatureFormatX509),
 				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
-					Content: strfmt.Base64(pemBytes),
+					Content: (*strfmt.Base64)(&pemBytes),
 				},
 			},
 		},
@@ -735,66 +682,6 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	}
 }
 
-func TestTimestampResponseCLI(t *testing.T) {
-	ctx := context.Background()
-	payload := []byte("i am a cat")
-	// Create files for data, response, and CA.
-
-	filePath := filepath.Join(t.TempDir(), "file.txt")
-	CAPath := filepath.Join(t.TempDir(), "ca.pem")
-	responsePath := filepath.Join(t.TempDir(), "response.tsr")
-	if err := ioutil.WriteFile(filePath, payload, 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	out := runCli(t, "timestamp", "--artifact", filePath, "--out", responsePath)
-	outputContains(t, out, "Wrote timestamp response to")
-
-	rekorClient, err := client.GetRekorClient("http://localhost:3000")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	certChain := rekorTimestampCertChain(t, ctx, rekorClient)
-	var rootCABytes bytes.Buffer
-	if err := pem.Encode(&rootCABytes, &pem.Block{Type: "CERTIFICATE", Bytes: certChain[len(certChain)-1].Raw}); err != nil {
-		t.Fatal(err)
-	}
-	if err := ioutil.WriteFile(CAPath, rootCABytes.Bytes(), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	// Use openssl to verify
-	cmd := exec.Command("openssl", "ts", "-verify", "-data", filePath, "-in", responsePath, "-CAfile", CAPath)
-	errs := &bytes.Buffer{}
-
-	cmd.Stderr = errs
-	if err := cmd.Run(); err != nil {
-		// Check that the result was OK.
-		if len(errs.Bytes()) > 0 {
-			t.Fatalf("error verifying with openssl %s", errs.String())
-		}
-
-	}
-
-	// Now try with the digest.
-	h := sha256.Sum256(payload)
-	hexDigest := hex.EncodeToString(h[:])
-	out = runCli(t, "timestamp", "--artifact-hash", hexDigest, "--out", responsePath)
-	outputContains(t, out, "Wrote timestamp response to")
-	cmd = exec.Command("openssl", "ts", "-verify", "-digest", hexDigest, "-in", responsePath, "-CAfile", CAPath)
-	errs = &bytes.Buffer{}
-
-	cmd.Stderr = errs
-	if err := cmd.Run(); err != nil {
-		// Check that the result was OK.
-		if len(errs.Bytes()) > 0 {
-			t.Fatalf("error verifying with openssl %s", errs.String())
-		}
-
-	}
-}
-
 func TestGetNonExistantIndex(t *testing.T) {
 	// this index is extremely likely to not exist
 	out := runCliErr(t, "get", "--log-index", "100000000")
@@ -805,34 +692,6 @@ func TestGetNonExistantUUID(t *testing.T) {
 	// this uuid is extremely likely to not exist
 	out := runCliErr(t, "get", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 	outputContains(t, out, "404")
-}
-
-func rekorTimestampCertChain(t *testing.T, ctx context.Context, c *genclient.Rekor) []*x509.Certificate {
-	resp, err := c.Timestamp.GetTimestampCertChain(&timestamp.GetTimestampCertChainParams{Context: ctx})
-	if err != nil {
-		t.Fatal(err)
-	}
-	certChainBytes := []byte(resp.GetPayload())
-
-	var block *pem.Block
-	block, certChainBytes = pem.Decode(certChainBytes)
-	certificates := []*x509.Certificate{}
-	for ; block != nil; block, certChainBytes = pem.Decode(certChainBytes) {
-		if block.Type == "CERTIFICATE" {
-			cert, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				t.Fatal(err)
-			}
-			certificates = append(certificates, cert)
-		} else {
-			t.Fatal(err)
-		}
-	}
-
-	if len(certificates) == 0 {
-		t.Fatal("could not find certificates")
-	}
-	return certificates
 }
 
 func TestEntryUpload(t *testing.T) {
@@ -846,16 +705,18 @@ func TestEntryUpload(t *testing.T) {
 	// Create the entry file
 	entryPath := filepath.Join(t.TempDir(), "entry.json")
 
+	pubKeyBytes := []byte(publicKey)
+
 	re := rekord.V001Entry{
 		RekordObj: models.RekordV001Schema{
 			Data: &models.RekordV001SchemaData{
 				Content: strfmt.Base64(payload),
 			},
 			Signature: &models.RekordV001SchemaSignature{
-				Content: strfmt.Base64(sig),
-				Format:  models.RekordV001SchemaSignatureFormatPgp,
+				Content: (*strfmt.Base64)(&sig),
+				Format:  swag.String(models.RekordV001SchemaSignatureFormatPgp),
 				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
-					Content: strfmt.Base64([]byte(publicKey)),
+					Content: (*strfmt.Base64)(&pubKeyBytes),
 				},
 			},
 		},
