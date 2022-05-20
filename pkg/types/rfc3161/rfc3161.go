@@ -17,8 +17,9 @@ package rfc3161
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 )
@@ -63,7 +64,7 @@ func (btt *BaseTimestampType) CreateProposedEntry(ctx context.Context, version s
 	}
 	ei, err := btt.VersionedUnmarshal(nil, version)
 	if err != nil {
-		return nil, errors.Wrap(err, "fetching RFC3161 version implementation")
+		return nil, fmt.Errorf("fetching RFC3161 version implementation: %w", err)
 	}
 	return ei.CreateFromArtifactProperties(ctx, props)
 }

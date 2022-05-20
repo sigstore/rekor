@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/transparency-dev/merkle/proof"
@@ -327,11 +326,11 @@ func createAndInitTree(ctx context.Context, adminClient trillian.TrillianAdminCl
 		},
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "create tree")
+		return nil, fmt.Errorf("create tree: %w", err)
 	}
 
 	if err := client.InitLog(ctx, t, logClient); err != nil {
-		return nil, errors.Wrap(err, "init log")
+		return nil, fmt.Errorf("init log: %w", err)
 	}
 	log.Logger.Infof("Created new tree with ID: %v", t.TreeId)
 	return t, nil

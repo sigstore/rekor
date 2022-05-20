@@ -21,6 +21,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -29,7 +30,6 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"github.com/pkg/errors"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -177,7 +177,7 @@ func (v *V001Entry) validate() (pki.Signature, pki.PublicKey, error) {
 		return nil, nil, err
 	}
 	if err := sigObj.Verify(nil, keyObj, options.WithDigest(decoded)); err != nil {
-		return nil, nil, types.ValidationError(errors.Wrap(err, "verifying signature"))
+		return nil, nil, types.ValidationError(fmt.Errorf("verifying signature: %w", err))
 	}
 
 	return sigObj, keyObj, nil

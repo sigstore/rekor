@@ -21,14 +21,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"

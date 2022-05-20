@@ -21,11 +21,11 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/go-openapi/swag"
-	"github.com/pkg/errors"
 	rclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/spf13/cobra"
@@ -118,7 +118,7 @@ func verifyInactiveTrees(rekorClient *rclient.Rekor, serverURL string, inactiveS
 		signedTreeHead := swag.StringValue(shard.SignedTreeHead)
 		treeID := swag.StringValue(shard.TreeID)
 		if err := verifyTree(rekorClient, signedTreeHead, serverURL, treeID); err != nil {
-			return errors.Wrapf(err, "verifying inactive shard with ID %s", treeID)
+			return fmt.Errorf("verifying inactive shard with ID %s: %w", treeID, err)
 		}
 	}
 	log.CliLogger.Infof("Successfully validated inactive shards")
