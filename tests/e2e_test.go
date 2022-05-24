@@ -196,7 +196,7 @@ func TestLogInfo(t *testing.T) {
 }
 
 type getOut struct {
-	Attestation     []byte
+	Attestation     string
 	AttestationType string
 	Body            interface{}
 	LogIndex        int
@@ -447,17 +447,17 @@ func TestIntoto(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Fatal(err)
 	}
-	// The attestation should be stored at /var/run/attestations/$uuid
+	// The attestation should be stored at /var/run/attestations/sha256:digest
 
 	got := in_toto.ProvenanceStatement{}
-	if err := json.Unmarshal(g.Attestation, &got); err != nil {
+	if err := json.Unmarshal([]byte(g.Attestation), &got); err != nil {
 		t.Fatal(err)
 	}
 	if diff := cmp.Diff(it, got); diff != "" {
 		t.Errorf("diff: %s", diff)
 	}
 
-	attHash := sha256.Sum256(g.Attestation)
+	attHash := sha256.Sum256(b)
 
 	intotoModel := &models.IntotoV001Schema{}
 	if err := types.DecodeEntry(g.Body.(map[string]interface{})["IntotoObj"], intotoModel); err != nil {

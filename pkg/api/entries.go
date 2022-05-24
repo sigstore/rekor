@@ -26,6 +26,7 @@ import (
 	"strconv"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
+	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -97,12 +98,35 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 
 	uuid := hex.EncodeToString(leaf.MerkleLeafHash)
 	if viper.GetBool("enable_attestation_storage") {
-		att, err := storageClient.FetchAttestation(ctx, uuid)
+		pe, err := models.UnmarshalProposedEntry(bytes.NewReader(leaf.LeafValue), runtime.JSONConsumer())
 		if err != nil {
-			log.Logger.Errorf("error fetching attestation: %s %s", uuid, err)
-		} else {
-			logEntryAnon.Attestation = &models.LogEntryAnonAttestation{
-				Data: att,
+			return nil, err
+		}
+		eimpl, err := types.NewEntry(pe)
+		if err != nil {
+			return nil, err
+		}
+		attKey := eimpl.AttestationKey()
+		if attKey != "" {
+			att, err := storageClient.FetchAttestation(ctx, attKey)
+			if err != nil {
+				log.Logger.Errorf("error fetching attestation by key, trying by UUID: %s %s", attKey, err)
+				// the original attestation implementation stored this by uuid instead of by digest
+				activeTree := fmt.Sprintf("%x", tc.logID)
+				entryIDstruct, err := sharding.CreateEntryIDFromParts(activeTree, uuid)
+				if err != nil {
+					err := fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, uuid, err)
+					return nil, err
+				}
+				att, err = storageClient.FetchAttestation(ctx, entryIDstruct.UUID)
+				if err != nil {
+					log.Logger.Errorf("error fetching attestation by uuid: %s %s", entryIDstruct.UUID, err)
+				}
+			}
+			if err == nil {
+				logEntryAnon.Attestation = &models.LogEntryAnonAttestation{
+					Data: att,
+				}
 			}
 		}
 	}
@@ -224,14 +248,16 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	if viper.GetBool("enable_attestation_storage") {
 
 		go func() {
-			attestation := entry.Attestation()
-			if attestation == nil {
-				log.RequestIDLogger(params.HTTPRequest).Infof("no attestation for %s", entryID)
+			attKey, attVal := entry.AttestationKeyValue()
+			if attVal == nil {
+				log.RequestIDLogger(params.HTTPRequest).Infof("no attestation for %s", uuid)
 				return
 			}
-			// TODO stop using uuid and use attestation hash
-			if err := storeAttestation(context.Background(), entryIDstruct.UUID, attestation); err != nil {
+			if err := storeAttestation(context.Background(), attKey, attVal); err != nil {
+				// entryIDstruct.UUID
 				log.RequestIDLogger(params.HTTPRequest).Errorf("error storing attestation: %s", err)
+			} else {
+				log.RequestIDLogger(params.HTTPRequest).Infof("stored attestation for uuid %s with filename %s", entryIDstruct.UUID, attKey)
 			}
 		}()
 	}
