@@ -1,5 +1,9 @@
 # v0.7.0
 
+
+**Breaking Change**: Removed timestamping authority API. This is a breaking API change.
+If you are relying on the timestamping authority to issue signed timestamps, create signed timestamps using either OpenSSL or a service such as FreeTSA.
+
 ## Enhancements
 
 * Remove timestamping authority (#813)
