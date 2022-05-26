@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@fcdc43634adb5f7ae75a9d7a9b9361790f7293e2 # v3.1.0
+      - uses: actions/setup-go@b22fbbc2921299758641fab08929b4ac52b32923 # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
       - name: Validate OpenAPI with Swagger
@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@fcdc43634adb5f7ae75a9d7a9b9361790f7293e2 # v3.1.0
+      - uses: actions/setup-go@b22fbbc2921299758641fab08929b4ac52b32923 # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
       - uses: imjasonh/setup-ko@2c3450ca27f6e6f2b02e72a40f2163c281a1f675 # v0.4
@@ -77,7 +77,7 @@ jobs:
         run: docker-compose build
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@fcdc43634adb5f7ae75a9d7a9b9361790f7293e2 # v3.1.0
+      - uses: actions/setup-go@b22fbbc2921299758641fab08929b4ac52b32923 # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
       - name: CLI
@@ -101,7 +101,7 @@ jobs:
         run: docker-compose build
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@fcdc43634adb5f7ae75a9d7a9b9361790f7293e2 # v3.1.0
+      - uses: actions/setup-go@b22fbbc2921299758641fab08929b4ac52b32923 # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
       - name: Sharding Test
