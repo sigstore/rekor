@@ -1,3 +1,68 @@
+# v0.7.0
+
+
+**Breaking Change**: Removed timestamping authority API. This is a breaking API change.
+If you are relying on the timestamping authority to issue signed timestamps, create signed timestamps using either OpenSSL or a service such as FreeTSA.
+
+## Enhancements
+
+* Remove timestamping authority (#813)
+* Limit the number of certificates parsed in a chain (#823)
+* Retrieve shard tree length if it isn't provided in the config (#810)
+* Don't try to index on hash for intoto obj if one isn't available (#800)
+* intoto: add index on materials digest of slsa provenance (#793)
+* remove URL fetch of keys/artifacts server-side (#735)
+
+## Others
+
+* all: remove dependency on deprecated github.com/pkg/errors (#834)
+* Add back owners for rfc3161 package type (#833)
+* Bump google-github-actions/auth from 0.7.2 to 0.7.3 (#832)
+* Bump github/codeql-action from 2.1.10 to 2.1.11 (#829)
+* Bump google-github-actions/auth from 0.7.1 to 0.7.2 (#830)
+* Bump google.golang.org/grpc from 1.46.0 to 1.46.2 (#828)
+* Bump actions/dependency-review-action (#825)
+* Bump actions/github-script from 6.0.0 to 6.1.0 (#826)
+* Bump github.com/prometheus/client_golang from 1.12.1 to 1.12.2 (#827)
+* update go to 1.17.10 in the dockerfile (#819)
+* Bump github.com/google/trillian from 1.4.0 to 1.4.1 in /hack/tools (#818)
+* Bump github.com/google/trillian from 1.4.0 to 1.4.1 (#817)
+* Bump actions/setup-go from 3.0.0 to 3.1.0 (#822)
+* Bump github/codeql-action (#821)
+* update release builder images to use go 1.17.10 and cosign image to 1.18.0 (#820)
+* Bump golangci/golangci-lint-action from 3.1.0 to 3.2.0 (#815)
+* Bump github/codeql-action from 2.1.9 to 2.1.10 (#816)
+* Bump github.com/go-openapi/runtime from 0.24.0 to 0.24.1 (#811)
+* Bump github.com/go-openapi/spec from 0.20.5 to 0.20.6 (#802)
+* Move trillian/merkly to transparency-dev (#807)
+* Bump github.com/go-playground/validator/v10 from 10.10.1 to 10.11.0 (#803)
+* chore(deps): Included dependency review (#788)
+* Bump github.com/go-openapi/runtime from 0.23.3 to 0.24.0 (#799)
+* Bump github.com/google/go-cmp from 0.5.7 to 0.5.8 (#794)
+* Bump sigstore/cosign-installer from 2.2.1 to 2.3.0 (#795)
+* Bump github/codeql-action from 2.1.8 to 2.1.9 (#796)
+* Bump google.golang.org/grpc from 1.45.0 to 1.46.0 (#791)
+* Bump google-github-actions/auth from 0.7.0 to 0.7.1 (#790)
+* Bump actions/checkout from 3.0.1 to 3.0.2 (#786)
+* Bump codecov/codecov-action from 3.0.0 to 3.1.0 (#785)
+* Bump github.com/mitchellh/mapstructure from 1.4.3 to 1.5.0 (#782)
+* Bump github.com/mediocregopher/radix/v4 from 4.0.0 to 4.1.0 (#781)
+* Bump anchore/sbom-action from 0.10.0 to 0.11.0 (#779)
+* Bump actions/checkout from 3.0.0 to 3.0.1 (#778)
+* Bump github.com/spf13/viper from 1.10.1 to 1.11.0 (#777)
+* Bump sigstore/cosign-installer from 2.2.0 to 2.2.1 (#776)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Bob Callaway (@bobcallaway)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Hayden Blauzvern (@haydentherapper)
+* Koichi Shiraishi (@zchee)
+* Naveen Srinivasan (@naveensrinivasan)
+* Priya Wadhwa (@priyawadhwa)
+
+
 # v0.6.0
 
 Notice: The server side remote fetching of resources will be removed in the next release
