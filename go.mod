@@ -3,7 +3,6 @@ module github.com/sigstore/rekor
 go 1.16
 
 require (
-	cloud.google.com/go/iam v0.3.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cavaliercoder/badio v0.0.0-20160213150051-ce5280129e9e // indirect
@@ -33,7 +32,7 @@ require (
 	github.com/rs/cors v1.8.2
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
 	github.com/secure-systems-lab/go-securesystemslib v0.3.1
-	github.com/sigstore/sigstore v1.2.1-0.20220528141235-6d98e7d59dee
+	github.com/sigstore/sigstore v1.2.1-0.20220526001230-8dc4fa90a468
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.11.0
@@ -52,7 +51,7 @@ require (
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2
 	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
-	google.golang.org/genproto v0.0.0-20220519153652-3a47de7e79bd
+	google.golang.org/genproto v0.0.0-20220422154200-b37d22cd5731
 	google.golang.org/grpc v1.46.2
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/ini.v1 v1.66.5
