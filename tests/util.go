@@ -13,12 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build e2e
 // +build e2e
 
 package e2e
 
 import (
 	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -58,12 +60,13 @@ func run(t *testing.T, stdin, cmd string, arg ...string) string {
 		t.Log(string(b))
 		t.Fatal(err)
 	}
+
 	return string(b)
 }
 
 func runCli(t *testing.T, arg ...string) string {
 	t.Helper()
-	arg = append(arg, "--rekor_server=http://localhost:3000")
+	arg = append(arg, rekorServerFlag())
 	// use a blank config file to ensure no collision
 	if os.Getenv("REKORTMPDIR") != "" {
 		arg = append(arg, "--config="+os.Getenv("REKORTMPDIR")+".rekor.yaml")
@@ -73,7 +76,7 @@ func runCli(t *testing.T, arg ...string) string {
 
 func runCliErr(t *testing.T, arg ...string) string {
 	t.Helper()
-	arg = append(arg, "--rekor_server=http://localhost:3000")
+	arg = append(arg, rekorServerFlag())
 	// use a blank config file to ensure no collision
 	if os.Getenv("REKORTMPDIR") != "" {
 		arg = append(arg, "--config="+os.Getenv("REKORTMPDIR")+".rekor.yaml")
@@ -85,6 +88,17 @@ func runCliErr(t *testing.T, arg ...string) string {
 		t.Fatalf("expected error, got %s", string(b))
 	}
 	return string(b)
+}
+
+func rekorServerFlag() string {
+	return fmt.Sprintf("--rekor_server=%s", rekorServer())
+}
+
+func rekorServer() string {
+	if s := os.Getenv("REKOR_SERVER"); s != "" {
+		return s
+	}
+	return "http://localhost:3000"
 }
 
 func readFile(t *testing.T, p string) string {

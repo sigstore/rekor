@@ -624,7 +624,7 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	}
 
 	// submit our newly signed payload to rekor
-	rekorClient, err := client.GetRekorClient("http://localhost:3000")
+	rekorClient, err := client.GetRekorClient(rekorServer())
 	if err != nil {
 		t.Fatal(err)
 	}
