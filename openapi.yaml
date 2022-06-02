@@ -504,7 +504,7 @@ definitions:
         items:
           type: string
           minItems: 1
-          pattern: '^[0-9a-fA-F]{64}$'
+          pattern: '(^[0-9a-fA-F]{64}|[0-9a-fA-F]{80}$)'
       logIndexes:
         type: array
         minItems: 1

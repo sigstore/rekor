@@ -356,7 +356,11 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		g, _ := errgroup.WithContext(httpReqCtx)
 
 		searchHashes := make([][]byte, len(params.Entry.EntryUUIDs)+len(params.Entry.Entries()))
-		for i, uuid := range params.Entry.EntryUUIDs {
+		for i, entryID := range params.Entry.EntryUUIDs {
+			uuid, err := sharding.GetUUIDFromIDString(entryID)
+			if err != nil {
+				return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("could not get UUID from ID string %v", entryID))
+			}
 			hash, err := hex.DecodeString(uuid)
 			if err != nil {
 				return handleRekorAPIError(params, http.StatusBadRequest, err, malformedUUID)
