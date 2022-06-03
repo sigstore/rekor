@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
@@ -73,6 +74,20 @@ func TestCrossFieldValidation(t *testing.T) {
 		Type:  "PUBLIC KEY",
 	})
 
+	// testing lack of support for ed25519
+	invalidEdPubKey, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	invalidDer, err := x509.MarshalPKIXPublicKey(invalidEdPubKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	invalidKeyBytes := pem.EncodeToMemory(&pem.Block{
+		Bytes: invalidDer,
+		Type:  "PUBLIC KEY",
+	})
+
 	dataBytes := []byte("sign me!")
 	h := sha256.Sum256(dataBytes)
 	dataSHA := hex.EncodeToString(h[:])
@@ -119,6 +134,20 @@ func TestCrossFieldValidation(t *testing.T) {
 					Signature: &models.HashedrekordV001SchemaSignature{
 						Content:   sigBytes,
 						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{},
+					},
+				},
+			},
+			expectUnmarshalSuccess: false,
+		},
+		{
+			caseDesc: "signature with ed25519 public key",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content: sigBytes,
+						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
+							Content: invalidKeyBytes,
+						},
 					},
 				},
 			},

@@ -18,6 +18,7 @@ package hashedrekord
 import (
 	"bytes"
 	"context"
+	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -157,6 +158,11 @@ func (v *V001Entry) validate() (pki.Signature, pki.PublicKey, error) {
 	keyObj, err := x509.NewPublicKey(bytes.NewReader(key.Content))
 	if err != nil {
 		return nil, nil, types.ValidationError(err)
+	}
+
+	_, isEd25519 := keyObj.CryptoPubKey().(ed25519.PublicKey)
+	if isEd25519 {
+		return nil, nil, types.ValidationError(errors.New("ed25519 unsupported for hashedrekord"))
 	}
 
 	data := v.HashedRekordObj.Data
