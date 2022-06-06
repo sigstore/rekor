@@ -194,6 +194,15 @@ popd
 # Pass in the universal log_index & make sure it resolves 
 check_log_index 3
 
+# Make sure the shard tree size is 1 and the total tree size is 4
+rm $HOME/.rekor/state.json # We have to remove this since we can't prove consistency between entry 0 and entry 1
+TREE_SIZE=$($REKOR_CLI loginfo --rekor_server http://localhost:3000 --format json | jq -r .TreeSize)
+stringsMatch $TREE_SIZE "1"
+
+TOTAL_TREE_SIZE=$($REKOR_CLI loginfo --rekor_server http://localhost:3000 --format json | jq -r .TotalTreeSize)
+stringsMatch $TOTAL_TREE_SIZE "4"
+
+
 # Make sure we can still get logproof for the now-inactive shard
 $REKOR_CLI logproof --last-size 2 --tree-id $INITIAL_TREE_ID --rekor_server http://localhost:3000
 # And the logproof for the now active shard
@@ -214,7 +223,6 @@ if [[ "$ENCODED_PUBLIC_KEY" == "$NEW_PUB_KEY" ]]; then
     echo "Active Shard Public Key: $NEW_PUB_KEY"
     exit 1
 fi
-
 
 # TODO: Try to get the entry via Entry ID (Tree ID in hex + UUID)
 UUID=$($REKOR_CLI get --log-index 2 --rekor_server http://localhost:3000 --format json | jq -r .UUID)
