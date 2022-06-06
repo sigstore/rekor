@@ -198,3 +198,15 @@ func GetTreeIDFromIDString(id string) (string, error) {
 		return "", fmt.Errorf("invalid ID len %v for %v", len(id), id)
 	}
 }
+
+func TreeID(entryID string) (int64, error) {
+	tid, err := GetTreeIDFromIDString(entryID)
+	if err != nil {
+		return 0, err
+	}
+	i, err := strconv.ParseInt(tid, 16, 64)
+	if err != nil {
+		return 0, fmt.Errorf("could not convert treeID %v to int64: %w", tid, err)
+	}
+	return i, nil
+}

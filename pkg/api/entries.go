@@ -355,18 +355,33 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	if len(params.Entry.EntryUUIDs) > 0 || len(params.Entry.Entries()) > 0 {
 		g, _ := errgroup.WithContext(httpReqCtx)
 
-		searchHashes := make([][]byte, len(params.Entry.EntryUUIDs)+len(params.Entry.Entries()))
-		for i, uuid := range params.Entry.EntryUUIDs {
+		var searchHashes [][]byte
+		for _, entryID := range params.Entry.EntryUUIDs {
+			uuid, err := sharding.GetUUIDFromIDString(entryID)
+			if err != nil {
+				return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("could not get UUID from ID string %v", entryID))
+			}
+			if tid, err := sharding.TreeID(entryID); err == nil {
+				entry, err := RetrieveUUID(entries.GetLogEntryByUUIDParams{
+					EntryUUID:   entryID,
+					HTTPRequest: params.HTTPRequest,
+				}, uuid, tid)
+				if err != nil {
+					return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("could not get uuid from %v", entryID))
+				}
+				resultPayload = append(resultPayload, entry)
+				continue
+			}
 			hash, err := hex.DecodeString(uuid)
 			if err != nil {
 				return handleRekorAPIError(params, http.StatusBadRequest, err, malformedUUID)
 			}
-			searchHashes[i] = hash
+			searchHashes = append(searchHashes, hash)
 		}
 
 		code := http.StatusBadRequest
-		for i, e := range params.Entry.Entries() {
-			i, e := i, e // https://golang.org/doc/faq#closures_and_goroutines
+		for _, e := range params.Entry.Entries() {
+			e := e // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
 				entry, err := types.NewEntry(e)
 				if err != nil {
@@ -380,7 +395,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 				}
 				hasher := rfc6962.DefaultHasher
 				leafHash := hasher.HashLeaf(leaf)
-				searchHashes[i+len(params.Entry.EntryUUIDs)] = leafHash
+				searchHashes = append(searchHashes, leafHash)
 				return nil
 			})
 		}
