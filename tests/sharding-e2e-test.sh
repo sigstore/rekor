@@ -196,7 +196,7 @@ check_log_index 3
 
 # Make sure the shard tree size is 1 and the total tree size is 4
 rm $HOME/.rekor/state.json # We have to remove this since we can't prove consistency between entry 0 and entry 1
-TREE_SIZE=$($REKOR_CLI loginfo --rekor_server http://localhost:3000 --format json | jq -r .TreeSize)
+TREE_SIZE=$($REKOR_CLI loginfo --rekor_server http://localhost:3000 --format json | jq -r .ActiveTreeSize)
 stringsMatch $TREE_SIZE "1"
 
 TOTAL_TREE_SIZE=$($REKOR_CLI loginfo --rekor_server http://localhost:3000 --format json | jq -r .TotalTreeSize)
