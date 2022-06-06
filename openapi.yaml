@@ -65,7 +65,7 @@ paths:
             items:
               type: string
               description: Entry UUID in transparency log
-              pattern: '(^[0-9a-fA-F]{64}|[0-9a-fA-F]{80}$)'
+              pattern: '^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$'
         400:
           $ref: '#/responses/BadContent'
         default:
@@ -214,7 +214,7 @@ paths:
           name: entryUUID
           type: string
           required: true
-          pattern: '(^[0-9a-fA-F]{64}|[0-9a-fA-F]{80}$)'
+          pattern: '^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$'
           description: the UUID of the entry for which the inclusion proof information should be returned
       responses:
         200:
@@ -504,7 +504,7 @@ definitions:
         items:
           type: string
           minItems: 1
-          pattern: '(^[0-9a-fA-F]{64}|[0-9a-fA-F]{80}$)'
+          pattern: '^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$'
       logIndexes:
         type: array
         minItems: 1
