@@ -43,7 +43,8 @@ import (
 )
 
 type logInfoCmdOutput struct {
-	TreeSize       int64
+	ActiveTreeSize int64
+	TotalTreeSize  int64
 	RootHash       string
 	TimestampNanos uint64
 	TreeID         string
@@ -54,11 +55,12 @@ func (l *logInfoCmdOutput) String() string {
 	ts := time.Unix(0, int64(l.TimestampNanos)).UTC().Format(time.RFC3339)
 
 	return fmt.Sprintf(`Verification Successful!
-Tree Size: %v
-Root Hash: %s
-Timestamp: %s
-TreeID:    %s
-`, l.TreeSize, l.RootHash, ts, l.TreeID)
+Active Tree Size:       %v
+Total Tree Size:        %v
+Root Hash:              %s
+Timestamp:              %s
+TreeID:                 %s
+`, l.ActiveTreeSize, l.TotalTreeSize, l.RootHash, ts, l.TreeID)
 }
 
 // logInfoCmd represents the current information about the transparency log
@@ -100,7 +102,8 @@ var logInfoCmd = &cobra.Command{
 		}
 
 		cmdOutput := &logInfoCmdOutput{
-			TreeSize:       swag.Int64Value(logInfo.TreeSize),
+			ActiveTreeSize: swag.Int64Value(logInfo.TreeSize),
+			TotalTreeSize:  totalTreeSize(logInfo, logInfo.InactiveShards),
 			RootHash:       swag.StringValue(logInfo.RootHash),
 			TimestampNanos: sth.GetTimestamp(),
 			TreeID:         swag.StringValue(logInfo.TreeID),
@@ -220,6 +223,14 @@ func loadVerifier(rekorClient *rclient.Rekor) (signature.Verifier, error) {
 	}
 
 	return signature.LoadVerifier(pub, crypto.SHA256)
+}
+
+func totalTreeSize(activeShard *models.LogInfo, inactiveShards []*models.InactiveShardLogInfo) int64 {
+	total := swag.Int64Value(activeShard.TreeSize)
+	for _, i := range inactiveShards {
+		total += swag.Int64Value(i.TreeSize)
+	}
+	return total
 }
 
 func init() {
