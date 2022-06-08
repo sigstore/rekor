@@ -1,5 +1,34 @@
-# v0.7.0
+# v0.8.0
 
+## Enhancements
+
+* Print total tree size, including inactive shards in `rekor-cli loginfo` (#864)
+* Allow retrieving entryIDs or UUIDs via `/api/v1/log/entries/retrieve` endpoint (#859)
+* Improve error message when using ED25519 with HashedRekord type (#862)
+
+## Others
+
+* Bump github.com/spf13/viper from 1.11.0 to 1.12.0 (#844)
+* Bump github.com/go-openapi/validate from 0.21.0 to 0.22.0 (#863)
+* update go.mod to go1.17 (#861)
+* update cross-builder image to use go1.17.11 and dockerfile base image (#860)
+* Bump github/codeql-action from 2.1.11 to 2.1.12 (#858)
+* Bump ossf/scorecard-action from 1.1.0 to 1.1.1 (#857)
+* Bump google.golang.org/grpc from 1.46.2 to 1.47.0 (#852)
+* Bump github.com/secure-systems-lab/go-securesystemslib (#853)
+* Configure rekor server in e2e tests via env variable (#850)
+* Bump gopkg.in/ini.v1 from 1.66.5 to 1.66.6 (#848)
+* Update go-tuf and sigstore/sigstore to non-vulnerable go-tuf version. (#847)
+* Bump gopkg.in/ini.v1 from 1.66.4 to 1.66.5 (#846)
+
+## Contributors
+
+* Carlos Tadeu Panato Junior (@cpanato)
+* dhaus67 (@dhaus67)
+* Hayden Blauzvern (@haydentherapper)
+* Priya Wadhwa (@priyawadhwa)
+
+# v0.7.0
 
 **Breaking Change**: Removed timestamping authority API. This is a breaking API change.
 If you are relying on the timestamping authority to issue signed timestamps, create signed timestamps using either OpenSSL or a service such as FreeTSA.
