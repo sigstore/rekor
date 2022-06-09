@@ -47,6 +47,7 @@ KO_PREFIX ?= gcr.io/projectsigstore
 export KO_DOCKER_REPO=$(KO_PREFIX)
 REKOR_YAML ?= rekor-$(GIT_TAG).yaml
 GHCR_PREFIX ?= ghcr.io/sigstore/rekor
+GOBIN ?= $(shell go env GOPATH)/bin
 
 # Binaries
 SWAGGER := $(TOOLS_BIN_DIR)/swagger

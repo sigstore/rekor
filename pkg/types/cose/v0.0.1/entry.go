@@ -21,6 +21,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -31,6 +32,9 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/spf13/viper"
+	gocose "github.com/veraison/go-cose"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -38,7 +42,6 @@ import (
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/cose"
-	gocose "github.com/veraison/go-cose"
 )
 
 const (
@@ -52,8 +55,10 @@ func init() {
 }
 
 type V001Entry struct {
-	CoseObj models.CoseV001Schema
-	keyObj  pki.PublicKey
+	CoseObj      models.CoseV001Schema
+	keyObj       pki.PublicKey
+	sign1Msg     *gocose.Sign1Message
+	envelopeHash []byte
 }
 
 func (v V001Entry) APIVersion() string {
@@ -84,20 +89,54 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	result = append(result, keyObj.EmailAddresses()...)
 
 	// 2. Overall envelope
-	result = append(result, formatKey(*v.CoseObj.Message))
+	result = append(result, formatKey(v.CoseObj.Message))
 
 	// 3. Payload
-	if v.CoseObj.Data.Content != nil {
-		result = append(result, formatKey(*v.CoseObj.Data.Content))
+	if v.sign1Msg != nil {
+		result = append(result, formatKey(v.sign1Msg.Payload))
+	}
+
+	// If payload is an in-toto statement, let's grab the subjects.
+	if rawContentType, ok := v.sign1Msg.Headers.Protected[gocose.HeaderLabelContentType]; ok {
+		contentType, ok := rawContentType.(string)
+		// Integers as defined by CoAP content format are valid too,
+		// but in-intoto payload type is not defined there, so only
+		// proceed if content type is a string.
+		// See list of CoAP content formats here:
+		// https://www.iana.org/assignments/core-parameters/core-parameters.xhtml#content-formats
+		if ok && contentType == in_toto.PayloadType {
+			stmt, err := getIntotoStatement(v.sign1Msg.Payload)
+			if err != nil {
+				// ContentType header says intoto statement, but
+				// parsing failed, continue with a warning.
+				log.Logger.Warnf("Failed to parse intoto statement")
+			} else {
+				for _, sub := range stmt.Subject {
+					for alg, digest := range sub.Digest {
+						index := alg + ":" + digest
+						result = append(result, index)
+					}
+				}
+			}
+		}
 	}
 
 	return result, nil
 }
 
+func getIntotoStatement(b []byte) (*in_toto.Statement, error) {
+	var stmt in_toto.Statement
+	if err := json.Unmarshal(b, &stmt); err != nil {
+		return nil, err
+	}
+
+	return &stmt, nil
+}
+
 func formatKey(b []byte) string {
 	h := sha256.Sum256(b)
 	hash := hex.EncodeToString(h[:])
-	return strings.ToLower(fmt.Sprintf("%s:%s", models.CoseV001SchemaDataHashAlgorithmSha256, hash))
+	return strings.ToLower(fmt.Sprintf("%s:%s", models.CoseV001SchemaDataPayloadHashAlgorithmSha256, hash))
 }
 
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
@@ -121,20 +160,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
-	// Check and make sure the hash value is correct.
-	h := sha256.Sum256(*v.CoseObj.Message)
-	computedSha := hex.EncodeToString(h[:])
-
-	if v.CoseObj.Data.Hash != nil {
-		if computedSha != *v.CoseObj.Data.Hash.Value {
-			return errors.New("hash mismatch")
-		}
-	} else {
-		v.CoseObj.Data.Hash = &models.CoseV001SchemaDataHash{
-			Algorithm: swag.String(models.CoseV001SchemaDataHashAlgorithmSha256),
-			Value:     &computedSha,
-		}
-	}
 	return v.validate()
 }
 
@@ -148,14 +173,18 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 	pkb := strfmt.Base64(pk)
 
-	h := sha256.Sum256([]byte(v.CoseObj.Data.Content.String()))
+	h := sha256.Sum256([]byte(v.sign1Msg.Payload))
 
 	canonicalEntry := models.CoseV001Schema{
 		PublicKey: &pkb,
 		Data: &models.CoseV001SchemaData{
-			Hash: &models.CoseV001SchemaDataHash{
-				Algorithm: swag.String(models.CoseV001SchemaDataHashAlgorithmSha256),
+			PayloadHash: &models.CoseV001SchemaDataPayloadHash{
+				Algorithm: swag.String(models.CoseV001SchemaDataPayloadHashAlgorithmSha256),
 				Value:     swag.String(hex.EncodeToString(h[:])),
+			},
+			EnvelopeHash: &models.CoseV001SchemaDataEnvelopeHash{
+				Algorithm: swag.String(models.CoseV001SchemaDataEnvelopeHashAlgorithmSha256),
+				Value:     swag.String(hex.EncodeToString(v.envelopeHash)),
 			},
 		},
 	}
@@ -171,53 +200,65 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 func (v *V001Entry) validate() error {
 
 	// This also gets called in the CLI, where we won't have this data
-	if v.CoseObj.Message == nil {
+	if len(v.CoseObj.Message) == 0 {
 		return nil
 	}
 
 	pk := v.keyObj.(*x509.PublicKey)
 	cryptoPub := pk.CryptoPubKey()
 
-	var alg *gocose.Algorithm
+	var alg gocose.Algorithm
 	switch t := cryptoPub.(type) {
 	case *rsa.PublicKey:
-		alg = gocose.PS256
+		alg = gocose.AlgorithmPS256
 	case *ecdsa.PublicKey:
-		alg = gocose.ES256
+		alg = gocose.AlgorithmES256
 	default:
 		return fmt.Errorf("unsupported algorithm type %T", t)
 	}
 
-	bv := gocose.Verifier{
-		PublicKey: cryptoPub,
-		Alg:       alg,
+	bv, err := gocose.NewVerifier(alg, cryptoPub)
+	if err != nil {
+		return err
 	}
-
-	msg := gocose.NewSign1Message()
-	if err := msg.UnmarshalCBOR(*v.CoseObj.Message); err != nil {
+	v.sign1Msg = gocose.NewSign1Message()
+	if err := v.sign1Msg.UnmarshalCBOR(v.CoseObj.Message); err != nil {
 		return err
 	}
 
-	return msg.Verify(*v.CoseObj.Data.Content, bv)
+	if err := v.sign1Msg.Verify(v.CoseObj.Data.Aad, bv); err != nil {
+		return err
+	}
+
+	// Store the envelope hash
+	h := sha256.Sum256(v.CoseObj.Message)
+	v.envelopeHash = h[:]
+
+	return nil
 }
 
 func (v *V001Entry) Attestation() []byte {
-	return nil
+	storageSize := len(v.CoseObj.Message)
+	if storageSize > viper.GetInt("max_attestation_size") {
+		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, viper.GetInt("max_attestation_size"))
+		return nil
+	}
+
+	return v.CoseObj.Message
 }
 
 func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	returnVal := models.Cose{}
-
 	var err error
-	artifactBytes := props.ArtifactBytes
-	if artifactBytes == nil {
+	messageBytes := props.ArtifactBytes
+	if messageBytes == nil {
 		if props.ArtifactPath == nil {
 			return nil, errors.New("path to artifact file must be specified")
 		}
 		if props.ArtifactPath.IsAbs() {
 			return nil, errors.New("cose envelopes cannot be fetched over HTTP(S)")
 		}
-		artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+		messageBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
 		if err != nil {
 			return nil, err
 		}
@@ -232,15 +273,21 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 			return nil, fmt.Errorf("error reading public key file: %w", err)
 		}
 	}
+	aadBytes, err := base64.StdEncoding.DecodeString(props.AdditionalAuthenticatedData)
+	if err != nil {
+		return nil, err
+	}
 	kb := strfmt.Base64(publicKeyBytes)
-	ab := strfmt.Base64(artifactBytes)
+	mb := strfmt.Base64(messageBytes)
+	ab := strfmt.Base64(aadBytes)
 
 	re := V001Entry{
 		CoseObj: models.CoseV001Schema{
 			Data: &models.CoseV001SchemaData{
-				Content: &ab,
+				Aad: ab,
 			},
 			PublicKey: &kb,
+			Message:   mb,
 		},
 	}
 

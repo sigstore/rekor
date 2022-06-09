@@ -16,6 +16,7 @@
 package cose
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -89,4 +90,79 @@ func TestCOSEType(t *testing.T) {
 	if _, err := brt.UnmarshalEntry(&u.Cose); err == nil {
 		t.Error("unexpected success in Unmarshal for invalid version")
 	}
+
+	ti, err := brt.UnmarshalEntry(nil)
+	if ti != nil {
+		t.Error("unexpected success in unmarshal for nil")
+	}
+	if err == nil {
+		t.Error("expected error")
+	}
+
+	ti, err = brt.UnmarshalEntry(types.BaseProposedEntryTester{})
+	if ti != nil {
+		t.Error("unexpected success in unmarshal for nil")
+	}
+	if err == nil {
+		t.Error("expected error")
+	}
+
+}
+
+func TestCOSEDefaultVersion(t *testing.T) {
+	brt := New()
+	ver := brt.DefaultVersion()
+	if ver != "0.0.1" {
+		t.Errorf("unexpected default version %s", ver)
+	}
+}
+
+func TestCOSECreateProposedEntry(t *testing.T) {
+	// Reset semver map
+	VersionMap = types.NewSemVerEntryFactoryMap()
+	u := UnmarshalTester{}
+	VersionMap.SetEntryFactory("0.0.3", u.NewEntry)
+	VersionMap.SetEntryFactory(New().DefaultVersion(), u.NewEntry)
+
+	t.Run("unknown version", func(t *testing.T) {
+		ctx := context.Background()
+		brt := New()
+		props := types.ArtifactProperties{}
+		pe, err := brt.CreateProposedEntry(ctx, "1.2.3", props)
+
+		if pe != nil {
+			t.Error("unexpected propsed entry")
+		}
+		if err == nil {
+			t.Error("expected error")
+		}
+	})
+	t.Run("valid version", func(t *testing.T) {
+		ctx := context.Background()
+		brt := New()
+		props := types.ArtifactProperties{}
+		pe, err := brt.CreateProposedEntry(ctx, "0.0.3", props)
+
+		// BaseUnmarshalTester returns nil for the proposed entry
+		if pe != nil {
+			t.Error("unexpected proposed entry")
+		}
+		if err != nil {
+			t.Error("unexpected error")
+		}
+	})
+	t.Run("default version", func(t *testing.T) {
+		ctx := context.Background()
+		brt := New()
+		props := types.ArtifactProperties{}
+		pe, err := brt.CreateProposedEntry(ctx, "", props)
+
+		// BaseUnmarshalTester returns nil for the proposed entry
+		if pe != nil {
+			t.Error("unexpected proposed entry")
+		}
+		if err != nil {
+			t.Error("unexpected error")
+		}
+	})
 }

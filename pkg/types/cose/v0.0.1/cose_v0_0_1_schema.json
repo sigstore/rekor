@@ -6,9 +6,10 @@
     "type": "object",
     "properties": {
         "message": {
+            "description": "The COSE Sign1 Message",
             "type": "string",
             "format": "byte",
-            "description": "The COSE Sign1 Message"
+            "writeOnly": true
         },
         "publicKey": {
             "description": "The public key that can verify the signature",
@@ -19,9 +20,10 @@
             "description": "Information about the content associated with the entry",
             "type": "object",
             "properties": {
-                "hash": {
+                "payloadHash": {
                     "description": "Specifies the hash algorithm and value for the content",
                     "type": "object",
+                    "readOnly": true,
                     "properties": {
                         "algorithm": {
                             "description": "The hashing function used to compute the hash value",
@@ -40,21 +42,40 @@
                         "value"
                     ]
                 },
-                "content": {
-                    "description": "Specifies the content inline within the document",
+                "envelopeHash": {
+                    "description": "Specifies the hash algorithm and value for the COSE envelope",
+                    "type": "object",
+                    "readOnly": true,
+                    "properties": {
+                        "algorithm": {
+                            "description": "The hashing function used to compute the hash value",
+                            "type": "string",
+                            "enum": [
+                                "sha256"
+                            ]
+                        },
+                        "value": {
+                            "description": "The hash value for the envelope",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "algorithm",
+                        "value"
+                    ]
+                },
+                "aad": {
+                    "description": "Specifies the additional authenticated data required to verify the signature",
                     "type": "string",
                     "format": "byte",
                     "writeOnly": true
                 }
             },
-            "required": [
-                "content"
-            ]
+            "required": []
         }
     },
     "required": [
         "publicKey",
-        "data",
-        "message"
+        "data"
     ]
 }

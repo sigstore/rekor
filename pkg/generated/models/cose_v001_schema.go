@@ -43,9 +43,8 @@ type CoseV001Schema struct {
 	Data *CoseV001SchemaData `json:"data"`
 
 	// The COSE Sign1 Message
-	// Required: true
 	// Format: byte
-	Message *strfmt.Base64 `json:"message"`
+	Message strfmt.Base64 `json:"message,omitempty"`
 
 	// The public key that can verify the signature
 	// Required: true
@@ -58,10 +57,6 @@ func (m *CoseV001Schema) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateData(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateMessage(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -90,15 +85,6 @@ func (m *CoseV001Schema) validateData(formats strfmt.Registry) error {
 			}
 			return err
 		}
-	}
-
-	return nil
-}
-
-func (m *CoseV001Schema) validateMessage(formats strfmt.Registry) error {
-
-	if err := validate.Required("message", "body", m.Message); err != nil {
-		return err
 	}
 
 	return nil
@@ -166,24 +152,26 @@ func (m *CoseV001Schema) UnmarshalBinary(b []byte) error {
 // swagger:model CoseV001SchemaData
 type CoseV001SchemaData struct {
 
-	// Specifies the content inline within the document
-	// Required: true
+	// Specifies the additional authenticated data required to verify the signature
 	// Format: byte
-	Content *strfmt.Base64 `json:"content"`
+	Aad strfmt.Base64 `json:"aad,omitempty"`
 
-	// hash
-	Hash *CoseV001SchemaDataHash `json:"hash,omitempty"`
+	// envelope hash
+	EnvelopeHash *CoseV001SchemaDataEnvelopeHash `json:"envelopeHash,omitempty"`
+
+	// payload hash
+	PayloadHash *CoseV001SchemaDataPayloadHash `json:"payloadHash,omitempty"`
 }
 
 // Validate validates this cose v001 schema data
 func (m *CoseV001SchemaData) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateContent(formats); err != nil {
+	if err := m.validateEnvelopeHash(formats); err != nil {
 		res = append(res, err)
 	}
 
-	if err := m.validateHash(formats); err != nil {
+	if err := m.validatePayloadHash(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -193,26 +181,36 @@ func (m *CoseV001SchemaData) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *CoseV001SchemaData) validateContent(formats strfmt.Registry) error {
+func (m *CoseV001SchemaData) validateEnvelopeHash(formats strfmt.Registry) error {
+	if swag.IsZero(m.EnvelopeHash) { // not required
+		return nil
+	}
 
-	if err := validate.Required("data"+"."+"content", "body", m.Content); err != nil {
-		return err
+	if m.EnvelopeHash != nil {
+		if err := m.EnvelopeHash.Validate(formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("data" + "." + "envelopeHash")
+			} else if ce, ok := err.(*errors.CompositeError); ok {
+				return ce.ValidateName("data" + "." + "envelopeHash")
+			}
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (m *CoseV001SchemaData) validateHash(formats strfmt.Registry) error {
-	if swag.IsZero(m.Hash) { // not required
+func (m *CoseV001SchemaData) validatePayloadHash(formats strfmt.Registry) error {
+	if swag.IsZero(m.PayloadHash) { // not required
 		return nil
 	}
 
-	if m.Hash != nil {
-		if err := m.Hash.Validate(formats); err != nil {
+	if m.PayloadHash != nil {
+		if err := m.PayloadHash.Validate(formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("data" + "." + "hash")
+				return ve.ValidateName("data" + "." + "payloadHash")
 			} else if ce, ok := err.(*errors.CompositeError); ok {
-				return ce.ValidateName("data" + "." + "hash")
+				return ce.ValidateName("data" + "." + "payloadHash")
 			}
 			return err
 		}
@@ -225,7 +223,11 @@ func (m *CoseV001SchemaData) validateHash(formats strfmt.Registry) error {
 func (m *CoseV001SchemaData) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.contextValidateHash(ctx, formats); err != nil {
+	if err := m.contextValidateEnvelopeHash(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidatePayloadHash(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -235,14 +237,30 @@ func (m *CoseV001SchemaData) ContextValidate(ctx context.Context, formats strfmt
 	return nil
 }
 
-func (m *CoseV001SchemaData) contextValidateHash(ctx context.Context, formats strfmt.Registry) error {
+func (m *CoseV001SchemaData) contextValidateEnvelopeHash(ctx context.Context, formats strfmt.Registry) error {
 
-	if m.Hash != nil {
-		if err := m.Hash.ContextValidate(ctx, formats); err != nil {
+	if m.EnvelopeHash != nil {
+		if err := m.EnvelopeHash.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("data" + "." + "hash")
+				return ve.ValidateName("data" + "." + "envelopeHash")
 			} else if ce, ok := err.(*errors.CompositeError); ok {
-				return ce.ValidateName("data" + "." + "hash")
+				return ce.ValidateName("data" + "." + "envelopeHash")
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *CoseV001SchemaData) contextValidatePayloadHash(ctx context.Context, formats strfmt.Registry) error {
+
+	if m.PayloadHash != nil {
+		if err := m.PayloadHash.ContextValidate(ctx, formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("data" + "." + "payloadHash")
+			} else if ce, ok := err.(*errors.CompositeError); ok {
+				return ce.ValidateName("data" + "." + "payloadHash")
 			}
 			return err
 		}
@@ -269,23 +287,23 @@ func (m *CoseV001SchemaData) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-// CoseV001SchemaDataHash Specifies the hash algorithm and value for the content
+// CoseV001SchemaDataEnvelopeHash Specifies the hash algorithm and value for the COSE envelope
 //
-// swagger:model CoseV001SchemaDataHash
-type CoseV001SchemaDataHash struct {
+// swagger:model CoseV001SchemaDataEnvelopeHash
+type CoseV001SchemaDataEnvelopeHash struct {
 
 	// The hashing function used to compute the hash value
 	// Required: true
 	// Enum: [sha256]
 	Algorithm *string `json:"algorithm"`
 
-	// The hash value for the content
+	// The hash value for the envelope
 	// Required: true
 	Value *string `json:"value"`
 }
 
-// Validate validates this cose v001 schema data hash
-func (m *CoseV001SchemaDataHash) Validate(formats strfmt.Registry) error {
+// Validate validates this cose v001 schema data envelope hash
+func (m *CoseV001SchemaDataEnvelopeHash) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateAlgorithm(formats); err != nil {
@@ -302,7 +320,7 @@ func (m *CoseV001SchemaDataHash) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-var coseV001SchemaDataHashTypeAlgorithmPropEnum []interface{}
+var coseV001SchemaDataEnvelopeHashTypeAlgorithmPropEnum []interface{}
 
 func init() {
 	var res []string
@@ -310,54 +328,59 @@ func init() {
 		panic(err)
 	}
 	for _, v := range res {
-		coseV001SchemaDataHashTypeAlgorithmPropEnum = append(coseV001SchemaDataHashTypeAlgorithmPropEnum, v)
+		coseV001SchemaDataEnvelopeHashTypeAlgorithmPropEnum = append(coseV001SchemaDataEnvelopeHashTypeAlgorithmPropEnum, v)
 	}
 }
 
 const (
 
-	// CoseV001SchemaDataHashAlgorithmSha256 captures enum value "sha256"
-	CoseV001SchemaDataHashAlgorithmSha256 string = "sha256"
+	// CoseV001SchemaDataEnvelopeHashAlgorithmSha256 captures enum value "sha256"
+	CoseV001SchemaDataEnvelopeHashAlgorithmSha256 string = "sha256"
 )
 
 // prop value enum
-func (m *CoseV001SchemaDataHash) validateAlgorithmEnum(path, location string, value string) error {
-	if err := validate.EnumCase(path, location, value, coseV001SchemaDataHashTypeAlgorithmPropEnum, true); err != nil {
+func (m *CoseV001SchemaDataEnvelopeHash) validateAlgorithmEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, coseV001SchemaDataEnvelopeHashTypeAlgorithmPropEnum, true); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (m *CoseV001SchemaDataHash) validateAlgorithm(formats strfmt.Registry) error {
+func (m *CoseV001SchemaDataEnvelopeHash) validateAlgorithm(formats strfmt.Registry) error {
 
-	if err := validate.Required("data"+"."+"hash"+"."+"algorithm", "body", m.Algorithm); err != nil {
+	if err := validate.Required("data"+"."+"envelopeHash"+"."+"algorithm", "body", m.Algorithm); err != nil {
 		return err
 	}
 
 	// value enum
-	if err := m.validateAlgorithmEnum("data"+"."+"hash"+"."+"algorithm", "body", *m.Algorithm); err != nil {
+	if err := m.validateAlgorithmEnum("data"+"."+"envelopeHash"+"."+"algorithm", "body", *m.Algorithm); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (m *CoseV001SchemaDataHash) validateValue(formats strfmt.Registry) error {
+func (m *CoseV001SchemaDataEnvelopeHash) validateValue(formats strfmt.Registry) error {
 
-	if err := validate.Required("data"+"."+"hash"+"."+"value", "body", m.Value); err != nil {
+	if err := validate.Required("data"+"."+"envelopeHash"+"."+"value", "body", m.Value); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// ContextValidate validates this cose v001 schema data hash based on context it is used
-func (m *CoseV001SchemaDataHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validate this cose v001 schema data envelope hash based on the context it is used
+func (m *CoseV001SchemaDataEnvelopeHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
 	return nil
 }
 
 // MarshalBinary interface implementation
-func (m *CoseV001SchemaDataHash) MarshalBinary() ([]byte, error) {
+func (m *CoseV001SchemaDataEnvelopeHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -365,8 +388,118 @@ func (m *CoseV001SchemaDataHash) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *CoseV001SchemaDataHash) UnmarshalBinary(b []byte) error {
-	var res CoseV001SchemaDataHash
+func (m *CoseV001SchemaDataEnvelopeHash) UnmarshalBinary(b []byte) error {
+	var res CoseV001SchemaDataEnvelopeHash
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// CoseV001SchemaDataPayloadHash Specifies the hash algorithm and value for the content
+//
+// swagger:model CoseV001SchemaDataPayloadHash
+type CoseV001SchemaDataPayloadHash struct {
+
+	// The hashing function used to compute the hash value
+	// Required: true
+	// Enum: [sha256]
+	Algorithm *string `json:"algorithm"`
+
+	// The hash value for the content
+	// Required: true
+	Value *string `json:"value"`
+}
+
+// Validate validates this cose v001 schema data payload hash
+func (m *CoseV001SchemaDataPayloadHash) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateAlgorithm(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateValue(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+var coseV001SchemaDataPayloadHashTypeAlgorithmPropEnum []interface{}
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["sha256"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		coseV001SchemaDataPayloadHashTypeAlgorithmPropEnum = append(coseV001SchemaDataPayloadHashTypeAlgorithmPropEnum, v)
+	}
+}
+
+const (
+
+	// CoseV001SchemaDataPayloadHashAlgorithmSha256 captures enum value "sha256"
+	CoseV001SchemaDataPayloadHashAlgorithmSha256 string = "sha256"
+)
+
+// prop value enum
+func (m *CoseV001SchemaDataPayloadHash) validateAlgorithmEnum(path, location string, value string) error {
+	if err := validate.EnumCase(path, location, value, coseV001SchemaDataPayloadHashTypeAlgorithmPropEnum, true); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *CoseV001SchemaDataPayloadHash) validateAlgorithm(formats strfmt.Registry) error {
+
+	if err := validate.Required("data"+"."+"payloadHash"+"."+"algorithm", "body", m.Algorithm); err != nil {
+		return err
+	}
+
+	// value enum
+	if err := m.validateAlgorithmEnum("data"+"."+"payloadHash"+"."+"algorithm", "body", *m.Algorithm); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *CoseV001SchemaDataPayloadHash) validateValue(formats strfmt.Registry) error {
+
+	if err := validate.Required("data"+"."+"payloadHash"+"."+"value", "body", m.Value); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ContextValidate validate this cose v001 schema data payload hash based on the context it is used
+func (m *CoseV001SchemaDataPayloadHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *CoseV001SchemaDataPayloadHash) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *CoseV001SchemaDataPayloadHash) UnmarshalBinary(b []byte) error {
+	var res CoseV001SchemaDataPayloadHash
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

@@ -87,6 +87,11 @@ func addArtifactPFlags(cmd *cobra.Command) error {
 			"path or URL to pre-formatted entry file",
 			false,
 		},
+		"aad": {
+			base64Flag,
+			"base64 encoded aad",
+			false,
+		},
 	}
 
 	for flag, flagVal := range flags {
@@ -152,6 +157,7 @@ func CreatePropsFromPflags() *types.ArtifactProperties {
 	}
 
 	props.PKIFormat = viper.GetString("pki-format")
+	props.AdditionalAuthenticatedData = viper.GetString("aad")
 
 	return props
 }

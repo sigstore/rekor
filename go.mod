@@ -37,7 +37,7 @@ require (
 	github.com/theupdateframework/go-tuf v0.3.0
 	github.com/transparency-dev/merkle v0.0.1
 	github.com/urfave/negroni v1.0.0
-	github.com/veraison/go-cose v0.0.0-20211126173600-dee3b3e54910
+	github.com/veraison/go-cose v1.0.0-alpha.1
 	github.com/zalando/go-keyring v0.1.1 // indirect
 	go.uber.org/goleak v1.1.12
 	go.uber.org/zap v1.21.0
