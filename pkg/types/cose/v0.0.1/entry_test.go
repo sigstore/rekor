@@ -24,6 +24,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"os"
 	"reflect"
@@ -420,7 +421,10 @@ func TestV001Entry_Attestation(t *testing.T) {
 		if err := v.Unmarshal(it); err != nil {
 			t.Errorf("V001Entry.Unmarshal() error = %v", err)
 		}
-		att := v.Attestation()
+		key, att := v.AttestationKeyValue()
+		if key != "" {
+			t.Errorf("Unexpected key returned")
+		}
 		if len(att) != 0 {
 			t.Errorf("Attestation returned")
 		}
@@ -431,19 +435,29 @@ func TestV001Entry_Attestation(t *testing.T) {
 		// an attestation
 		os.Setenv("MAX_ATTESTATION_SIZE", "1048576")
 		viper.AutomaticEnv()
+
+		msgHash := sha256.Sum256(msg)
+		wantKey := fmt.Sprintf("sha256:%s",
+			hex.EncodeToString(msgHash[:]))
+
 		v := &V001Entry{
 			CoseObj: models.CoseV001Schema{},
 		}
 		if err := v.Unmarshal(it); err != nil {
 			t.Errorf("V001Entry.Unmarshal() error = %v", err)
 		}
-		att := v.Attestation()
+		key, att := v.AttestationKeyValue()
+		if key != wantKey {
+			t.Errorf("unexpected attestation key: %s want: %s",
+				key, wantKey)
+		}
+
 		if len(att) != len(msg) {
-			t.Errorf("Wrong attestation returned")
+			t.Error("Wrong attestation returned")
 		}
 		for i := range att {
 			if att[i] != msg[i] {
-				t.Errorf("Wrong attestation returned")
+				t.Error("Wrong attestation returned")
 				return
 			}
 		}

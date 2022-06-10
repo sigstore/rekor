@@ -94,6 +94,10 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	// 3. Payload
 	if v.sign1Msg != nil {
 		result = append(result, formatKey(v.sign1Msg.Payload))
+	} else {
+		// If no payload exists (it's unpacked in validate() method)
+		// return now, as we will not be able to extract any headers
+		return result, nil
 	}
 
 	// If payload is an in-toto statement, let's grab the subjects.
@@ -160,6 +164,23 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
+	// Store the envelope hash.
+	// The CoseObj.Message is only populated during entry creation.
+	// When marshalling from the database (retrieval) the envelope
+	// hash must be decoded fromt he stored hex string.
+	// The envelope hash is used to create the attestation key during
+	// retrieval of a record.
+	if len(v.CoseObj.Message) == 0 {
+		b, err := hex.DecodeString(*v.CoseObj.Data.EnvelopeHash.Value)
+		if err != nil {
+			return err
+		}
+		v.envelopeHash = b
+	} else {
+		h := sha256.Sum256(v.CoseObj.Message)
+		v.envelopeHash = h[:]
+	}
+
 	return v.validate()
 }
 
@@ -198,8 +219,9 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 // validate performs cross-field validation for fields in object
 func (v *V001Entry) validate() error {
-
 	// This also gets called in the CLI, where we won't have this data
+	// or during record retrieval (message is the raw COSE object) which
+	// is only stored as an attestation.
 	if len(v.CoseObj.Message) == 0 {
 		return nil
 	}
@@ -230,21 +252,27 @@ func (v *V001Entry) validate() error {
 		return err
 	}
 
-	// Store the envelope hash
-	h := sha256.Sum256(v.CoseObj.Message)
-	v.envelopeHash = h[:]
-
 	return nil
 }
 
-func (v *V001Entry) Attestation() []byte {
+// AttestationKey returns the digest of the COSE envelope that was uploaded,
+// to be used to lookup the attestation from storage.
+func (v *V001Entry) AttestationKey() string {
+	return fmt.Sprintf("%s:%s",
+		models.CoseV001SchemaDataEnvelopeHashAlgorithmSha256,
+		hex.EncodeToString(v.envelopeHash))
+}
+
+// AttestationKeyValue returns both the key and value to be persisted
+// into attestation storage
+func (v *V001Entry) AttestationKeyValue() (string, []byte) {
 	storageSize := len(v.CoseObj.Message)
 	if storageSize > viper.GetInt("max_attestation_size") {
 		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, viper.GetInt("max_attestation_size"))
-		return nil
+		return "", nil
 	}
 
-	return v.CoseObj.Message
+	return v.AttestationKey(), v.CoseObj.Message
 }
 
 func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
