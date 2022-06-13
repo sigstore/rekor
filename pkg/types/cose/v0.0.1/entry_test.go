@@ -38,6 +38,51 @@ import (
 	"go.uber.org/goleak"
 )
 
+const (
+	pubKeyP256 = `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5P3tzcNDA11znnCFF3DHLwiHNCl3
+OXbUFakqff3cSRd4OTH1hiJgi15VIGSKZALlqjdWpf+fs87uRpiI6Yp59A==
+-----END PUBLIC KEY-----
+`
+	pubKeyP384 = `-----BEGIN PUBLIC KEY-----
+MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEPx88tPXP1ggkZHXnvg0vQAQ3vBlpKhF0
+hVt3kEn4ug3o72Wa1JnJALuOALGn4tY5Xuv9jx4BG+DzbAcyMbC3ueuw6ppQcNEu
+YJtZ/ty5vUBCekso165mLmAK+l5UXWTq
+-----END PUBLIC KEY-----
+`
+	pubKeyP521 = `-----BEGIN PUBLIC KEY-----
+MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQBRuRK30vNm09kt7AqbEtyZ4csZ943
+5zgNvcYlqO9GOPA5rUu8lvjbwiELR4WPr9lzofDJY/I7gq8Hzdnl6snlyycBabpQ
+Ndanm2XueC84SStD3ElF6JzjsD9QGljaVYWek6to/8luw5+1niH3hNDEw5jsqa2W
+/r+0gL0QOCKvVsThqp4=
+-----END PUBLIC KEY-----
+`
+	pubKeyRSA2048 = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuqO4gwscYmCE3P8eM9eg
+yIiElLNAzjWapPn99/uFAFKqkinGr/DAejP2zxgdXk+ESd8bO0Rqob1WZL8/HqQN
+8kRkf2KfR7d6jFe06V7N/Fmh+3YCcNNS6K9eW86u31sjnszgdtmWDrXhsH+M0W8g
+Q7rmo+7BUJAcU39iApN2GNsji6vrRLRiEnMP/fpnsLa8qYpPToSE0YVfWrKOvY2q
+Qhg/LceADsJzdYP0Yp+Q2jdC1J5OvUC4Mq08YdD7EawWJ5JI2qEkcPgPn5SqPomS
+ihKHDVzm+FqHEbgx0P57ZdKnk8kALNz5FFdwq46mbY8FRqGD56r4sB5rRcxy0cbB
+EQIDAQAB
+-----END PUBLIC KEY-----
+`
+	pubKeyEd25519 = `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEABhjHE6AOa33q2JGlVk9OjICRp2S6d9nUJh0Xr6PUego=
+-----END PUBLIC KEY-----
+`
+)
+
+type testPublicKey int
+
+func (t testPublicKey) CanonicalValue() ([]byte, error) {
+	return nil, nil
+}
+
+func (t testPublicKey) EmailAddresses() []string {
+	return nil
+}
+
 func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }
@@ -462,6 +507,110 @@ func TestV001Entry_Attestation(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestGetPublicKey(t *testing.T) {
+	t.Run("P256", func(t *testing.T) {
+		pk, err := sigx509.NewPublicKey(bytes.NewBufferString(pubKeyP256))
+		if err != nil {
+			t.Error("failed to load public key")
+		}
+		alg, cpk, err := getPublicKey(pk)
+		if alg != gocose.AlgorithmES256 {
+			t.Error("wrong algorithm")
+		}
+		if cpk == nil {
+			t.Error("no public key returned")
+		}
+		if err != nil {
+			t.Errorf("Unexpected error %s", err.Error())
+		}
+	})
+
+	t.Run("P384", func(t *testing.T) {
+		pk, err := sigx509.NewPublicKey(bytes.NewBufferString(pubKeyP384))
+		if err != nil {
+			t.Error("failed to load public key")
+		}
+		alg, cpk, err := getPublicKey(pk)
+		if alg != gocose.Algorithm(0) {
+			t.Error("unexpected algorithm returned")
+		}
+		if cpk != nil {
+			t.Error("unexpected key returned")
+		}
+		if err == nil {
+			t.Error("expected error")
+		}
+	})
+
+	t.Run("P521", func(t *testing.T) {
+		pk, err := sigx509.NewPublicKey(bytes.NewBufferString(pubKeyP521))
+		if err != nil {
+			t.Error("failed to load public key")
+		}
+		alg, cpk, err := getPublicKey(pk)
+		if alg != gocose.Algorithm(0) {
+			t.Error("unexpected algorithm returned")
+		}
+		if cpk != nil {
+			t.Error("unexpected key returned")
+		}
+		if err == nil {
+			t.Error("expected error")
+		}
+	})
+
+	t.Run("RSA2048", func(t *testing.T) {
+		pk, err := sigx509.NewPublicKey(bytes.NewBufferString(pubKeyRSA2048))
+		if err != nil {
+			t.Error("failed to load public key")
+		}
+		alg, cpk, err := getPublicKey(pk)
+		if alg != gocose.AlgorithmPS256 {
+			t.Error("unexpected algorithm returned")
+		}
+		if cpk == nil {
+			t.Error("no public key returned")
+		}
+		if err != nil {
+			t.Error("unexpected error")
+		}
+	})
+
+	t.Run("Invalid key", func(t *testing.T) {
+		alg, cpk, err := getPublicKey(testPublicKey(0))
+		if alg != gocose.Algorithm(0) {
+			t.Error("unexpected algorithm returned")
+		}
+		if cpk != nil {
+			t.Error("unexpected key returned")
+		}
+		if err == nil {
+			t.Error("expected error")
+		}
+	})
+
+	t.Run("Ed25519", func(t *testing.T) {
+		pk, err := sigx509.NewPublicKey(bytes.NewBufferString(pubKeyEd25519))
+		if err != nil {
+			t.Error("failed to load public key")
+		}
+		alg, cpk, err := getPublicKey(pk)
+		if alg != gocose.Algorithm(0) {
+			t.Error("unexpected algorithm returned")
+		}
+		if cpk != nil {
+			t.Error("unexpected key returned")
+		}
+		if err == nil {
+			t.Error("expected error")
+		}
+		if err.Error() != "unsupported algorithm type ed25519.PublicKey" {
+			t.Error("expected error")
+		}
+	})
+
 }
 
 func mustContain(t *testing.T, want string, l []string) {

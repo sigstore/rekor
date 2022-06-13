@@ -18,6 +18,7 @@ package cose
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -46,6 +47,10 @@ import (
 
 const (
 	APIVERSION = "0.0.1"
+)
+
+const (
+	CurveP256 = "P-256"
 )
 
 func init() {
@@ -226,20 +231,12 @@ func (v *V001Entry) validate() error {
 		return nil
 	}
 
-	pk := v.keyObj.(*x509.PublicKey)
-	cryptoPub := pk.CryptoPubKey()
-
-	var alg gocose.Algorithm
-	switch t := cryptoPub.(type) {
-	case *rsa.PublicKey:
-		alg = gocose.AlgorithmPS256
-	case *ecdsa.PublicKey:
-		alg = gocose.AlgorithmES256
-	default:
-		return fmt.Errorf("unsupported algorithm type %T", t)
+	alg, pk, err := getPublicKey(v.keyObj)
+	if err != nil {
+		return nil
 	}
 
-	bv, err := gocose.NewVerifier(alg, cryptoPub)
+	bv, err := gocose.NewVerifier(alg, pk)
 	if err != nil {
 		return err
 	}
@@ -253,6 +250,33 @@ func (v *V001Entry) validate() error {
 	}
 
 	return nil
+}
+
+func getPublicKey(pk pki.PublicKey) (gocose.Algorithm, crypto.PublicKey, error) {
+	invAlg := gocose.Algorithm(0)
+	x5pk, ok := pk.(*x509.PublicKey)
+
+	if !ok {
+		return invAlg, nil, errors.New("invalid public key type")
+	}
+
+	cryptoPub := x5pk.CryptoPubKey()
+
+	var alg gocose.Algorithm
+	switch t := cryptoPub.(type) {
+	case *rsa.PublicKey:
+		alg = gocose.AlgorithmPS256
+	case *ecdsa.PublicKey:
+		alg = gocose.AlgorithmES256
+		if t.Params().Name != CurveP256 {
+			return invAlg, nil, fmt.Errorf("unsupported elliptic curve %s",
+				t.Params().Name)
+		}
+	default:
+		return invAlg, nil, fmt.Errorf("unsupported algorithm type %T", t)
+	}
+
+	return alg, cryptoPub, nil
 }
 
 // AttestationKey returns the digest of the COSE envelope that was uploaded,
