@@ -239,15 +239,16 @@ func (v *V001Entry) validate() error {
 	if err != nil {
 		return err
 	}
-	v.sign1Msg = gocose.NewSign1Message()
-	if err := v.sign1Msg.UnmarshalCBOR(v.CoseObj.Message); err != nil {
+	sign1Msg := gocose.NewSign1Message()
+	if err := sign1Msg.UnmarshalCBOR(v.CoseObj.Message); err != nil {
 		return err
 	}
 
-	if err := v.sign1Msg.Verify(v.CoseObj.Data.Aad, bv); err != nil {
+	if err := sign1Msg.Verify(v.CoseObj.Data.Aad, bv); err != nil {
 		return err
 	}
 
+	v.sign1Msg = sign1Msg
 	return nil
 }
 
