@@ -86,7 +86,7 @@ jobs:
         uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # v3
         if: failure()
         with:
-          name: Docker Compose logs
+          name: E2E Docker Compose logs
           path: /tmp/docker-compose.log
 
   sharding-e2e:
@@ -110,5 +110,5 @@ jobs:
         uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # v3
         if: failure()
         with:
-          name: Docker Compose logs
+          name: Sharding E2E Docker Compose logs
           path: /tmp/docker-compose.log

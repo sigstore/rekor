@@ -244,8 +244,8 @@ echo "Testing /api/v1/log/entries/retrieve endpoint..."
 UUID1=$($REKOR_CLI get --log-index 0 --rekor_server http://localhost:3000 --format json | jq -r .UUID)
 UUID2=$($REKOR_CLI get --log-index 3 --rekor_server http://localhost:3000 --format json | jq -r .UUID)
 
-HEX_INITIAL_TREE_ID=$(printf "%x" $INITIAL_TREE_ID | awk '{printf "%016s", $0}')
-HEX_INITIAL_SHARD_ID=$(printf "%x" $SHARD_TREE_ID | awk '{printf "%016s", $0}')
+HEX_INITIAL_TREE_ID=$(printf "%x" $INITIAL_TREE_ID | awk '{ for(c = 0; c < 16 ; c++) s = s"0"; s = s$1; print substr(s, 1 + length(s) - 16);}')
+HEX_INITIAL_SHARD_ID=$(printf "%x" $SHARD_TREE_ID | awk '{ for(c = 0; c < 16 ; c++) s = s"0"; s = s$1; print substr(s, 1 + length(s) - 16);}')
 
 ENTRY_ID_1=$(echo -n "$HEX_INITIAL_TREE_ID$UUID1" | xargs echo -n)
 ENTRY_ID_2=$(echo -n "$HEX_INITIAL_SHARD_ID$UUID2" | xargs echo -n)
@@ -255,6 +255,3 @@ NUM_ELEMENTS=$(curl -f http://localhost:3000/api/v1/log/entries/retrieve -H "Con
 stringsMatch $NUM_ELEMENTS "2"
 
 echo "Test passed successfully :)"
-
-echo "testing failure to ensure logs are uploaded"
-echo -n "not" | grep "here"
