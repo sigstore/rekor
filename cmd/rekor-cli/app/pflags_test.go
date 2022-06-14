@@ -357,6 +357,15 @@ func TestArtifactPFlags(t *testing.T) {
 			aad:                   "dGVzdCBhYWQ=",
 		},
 		{
+			caseDesc:              "valid cose, malformed base64 aad",
+			typeStr:               "cose",
+			artifact:              "../../../tests/test_cose.cbor",
+			publicKey:             "../../../tests/test_cose.pub",
+			expectParseSuccess:    false,
+			expectValidateSuccess: true,
+			aad:                   "dGVzdCBhYWQ]",
+		},
+		{
 			caseDesc:              "valid cose, missing aad",
 			typeStr:               "cose",
 			artifact:              "../../../tests/test_cose.cbor",
