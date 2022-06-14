@@ -33,6 +33,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
+	"github.com/sigstore/rekor/pkg/types"
 	"github.com/spf13/viper"
 	gocose "github.com/veraison/go-cose"
 	"go.uber.org/goleak"
@@ -252,6 +253,18 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("invalid type", func(t *testing.T) {
+		want := "cannot unmarshal non Cose v0.0.1 type"
+		v := V001Entry{}
+		if err := v.Unmarshal(&types.BaseProposedEntryTester{}); err == nil {
+			t.Error("expected error")
+		} else {
+			if err.Error() != want {
+				t.Errorf("wrong error: %s", err.Error())
+			}
+		}
+	})
 }
 
 func TestV001Entry_IndexKeys(t *testing.T) {
@@ -608,6 +621,31 @@ func TestGetPublicKey(t *testing.T) {
 		}
 		if err.Error() != "unsupported algorithm type ed25519.PublicKey" {
 			t.Error("expected error")
+		}
+	})
+
+}
+
+func TestV001Entry_Validate(t *testing.T) {
+	t.Run("missing message", func(t *testing.T) {
+		v := V001Entry{}
+		err := v.validate()
+		if err != nil {
+			t.Error("unexpected error")
+		}
+	})
+
+	t.Run("invalid public key", func(t *testing.T) {
+		v := V001Entry{}
+		v.CoseObj.Message = []byte("string")
+		v.keyObj, _ = sigx509.NewPublicKey(bytes.NewBufferString(pubKeyEd25519))
+		err := v.validate()
+		if err == nil {
+			t.Error("expected error")
+			return
+		}
+		if err.Error() != "unsupported algorithm type ed25519.PublicKey" {
+			t.Error("wrong error returned")
 		}
 	})
 

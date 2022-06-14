@@ -38,6 +38,7 @@ func TestArtifactPFlags(t *testing.T) {
 		signature             string
 		publicKey             string
 		uuid                  string
+		aad                   string
 		uuidRequired          bool
 		logIndex              string
 		logIndexRequired      bool
@@ -346,6 +347,23 @@ func TestArtifactPFlags(t *testing.T) {
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
+		{
+			caseDesc:              "valid cose, with aad",
+			typeStr:               "cose",
+			artifact:              "../../../tests/test_cose.cbor",
+			publicKey:             "../../../tests/test_cose.pub",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+			aad:                   "dGVzdCBhYWQ=",
+		},
+		{
+			caseDesc:              "valid cose, missing aad",
+			typeStr:               "cose",
+			artifact:              "../../../tests/test_cose.cbor",
+			publicKey:             "../../../tests/test_cose.pub",
+			expectParseSuccess:    true,
+			expectValidateSuccess: false,
+		},
 	}
 
 	for _, tc := range tests {
@@ -383,6 +401,9 @@ func TestArtifactPFlags(t *testing.T) {
 		}
 		if tc.logIndex != "" {
 			args = append(args, "--log-index", tc.logIndex)
+		}
+		if tc.aad != "" {
+			args = append(args, "--aad", tc.aad)
 		}
 
 		if err := blankCmd.ParseFlags(args); (err == nil) != tc.expectParseSuccess {

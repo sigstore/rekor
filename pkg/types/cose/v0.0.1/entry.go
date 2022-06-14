@@ -233,7 +233,7 @@ func (v *V001Entry) validate() error {
 
 	alg, pk, err := getPublicKey(v.keyObj)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	bv, err := gocose.NewVerifier(alg, pk)
