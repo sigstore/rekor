@@ -259,10 +259,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 		v := V001Entry{}
 		if err := v.Unmarshal(&types.BaseProposedEntryTester{}); err == nil {
 			t.Error("expected error")
-		} else {
-			if err.Error() != want {
-				t.Errorf("wrong error: %s", err.Error())
-			}
+		} else if err.Error() != want {
+			t.Errorf("wrong error: %s", err.Error())
 		}
 	})
 }
