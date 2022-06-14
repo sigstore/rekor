@@ -89,7 +89,7 @@ func addArtifactPFlags(cmd *cobra.Command) error {
 		},
 		"aad": {
 			base64Flag,
-			"base64 encoded aad",
+			"base64 encoded additional authenticated data",
 			false,
 		},
 	}
