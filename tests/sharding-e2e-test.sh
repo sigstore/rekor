@@ -85,7 +85,7 @@ function collectLogsOnFailure () {
     if [ $? -ne 0 ]; then
         echo "failure detected, collecting docker-compose logs"
         docker-compose logs --no-color > /tmp/docker-compose.log
-    elif docker-compose logs --no-color | grep -q "panic: runtime error:" ; then
+    elif ! docker-compose logs --no-color | grep -q "panic: runtime error:" ; then
         # if we're here, we found a panic
         echo "failing due to panics detected in logs"
         docker-compose logs --no-color > /tmp/docker-compose.log
