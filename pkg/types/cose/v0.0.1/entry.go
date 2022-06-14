@@ -22,7 +22,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -325,18 +324,16 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 			return nil, fmt.Errorf("error reading public key file: %w", err)
 		}
 	}
-	aadBytes, err := base64.StdEncoding.DecodeString(props.AdditionalAuthenticatedData)
 	if err != nil {
 		return nil, err
 	}
 	kb := strfmt.Base64(publicKeyBytes)
 	mb := strfmt.Base64(messageBytes)
-	ab := strfmt.Base64(aadBytes)
 
 	re := V001Entry{
 		CoseObj: models.CoseV001Schema{
 			Data: &models.CoseV001SchemaData{
-				Aad: ab,
+				Aad: props.AdditionalAuthenticatedData,
 			},
 			PublicKey: &kb,
 			Message:   mb,

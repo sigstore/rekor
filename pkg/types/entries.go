@@ -121,7 +121,7 @@ func CanonicalizeEntry(ctx context.Context, entry EntryImpl) ([]byte, error) {
 // ArtifactProperties provide a consistent struct for passing values from
 // CLI flags to the type+version specific CreateProposeEntry() methods
 type ArtifactProperties struct {
-	AdditionalAuthenticatedData string
+	AdditionalAuthenticatedData []byte
 	ArtifactPath                *url.URL
 	ArtifactHash                string
 	ArtifactBytes               []byte
