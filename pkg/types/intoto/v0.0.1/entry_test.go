@@ -329,3 +329,43 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 		})
 	}
 }
+
+func TestIndexKeysNoContentHash(t *testing.T) {
+	statement := in_toto.Statement{
+		Predicate: "hello",
+		StatementHeader: in_toto.StatementHeader{
+			Subject: []in_toto.Subject{
+				{
+					Name: "myimage",
+					Digest: slsa.DigestSet{
+						"sha256": "mysha256digest",
+					},
+				},
+			},
+		},
+	}
+	b, err := json.Marshal(statement)
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := base64.StdEncoding.EncodeToString(b)
+	v := V001Entry{
+		env: dsse.Envelope{
+			Payload:     payload,
+			PayloadType: in_toto.PayloadType,
+		},
+	}
+	sha := sha256.Sum256([]byte(payload))
+	// Always start with the hash
+	want := []string{"sha256:" + hex.EncodeToString(sha[:])}
+	want = append(want, "sha256:mysha256digest")
+	got, err := v.IndexKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(got)
+	sort.Strings(want)
+	if !cmp.Equal(got, want) {
+		t.Errorf("V001Entry.IndexKeys() = %v, want %v", got, want)
+	}
+}
