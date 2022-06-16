@@ -211,6 +211,8 @@ func verifyCertChain(certChain []*x509.Certificate) error {
 		Intermediates: subPool,
 		// Allow any key usage
 		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+		// Expired certificates can be uploaded and should be verifiable
+		CurrentTime: certChain[0].NotBefore,
 	}); err != nil {
 		return err
 	}

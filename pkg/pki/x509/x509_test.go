@@ -250,6 +250,18 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 		t.Fatalf("unexpected error verifying signature, %v", err)
 	}
 
+	// Verify works with expired certificate
+	leafCert, leafKey, _ = testutils.GenerateExpiredLeafCert("subject@example.com", "oidc-issuer", subCert, subKey)
+	pemCertChain, _ = cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, subCert, rootCert})
+	pub, _ = NewPublicKey(bytes.NewReader(pemCertChain))
+	signer, _ = signature.LoadSigner(leafKey, crypto.SHA256)
+	sigBytes, _ = signer.SignMessage(bytes.NewReader(data))
+	s, _ = NewSignature(bytes.NewReader(sigBytes))
+	err = s.Verify(bytes.NewReader(data), pub)
+	if err != nil {
+		t.Fatalf("unexpected error verifying signature with expired cert: %v", err)
+	}
+
 	// Verify error with invalid chain
 	pemCertChain, _ = cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, rootCert})
 	pub, _ = NewPublicKey(bytes.NewReader(pemCertChain))
