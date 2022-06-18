@@ -126,6 +126,14 @@ jobs:
       - uses: actions/setup-go@b22fbbc2921299758641fab08929b4ac52b32923 # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
+      - name: Set up Cloud SDK
+        uses: google-github-actions/auth@ceee102ec2387dd9e844e01b530ccd4ec87ce955 # v0.8.0
+        with:
+          workload_identity_provider: 'projects/498091336538/locations/global/workloadIdentityPools/githubactions/providers/sigstore-rekor'
+          service_account: 'github-actions-rekor@projectsigstore.iam.gserviceaccount.com'
+
+      - name: creds
+        run: gcloud auth configure-docker --quiet
       - name: Test for Attestation begin returned that was previously persisted in tlog
         run: ./tests/issue-872-e2e-test.sh
       - name: Upload logs if they exist
