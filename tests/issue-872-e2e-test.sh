@@ -22,6 +22,7 @@ docker-compose up -d
 
 echo "* building CLI"
 go build -o rekor-cli ./cmd/rekor-cli
+REKOR_CLI=$(pwd)/rekor-cli
 
 function waitForRekorServer () {
   echo -n "* waiting up to 60 sec for system to start"
@@ -148,7 +149,7 @@ waitForRekorServer
 ISSUE872_UPLOAD_INDEX=$(jq -r .Index $V060_UPLOAD_OUTPUT)
 ISSUE872_GET_ENTRY=$REKORTMPDIR/issue-872-get-entry
 echo "* fetching previous entry made under v0.6.0"
-if ! rekor-cli get --log-index=$ISSUE872_UPLOAD_INDEX --rekor_server=http://localhost:3000 --format=json > $ISSUE872_GET_ENTRY; then
+if ! $REKOR_CLI get --log-index=$ISSUE872_UPLOAD_INDEX --rekor_server=http://localhost:3000 --format=json > $ISSUE872_GET_ENTRY; then
    echo "* failed to read back intoto entry while testing issue #872, exiting"
    docker-compose logs --no-color > /tmp/docker-compose.log
    exit 1
