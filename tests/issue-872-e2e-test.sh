@@ -56,7 +56,7 @@ version: '3.4'
 services:
   rekor-server-issue-872-v060:
     # this container image is built on v0.6.0 with the fix for issue #800
-    image: gcr.io/projectsigstore/rekor-server@sha256:568aee99574e6d796d70b7b1fd59438bd54b3b9f44cc2c9a086629597c66d324
+    image: gcr.io/projectsigstore/rekor/ci/rekor/rekor-server@sha256:568aee99574e6d796d70b7b1fd59438bd54b3b9f44cc2c9a086629597c66d324
     command: [
       "serve",
       "--trillian_log_server.address=trillian-log-server",
