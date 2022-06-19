@@ -122,12 +122,11 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 			activeTree := fmt.Sprintf("%x", tc.logID)
 			entryIDstruct, err := sharding.CreateEntryIDFromParts(activeTree, uuid)
 			if err != nil {
-				err := fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, uuid, err)
-				return nil, err
+				return nil, fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, uuid, err)
 			}
 			att, fetchErr = storageClient.FetchAttestation(ctx, entryIDstruct.UUID)
 			if fetchErr != nil {
-				log.Logger.Errorf("error fetching attestation by uuid: %s %s", entryIDstruct.UUID, err)
+				log.Logger.Errorf("error fetching attestation by uuid: %s %v", entryIDstruct.UUID, fetchErr)
 			}
 		}
 		if fetchErr == nil {
