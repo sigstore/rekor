@@ -82,17 +82,19 @@ function waitForRekorServer () {
 }
 
 function collectLogsOnFailure () {
-    if [ $? -ne 0 ]; then
+    if [[ "$1" -ne "0" ]]; then
         echo "failure detected, collecting docker-compose logs"
         docker-compose logs --no-color > /tmp/docker-compose.log
-    elif ! docker-compose logs --no-color | grep -q "panic: runtime error:" ; then
+        exit $1
+    elif docker-compose logs --no-color | grep -q "panic: runtime error:" ; then
         # if we're here, we found a panic
         echo "failing due to panics detected in logs"
         docker-compose logs --no-color > /tmp/docker-compose.log
+        exit 1
     fi
-    exit 1
+    exit 0
 }
-trap "collectLogsOnFailure" EXIT
+trap "collectLogsOnFailure $?" EXIT
 
 echo "Waiting for rekor server to come up..."
 waitForRekorServer
