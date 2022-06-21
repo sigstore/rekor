@@ -1,3 +1,19 @@
+# v0.8.2
+
+## Bug Fixes
+
+* ensure fallback logic executes if attestation key is empty when fetching attestation (https://github.com/sigstore/rekor/pull/878)
+
+## Others
+
+* Bump github/codeql-action from 2.1.12 to 2.1.13 (https://github.com/sigstore/rekor/pull/880)
+* Bump github.com/spf13/cobra from 1.4.0 to 1.5.0 (https://github.com/sigstore/rekor/pull/881)
+* collect docker-compose logs if sharding tests fail, also trim IDs (https://github.com/sigstore/rekor/pull/869)
+
+## Contributors
+
+* Bob Callaway (@bobcallaway)
+
 # v0.8.1
 
 ## Bug Fixes
