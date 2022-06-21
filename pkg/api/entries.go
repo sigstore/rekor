@@ -106,27 +106,32 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 		if err != nil {
 			return nil, err
 		}
+
+		var att []byte
+		var fetchErr error
 		attKey := eimpl.AttestationKey()
+		// if we're given a key by the type logic, let's try that first
 		if attKey != "" {
-			att, err := storageClient.FetchAttestation(ctx, attKey)
-			if err != nil {
-				log.Logger.Errorf("error fetching attestation by key, trying by UUID: %s %s", attKey, err)
-				// the original attestation implementation stored this by uuid instead of by digest
-				activeTree := fmt.Sprintf("%x", tc.logID)
-				entryIDstruct, err := sharding.CreateEntryIDFromParts(activeTree, uuid)
-				if err != nil {
-					err := fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, uuid, err)
-					return nil, err
-				}
-				att, err = storageClient.FetchAttestation(ctx, entryIDstruct.UUID)
-				if err != nil {
-					log.Logger.Errorf("error fetching attestation by uuid: %s %s", entryIDstruct.UUID, err)
-				}
+			att, fetchErr = storageClient.FetchAttestation(ctx, attKey)
+			if fetchErr != nil {
+				log.Logger.Errorf("error fetching attestation by key, trying by UUID: %s %w", attKey, fetchErr)
 			}
-			if err == nil {
-				logEntryAnon.Attestation = &models.LogEntryAnonAttestation{
-					Data: att,
-				}
+		}
+		// if looking up by key failed or we weren't able to generate a key, try looking up by uuid
+		if attKey == "" || fetchErr != nil {
+			activeTree := fmt.Sprintf("%x", tc.logID)
+			entryIDstruct, err := sharding.CreateEntryIDFromParts(activeTree, uuid)
+			if err != nil {
+				return nil, fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, uuid, err)
+			}
+			att, fetchErr = storageClient.FetchAttestation(ctx, entryIDstruct.UUID)
+			if fetchErr != nil {
+				log.Logger.Errorf("error fetching attestation by uuid: %s %v", entryIDstruct.UUID, fetchErr)
+			}
+		}
+		if fetchErr == nil {
+			logEntryAnon.Attestation = &models.LogEntryAnonAttestation{
+				Data: att,
 			}
 		}
 	}

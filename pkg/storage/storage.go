@@ -18,6 +18,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/sigstore/rekor/pkg/log"
 
@@ -72,7 +73,7 @@ func (b *Blob) FetchAttestation(ctx context.Context, key string) ([]byte, error)
 		return nil, err
 	}
 	if !exists {
-		return nil, nil
+		return nil, fmt.Errorf("attestation %v does not exist", key)
 	}
 
 	data, err := b.bucket.ReadAll(ctx, key)
