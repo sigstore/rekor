@@ -16,6 +16,7 @@
 package app
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/url"
@@ -87,6 +88,11 @@ func addArtifactPFlags(cmd *cobra.Command) error {
 			"path or URL to pre-formatted entry file",
 			false,
 		},
+		"aad": {
+			base64Flag,
+			"base64 encoded additional authenticated data",
+			false,
+		},
 	}
 
 	for flag, flagVal := range flags {
@@ -152,6 +158,10 @@ func CreatePropsFromPflags() *types.ArtifactProperties {
 	}
 
 	props.PKIFormat = viper.GetString("pki-format")
+	b64aad := viper.GetString("aad")
+	if b64aad != "" {
+		props.AdditionalAuthenticatedData, _ = base64.StdEncoding.DecodeString(b64aad)
+	}
 
 	return props
 }

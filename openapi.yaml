@@ -378,6 +378,23 @@ definitions:
         - spec
       additionalProperties: false
 
+  cose:
+    type: object
+    description: COSE object
+    allOf:
+    - $ref: '#/definitions/ProposedEntry'
+    - properties:
+        apiVersion:
+          type: string
+          pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
+        spec:
+          type: object
+          $ref: 'pkg/types/cose/cose_schema.json'
+      required:
+        - apiVersion
+        - spec
+      additionalProperties: false
+
   jar:
     type: object
     description: Java Archive (JAR)

@@ -1,0 +1,81 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://rekor.sigstore.dev/types/intoto/intoto_v0_0_1_schema.json",
+    "title": "cose v0.0.1 Schema",
+    "description": "Schema for cose object",
+    "type": "object",
+    "properties": {
+        "message": {
+            "description": "The COSE Sign1 Message",
+            "type": "string",
+            "format": "byte",
+            "writeOnly": true
+        },
+        "publicKey": {
+            "description": "The public key that can verify the signature",
+            "type": "string",
+            "format": "byte"
+        },
+        "data": {
+            "description": "Information about the content associated with the entry",
+            "type": "object",
+            "properties": {
+                "payloadHash": {
+                    "description": "Specifies the hash algorithm and value for the content",
+                    "type": "object",
+                    "readOnly": true,
+                    "properties": {
+                        "algorithm": {
+                            "description": "The hashing function used to compute the hash value",
+                            "type": "string",
+                            "enum": [
+                                "sha256"
+                            ]
+                        },
+                        "value": {
+                            "description": "The hash value for the content",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "algorithm",
+                        "value"
+                    ]
+                },
+                "envelopeHash": {
+                    "description": "Specifies the hash algorithm and value for the COSE envelope",
+                    "type": "object",
+                    "readOnly": true,
+                    "properties": {
+                        "algorithm": {
+                            "description": "The hashing function used to compute the hash value",
+                            "type": "string",
+                            "enum": [
+                                "sha256"
+                            ]
+                        },
+                        "value": {
+                            "description": "The hash value for the envelope",
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "algorithm",
+                        "value"
+                    ]
+                },
+                "aad": {
+                    "description": "Specifies the additional authenticated data required to verify the signature",
+                    "type": "string",
+                    "format": "byte",
+                    "writeOnly": true
+                }
+            },
+            "required": []
+        }
+    },
+    "required": [
+        "publicKey",
+        "data"
+    ]
+}

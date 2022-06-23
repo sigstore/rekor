@@ -16,6 +16,7 @@
 package app
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 	"strconv"
@@ -46,6 +47,7 @@ const (
 	oidFlag       FlagType = "oid"
 	formatFlag    FlagType = "format"
 	timeoutFlag   FlagType = "timeout"
+	base64Flag    FlagType = "base64"
 )
 
 type newPFlagValueFunc func() pflag.Value
@@ -104,6 +106,10 @@ func initializePFlagMap() {
 		timeoutFlag: func() pflag.Value {
 			// this validates the timeout is >= 0
 			return valueFactory(formatFlag, validateTimeout, "")
+		},
+		base64Flag: func() pflag.Value {
+			// This validates the string is in base64 format
+			return valueFactory(base64Flag, validateBase64, "")
 		},
 	}
 }
@@ -237,6 +243,13 @@ func validateTimeout(v string) error {
 		Duration time.Duration `validate:"min=0"`
 	}{duration}
 	return useValidator(timeoutFlag, d)
+}
+
+// validateBase64 ensures that the supplied string is valid base64 encoded data
+func validateBase64(v string) error {
+	_, err := base64.StdEncoding.DecodeString(v)
+
+	return err
 }
 
 // validateTypeFlag ensures that the string is in the format type(\.version)? and
