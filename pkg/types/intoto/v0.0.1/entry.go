@@ -73,8 +73,24 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
-	h := sha256.Sum256([]byte(v.env.Payload))
-	payloadKey := "sha256:" + hex.EncodeToString(h[:])
+	if v.IntotoObj.PublicKey != nil {
+		key := *v.IntotoObj.PublicKey
+		keyHash := sha256.Sum256(key)
+		result = append(result, "sha256:"+strings.ToLower(hex.EncodeToString(keyHash[:])))
+
+		pub, err := x509.NewPublicKey(bytes.NewReader(key))
+		if err != nil {
+			return result, err
+		}
+		result = append(result, pub.EmailAddresses()...)
+	}
+
+	payloadBytes, err := v.env.DecodeB64Payload()
+	if err != nil {
+		return result, err
+	}
+	payloadHash := sha256.Sum256(payloadBytes)
+	payloadKey := "sha256:" + hex.EncodeToString(payloadHash[:])
 	result = append(result, payloadKey)
 
 	switch v.env.PayloadType {
@@ -180,8 +196,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 			},
 		},
 	}
-	attKey, attValue := v.AttestationKeyValue()
-	if attValue != nil {
+	if attKey, attValue := v.AttestationKeyValue(); attValue != nil {
 		canonicalEntry.Content.PayloadHash = &models.IntotoV001SchemaContentPayloadHash{
 			Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
 			Value:     swag.String(strings.Replace(attKey, fmt.Sprintf("%s:", models.IntotoV001SchemaContentHashAlgorithmSha256), "", 1)),
