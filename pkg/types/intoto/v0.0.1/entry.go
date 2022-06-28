@@ -82,13 +82,17 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	}
 
 	// add digest over public key
-	if v.IntotoObj.PublicKey != nil && v.keyObj != nil {
-		key := *v.IntotoObj.PublicKey
-		keyHash := sha256.Sum256(key)
-		result = append(result, "sha256:"+strings.ToLower(hex.EncodeToString(keyHash[:])))
+	if v.keyObj != nil {
+		key, err := v.keyObj.CanonicalValue()
+		if err == nil {
+			keyHash := sha256.Sum256(key)
+			result = append(result, fmt.Sprintf("sha256:%s", strings.ToLower(hex.EncodeToString(keyHash[:]))))
 
-		// add digest over any email addresses within signing certificate
-		result = append(result, v.keyObj.EmailAddresses()...)
+			// add digest over any email addresses within signing certificate
+			result = append(result, v.keyObj.EmailAddresses()...)
+		} else {
+			log.Logger.Errorf("could not canonicalize public key to include in index keys: %w", err)
+		}
 	} else {
 		log.Logger.Error("could not find public key to include in index keys")
 	}
@@ -97,8 +101,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	payloadBytes, err := base64.StdEncoding.DecodeString(v.env.Payload)
 	if err == nil {
 		payloadHash := sha256.Sum256(payloadBytes)
-		payloadKey := "sha256:" + hex.EncodeToString(payloadHash[:])
-		result = append(result, payloadKey)
+		result = append(result, fmt.Sprintf("sha256:%s", strings.ToLower(hex.EncodeToString(payloadHash[:]))))
 	} else {
 		log.Logger.Errorf("error decoding intoto payload to compute digest: %w", err)
 	}
