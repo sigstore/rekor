@@ -85,7 +85,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 		result = append(result, pub.EmailAddresses()...)
 	}
 
-	payloadBytes, err := v.env.DecodeB64Payload()
+	payloadBytes, err := base64.StdEncoding.DecodeString(v.env.Payload)
 	if err != nil {
 		return result, err
 	}
