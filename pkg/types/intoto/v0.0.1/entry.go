@@ -73,36 +73,42 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
-	if v.IntotoObj.PublicKey != nil {
+	// add digest over entire DSSE envelope
+	if v.IntotoObj.Content != nil && v.IntotoObj.Content.Hash != nil {
+		hashkey := strings.ToLower(fmt.Sprintf("%s:%s", swag.StringValue(v.IntotoObj.Content.Hash.Algorithm), swag.StringValue(v.IntotoObj.Content.Hash.Value)))
+		result = append(result, hashkey)
+	} else {
+		log.Logger.Error("could not find content digest to include in index keys")
+	}
+
+	// add digest over public key
+	if v.IntotoObj.PublicKey != nil && v.keyObj != nil {
 		key := *v.IntotoObj.PublicKey
 		keyHash := sha256.Sum256(key)
 		result = append(result, "sha256:"+strings.ToLower(hex.EncodeToString(keyHash[:])))
 
-		pub, err := x509.NewPublicKey(bytes.NewReader(key))
-		if err != nil {
-			return result, err
-		}
-		result = append(result, pub.EmailAddresses()...)
+		// add digest over any email addresses within signing certificate
+		result = append(result, v.keyObj.EmailAddresses()...)
+	} else {
+		log.Logger.Error("could not find public key to include in index keys")
 	}
 
+	// add digest base64-decoded payload inside of DSSE envelope
 	payloadBytes, err := base64.StdEncoding.DecodeString(v.env.Payload)
-	if err != nil {
-		return result, err
+	if err == nil {
+		payloadHash := sha256.Sum256(payloadBytes)
+		payloadKey := "sha256:" + hex.EncodeToString(payloadHash[:])
+		result = append(result, payloadKey)
+	} else {
+		log.Logger.Errorf("error decoding intoto payload to compute digest: %w", err)
 	}
-	payloadHash := sha256.Sum256(payloadBytes)
-	payloadKey := "sha256:" + hex.EncodeToString(payloadHash[:])
-	result = append(result, payloadKey)
 
 	switch v.env.PayloadType {
 	case in_toto.PayloadType:
-		if v.IntotoObj.Content != nil && v.IntotoObj.Content.Hash != nil {
-			hashkey := strings.ToLower(fmt.Sprintf("%s:%s", swag.StringValue(v.IntotoObj.Content.Hash.Algorithm), swag.StringValue(v.IntotoObj.Content.Hash.Value)))
-			result = append(result, hashkey)
-		}
-
 		statement, err := parseStatement(v.env.Payload)
 		if err != nil {
-			return result, err
+			log.Logger.Errorf("error parsing payload as intoto statement: %w", err)
+			break
 		}
 		for _, s := range statement.Subject {
 			for alg, ds := range s.Digest {
@@ -122,7 +128,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 			}
 		}
 	default:
-		log.Logger.Infof("Unknown in_toto Statement Type: %s", v.env.PayloadType)
+		log.Logger.Infof("unknown in_toto statement type (%s), cannot extract additional index keys", v.env.PayloadType)
 	}
 	return result, nil
 }
