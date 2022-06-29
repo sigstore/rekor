@@ -73,20 +73,45 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
-	h := sha256.Sum256([]byte(v.env.Payload))
-	payloadKey := "sha256:" + hex.EncodeToString(h[:])
-	result = append(result, payloadKey)
+	// add digest over entire DSSE envelope
+	if v.IntotoObj.Content != nil && v.IntotoObj.Content.Hash != nil {
+		hashkey := strings.ToLower(fmt.Sprintf("%s:%s", swag.StringValue(v.IntotoObj.Content.Hash.Algorithm), swag.StringValue(v.IntotoObj.Content.Hash.Value)))
+		result = append(result, hashkey)
+	} else {
+		log.Logger.Error("could not find content digest to include in index keys")
+	}
+
+	// add digest over public key
+	if v.keyObj != nil {
+		key, err := v.keyObj.CanonicalValue()
+		if err == nil {
+			keyHash := sha256.Sum256(key)
+			result = append(result, fmt.Sprintf("sha256:%s", strings.ToLower(hex.EncodeToString(keyHash[:]))))
+
+			// add digest over any email addresses within signing certificate
+			result = append(result, v.keyObj.EmailAddresses()...)
+		} else {
+			log.Logger.Errorf("could not canonicalize public key to include in index keys: %w", err)
+		}
+	} else {
+		log.Logger.Error("could not find public key to include in index keys")
+	}
+
+	// add digest base64-decoded payload inside of DSSE envelope
+	payloadBytes, err := base64.StdEncoding.DecodeString(v.env.Payload)
+	if err == nil {
+		payloadHash := sha256.Sum256(payloadBytes)
+		result = append(result, fmt.Sprintf("sha256:%s", strings.ToLower(hex.EncodeToString(payloadHash[:]))))
+	} else {
+		log.Logger.Errorf("error decoding intoto payload to compute digest: %w", err)
+	}
 
 	switch v.env.PayloadType {
 	case in_toto.PayloadType:
-		if v.IntotoObj.Content != nil && v.IntotoObj.Content.Hash != nil {
-			hashkey := strings.ToLower(fmt.Sprintf("%s:%s", swag.StringValue(v.IntotoObj.Content.Hash.Algorithm), swag.StringValue(v.IntotoObj.Content.Hash.Value)))
-			result = append(result, hashkey)
-		}
-
 		statement, err := parseStatement(v.env.Payload)
 		if err != nil {
-			return result, err
+			log.Logger.Errorf("error parsing payload as intoto statement: %w", err)
+			break
 		}
 		for _, s := range statement.Subject {
 			for alg, ds := range s.Digest {
@@ -106,7 +131,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 			}
 		}
 	default:
-		log.Logger.Infof("Unknown in_toto Statement Type: %s", v.env.PayloadType)
+		log.Logger.Infof("unknown in_toto statement type (%s), cannot extract additional index keys", v.env.PayloadType)
 	}
 	return result, nil
 }
@@ -180,8 +205,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 			},
 		},
 	}
-	attKey, attValue := v.AttestationKeyValue()
-	if attValue != nil {
+	if attKey, attValue := v.AttestationKeyValue(); attValue != nil {
 		canonicalEntry.Content.PayloadHash = &models.IntotoV001SchemaContentPayloadHash{
 			Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
 			Value:     swag.String(strings.Replace(attKey, fmt.Sprintf("%s:", models.IntotoV001SchemaContentHashAlgorithmSha256), "", 1)),
