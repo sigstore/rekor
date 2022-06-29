@@ -256,4 +256,8 @@ ENTRY_ID_2=$(echo -n "$HEX_INITIAL_SHARD_ID$UUID2" | xargs echo -n)
 NUM_ELEMENTS=$(curl -f http://localhost:3000/api/v1/log/entries/retrieve -H "Content-Type: application/json" -H "Accept: application/json" -d "{ \"entryUUIDs\": [\"$ENTRY_ID_1\", \"$ENTRY_ID_2\"]}" | jq '. | length')
 stringsMatch $NUM_ELEMENTS "2"
 
+# Make sure the /api/v1/log/entries/retrieve endpoint is resolving virtual indexes correctly
+NUM_ELEMENTS=$(curl -f -H "Content-Type: application/json" --data '{"logIndexes": [0,3]}'  "http://localhost:3000/api/v1/log/entries/retrieve" | jq '. | length')
+stringsMatch $NUM_ELEMENTS "2"
+
 echo "Test passed successfully :)"

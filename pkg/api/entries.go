@@ -451,7 +451,9 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		for i, logIndex := range params.Entry.LogIndexes {
 			i, logIndex := i, logIndex // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
-				resp := tc.getLeafAndProofByIndex(swag.Int64Value(logIndex))
+				tid, resolvedIndex := api.logRanges.ResolveVirtualIndex(int(swag.Int64Value(logIndex)))
+				trillianClient := NewTrillianClientFromTreeID(httpReqCtx, tid)
+				resp := trillianClient.getLeafAndProofByIndex(resolvedIndex)
 				switch resp.status {
 				case codes.OK, codes.NotFound:
 				default:
