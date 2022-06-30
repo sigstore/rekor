@@ -188,6 +188,13 @@ func (k PublicKey) EmailAddresses() []string {
 				names = append(names, strings.ToLower(name))
 			}
 		}
+		for _, name := range cert.URIs {
+			validate := validator.New()
+			errs := validate.Var(name.String(), "required,uri")
+			if errs == nil {
+				names = append(names, strings.ToLower(name.String()))
+			}
+		}
 	}
 	return names
 }
