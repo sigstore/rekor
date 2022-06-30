@@ -84,6 +84,10 @@ func (t testPublicKey) EmailAddresses() []string {
 	return nil
 }
 
+func (t testPublicKey) Subjects() []string {
+	return nil
+}
+
 func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }

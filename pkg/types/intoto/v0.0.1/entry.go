@@ -88,8 +88,8 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 			keyHash := sha256.Sum256(key)
 			result = append(result, fmt.Sprintf("sha256:%s", strings.ToLower(hex.EncodeToString(keyHash[:]))))
 
-			// add digest over any email addresses within signing certificate
-			result = append(result, v.keyObj.EmailAddresses()...)
+			// add digest over any subjects within signing certificate
+			result = append(result, v.keyObj.Subjects()...)
 		} else {
 			log.Logger.Errorf("could not canonicalize public key to include in index keys: %w", err)
 		}

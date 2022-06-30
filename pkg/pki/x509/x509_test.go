@@ -221,8 +221,13 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 		t.Fatal("expected public keys to match")
 	}
 
-	if !reflect.DeepEqual(pub.EmailAddresses(), append(leafCert.EmailAddresses, leafCert.URIs[0].String())) {
-		t.Fatalf("expected matching email addresses, expected %v, got %v", leafCert.EmailAddresses, pub.EmailAddresses())
+	if !reflect.DeepEqual(pub.EmailAddresses(), leafCert.EmailAddresses) {
+		t.Fatalf("expected matching subjects, expected %v, got %v", leafCert.EmailAddresses, pub.EmailAddresses())
+	}
+
+	expectedSubjects := append(leafCert.EmailAddresses, leafCert.URIs[0].String())
+	if !reflect.DeepEqual(pub.Subjects(), expectedSubjects) {
+		t.Fatalf("expected matching subjects, expected %v, got %v", expectedSubjects, pub.Subjects())
 	}
 
 	canonicalValue, err := pub.CanonicalValue()

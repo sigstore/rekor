@@ -181,15 +181,35 @@ func (k PublicKey) EmailAddresses() []string {
 		cert = k.certs[0]
 	}
 	if cert != nil {
+		validate := validator.New()
 		for _, name := range cert.EmailAddresses {
-			validate := validator.New()
+			errs := validate.Var(name, "required,email")
+			if errs == nil {
+				names = append(names, strings.ToLower(name))
+			}
+		}
+	}
+	return names
+}
+
+// Subjects implements the pki.PublicKey interface
+func (k PublicKey) Subjects() []string {
+	var names []string
+	var cert *x509.Certificate
+	if k.cert != nil {
+		cert = k.cert.c
+	} else if len(k.certs) > 0 {
+		cert = k.certs[0]
+	}
+	if cert != nil {
+		validate := validator.New()
+		for _, name := range cert.EmailAddresses {
 			errs := validate.Var(name, "required,email")
 			if errs == nil {
 				names = append(names, strings.ToLower(name))
 			}
 		}
 		for _, name := range cert.URIs {
-			validate := validator.New()
 			errs := validate.Var(name.String(), "required,uri")
 			if errs == nil {
 				names = append(names, strings.ToLower(name.String()))
