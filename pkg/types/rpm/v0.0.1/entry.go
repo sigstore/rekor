@@ -80,7 +80,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	keyHash := sha256.Sum256(key)
 	result = append(result, strings.ToLower(hex.EncodeToString(keyHash[:])))
 
-	result = append(result, keyObj.EmailAddresses()...)
+	result = append(result, keyObj.Subjects()...)
 
 	if v.RPMModel.Package.Hash != nil {
 		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.RPMModel.Package.Hash.Algorithm, *v.RPMModel.Package.Hash.Value))

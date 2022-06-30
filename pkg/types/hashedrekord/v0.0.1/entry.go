@@ -74,7 +74,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	result = append(result, pub.EmailAddresses()...)
+	result = append(result, pub.Subjects()...)
 
 	if v.HashedRekordObj.Data.Hash != nil {
 		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.HashedRekordObj.Data.Hash.Algorithm, *v.HashedRekordObj.Data.Hash.Value))

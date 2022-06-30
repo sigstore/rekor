@@ -204,14 +204,12 @@ func (k PublicKey) Subjects() []string {
 	if cert != nil {
 		validate := validator.New()
 		for _, name := range cert.EmailAddresses {
-			errs := validate.Var(name, "required,email")
-			if errs == nil {
+			if errs := validate.Var(name, "required,email"); errs == nil {
 				names = append(names, strings.ToLower(name))
 			}
 		}
 		for _, name := range cert.URIs {
-			errs := validate.Var(name.String(), "required,uri")
-			if errs == nil {
+			if errs := validate.Var(name.String(), "required,uri"); errs == nil {
 				names = append(names, strings.ToLower(name.String()))
 			}
 		}
