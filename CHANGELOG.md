@@ -1,3 +1,31 @@
+# v0.9.0
+
+## Enhancements
+
+* Add COSE support to Rekor (https://github.com/sigstore/rekor/pull/867)
+
+## Bug Fixes
+
+* Resolve virtual log index when calling /api/v1/log/entries/retrieve endpoint (https://github.com/sigstore/rekor/pull/894)
+* Fix intoto index keys (https://github.com/sigstore/rekor/pull/889)
+* ensure fallback logic executes if attestation key is empty when fetching attestation (https://github.com/sigstore/rekor/pull/878)
+
+## Others
+
+* Bump github/codeql-action from 2.1.14 to 2.1.15 (https://github.com/sigstore/rekor/pull/893)
+* Bump ossf/scorecard-action from 1.1.1 to 1.1.2 (https://github.com/sigstore/rekor/pull/888)
+* Bump github/codeql-action from 2.1.13 to 2.1.14 (https://github.com/sigstore/rekor/pull/885)
+* add changelog for v0.8.2 (https://github.com/sigstore/rekor/pull/882)
+* Bump github/codeql-action from 2.1.12 to 2.1.13 (https://github.com/sigstore/rekor/pull/880)
+* Bump github.com/spf13/cobra from 1.4.0 to 1.5.0 (https://github.com/sigstore/rekor/pull/881)
+
+## Contributors
+
+* Bob Callaway (@bobcallaway)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Fredrik Skogman (@kommendorkapten)
+* Priya Wadhwa (@priyawadhwa)
+
 # v0.8.2
 
 ## Bug Fixes
