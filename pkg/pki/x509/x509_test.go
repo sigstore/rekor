@@ -225,7 +225,8 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 		t.Fatalf("expected matching subjects, expected %v, got %v", leafCert.EmailAddresses, pub.EmailAddresses())
 	}
 
-	expectedSubjects := append(leafCert.EmailAddresses, leafCert.URIs[0].String())
+	expectedSubjects := leafCert.EmailAddresses
+	expectedSubjects = append(expectedSubjects, leafCert.URIs[0].String())
 	if !reflect.DeepEqual(pub.Subjects(), expectedSubjects) {
 		t.Fatalf("expected matching subjects, expected %v, got %v", expectedSubjects, pub.Subjects())
 	}
