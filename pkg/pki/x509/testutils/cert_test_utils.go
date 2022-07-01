@@ -23,6 +23,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"math/big"
+	"net/url"
 	"time"
 )
 
@@ -115,7 +116,7 @@ func GenerateSubordinateCa(rootTemplate *x509.Certificate, rootPriv crypto.Signe
 	return cert, priv, nil
 }
 
-func GenerateLeafCert(subject string, oidcIssuer string, parentTemplate *x509.Certificate, parentPriv crypto.Signer) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+func GenerateLeafCert(subject, oidcIssuer string, uri *url.URL, parentTemplate *x509.Certificate, parentPriv crypto.Signer) (*x509.Certificate, *ecdsa.PrivateKey, error) {
 	certTemplate := &x509.Certificate{
 		SerialNumber:   big.NewInt(1),
 		EmailAddresses: []string{subject},
@@ -130,6 +131,9 @@ func GenerateLeafCert(subject string, oidcIssuer string, parentTemplate *x509.Ce
 			Critical: false,
 			Value:    []byte(oidcIssuer),
 		}},
+	}
+	if uri != nil {
+		certTemplate.URIs = []*url.URL{uri}
 	}
 
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

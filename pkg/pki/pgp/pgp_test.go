@@ -347,18 +347,18 @@ func TestEmailAddresses(t *testing.T) {
 	type test struct {
 		caseDesc  string
 		inputFile string
-		emails    []string
+		subjects  []string
 	}
 
 	var k PublicKey
-	if len(k.EmailAddresses()) != 0 {
-		t.Errorf("EmailAddresses for unitialized key should give empty slice")
+	if len(k.Subjects()) != 0 {
+		t.Errorf("Subjects for unitialized key should give empty slice")
 	}
 	tests := []test{
-		{caseDesc: "Valid armored public key", inputFile: "testdata/valid_armored_public.pgp", emails: []string{}},
-		{caseDesc: "Valid armored public key with multiple subentries", inputFile: "testdata/valid_armored_complex_public.pgp", emails: []string{"linux-packages-keymaster@google.com", "linux-packages-keymaster@google.com"}},
-		{caseDesc: "Valid binary public key", inputFile: "testdata/valid_binary_public.pgp", emails: []string{}},
-		{caseDesc: "Valid binary public key with multiple subentries", inputFile: "testdata/valid_binary_complex_public.pgp", emails: []string{"linux-packages-keymaster@google.com", "linux-packages-keymaster@google.com"}},
+		{caseDesc: "Valid armored public key", inputFile: "testdata/valid_armored_public.pgp", subjects: []string{}},
+		{caseDesc: "Valid armored public key with multiple subentries", inputFile: "testdata/valid_armored_complex_public.pgp", subjects: []string{"linux-packages-keymaster@google.com", "linux-packages-keymaster@google.com"}},
+		{caseDesc: "Valid binary public key", inputFile: "testdata/valid_binary_public.pgp", subjects: []string{}},
+		{caseDesc: "Valid binary public key with multiple subentries", inputFile: "testdata/valid_binary_complex_public.pgp", subjects: []string{"linux-packages-keymaster@google.com", "linux-packages-keymaster@google.com"}},
 	}
 
 	for _, tc := range tests {
@@ -374,18 +374,18 @@ func TestEmailAddresses(t *testing.T) {
 			t.Errorf("%v: Error reading input for TestEmailAddresses: %v", tc.caseDesc, err)
 		}
 
-		emails := inputKey.EmailAddresses()
+		subjects := inputKey.Subjects()
 
-		if len(emails) == len(tc.emails) {
-			if len(emails) > 0 {
-				sort.Strings(emails)
-				sort.Strings(tc.emails)
-				if !reflect.DeepEqual(emails, tc.emails) {
-					t.Errorf("%v: Error getting email addresses from keys, got %v, expected %v", tc.caseDesc, emails, tc.emails)
+		if len(subjects) == len(tc.subjects) {
+			if len(subjects) > 0 {
+				sort.Strings(subjects)
+				sort.Strings(tc.subjects)
+				if !reflect.DeepEqual(subjects, tc.subjects) {
+					t.Errorf("%v: Error getting subjects from keys, got %v, expected %v", tc.caseDesc, subjects, tc.subjects)
 				}
 			}
 		} else {
-			t.Errorf("%v: Error getting email addresses from keys length, got %v, expected %v", tc.caseDesc, len(emails), len(tc.emails))
+			t.Errorf("%v: Error getting subjects from keys length, got %v, expected %v", tc.caseDesc, len(subjects), len(tc.subjects))
 		}
 
 	}

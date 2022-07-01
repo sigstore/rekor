@@ -292,7 +292,7 @@ func TestEmailAddresses(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			emails := pub.EmailAddresses()
+			emails := pub.Subjects()
 
 			if len(emails) == len(tt.emails) {
 				if len(emails) > 0 {

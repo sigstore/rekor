@@ -20,6 +20,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/x509"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -200,7 +201,8 @@ func TestSignature_VerifyFail(t *testing.T) {
 func TestPublicKeyWithCertChain(t *testing.T) {
 	rootCert, rootKey, _ := testutils.GenerateRootCa()
 	subCert, subKey, _ := testutils.GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, leafKey, _ := testutils.GenerateLeafCert("subject@example.com", "oidc-issuer", subCert, subKey)
+	url, _ := url.Parse("https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1")
+	leafCert, leafKey, _ := testutils.GenerateLeafCert("subject@example.com", "oidc-issuer", url, subCert, subKey)
 
 	pemCertChain, err := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, subCert, rootCert})
 	if err != nil {
@@ -220,7 +222,13 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(pub.EmailAddresses(), leafCert.EmailAddresses) {
-		t.Fatalf("expected matching email addresses, expected %v, got %v", leafCert.EmailAddresses, pub.EmailAddresses())
+		t.Fatalf("expected matching subjects, expected %v, got %v", leafCert.EmailAddresses, pub.EmailAddresses())
+	}
+
+	expectedSubjects := leafCert.EmailAddresses
+	expectedSubjects = append(expectedSubjects, leafCert.URIs[0].String())
+	if !reflect.DeepEqual(pub.Subjects(), expectedSubjects) {
+		t.Fatalf("expected matching subjects, expected %v, got %v", expectedSubjects, pub.Subjects())
 	}
 
 	canonicalValue, err := pub.CanonicalValue()
@@ -274,7 +282,7 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 	}
 
 	// Verify works with chain without intermediate
-	leafCert, leafKey, _ = testutils.GenerateLeafCert("subject@example.com", "oidc-issuer", rootCert, rootKey)
+	leafCert, leafKey, _ = testutils.GenerateLeafCert("subject@example.com", "oidc-issuer", nil, rootCert, rootKey)
 	pemCertChain, _ = cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, rootCert})
 	pub, _ = NewPublicKey(bytes.NewReader(pemCertChain))
 	signer, _ = signature.LoadSigner(leafKey, crypto.SHA256)

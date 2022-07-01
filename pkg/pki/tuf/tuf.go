@@ -169,3 +169,8 @@ func (k PublicKey) SpecVersion() (string, error) {
 func (k PublicKey) EmailAddresses() []string {
 	return nil
 }
+
+// Subjects implements the pki.PublicKey interface
+func (k PublicKey) Subjects() []string {
+	return nil
+}
