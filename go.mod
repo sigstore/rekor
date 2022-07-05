@@ -1,6 +1,6 @@
 module github.com/sigstore/rekor
 
-go 1.17
+go 1.18
 
 require (
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
@@ -51,7 +51,7 @@ require (
 	google.golang.org/grpc v1.47.0
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/ini.v1 v1.66.6
-	sigs.k8s.io/release-utils v0.4.1-0.20220207182343-6dadf2228617
+	sigs.k8s.io/release-utils v0.7.1
 )
 
 require (
@@ -125,5 +125,5 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
