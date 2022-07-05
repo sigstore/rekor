@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -30,7 +31,6 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/google/trillian"
 	ttypes "github.com/google/trillian/types"
-	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"github.com/transparency-dev/merkle/rfc6962"
 	"golang.org/x/sync/errgroup"
@@ -313,7 +313,10 @@ func getEntryURL(locationURL url.URL, uuid string) strfmt.URI {
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
 	logEntry, err := retrieveLogEntry(params.HTTPRequest.Context(), params.EntryUUID)
 	if err != nil {
-		return handleRekorAPIError(params, http.StatusNotFound, err, "ID %s not found in any known trees", params.EntryUUID)
+		if _, ok := (err).(types.ValidationError); ok {
+			return handleRekorAPIError(params, http.StatusBadRequest, err, "incorrectly formatted uuid %s", params.EntryUUID)
+		}
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, "ID %s not found in any known trees", params.EntryUUID)
 	}
 	return entries.NewGetLogEntryByUUIDOK().WithPayload(logEntry)
 }
@@ -333,8 +336,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 			if err != nil {
 				return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("could not get UUID from ID string %v", entryID))
 			}
-			logEntry, err := retrieveLogEntry(httpReqCtx, entryID)
-			if err == nil {
+			if logEntry, err := retrieveLogEntry(httpReqCtx, entryID); err == nil {
 				resultPayload = append(resultPayload, logEntry)
 				continue
 			}
@@ -455,7 +457,7 @@ var ErrNotFound = errors.New("grpc returned 0 leaves with success code")
 func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, error) {
 	uuid, err := sharding.GetUUIDFromIDString(entryUUID)
 	if err != nil {
-		return models.LogEntry{}, errors.Wrap(err, "getting uuid from id string")
+		return models.LogEntry{}, sharding.ErrPlainUUID
 	}
 
 	// Get the tree ID and check that shard for the entry
@@ -484,7 +486,7 @@ func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, e
 func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.LogEntry, error) {
 	hashValue, err := hex.DecodeString(uuid)
 	if err != nil {
-		return models.LogEntry{}, err
+		return models.LogEntry{}, types.ValidationError(err)
 	}
 
 	tc := NewTrillianClientFromTreeID(ctx, tid)
