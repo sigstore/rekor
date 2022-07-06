@@ -159,7 +159,7 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 		ctx := r.Context()
 		r = r.WithContext(log.WithRequestID(ctx, middleware.GetReqID(ctx)))
 		defer func() {
-			_ = log.RequestIDLogger(r).Sync()
+			_ = log.ContextLogger(ctx).Sync()
 		}()
 
 		returnHandler.ServeHTTP(w, r)
@@ -196,14 +196,15 @@ func cacheForever(handler http.Handler) http.Handler {
 }
 
 func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
+	ctx := r.Context()
 	if apiErr, ok := err.(errors.Error); ok && apiErr.Code() == http.StatusNotFound {
-		log.RequestIDLogger(r).Warn(err)
+		log.ContextLogger(ctx).Warn(err)
 	} else {
-		log.RequestIDLogger(r).Error(err)
+		log.ContextLogger(ctx).Error(err)
 	}
 	requestFields := map[string]interface{}{}
 	if err := mapstructure.Decode(r, &requestFields); err == nil {
-		log.RequestIDLogger(r).Debug(requestFields)
+		log.ContextLogger(ctx).Debug(requestFields)
 	}
 	errors.ServeError(w, r, err)
 }

@@ -113,7 +113,7 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 		if attKey != "" {
 			att, fetchErr = storageClient.FetchAttestation(ctx, attKey)
 			if fetchErr != nil {
-				log.Logger.Errorf("error fetching attestation by key, trying by UUID: %s %w", attKey, fetchErr)
+				log.ContextLogger(ctx).Errorf("error fetching attestation by key, trying by UUID: %s %w", attKey, fetchErr)
 			}
 		}
 		// if looking up by key failed or we weren't able to generate a key, try looking up by uuid
@@ -125,7 +125,7 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 			}
 			att, fetchErr = storageClient.FetchAttestation(ctx, entryIDstruct.UUID)
 			if fetchErr != nil {
-				log.Logger.Errorf("error fetching attestation by uuid: %s %v", entryIDstruct.UUID, fetchErr)
+				log.ContextLogger(ctx).Errorf("error fetching attestation by uuid: %s %v", entryIDstruct.UUID, fetchErr)
 			}
 		}
 		if fetchErr == nil {
@@ -149,7 +149,7 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 	ctx := params.HTTPRequest.Context()
 	tid, resolvedIndex := api.logRanges.ResolveVirtualIndex(int(params.LogIndex))
 	tc := NewTrillianClientFromTreeID(ctx, tid)
-	log.RequestIDLogger(params.HTTPRequest).Debugf("Retrieving resolved index %v from TreeID %v", resolvedIndex, tid)
+	log.ContextLogger(ctx).Debugf("Retrieving resolved index %v from TreeID %v", resolvedIndex, tid)
 
 	resp := tc.getLeafAndProofByIndex(resolvedIndex)
 	switch resp.status {
@@ -238,12 +238,12 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		go func() {
 			keys, err := entry.IndexKeys()
 			if err != nil {
-				log.RequestIDLogger(params.HTTPRequest).Error(err)
+				log.ContextLogger(ctx).Error(err)
 				return
 			}
 			for _, key := range keys {
 				if err := addToIndex(context.Background(), key, entryID); err != nil {
-					log.RequestIDLogger(params.HTTPRequest).Error(err)
+					log.ContextLogger(ctx).Error(err)
 				}
 			}
 		}()
@@ -254,14 +254,14 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		go func() {
 			attKey, attVal := entry.AttestationKeyValue()
 			if attVal == nil {
-				log.RequestIDLogger(params.HTTPRequest).Infof("no attestation for %s", uuid)
+				log.ContextLogger(ctx).Infof("no attestation for %s", uuid)
 				return
 			}
 			if err := storeAttestation(context.Background(), attKey, attVal); err != nil {
 				// entryIDstruct.UUID
-				log.RequestIDLogger(params.HTTPRequest).Errorf("error storing attestation: %s", err)
+				log.ContextLogger(ctx).Errorf("error storing attestation: %s", err)
 			} else {
-				log.RequestIDLogger(params.HTTPRequest).Infof("stored attestation for uuid %s with filename %s", entryIDstruct.UUID, attKey)
+				log.ContextLogger(ctx).Infof("stored attestation for uuid %s with filename %s", entryIDstruct.UUID, attKey)
 			}
 		}()
 	}
@@ -490,7 +490,7 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 	}
 
 	tc := NewTrillianClientFromTreeID(ctx, tid)
-	log.Logger.Debugf("Attempting to retrieve UUID %v from TreeID %v", uuid, tid)
+	log.ContextLogger(ctx).Debugf("Attempting to retrieve UUID %v from TreeID %v", uuid, tid)
 
 	resp := tc.getLeafAndProofByHash(hashValue)
 	switch resp.status {
@@ -510,6 +510,7 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 	case codes.NotFound:
 		return models.LogEntry{}, ErrNotFound
 	default:
+		log.ContextLogger(ctx).Errorf("Unexpected response code while attempting to retrieve UUID %v from TreeID %v: %v", uuid, tid, resp.status)
 		return models.LogEntry{}, errors.New("unexpected error")
 	}
 }

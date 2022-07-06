@@ -55,7 +55,7 @@ type Blob struct {
 }
 
 func (b *Blob) StoreAttestation(ctx context.Context, key string, attestation []byte) error {
-	log.Logger.Infof("storing attestation at %s", key)
+	log.ContextLogger(ctx).Infof("storing attestation at %s", key)
 	w, err := b.bucket.NewWriter(ctx, key, nil)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (b *Blob) StoreAttestation(ctx context.Context, key string, attestation []b
 }
 
 func (b *Blob) FetchAttestation(ctx context.Context, key string) ([]byte, error) {
-	log.Logger.Infof("fetching attestation %s", key)
+	log.ContextLogger(ctx).Infof("fetching attestation %s", key)
 	exists, err := b.bucket.Exists(ctx, key)
 	if err != nil {
 		return nil, err
