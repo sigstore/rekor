@@ -147,30 +147,13 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 // GetLogEntryAndProofByIndexHandler returns the entry and inclusion proof for a specified log index
 func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middleware.Responder {
 	ctx := params.HTTPRequest.Context()
-	tid, resolvedIndex := api.logRanges.ResolveVirtualIndex(int(params.LogIndex))
-	tc := NewTrillianClientFromTreeID(ctx, tid)
-	log.ContextLogger(ctx).Debugf("Retrieving resolved index %v from TreeID %v", resolvedIndex, tid)
-
-	resp := tc.getLeafAndProofByIndex(resolvedIndex)
-	switch resp.status {
-	case codes.OK:
-	case codes.NotFound, codes.OutOfRange, codes.InvalidArgument:
-		return handleRekorAPIError(params, http.StatusNotFound, fmt.Errorf("grpc error: %w", resp.err), "")
-	default:
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc err: %w", resp.err), trillianCommunicationError)
-	}
-
-	result := resp.getLeafAndProofResult
-	leaf := result.Leaf
-	if leaf == nil {
-		return handleRekorAPIError(params, http.StatusNotFound, errors.New("grpc returned 0 leaves with success code"), "")
-	}
-
-	logEntry, err := logEntryFromLeaf(ctx, api.signer, tc, leaf, result.SignedLogRoot, result.Proof, tid, api.logRanges)
+	logEntry, err := retrieveLogEntryByIndex(ctx, int(params.LogIndex))
 	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return handleRekorAPIError(params, http.StatusNotFound, fmt.Errorf("grpc error: %w", err), "")
+		}
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
 	}
-
 	return entries.NewGetLogEntryByIndexOK().WithPayload(logEntry)
 }
 
@@ -411,22 +394,14 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	if len(params.Entry.LogIndexes) > 0 {
 		g, _ := errgroup.WithContext(httpReqCtx)
 
-		leafResults := make([]*trillian.GetEntryAndProofResponse, len(params.Entry.LogIndexes))
-		for i, logIndex := range params.Entry.LogIndexes {
-			i, logIndex := i, logIndex // https://golang.org/doc/faq#closures_and_goroutines
+		for _, logIndex := range params.Entry.LogIndexes {
+			logIndex := logIndex // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
-				tid, resolvedIndex := api.logRanges.ResolveVirtualIndex(int(swag.Int64Value(logIndex)))
-				trillianClient := NewTrillianClientFromTreeID(httpReqCtx, tid)
-				resp := trillianClient.getLeafAndProofByIndex(resolvedIndex)
-				switch resp.status {
-				case codes.OK, codes.NotFound:
-				default:
-					return resp.err
+				logEntry, err := retrieveLogEntryByIndex(httpReqCtx, int(swag.Int64Value(logIndex)))
+				if err != nil {
+					return err
 				}
-				leafResult := resp.getLeafAndProofResult
-				if leafResult != nil && leafResult.Leaf != nil {
-					leafResults[i] = leafResult
-				}
+				resultPayload = append(resultPayload, logEntry)
 				return nil
 			})
 		}
@@ -434,22 +409,35 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		if err := g.Wait(); err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", err), trillianUnexpectedResult)
 		}
-
-		for _, result := range leafResults {
-			if result != nil {
-				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tc, result.Leaf, result.SignedLogRoot, result.Proof, api.logRanges.ActiveTreeID(), api.logRanges)
-				if err != nil {
-					return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
-				}
-				resultPayload = append(resultPayload, logEntry)
-			}
-		}
 	}
 
 	return entries.NewSearchLogQueryOK().WithPayload(resultPayload)
 }
 
 var ErrNotFound = errors.New("grpc returned 0 leaves with success code")
+
+func retrieveLogEntryByIndex(ctx context.Context, logIndex int) (models.LogEntry, error) {
+	tid, resolvedIndex := api.logRanges.ResolveVirtualIndex(logIndex)
+	tc := NewTrillianClientFromTreeID(ctx, tid)
+	log.ContextLogger(ctx).Debugf("Retrieving resolved index %v from TreeID %v", resolvedIndex, tid)
+
+	resp := tc.getLeafAndProofByIndex(resolvedIndex)
+	switch resp.status {
+	case codes.OK:
+	case codes.NotFound, codes.OutOfRange, codes.InvalidArgument:
+		return models.LogEntry{}, ErrNotFound
+	default:
+		return models.LogEntry{}, fmt.Errorf("grpc err: %w: %s", resp.err, trillianCommunicationError)
+	}
+
+	result := resp.getLeafAndProofResult
+	leaf := result.Leaf
+	if leaf == nil {
+		return models.LogEntry{}, ErrNotFound
+	}
+
+	return logEntryFromLeaf(ctx, api.signer, tc, leaf, result.SignedLogRoot, result.Proof, tid, api.logRanges)
+}
 
 // Retrieve a Log Entry
 // If a tree ID is specified, look in that tree

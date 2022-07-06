@@ -265,4 +265,8 @@ stringsMatch $NUM_ELEMENTS "2"
 NUM_ELEMENTS=$(curl -f -H "Content-Type: application/json" --data '{"logIndexes": [0,3]}'  "http://localhost:3000/api/v1/log/entries/retrieve" | jq '. | length')
 stringsMatch $NUM_ELEMENTS "2"
 
+# Make sure we get the expected LogIndex in the response when calling /retrieve endpoint
+RETRIEVE_LOGINDEX1=$(curl -f http://localhost:3000/api/v1/log/entries/retrieve -H "Content-Type: application/json" -H "Accept: application/json" -d "{ \"logIndexes\": [1]}" | jq '.[0]' | jq  -r .$UUID1.logIndex)
+stringsMatch $RETRIEVE_LOGINDEX1 "1"
+
 echo "Test passed successfully :)"
