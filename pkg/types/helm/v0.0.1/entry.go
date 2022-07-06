@@ -280,14 +280,6 @@ func (v V001Entry) validate() error {
 	return nil
 }
 
-func (v V001Entry) AttestationKey() string {
-	return ""
-}
-
-func (v V001Entry) AttestationKeyValue() (string, []byte) {
-	return "", nil
-}
-
 func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	//TODO: how to select version of item to create
 	returnVal := models.Helm{}

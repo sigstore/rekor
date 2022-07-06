@@ -106,31 +106,33 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 			return nil, err
 		}
 
-		var att []byte
-		var fetchErr error
-		attKey := eimpl.AttestationKey()
-		// if we're given a key by the type logic, let's try that first
-		if attKey != "" {
-			att, fetchErr = storageClient.FetchAttestation(ctx, attKey)
-			if fetchErr != nil {
-				log.ContextLogger(ctx).Errorf("error fetching attestation by key, trying by UUID: %s %w", attKey, fetchErr)
+		if entryWithAtt, ok := eimpl.(types.EntryWithAttestationImpl); ok {
+			var att []byte
+			var fetchErr error
+			attKey := entryWithAtt.AttestationKey()
+			// if we're given a key by the type logic, let's try that first
+			if attKey != "" {
+				att, fetchErr = storageClient.FetchAttestation(ctx, attKey)
+				if fetchErr != nil {
+					log.ContextLogger(ctx).Errorf("error fetching attestation by key, trying by UUID: %s %w", attKey, fetchErr)
+				}
 			}
-		}
-		// if looking up by key failed or we weren't able to generate a key, try looking up by uuid
-		if attKey == "" || fetchErr != nil {
-			activeTree := fmt.Sprintf("%x", tc.logID)
-			entryIDstruct, err := sharding.CreateEntryIDFromParts(activeTree, uuid)
-			if err != nil {
-				return nil, fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, uuid, err)
+			// if looking up by key failed or we weren't able to generate a key, try looking up by uuid
+			if attKey == "" || fetchErr != nil {
+				activeTree := fmt.Sprintf("%x", tc.logID)
+				entryIDstruct, err := sharding.CreateEntryIDFromParts(activeTree, uuid)
+				if err != nil {
+					return nil, fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, uuid, err)
+				}
+				att, fetchErr = storageClient.FetchAttestation(ctx, entryIDstruct.UUID)
+				if fetchErr != nil {
+					log.ContextLogger(ctx).Errorf("error fetching attestation by uuid: %s %v", entryIDstruct.UUID, fetchErr)
+				}
 			}
-			att, fetchErr = storageClient.FetchAttestation(ctx, entryIDstruct.UUID)
-			if fetchErr != nil {
-				log.ContextLogger(ctx).Errorf("error fetching attestation by uuid: %s %v", entryIDstruct.UUID, fetchErr)
-			}
-		}
-		if fetchErr == nil {
-			logEntryAnon.Attestation = &models.LogEntryAnonAttestation{
-				Data: att,
+			if fetchErr == nil {
+				logEntryAnon.Attestation = &models.LogEntryAnonAttestation{
+					Data: att,
+				}
 			}
 		}
 	}
@@ -250,20 +252,21 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	}
 
 	if viper.GetBool("enable_attestation_storage") {
-
-		go func() {
-			attKey, attVal := entry.AttestationKeyValue()
-			if attVal == nil {
-				log.ContextLogger(ctx).Infof("no attestation for %s", uuid)
-				return
-			}
-			if err := storeAttestation(context.Background(), attKey, attVal); err != nil {
-				// entryIDstruct.UUID
-				log.ContextLogger(ctx).Errorf("error storing attestation: %s", err)
+		if entryWithAtt, ok := entry.(types.EntryWithAttestationImpl); ok {
+			attKey, attVal := entryWithAtt.AttestationKeyValue()
+			if attVal != nil {
+				go func() {
+					if err := storeAttestation(context.Background(), attKey, attVal); err != nil {
+						// entryIDstruct.UUID
+						log.ContextLogger(ctx).Errorf("error storing attestation: %s", err)
+					} else {
+						log.ContextLogger(ctx).Infof("stored attestation for uuid %s with filename %s", entryIDstruct.UUID, attKey)
+					}
+				}()
 			} else {
-				log.ContextLogger(ctx).Infof("stored attestation for uuid %s with filename %s", entryIDstruct.UUID, attKey)
+				log.ContextLogger(ctx).Infof("no attestation returned for %s", uuid)
 			}
-		}()
+		}
 	}
 
 	signature, err := signEntry(ctx, api.signer, logEntryAnon)
