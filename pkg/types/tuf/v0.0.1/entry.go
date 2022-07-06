@@ -294,14 +294,6 @@ func (v V001Entry) Validate() error {
 	return nil
 }
 
-func (v V001Entry) AttestationKey() string {
-	return ""
-}
-
-func (v V001Entry) AttestationKeyValue() (string, []byte) {
-	return "", nil
-}
-
 func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	// This will do only syntactic checks of the metablock, not signature verification.
 	// Signature verification occurs in FetchExternalEntries()

@@ -173,14 +173,6 @@ func (v V001Entry) validate() error {
 	return nil
 }
 
-func (v V001Entry) AttestationKey() string {
-	return ""
-}
-
-func (v V001Entry) AttestationKeyValue() (string, []byte) {
-	return "", nil
-}
-
 func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	returnVal := models.Rfc3161{}
 

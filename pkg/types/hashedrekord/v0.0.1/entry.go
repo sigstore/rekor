@@ -189,14 +189,6 @@ func (v *V001Entry) validate() (pki.Signature, pki.PublicKey, error) {
 	return sigObj, keyObj, nil
 }
 
-func (v V001Entry) AttestationKey() string {
-	return ""
-}
-
-func (v V001Entry) AttestationKeyValue() (string, []byte) {
-	return "", nil
-}
-
 func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	returnVal := models.Hashedrekord{}
 	re := V001Entry{}
