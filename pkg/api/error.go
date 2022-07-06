@@ -67,10 +67,11 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 	handler := re.FindStringSubmatch(typeStr)[1]
 
 	logMsg := func(r *http.Request) {
-		log.RequestIDLogger(r).Errorw("exiting with error", append([]interface{}{"handler", handler, "statusCode", code, "clientMessage", message, "error", err}, fields...)...)
+		ctx := r.Context()
+		log.ContextLogger(ctx).Errorw("error processing request", append([]interface{}{"handler", handler, "statusCode", code, "clientMessage", message, "error", err}, fields...)...)
 		paramsFields := map[string]interface{}{}
 		if err := mapstructure.Decode(params, &paramsFields); err == nil {
-			log.RequestIDLogger(r).Debug(paramsFields)
+			log.ContextLogger(ctx).Debug(paramsFields)
 		}
 	}
 
