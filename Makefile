@@ -66,7 +66,7 @@ Makefile.swagger: $(SWAGGER) $(OPENAPIDEPS)
 	$(SWAGGER) validate openapi.yaml
 	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --default-consumes application/json\;q=1 --additional-initialism=TUF
 	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A rekor_server --flag-strategy=pflag --default-produces application/json --additional-initialism=TUF
-	@echo "SWAGGER_GEN=`find pkg/generated/client pkg/generated/models/ pkg/generated/restapi/ -iname '*.go' | grep -v 'configure_rekor_server' | tr '\n' ' ' | sed 's/ $$//'`" > Makefile.swagger;
+	@echo "SWAGGER_GEN=`find pkg/generated/client pkg/generated/models/ pkg/generated/restapi/ -iname '*.go' | grep -v 'configure_rekor_server' | sort | tr '\n' ' ' | sed 's/ $$//'`" > Makefile.swagger;
 
 
 lint:
