@@ -35,8 +35,6 @@ jobs:
       - uses: actions/setup-go@b22fbbc2921299758641fab08929b4ac52b32923 # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
-      - name: Validate OpenAPI with Swagger
-        run: make validate-openapi
       - name: Build
         run: make -C $GITHUB_WORKSPACE all
       - name: Fuzz-Build

@@ -59,7 +59,6 @@ func init() {
 }
 
 var (
-	specFile         string
 	enabledListeners []string
 	cleanupTimeout   time.Duration
 	gracefulTimeout  time.Duration
@@ -87,7 +86,6 @@ var (
 
 func init() {
 	maxHeaderSize = flagext.ByteSize(1000000)
-	flag.StringVarP(&specFile, "spec", "", "", "the swagger specification to serve")
 
 	flag.StringSliceVar(&enabledListeners, "scheme", defaultSchemes, "the listeners to enable, this can be repeated and defaults to the schemes in the swagger spec")
 
@@ -168,7 +166,6 @@ func NewServer(api *operations.RekorServerAPI) *Server {
 	s.TLSKeepAlive = tlsKeepAlive
 	s.TLSReadTimeout = tlsReadTimeout
 	s.TLSWriteTimeout = tlsWriteTimeout
-	s.Spec = specFile
 	s.shutdown = make(chan struct{})
 	s.api = api
 	s.interrupt = make(chan os.Signal, 1)
@@ -218,7 +215,6 @@ type Server struct {
 	TLSWriteTimeout   time.Duration
 	httpsServerL      net.Listener
 
-	Spec         string
 	api          *operations.RekorServerAPI
 	handler      http.Handler
 	hasListeners bool
