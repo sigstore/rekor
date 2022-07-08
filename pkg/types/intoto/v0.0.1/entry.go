@@ -43,7 +43,7 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/intoto"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/options"
+	dsse_verifier "github.com/sigstore/sigstore/pkg/signature/dsse"
 )
 
 const (
@@ -232,26 +232,12 @@ func (v *V001Entry) validate() error {
 	if err != nil {
 		return err
 	}
-	dsseVerifier, err := dsse.NewEnvelopeSigner(&verifier{
-		v:   vfr,
-		pub: pk,
-	})
-	if err != nil {
+	dsseVerifier := dsse_verifier.WrapVerifier(vfr)
+
+	if err := dsseVerifier.VerifySignature(strings.NewReader(v.IntotoObj.Content.Envelope), nil); err != nil {
 		return err
 	}
-
-	if v.IntotoObj.Content.Envelope == "" {
-		return nil
-	}
-
-	if err := json.Unmarshal([]byte(v.IntotoObj.Content.Envelope), &v.env); err != nil {
-		return err
-	}
-
-	if _, err := dsseVerifier.Verify(&v.env); err != nil {
-		return err
-	}
-	return nil
+	return json.Unmarshal([]byte(v.IntotoObj.Content.Envelope), &v.env)
 }
 
 // AttestationKey returns the digest of the attestation that was uploaded, to be used to lookup the attestation from storage
@@ -273,38 +259,6 @@ func (v *V001Entry) AttestationKeyValue() (string, []byte) {
 	attHash := sha256.Sum256(attBytes)
 	attKey := fmt.Sprintf("%s:%s", models.IntotoV001SchemaContentHashAlgorithmSha256, hex.EncodeToString(attHash[:]))
 	return attKey, attBytes
-}
-
-type verifier struct {
-	s   signature.Signer
-	v   signature.Verifier
-	pub crypto.PublicKey
-}
-
-func (v *verifier) KeyID() (string, error) {
-	return "", nil
-}
-
-func (v *verifier) Public() crypto.PublicKey {
-	return v.pub
-}
-
-func (v *verifier) Sign(data []byte) (sig []byte, err error) {
-	if v.s == nil {
-		return nil, errors.New("nil signer")
-	}
-	sig, err = v.s.SignMessage(bytes.NewReader(data), options.WithCryptoSignerOpts(crypto.SHA256))
-	if err != nil {
-		return nil, err
-	}
-	return sig, nil
-}
-
-func (v *verifier) Verify(data, sig []byte) error {
-	if v.v == nil {
-		return errors.New("nil verifier")
-	}
-	return v.v.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data))
 }
 
 func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {

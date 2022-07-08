@@ -46,6 +46,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
+	dsse_signer "github.com/sigstore/sigstore/pkg/signature/dsse"
 	"go.uber.org/goleak"
 )
 
@@ -71,23 +72,13 @@ func envelope(t *testing.T, k *ecdsa.PrivateKey, payload, payloadType string) st
 	if err != nil {
 		t.Fatal(err)
 	}
-	signer, err := in_toto.NewDSSESigner(&verifier{
-		s:   s,
-		pub: k.Public(),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	dsseEnv, err := signer.SignPayload([]byte(payload))
-	if err != nil {
-		t.Fatal(err)
-	}
-	b, err := json.Marshal(dsseEnv)
+	wrappedSigner := dsse_signer.WrapSigner(s, string(payloadType))
+	dsseEnv, err := wrappedSigner.SignMessage(strings.NewReader(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return string(b)
+	return string(dsseEnv)
 }
 
 func TestV001Entry_Unmarshal(t *testing.T) {
