@@ -78,7 +78,7 @@ func init() {
               "items": {
                 "description": "Entry UUID in transparency log",
                 "type": "string",
-                "pattern": "(^[0-9a-fA-F]{64}|[0-9a-fA-F]{80}$)"
+                "pattern": "^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$"
               }
             }
           },
@@ -236,7 +236,7 @@ func init() {
         "operationId": "getLogEntryByUUID",
         "parameters": [
           {
-            "pattern": "(^[0-9a-fA-F]{64}|[0-9a-fA-F]{80}$)",
+            "pattern": "^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$",
             "type": "string",
             "description": "the UUID of the entry for which the inclusion proof information should be returned",
             "name": "entryUUID",
@@ -284,6 +284,13 @@ func init() {
             "name": "lastSize",
             "in": "query",
             "required": true
+          },
+          {
+            "pattern": "^[0-9]+$",
+            "type": "string",
+            "description": "The tree ID of the tree that you wish to prove consistency for",
+            "name": "treeID",
+            "in": "query"
           }
         ],
         "responses": {
@@ -313,98 +320,21 @@ func init() {
         ],
         "summary": "Retrieve the public key that can be used to validate the signed tree head",
         "operationId": "getPublicKey",
+        "parameters": [
+          {
+            "pattern": "^[0-9]+$",
+            "type": "string",
+            "description": "The tree ID of the tree you wish to get a public key for",
+            "name": "treeID",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "The public key",
             "schema": {
               "type": "string"
             }
-          },
-          "default": {
-            "$ref": "#/responses/InternalServerError"
-          }
-        }
-      }
-    },
-    "/api/v1/timestamp": {
-      "post": {
-        "consumes": [
-          "application/timestamp-query"
-        ],
-        "produces": [
-          "application/timestamp-reply"
-        ],
-        "tags": [
-          "timestamp"
-        ],
-        "summary": "Generates a new timestamp response and creates a new log entry for the timestamp in the transparency log",
-        "operationId": "getTimestampResponse",
-        "parameters": [
-          {
-            "name": "request",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "binary"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Returns a timestamp response and the location of the log entry in the transprency log",
-            "schema": {
-              "type": "string",
-              "format": "binary"
-            },
-            "headers": {
-              "ETag": {
-                "type": "string",
-                "description": "UUID of the log entry made for the timestamp response"
-              },
-              "Index": {
-                "type": "integer",
-                "description": "Log index of the log entry made for the timestamp response"
-              },
-              "Location": {
-                "type": "string",
-                "format": "uri",
-                "description": "URI location of the log entry made for the timestamp response"
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/responses/BadContent"
-          },
-          "501": {
-            "$ref": "#/responses/NotImplemented"
-          },
-          "default": {
-            "$ref": "#/responses/InternalServerError"
-          }
-        }
-      }
-    },
-    "/api/v1/timestamp/certchain": {
-      "get": {
-        "description": "Returns the certfiicate chain for timestamping that can be used to validate trusted timestamps",
-        "produces": [
-          "application/pem-certificate-chain"
-        ],
-        "tags": [
-          "timestamp"
-        ],
-        "summary": "Retrieve the certfiicate chain for timestamping that can be used to validate trusted timestamps",
-        "operationId": "getTimestampCertChain",
-        "responses": {
-          "200": {
-            "description": "The PEM encoded cert chain",
-            "schema": {
-              "type": "string"
-            }
-          },
-          "404": {
-            "$ref": "#/responses/NotFound"
           },
           "default": {
             "$ref": "#/responses/InternalServerError"
@@ -464,6 +394,37 @@ func init() {
         },
         "message": {
           "type": "string"
+        }
+      }
+    },
+    "InactiveShardLogInfo": {
+      "type": "object",
+      "required": [
+        "rootHash",
+        "treeSize",
+        "signedTreeHead",
+        "treeID"
+      ],
+      "properties": {
+        "rootHash": {
+          "description": "The current hash value stored at the root of the merkle tree",
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$"
+        },
+        "signedTreeHead": {
+          "description": "The current signed tree head",
+          "type": "string",
+          "format": "signedCheckpoint"
+        },
+        "treeID": {
+          "description": "The current treeID",
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "treeSize": {
+          "description": "The current number of nodes in the merkle tree",
+          "type": "integer",
+          "minimum": 1
         }
       }
     },
@@ -557,9 +518,16 @@ func init() {
       "required": [
         "rootHash",
         "treeSize",
-        "signedTreeHead"
+        "signedTreeHead",
+        "treeID"
       ],
       "properties": {
+        "inactiveShards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InactiveShardLogInfo"
+          }
+        },
         "rootHash": {
           "description": "The current hash value stored at the root of the merkle tree",
           "type": "string",
@@ -569,6 +537,11 @@ func init() {
           "description": "The current signed tree head",
           "type": "string",
           "format": "signedCheckpoint"
+        },
+        "treeID": {
+          "description": "The current treeID",
+          "type": "string",
+          "pattern": "^[0-9]+$"
         },
         "treeSize": {
           "description": "The current number of nodes in the merkle tree",
@@ -665,7 +638,7 @@ func init() {
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^[0-9a-fA-F]{64}$",
+            "pattern": "^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$",
             "minItems": 1
           }
         },
@@ -698,6 +671,32 @@ func init() {
             "spec": {
               "type": "object",
               "$ref": "pkg/types/alpine/alpine_schema.json"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "cose": {
+      "description": "COSE object",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "type": "object",
+              "$ref": "pkg/types/cose/cose_schema.json"
             }
           },
           "additionalProperties": false
@@ -939,9 +938,6 @@ func init() {
     },
     "NotFound": {
       "description": "The content requested could not be found"
-    },
-    "NotImplemented": {
-      "description": "The content requested is not implemented"
     }
   }
 }`))
@@ -990,7 +986,7 @@ func init() {
               "items": {
                 "description": "Entry UUID in transparency log",
                 "type": "string",
-                "pattern": "(^[0-9a-fA-F]{64}|[0-9a-fA-F]{80}$)"
+                "pattern": "^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$"
               }
             }
           },
@@ -1182,7 +1178,7 @@ func init() {
         "operationId": "getLogEntryByUUID",
         "parameters": [
           {
-            "pattern": "(^[0-9a-fA-F]{64}|[0-9a-fA-F]{80}$)",
+            "pattern": "^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$",
             "type": "string",
             "description": "the UUID of the entry for which the inclusion proof information should be returned",
             "name": "entryUUID",
@@ -1233,6 +1229,13 @@ func init() {
             "name": "lastSize",
             "in": "query",
             "required": true
+          },
+          {
+            "pattern": "^[0-9]+$",
+            "type": "string",
+            "description": "The tree ID of the tree that you wish to prove consistency for",
+            "name": "treeID",
+            "in": "query"
           }
         ],
         "responses": {
@@ -1268,107 +1271,21 @@ func init() {
         ],
         "summary": "Retrieve the public key that can be used to validate the signed tree head",
         "operationId": "getPublicKey",
+        "parameters": [
+          {
+            "pattern": "^[0-9]+$",
+            "type": "string",
+            "description": "The tree ID of the tree you wish to get a public key for",
+            "name": "treeID",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "The public key",
             "schema": {
               "type": "string"
             }
-          },
-          "default": {
-            "description": "There was an internal error in the server while processing the request",
-            "schema": {
-              "$ref": "#/definitions/Error"
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/timestamp": {
-      "post": {
-        "consumes": [
-          "application/timestamp-query"
-        ],
-        "produces": [
-          "application/timestamp-reply"
-        ],
-        "tags": [
-          "timestamp"
-        ],
-        "summary": "Generates a new timestamp response and creates a new log entry for the timestamp in the transparency log",
-        "operationId": "getTimestampResponse",
-        "parameters": [
-          {
-            "name": "request",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "binary"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Returns a timestamp response and the location of the log entry in the transprency log",
-            "schema": {
-              "type": "string",
-              "format": "binary"
-            },
-            "headers": {
-              "ETag": {
-                "type": "string",
-                "description": "UUID of the log entry made for the timestamp response"
-              },
-              "Index": {
-                "type": "integer",
-                "description": "Log index of the log entry made for the timestamp response"
-              },
-              "Location": {
-                "type": "string",
-                "format": "uri",
-                "description": "URI location of the log entry made for the timestamp response"
-              }
-            }
-          },
-          "400": {
-            "description": "The content supplied to the server was invalid",
-            "schema": {
-              "$ref": "#/definitions/Error"
-            }
-          },
-          "501": {
-            "description": "The content requested is not implemented"
-          },
-          "default": {
-            "description": "There was an internal error in the server while processing the request",
-            "schema": {
-              "$ref": "#/definitions/Error"
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/timestamp/certchain": {
-      "get": {
-        "description": "Returns the certfiicate chain for timestamping that can be used to validate trusted timestamps",
-        "produces": [
-          "application/pem-certificate-chain"
-        ],
-        "tags": [
-          "timestamp"
-        ],
-        "summary": "Retrieve the certfiicate chain for timestamping that can be used to validate trusted timestamps",
-        "operationId": "getTimestampCertChain",
-        "responses": {
-          "200": {
-            "description": "The PEM encoded cert chain",
-            "schema": {
-              "type": "string"
-            }
-          },
-          "404": {
-            "description": "The content requested could not be found"
           },
           "default": {
             "description": "There was an internal error in the server while processing the request",
@@ -1410,7 +1327,7 @@ func init() {
       "oneOf": [
         {
           "required": [
-            "url"
+            "hash"
           ]
         },
         {
@@ -1445,7 +1362,8 @@ func init() {
               "description": "The hash value for the package",
               "type": "string"
             }
-          }
+          },
+          "readOnly": true
         },
         "pkginfo": {
           "description": "Values of the .PKGINFO key / value pairs",
@@ -1454,12 +1372,6 @@ func init() {
             "type": "string"
           },
           "readOnly": true
-        },
-        "url": {
-          "description": "Specifies the location of the package; if this is specified, a hash value must also be provided",
-          "type": "string",
-          "format": "uri",
-          "writeOnly": true
         }
       }
     },
@@ -1482,34 +1394,20 @@ func init() {
           "description": "The hash value for the package",
           "type": "string"
         }
-      }
+      },
+      "readOnly": true
     },
     "AlpineV001SchemaPublicKey": {
       "description": "The public key that can verify the package signature",
       "type": "object",
-      "oneOf": [
-        {
-          "required": [
-            "url"
-          ]
-        },
-        {
-          "required": [
-            "content"
-          ]
-        }
+      "required": [
+        "content"
       ],
       "properties": {
         "content": {
           "description": "Specifies the content of the public key inline within the document",
           "type": "string",
           "format": "byte"
-        },
-        "url": {
-          "description": "Specifies the location of the public key",
-          "type": "string",
-          "format": "uri",
-          "writeOnly": true
         }
       }
     },
@@ -1534,6 +1432,106 @@ func init() {
           "pattern": "^[0-9a-fA-F]{64}$"
         }
       }
+    },
+    "CoseV001SchemaData": {
+      "description": "Information about the content associated with the entry",
+      "type": "object",
+      "properties": {
+        "aad": {
+          "description": "Specifies the additional authenticated data required to verify the signature",
+          "type": "string",
+          "format": "byte",
+          "writeOnly": true
+        },
+        "envelopeHash": {
+          "description": "Specifies the hash algorithm and value for the COSE envelope",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value": {
+              "description": "The hash value for the envelope",
+              "type": "string"
+            }
+          },
+          "readOnly": true
+        },
+        "payloadHash": {
+          "description": "Specifies the hash algorithm and value for the content",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value": {
+              "description": "The hash value for the content",
+              "type": "string"
+            }
+          },
+          "readOnly": true
+        }
+      }
+    },
+    "CoseV001SchemaDataEnvelopeHash": {
+      "description": "Specifies the hash algorithm and value for the COSE envelope",
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "The hashing function used to compute the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value": {
+          "description": "The hash value for the envelope",
+          "type": "string"
+        }
+      },
+      "readOnly": true
+    },
+    "CoseV001SchemaDataPayloadHash": {
+      "description": "Specifies the hash algorithm and value for the content",
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "The hashing function used to compute the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value": {
+          "description": "The hash value for the content",
+          "type": "string"
+        }
+      },
+      "readOnly": true
     },
     "Error": {
       "type": "object",
@@ -1662,7 +1660,7 @@ func init() {
           "oneOf": [
             {
               "required": [
-                "url"
+                "signature"
               ]
             },
             {
@@ -1693,12 +1691,6 @@ func init() {
                 }
               },
               "readOnly": true
-            },
-            "url": {
-              "description": "Specifies the location of the provenance file",
-              "type": "string",
-              "format": "uri",
-              "writeOnly": true
             }
           }
         }
@@ -1732,7 +1724,7 @@ func init() {
       "oneOf": [
         {
           "required": [
-            "url"
+            "signature"
           ]
         },
         {
@@ -1763,12 +1755,6 @@ func init() {
             }
           },
           "readOnly": true
-        },
-        "url": {
-          "description": "Specifies the location of the provenance file",
-          "type": "string",
-          "format": "uri",
-          "writeOnly": true
         }
       }
     },
@@ -1791,29 +1777,45 @@ func init() {
     "HelmV001SchemaPublicKey": {
       "description": "The public key that can verify the package signature",
       "type": "object",
-      "oneOf": [
-        {
-          "required": [
-            "url"
-          ]
-        },
-        {
-          "required": [
-            "content"
-          ]
-        }
+      "required": [
+        "content"
       ],
       "properties": {
         "content": {
           "description": "Specifies the content of the public key inline within the document",
           "type": "string",
           "format": "byte"
-        },
-        "url": {
-          "description": "Specifies the location of the public key",
+        }
+      }
+    },
+    "InactiveShardLogInfo": {
+      "type": "object",
+      "required": [
+        "rootHash",
+        "treeSize",
+        "signedTreeHead",
+        "treeID"
+      ],
+      "properties": {
+        "rootHash": {
+          "description": "The current hash value stored at the root of the merkle tree",
           "type": "string",
-          "format": "uri",
-          "writeOnly": true
+          "pattern": "^[0-9a-fA-F]{64}$"
+        },
+        "signedTreeHead": {
+          "description": "The current signed tree head",
+          "type": "string",
+          "format": "signedCheckpoint"
+        },
+        "treeID": {
+          "description": "The current treeID",
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "treeSize": {
+          "description": "The current number of nodes in the merkle tree",
+          "type": "integer",
+          "minimum": 1
         }
       }
     },
@@ -1881,6 +1883,28 @@ func init() {
             }
           },
           "readOnly": true
+        },
+        "payloadHash": {
+          "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value": {
+              "description": "The hash value for the envelope's payload",
+              "type": "string"
+            }
+          },
+          "readOnly": true
         }
       }
     },
@@ -1906,13 +1930,35 @@ func init() {
       },
       "readOnly": true
     },
+    "IntotoV001SchemaContentPayloadHash": {
+      "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "The hashing function used to compute the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value": {
+          "description": "The hash value for the envelope's payload",
+          "type": "string"
+        }
+      },
+      "readOnly": true
+    },
     "JarV001SchemaArchive": {
       "description": "Information about the archive associated with the entry",
       "type": "object",
       "oneOf": [
         {
           "required": [
-            "url"
+            "hash"
           ]
         },
         {
@@ -1948,12 +1994,6 @@ func init() {
               "type": "string"
             }
           }
-        },
-        "url": {
-          "description": "Specifies the location of the archive; if this is specified, a hash value must also be provided",
-          "type": "string",
-          "format": "uri",
-          "writeOnly": true
         }
       }
     },
@@ -2106,9 +2146,16 @@ func init() {
       "required": [
         "rootHash",
         "treeSize",
-        "signedTreeHead"
+        "signedTreeHead",
+        "treeID"
       ],
       "properties": {
+        "inactiveShards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InactiveShardLogInfo"
+          }
+        },
         "rootHash": {
           "description": "The current hash value stored at the root of the merkle tree",
           "type": "string",
@@ -2118,6 +2165,11 @@ func init() {
           "description": "The current signed tree head",
           "type": "string",
           "format": "signedCheckpoint"
+        },
+        "treeID": {
+          "description": "The current treeID",
+          "type": "string",
+          "pattern": "^[0-9]+$"
         },
         "treeSize": {
           "description": "The current number of nodes in the merkle tree",
@@ -2167,7 +2219,7 @@ func init() {
       "oneOf": [
         {
           "required": [
-            "url"
+            "hash"
           ]
         },
         {
@@ -2202,13 +2254,8 @@ func init() {
               "description": "The hash value for the content",
               "type": "string"
             }
-          }
-        },
-        "url": {
-          "description": "Specifies the location of the content",
-          "type": "string",
-          "format": "uri",
-          "writeOnly": true
+          },
+          "readOnly": true
         }
       }
     },
@@ -2231,26 +2278,16 @@ func init() {
           "description": "The hash value for the content",
           "type": "string"
         }
-      }
+      },
+      "readOnly": true
     },
     "RekordV001SchemaSignature": {
       "description": "Information about the detached signature associated with the entry",
       "type": "object",
-      "oneOf": [
-        {
-          "required": [
-            "format",
-            "publicKey",
-            "url"
-          ]
-        },
-        {
-          "required": [
-            "format",
-            "publicKey",
-            "content"
-          ]
-        }
+      "required": [
+        "format",
+        "publicKey",
+        "content"
       ],
       "properties": {
         "content": {
@@ -2271,66 +2308,30 @@ func init() {
         "publicKey": {
           "description": "The public key that can verify the signature",
           "type": "object",
-          "oneOf": [
-            {
-              "required": [
-                "url"
-              ]
-            },
-            {
-              "required": [
-                "content"
-              ]
-            }
+          "required": [
+            "content"
           ],
           "properties": {
             "content": {
               "description": "Specifies the content of the public key inline within the document",
               "type": "string",
               "format": "byte"
-            },
-            "url": {
-              "description": "Specifies the location of the public key",
-              "type": "string",
-              "format": "uri",
-              "writeOnly": true
             }
           }
-        },
-        "url": {
-          "description": "Specifies the location of the signature",
-          "type": "string",
-          "format": "uri",
-          "writeOnly": true
         }
       }
     },
     "RekordV001SchemaSignaturePublicKey": {
       "description": "The public key that can verify the signature",
       "type": "object",
-      "oneOf": [
-        {
-          "required": [
-            "url"
-          ]
-        },
-        {
-          "required": [
-            "content"
-          ]
-        }
+      "required": [
+        "content"
       ],
       "properties": {
         "content": {
           "description": "Specifies the content of the public key inline within the document",
           "type": "string",
           "format": "byte"
-        },
-        "url": {
-          "description": "Specifies the location of the public key",
-          "type": "string",
-          "format": "uri",
-          "writeOnly": true
         }
       }
     },
@@ -2354,7 +2355,7 @@ func init() {
       "oneOf": [
         {
           "required": [
-            "url"
+            "hash"
           ]
         },
         {
@@ -2398,12 +2399,6 @@ func init() {
             "type": "string"
           },
           "readOnly": true
-        },
-        "url": {
-          "description": "Specifies the location of the package; if this is specified, a hash value must also be provided",
-          "type": "string",
-          "format": "uri",
-          "writeOnly": true
         }
       }
     },
@@ -2431,29 +2426,14 @@ func init() {
     "RpmV001SchemaPublicKey": {
       "description": "The PGP public key that can verify the RPM signature",
       "type": "object",
-      "oneOf": [
-        {
-          "required": [
-            "url"
-          ]
-        },
-        {
-          "required": [
-            "content"
-          ]
-        }
+      "required": [
+        "content"
       ],
       "properties": {
         "content": {
           "description": "Specifies the content of the public key inline within the document",
           "type": "string",
           "format": "byte"
-        },
-        "url": {
-          "description": "Specifies the location of the public key",
-          "type": "string",
-          "format": "uri",
-          "writeOnly": true
         }
       }
     },
@@ -2535,7 +2515,7 @@ func init() {
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^[0-9a-fA-F]{64}$"
+            "pattern": "^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$"
           }
         },
         "logIndexes": {
@@ -2551,36 +2531,28 @@ func init() {
     "TUFV001SchemaMetadata": {
       "description": "TUF metadata",
       "type": "object",
+      "required": [
+        "metadata"
+      ],
       "properties": {
         "content": {
-          "description": "Specifies the archive inline within the document",
+          "description": "Specifies the metadata inline within the document",
           "type": "object",
-          "additionalProperties": true,
-          "writeOnly": true
-        },
-        "url": {
-          "description": "Specifies the location of the archive",
-          "type": "string",
-          "format": "uri",
-          "writeOnly": true
+          "additionalProperties": true
         }
       }
     },
     "TUFV001SchemaRoot": {
       "description": "root metadata containing about the public keys used to sign the manifest",
       "type": "object",
+      "required": [
+        "content"
+      ],
       "properties": {
         "content": {
-          "description": "Specifies the archive inline within the document",
+          "description": "Specifies the metadata inline within the document",
           "type": "object",
-          "additionalProperties": true,
-          "writeOnly": true
-        },
-        "url": {
-          "description": "Specifies the location of the archive",
-          "type": "string",
-          "format": "uri",
-          "writeOnly": true
+          "additionalProperties": true
         }
       }
     },
@@ -2636,7 +2608,7 @@ func init() {
           "oneOf": [
             {
               "required": [
-                "url"
+                "hash"
               ]
             },
             {
@@ -2671,7 +2643,8 @@ func init() {
                   "description": "The hash value for the package",
                   "type": "string"
                 }
-              }
+              },
+              "readOnly": true
             },
             "pkginfo": {
               "description": "Values of the .PKGINFO key / value pairs",
@@ -2680,47 +2653,143 @@ func init() {
                 "type": "string"
               },
               "readOnly": true
-            },
-            "url": {
-              "description": "Specifies the location of the package; if this is specified, a hash value must also be provided",
-              "type": "string",
-              "format": "uri",
-              "writeOnly": true
             }
           }
         },
         "publicKey": {
           "description": "The public key that can verify the package signature",
           "type": "object",
-          "oneOf": [
-            {
-              "required": [
-                "url"
-              ]
-            },
-            {
-              "required": [
-                "content"
-              ]
-            }
+          "required": [
+            "content"
           ],
           "properties": {
             "content": {
               "description": "Specifies the content of the public key inline within the document",
               "type": "string",
               "format": "byte"
-            },
-            "url": {
-              "description": "Specifies the location of the public key",
-              "type": "string",
-              "format": "uri",
-              "writeOnly": true
             }
           }
         }
       },
       "$schema": "http://json-schema.org/draft-07/schema",
       "$id": "http://rekor.sigstore.dev/types/alpine/alpine_v0_0_1_schema.json"
+    },
+    "cose": {
+      "description": "COSE object",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "$ref": "#/definitions/coseSchema"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "coseSchema": {
+      "description": "COSE for Rekord objects",
+      "type": "object",
+      "title": "COSE Schema",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/coseV001Schema"
+        }
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/cose/cose_schema.json"
+    },
+    "coseV001Schema": {
+      "description": "Schema for cose object",
+      "type": "object",
+      "title": "cose v0.0.1 Schema",
+      "required": [
+        "publicKey",
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "description": "Information about the content associated with the entry",
+          "type": "object",
+          "properties": {
+            "aad": {
+              "description": "Specifies the additional authenticated data required to verify the signature",
+              "type": "string",
+              "format": "byte",
+              "writeOnly": true
+            },
+            "envelopeHash": {
+              "description": "Specifies the hash algorithm and value for the COSE envelope",
+              "type": "object",
+              "required": [
+                "algorithm",
+                "value"
+              ],
+              "properties": {
+                "algorithm": {
+                  "description": "The hashing function used to compute the hash value",
+                  "type": "string",
+                  "enum": [
+                    "sha256"
+                  ]
+                },
+                "value": {
+                  "description": "The hash value for the envelope",
+                  "type": "string"
+                }
+              },
+              "readOnly": true
+            },
+            "payloadHash": {
+              "description": "Specifies the hash algorithm and value for the content",
+              "type": "object",
+              "required": [
+                "algorithm",
+                "value"
+              ],
+              "properties": {
+                "algorithm": {
+                  "description": "The hashing function used to compute the hash value",
+                  "type": "string",
+                  "enum": [
+                    "sha256"
+                  ]
+                },
+                "value": {
+                  "description": "The hash value for the content",
+                  "type": "string"
+                }
+              },
+              "readOnly": true
+            }
+          }
+        },
+        "message": {
+          "description": "The COSE Sign1 Message",
+          "type": "string",
+          "format": "byte",
+          "writeOnly": true
+        },
+        "publicKey": {
+          "description": "The public key that can verify the signature",
+          "type": "string",
+          "format": "byte"
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/intoto/intoto_v0_0_1_schema.json"
     },
     "hashedrekord": {
       "description": "Hashed Rekord object",
@@ -2901,7 +2970,7 @@ func init() {
               "oneOf": [
                 {
                   "required": [
-                    "url"
+                    "signature"
                   ]
                 },
                 {
@@ -2932,12 +3001,6 @@ func init() {
                     }
                   },
                   "readOnly": true
-                },
-                "url": {
-                  "description": "Specifies the location of the provenance file",
-                  "type": "string",
-                  "format": "uri",
-                  "writeOnly": true
                 }
               }
             }
@@ -2946,29 +3009,14 @@ func init() {
         "publicKey": {
           "description": "The public key that can verify the package signature",
           "type": "object",
-          "oneOf": [
-            {
-              "required": [
-                "url"
-              ]
-            },
-            {
-              "required": [
-                "content"
-              ]
-            }
+          "required": [
+            "content"
           ],
           "properties": {
             "content": {
               "description": "Specifies the content of the public key inline within the document",
               "type": "string",
               "format": "byte"
-            },
-            "url": {
-              "description": "Specifies the location of the public key",
-              "type": "string",
-              "format": "uri",
-              "writeOnly": true
             }
           }
         }
@@ -3051,6 +3099,28 @@ func init() {
                 }
               },
               "readOnly": true
+            },
+            "payloadHash": {
+              "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
+              "type": "object",
+              "required": [
+                "algorithm",
+                "value"
+              ],
+              "properties": {
+                "algorithm": {
+                  "description": "The hashing function used to compute the hash value",
+                  "type": "string",
+                  "enum": [
+                    "sha256"
+                  ]
+                },
+                "value": {
+                  "description": "The hash value for the envelope's payload",
+                  "type": "string"
+                }
+              },
+              "readOnly": true
             }
           }
         },
@@ -3114,7 +3184,7 @@ func init() {
           "oneOf": [
             {
               "required": [
-                "url"
+                "hash"
               ]
             },
             {
@@ -3150,12 +3220,6 @@ func init() {
                   "type": "string"
                 }
               }
-            },
-            "url": {
-              "description": "Specifies the location of the archive; if this is specified, a hash value must also be provided",
-              "type": "string",
-              "format": "uri",
-              "writeOnly": true
             }
           }
         },
@@ -3246,7 +3310,7 @@ func init() {
           "oneOf": [
             {
               "required": [
-                "url"
+                "hash"
               ]
             },
             {
@@ -3281,34 +3345,18 @@ func init() {
                   "description": "The hash value for the content",
                   "type": "string"
                 }
-              }
-            },
-            "url": {
-              "description": "Specifies the location of the content",
-              "type": "string",
-              "format": "uri",
-              "writeOnly": true
+              },
+              "readOnly": true
             }
           }
         },
         "signature": {
           "description": "Information about the detached signature associated with the entry",
           "type": "object",
-          "oneOf": [
-            {
-              "required": [
-                "format",
-                "publicKey",
-                "url"
-              ]
-            },
-            {
-              "required": [
-                "format",
-                "publicKey",
-                "content"
-              ]
-            }
+          "required": [
+            "format",
+            "publicKey",
+            "content"
           ],
           "properties": {
             "content": {
@@ -3329,37 +3377,16 @@ func init() {
             "publicKey": {
               "description": "The public key that can verify the signature",
               "type": "object",
-              "oneOf": [
-                {
-                  "required": [
-                    "url"
-                  ]
-                },
-                {
-                  "required": [
-                    "content"
-                  ]
-                }
+              "required": [
+                "content"
               ],
               "properties": {
                 "content": {
                   "description": "Specifies the content of the public key inline within the document",
                   "type": "string",
                   "format": "byte"
-                },
-                "url": {
-                  "description": "Specifies the location of the public key",
-                  "type": "string",
-                  "format": "uri",
-                  "writeOnly": true
                 }
               }
-            },
-            "url": {
-              "description": "Specifies the location of the signature",
-              "type": "string",
-              "format": "uri",
-              "writeOnly": true
             }
           }
         }
@@ -3482,7 +3509,7 @@ func init() {
           "oneOf": [
             {
               "required": [
-                "url"
+                "hash"
               ]
             },
             {
@@ -3526,41 +3553,20 @@ func init() {
                 "type": "string"
               },
               "readOnly": true
-            },
-            "url": {
-              "description": "Specifies the location of the package; if this is specified, a hash value must also be provided",
-              "type": "string",
-              "format": "uri",
-              "writeOnly": true
             }
           }
         },
         "publicKey": {
           "description": "The PGP public key that can verify the RPM signature",
           "type": "object",
-          "oneOf": [
-            {
-              "required": [
-                "url"
-              ]
-            },
-            {
-              "required": [
-                "content"
-              ]
-            }
+          "required": [
+            "content"
           ],
           "properties": {
             "content": {
               "description": "Specifies the content of the public key inline within the document",
               "type": "string",
               "format": "byte"
-            },
-            "url": {
-              "description": "Specifies the location of the public key",
-              "type": "string",
-              "format": "uri",
-              "writeOnly": true
             }
           }
         }
@@ -3617,36 +3623,28 @@ func init() {
         "metadata": {
           "description": "TUF metadata",
           "type": "object",
+          "required": [
+            "metadata"
+          ],
           "properties": {
             "content": {
-              "description": "Specifies the archive inline within the document",
+              "description": "Specifies the metadata inline within the document",
               "type": "object",
-              "additionalProperties": true,
-              "writeOnly": true
-            },
-            "url": {
-              "description": "Specifies the location of the archive",
-              "type": "string",
-              "format": "uri",
-              "writeOnly": true
+              "additionalProperties": true
             }
           }
         },
         "root": {
           "description": "root metadata containing about the public keys used to sign the manifest",
           "type": "object",
+          "required": [
+            "content"
+          ],
           "properties": {
             "content": {
-              "description": "Specifies the archive inline within the document",
+              "description": "Specifies the metadata inline within the document",
               "type": "object",
-              "additionalProperties": true,
-              "writeOnly": true
-            },
-            "url": {
-              "description": "Specifies the location of the archive",
-              "type": "string",
-              "format": "uri",
-              "writeOnly": true
+              "additionalProperties": true
             }
           }
         },
@@ -3687,9 +3685,6 @@ func init() {
     },
     "NotFound": {
       "description": "The content requested could not be found"
-    },
-    "NotImplemented": {
-      "description": "The content requested is not implemented"
     }
   }
 }`))

@@ -17,9 +17,10 @@
 
 all: rekor-cli rekor-server
 
-GENSRC = pkg/generated/client/%.go pkg/generated/models/%.go pkg/generated/restapi/%.go
+include Makefile.swagger
+
 OPENAPIDEPS = openapi.yaml $(shell find pkg/types -iname "*.json")
-SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go"|grep -v pkg/generated) pkg/generated/restapi/configure_rekor_server.go $(GENSRC)
+SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go"|grep -v pkg/generated) pkg/generated/restapi/configure_rekor_server.go $(SWAGGER_GEN)
 TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
 BIN_DIR := $(abspath $(ROOT_DIR)/bin)
@@ -61,17 +62,12 @@ REKOR_LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
 CLI_LDFLAGS=$(REKOR_LDFLAGS)
 SERVER_LDFLAGS=$(REKOR_LDFLAGS)
 
-
-$(GENSRC): $(SWAGGER) $(OPENAPIDEPS)
-	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --default-consumes application/json\;q=1 --additional-initialism=TUF
-	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A rekor_server --exclude-spec --flag-strategy=pflag --default-produces application/json --additional-initialism=TUF
-
-.PHONY: validate-openapi
-validate-openapi: $(SWAGGER)
+Makefile.swagger: $(SWAGGER) $(OPENAPIDEPS)
 	$(SWAGGER) validate openapi.yaml
-
-# this exists to override pattern match rule above since this file is in the generated directory but should not be treated as generated code
-pkg/generated/restapi/configure_rekor_server.go: $(OPENAPIDEPS)
+	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --default-consumes application/json\;q=1 --additional-initialism=TUF
+	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A rekor_server --flag-strategy=pflag --default-produces application/json --additional-initialism=TUF
+	@echo "# This file is generated after swagger runs as part of the build; do not edit!" > Makefile.swagger
+	@echo "SWAGGER_GEN=`find pkg/generated/client pkg/generated/models/ pkg/generated/restapi/ -iname '*.go' | grep -v 'configure_rekor_server' | sort -d | tr '\n' ' ' | sed 's/ $$//'`" >> Makefile.swagger;
 
 
 lint:
@@ -79,8 +75,6 @@ lint:
 
 gosec:
 	$(GOBIN)/gosec ./...
-
-gen: $(GENSRC)
 
 rekor-cli: $(SRCS)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(CLI_LDFLAGS)" -o rekor-cli ./cmd/rekor-cli
@@ -104,7 +98,7 @@ clean:
 	rm -f *fuzz.zip
 
 clean-gen: clean
-	rm -rf $(shell find pkg/generated -iname "*.go"|grep -v pkg/generated/restapi/configure_rekor_server.go)
+	rm -rf $(SWAGGER_GEN)
 
 up:
 	docker-compose -f docker-compose.yml build --build-arg SERVER_LDFLAGS="$(SERVER_LDFLAGS)"
