@@ -1,3 +1,32 @@
+# v0.9.1
+
+## Enhancements
+
+* Optimize lookup of attestation from storage layer (https://github.com/sigstore/rekor/pull/909)
+* feat: add subject URIs to index for x509 certificates (https://github.com/sigstore/rekor/pull/897)
+* ensure log messages have requestID where possible (https://github.com/sigstore/rekor/pull/907)
+* Check inactive shards for UUID for /retrieve endpoint (https://github.com/sigstore/rekor/pull/905)
+
+## Bug Fixes
+
+* Fix bug where /retrieve endpoint returns wrong logIndex across shards (https://github.com/sigstore/rekor/pull/908)
+* fix: sql syntax in dbcreate script (https://github.com/sigstore/rekor/pull/903)
+
+## Others
+
+* cleanup makefile with generated code; cleanup unused files (https://github.com/sigstore/rekor/pull/910)
+* Bump github.com/theupdateframework/go-tuf from 0.3.0 to 0.3.1 (https://github.com/sigstore/rekor/pull/906)
+* Pin release-utils to v0.7.1 (https://github.com/sigstore/rekor/pull/904)
+* Bump sigstore/cosign-installer from 2.4.0 to 2.4.1 (https://github.com/sigstore/rekor/pull/898)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Bob Callaway (@bobcallaway)
+* Priya Wadhwa (@priyawadhwa)
+* Romain Aviolat (@xens)
+* Sascha Grunert (@saschagrunert)
+
 # v0.9.0
 
 ## Enhancements
