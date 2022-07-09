@@ -72,7 +72,7 @@ builds:
       - -trimpath
     mod_timestamp: '{{ .CommitTimestamp }}'
     ldflags:
-     - "{{ .Env.CLIENT_LDFLAGS }}"
+     - "{{ .Env.CLI_LDFLAGS }}"
 
 signs:
   - id: rekor
