@@ -691,7 +691,7 @@ func TestGetNonExistantIndex(t *testing.T) {
 func TestGetNonExistantUUID(t *testing.T) {
 	// this uuid is extremely likely to not exist
 	out := runCliErr(t, "get", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-	outputContains(t, out, "400")
+	outputContains(t, out, "404")
 }
 
 func TestEntryUpload(t *testing.T) {

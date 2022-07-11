@@ -299,8 +299,11 @@ func getEntryURL(locationURL url.URL, uuid string) strfmt.URI {
 func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
 	logEntry, err := retrieveLogEntry(params.HTTPRequest.Context(), params.EntryUUID)
 	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return handleRekorAPIError(params, http.StatusNotFound, err, "")
+		}
 		if _, ok := (err).(types.ValidationError); ok {
-			return handleRekorAPIError(params, http.StatusBadRequest, err, "incorrectly formatted uuid %s", params.EntryUUID)
+			return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("incorrectly formatted uuid %s", params.EntryUUID), params.EntryUUID)
 		}
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, "ID %s not found in any known trees", params.EntryUUID)
 	}
@@ -448,7 +451,7 @@ func retrieveLogEntryByIndex(ctx context.Context, logIndex int) (models.LogEntry
 func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, error) {
 	uuid, err := sharding.GetUUIDFromIDString(entryUUID)
 	if err != nil {
-		return models.LogEntry{}, sharding.ErrPlainUUID
+		return nil, sharding.ErrPlainUUID
 	}
 
 	// Get the tree ID and check that shard for the entry
@@ -469,9 +472,10 @@ func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, e
 			}
 			return logEntry, nil
 		}
+		return nil, ErrNotFound
 	}
 
-	return models.LogEntry{}, err
+	return nil, err
 }
 
 func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.LogEntry, error) {
