@@ -203,7 +203,7 @@ type getOut struct {
 	IntegratedTime  int64
 }
 
-func TestGet(t *testing.T) {
+func TestGetCLI(t *testing.T) {
 	// Create something and add it to the log
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
 	sigPath := filepath.Join(t.TempDir(), "signature.asc")
