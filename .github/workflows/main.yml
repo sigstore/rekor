@@ -133,30 +133,9 @@ jobs:
           name: Docker Compose logs
           path: /tmp/*docker-compose.log
 
-  get-versions:
-    runs-on: ubuntu-20.04
-    outputs:
-      versions: ${{ steps.versions.outputs.versions }}
-    steps:
-    - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
-    - name: get versions to test harness against
-      id: versions
-      shell: bash
-      run: |
-        git fetch origin
-        VERSIONS=$(git tag --sort=-version:refname | head -n 3 | jq --raw-input . | jq --slurp)
-        echo "Testing versions: $VERSIONS" 
-        echo "::set-output name=versions::$(echo $VERSIONS)"
-
   harness:
     runs-on: ubuntu-20.04
-    needs: [get-versions, build]
-    continue-on-error: true
-    strategy:
-        matrix: 
-          server-version: ${{fromJson(needs.get-versions.outputs.versions)}}
-    env:
-      SERVER_VERSION: ${{ matrix.server-version }}
+    needs: build
     steps:
     - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
     - name: Extract version of Go to use
