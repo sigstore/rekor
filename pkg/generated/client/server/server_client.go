@@ -50,7 +50,7 @@ type ClientService interface {
 }
 
 /*
-  GetRekorVersion gets the current version of the rekor server
+GetRekorVersion gets the current version of the rekor server
 */
 func (a *Client) GetRekorVersion(params *GetRekorVersionParams, opts ...ClientOption) (*GetRekorVersionOK, error) {
 	// TODO: Validate the params before sending
@@ -61,8 +61,8 @@ func (a *Client) GetRekorVersion(params *GetRekorVersionParams, opts ...ClientOp
 		ID:                 "getRekorVersion",
 		Method:             "GET",
 		PathPattern:        "/api/v1/version",
-		ProducesMediaTypes: []string{"application/json;q=1", "application/yaml"},
-		ConsumesMediaTypes: []string{"application/json", "application/yaml"},
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &GetRekorVersionReader{formats: a.formats},

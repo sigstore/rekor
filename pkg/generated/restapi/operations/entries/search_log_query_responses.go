@@ -32,7 +32,8 @@ import (
 // SearchLogQueryOKCode is the HTTP code returned for type SearchLogQueryOK
 const SearchLogQueryOKCode int = 200
 
-/*SearchLogQueryOK Returns zero or more entries from the transparency log, according to how many were included in request query
+/*
+SearchLogQueryOK Returns zero or more entries from the transparency log, according to how many were included in request query
 
 swagger:response searchLogQueryOK
 */
@@ -79,7 +80,8 @@ func (o *SearchLogQueryOK) WriteResponse(rw http.ResponseWriter, producer runtim
 // SearchLogQueryBadRequestCode is the HTTP code returned for type SearchLogQueryBadRequest
 const SearchLogQueryBadRequestCode int = 400
 
-/*SearchLogQueryBadRequest The content supplied to the server was invalid
+/*
+SearchLogQueryBadRequest The content supplied to the server was invalid
 
 swagger:response searchLogQueryBadRequest
 */
@@ -120,7 +122,8 @@ func (o *SearchLogQueryBadRequest) WriteResponse(rw http.ResponseWriter, produce
 	}
 }
 
-/*SearchLogQueryDefault There was an internal error in the server while processing the request
+/*
+SearchLogQueryDefault There was an internal error in the server while processing the request
 
 swagger:response searchLogQueryDefault
 */

@@ -62,7 +62,8 @@ func NewGetPublicKeyOK() *GetPublicKeyOK {
 	return &GetPublicKeyOK{}
 }
 
-/* GetPublicKeyOK describes a response with status code 200, with default header values.
+/*
+GetPublicKeyOK describes a response with status code 200, with default header values.
 
 The public key
 */
@@ -94,7 +95,8 @@ func NewGetPublicKeyDefault(code int) *GetPublicKeyDefault {
 	}
 }
 
-/* GetPublicKeyDefault describes a response with status code -1, with default header values.
+/*
+GetPublicKeyDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */

@@ -68,7 +68,8 @@ func NewGetLogProofOK() *GetLogProofOK {
 	return &GetLogProofOK{}
 }
 
-/* GetLogProofOK describes a response with status code 200, with default header values.
+/*
+GetLogProofOK describes a response with status code 200, with default header values.
 
 All hashes required to compute the consistency proof
 */
@@ -100,7 +101,8 @@ func NewGetLogProofBadRequest() *GetLogProofBadRequest {
 	return &GetLogProofBadRequest{}
 }
 
-/* GetLogProofBadRequest describes a response with status code 400, with default header values.
+/*
+GetLogProofBadRequest describes a response with status code 400, with default header values.
 
 The content supplied to the server was invalid
 */
@@ -134,7 +136,8 @@ func NewGetLogProofDefault(code int) *GetLogProofDefault {
 	}
 }
 
-/* GetLogProofDefault describes a response with status code -1, with default header values.
+/*
+GetLogProofDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */

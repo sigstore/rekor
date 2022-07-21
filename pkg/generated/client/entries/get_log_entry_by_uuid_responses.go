@@ -68,7 +68,8 @@ func NewGetLogEntryByUUIDOK() *GetLogEntryByUUIDOK {
 	return &GetLogEntryByUUIDOK{}
 }
 
-/* GetLogEntryByUUIDOK describes a response with status code 200, with default header values.
+/*
+GetLogEntryByUUIDOK describes a response with status code 200, with default header values.
 
 Information needed for a client to compute the inclusion proof
 */
@@ -98,7 +99,8 @@ func NewGetLogEntryByUUIDNotFound() *GetLogEntryByUUIDNotFound {
 	return &GetLogEntryByUUIDNotFound{}
 }
 
-/* GetLogEntryByUUIDNotFound describes a response with status code 404, with default header values.
+/*
+GetLogEntryByUUIDNotFound describes a response with status code 404, with default header values.
 
 The content requested could not be found
 */
@@ -121,7 +123,8 @@ func NewGetLogEntryByUUIDDefault(code int) *GetLogEntryByUUIDDefault {
 	}
 }
 
-/* GetLogEntryByUUIDDefault describes a response with status code -1, with default header values.
+/*
+GetLogEntryByUUIDDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */

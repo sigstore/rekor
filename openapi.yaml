@@ -25,10 +25,8 @@ schemes:
 
 consumes:
   - application/json
-  - application/yaml
 produces:
-  - application/json;q=1
-  - application/yaml
+  - application/json
 
 paths:
   /api/v1/version:

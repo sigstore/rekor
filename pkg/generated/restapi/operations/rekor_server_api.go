@@ -32,7 +32,6 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/runtime/security"
-	"github.com/go-openapi/runtime/yamlpc"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -63,13 +62,11 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 		BearerAuthenticator: security.BearerAuth,
 
 		JSONConsumer: runtime.JSONConsumer(),
-		YamlConsumer: yamlpc.YAMLConsumer(),
 
 		ApplicationXPemFileProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
 			return errors.NotImplemented("applicationXPemFile producer has not yet been implemented")
 		}),
 		JSONProducer: runtime.JSONProducer(),
-		YamlProducer: yamlpc.YAMLProducer(),
 
 		EntriesCreateLogEntryHandler: entries.CreateLogEntryHandlerFunc(func(params entries.CreateLogEntryParams) middleware.Responder {
 			return middleware.NotImplemented("operation entries.CreateLogEntry has not yet been implemented")
@@ -129,9 +126,6 @@ type RekorServerAPI struct {
 	// JSONConsumer registers a consumer for the following mime types:
 	//   - application/json
 	JSONConsumer runtime.Consumer
-	// YamlConsumer registers a consumer for the following mime types:
-	//   - application/yaml
-	YamlConsumer runtime.Consumer
 
 	// ApplicationXPemFileProducer registers a producer for the following mime types:
 	//   - application/x-pem-file
@@ -139,9 +133,6 @@ type RekorServerAPI struct {
 	// JSONProducer registers a producer for the following mime types:
 	//   - application/json
 	JSONProducer runtime.Producer
-	// YamlProducer registers a producer for the following mime types:
-	//   - application/yaml
-	YamlProducer runtime.Producer
 
 	// EntriesCreateLogEntryHandler sets the operation handler for the create log entry operation
 	EntriesCreateLogEntryHandler entries.CreateLogEntryHandler
@@ -233,18 +224,12 @@ func (o *RekorServerAPI) Validate() error {
 	if o.JSONConsumer == nil {
 		unregistered = append(unregistered, "JSONConsumer")
 	}
-	if o.YamlConsumer == nil {
-		unregistered = append(unregistered, "YamlConsumer")
-	}
 
 	if o.ApplicationXPemFileProducer == nil {
 		unregistered = append(unregistered, "ApplicationXPemFileProducer")
 	}
 	if o.JSONProducer == nil {
 		unregistered = append(unregistered, "JSONProducer")
-	}
-	if o.YamlProducer == nil {
-		unregistered = append(unregistered, "YamlProducer")
 	}
 
 	if o.EntriesCreateLogEntryHandler == nil {
@@ -305,8 +290,6 @@ func (o *RekorServerAPI) ConsumersFor(mediaTypes []string) map[string]runtime.Co
 		switch mt {
 		case "application/json":
 			result["application/json"] = o.JSONConsumer
-		case "application/yaml":
-			result["application/yaml"] = o.YamlConsumer
 		}
 
 		if c, ok := o.customConsumers[mt]; ok {
@@ -326,8 +309,6 @@ func (o *RekorServerAPI) ProducersFor(mediaTypes []string) map[string]runtime.Pr
 			result["application/x-pem-file"] = o.ApplicationXPemFileProducer
 		case "application/json":
 			result["application/json"] = o.JSONProducer
-		case "application/yaml":
-			result["application/yaml"] = o.YamlProducer
 		}
 
 		if p, ok := o.customProducers[mt]; ok {

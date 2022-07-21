@@ -50,7 +50,7 @@ type ClientService interface {
 }
 
 /*
-  SearchIndex searches index by entry metadata
+SearchIndex searches index by entry metadata
 */
 func (a *Client) SearchIndex(params *SearchIndexParams, opts ...ClientOption) (*SearchIndexOK, error) {
 	// TODO: Validate the params before sending
@@ -61,8 +61,8 @@ func (a *Client) SearchIndex(params *SearchIndexParams, opts ...ClientOption) (*
 		ID:                 "searchIndex",
 		Method:             "POST",
 		PathPattern:        "/api/v1/index/retrieve",
-		ProducesMediaTypes: []string{"application/json;q=1", "application/yaml"},
-		ConsumesMediaTypes: []string{"application/json", "application/yaml"},
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &SearchIndexReader{formats: a.formats},

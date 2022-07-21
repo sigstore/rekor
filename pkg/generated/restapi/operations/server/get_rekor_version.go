@@ -45,10 +45,10 @@ func NewGetRekorVersion(ctx *middleware.Context, handler GetRekorVersionHandler)
 	return &GetRekorVersion{Context: ctx, Handler: handler}
 }
 
-/* GetRekorVersion swagger:route GET /api/v1/version server getRekorVersion
+/*
+	GetRekorVersion swagger:route GET /api/v1/version server getRekorVersion
 
 Get the current version of the rekor server
-
 */
 type GetRekorVersion struct {
 	Context *middleware.Context

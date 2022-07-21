@@ -34,7 +34,6 @@ import (
 	"github.com/spf13/viper"
 
 	pkgapi "github.com/sigstore/rekor/pkg/api"
-	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
@@ -70,9 +69,6 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 
 	api.JSONConsumer = runtime.JSONConsumer()
 	api.JSONProducer = runtime.JSONProducer()
-
-	api.YamlConsumer = client.YamlConsumer()
-	api.YamlProducer = client.YamlProducer()
 
 	api.ApplicationXPemFileProducer = runtime.TextProducer()
 
