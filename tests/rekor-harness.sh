@@ -50,7 +50,7 @@ function build_cli () {
     cli_version=$1
     current_branch=$(git rev-parse --abbrev-ref HEAD)
     git checkout $cli_version
-    go build -o rekor-cli ./cmd/rekor-cli
+    make rekor-cli
     git checkout $current_branch
 }
 
@@ -63,8 +63,8 @@ function run_tests () {
     go clean -testcache
     for test in $HARNESS_TESTS
     do
-        if ! REKORTMPDIR=$REKORTMPDIR go test -run $test -v -tags=e2e ./tests/ > logs ; then 
-            cat logs
+        if ! REKORTMPDIR=$REKORTMPDIR go test -run $test -v -tags=e2e ./tests/ > $REKORTMPDIR/logs ; then 
+            cat $REKORTMPDIR/logs
             docker-compose logs --no-color > /tmp/docker-compose.log
             exit 1
         fi
