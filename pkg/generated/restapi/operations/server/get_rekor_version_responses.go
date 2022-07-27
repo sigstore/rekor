@@ -32,8 +32,7 @@ import (
 // GetRekorVersionOKCode is the HTTP code returned for type GetRekorVersionOK
 const GetRekorVersionOKCode int = 200
 
-/*
-GetRekorVersionOK A JSON object with the running rekor version
+/*GetRekorVersionOK A JSON object with the running rekor version
 
 swagger:response getRekorVersionOK
 */
@@ -74,8 +73,7 @@ func (o *GetRekorVersionOK) WriteResponse(rw http.ResponseWriter, producer runti
 	}
 }
 
-/*
-GetRekorVersionDefault There was an internal error in the server while processing the request
+/*GetRekorVersionDefault There was an internal error in the server while processing the request
 
 swagger:response getRekorVersionDefault
 */

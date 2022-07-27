@@ -45,10 +45,10 @@ func NewSearchIndex(ctx *middleware.Context, handler SearchIndexHandler) *Search
 	return &SearchIndex{Context: ctx, Handler: handler}
 }
 
-/*
-	SearchIndex swagger:route POST /api/v1/index/retrieve index searchIndex
+/* SearchIndex swagger:route POST /api/v1/index/retrieve index searchIndex
 
 Searches index by entry metadata
+
 */
 type SearchIndex struct {
 	Context *middleware.Context

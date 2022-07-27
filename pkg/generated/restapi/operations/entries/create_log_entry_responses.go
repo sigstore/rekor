@@ -33,8 +33,7 @@ import (
 // CreateLogEntryCreatedCode is the HTTP code returned for type CreateLogEntryCreated
 const CreateLogEntryCreatedCode int = 201
 
-/*
-CreateLogEntryCreated Returns the entry created in the transparency log
+/*CreateLogEntryCreated Returns the entry created in the transparency log
 
 swagger:response createLogEntryCreated
 */
@@ -125,8 +124,7 @@ func (o *CreateLogEntryCreated) WriteResponse(rw http.ResponseWriter, producer r
 // CreateLogEntryBadRequestCode is the HTTP code returned for type CreateLogEntryBadRequest
 const CreateLogEntryBadRequestCode int = 400
 
-/*
-CreateLogEntryBadRequest The content supplied to the server was invalid
+/*CreateLogEntryBadRequest The content supplied to the server was invalid
 
 swagger:response createLogEntryBadRequest
 */
@@ -170,8 +168,7 @@ func (o *CreateLogEntryBadRequest) WriteResponse(rw http.ResponseWriter, produce
 // CreateLogEntryConflictCode is the HTTP code returned for type CreateLogEntryConflict
 const CreateLogEntryConflictCode int = 409
 
-/*
-CreateLogEntryConflict The request conflicts with the current state of the transparency log
+/*CreateLogEntryConflict The request conflicts with the current state of the transparency log
 
 swagger:response createLogEntryConflict
 */
@@ -234,8 +231,7 @@ func (o *CreateLogEntryConflict) WriteResponse(rw http.ResponseWriter, producer 
 	}
 }
 
-/*
-CreateLogEntryDefault There was an internal error in the server while processing the request
+/*CreateLogEntryDefault There was an internal error in the server while processing the request
 
 swagger:response createLogEntryDefault
 */

@@ -70,12 +70,10 @@ func NewCreateLogEntryParamsWithHTTPClient(client *http.Client) *CreateLogEntryP
 	}
 }
 
-/*
-CreateLogEntryParams contains all the parameters to send to the API endpoint
+/* CreateLogEntryParams contains all the parameters to send to the API endpoint
+   for the create log entry operation.
 
-	for the create log entry operation.
-
-	Typically these are written to a http.Request.
+   Typically these are written to a http.Request.
 */
 type CreateLogEntryParams struct {
 

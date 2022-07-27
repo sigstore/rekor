@@ -32,8 +32,7 @@ import (
 // GetLogEntryByIndexOKCode is the HTTP code returned for type GetLogEntryByIndexOK
 const GetLogEntryByIndexOKCode int = 200
 
-/*
-GetLogEntryByIndexOK the entry in the transparency log requested along with an inclusion proof
+/*GetLogEntryByIndexOK the entry in the transparency log requested along with an inclusion proof
 
 swagger:response getLogEntryByIndexOK
 */
@@ -80,8 +79,7 @@ func (o *GetLogEntryByIndexOK) WriteResponse(rw http.ResponseWriter, producer ru
 // GetLogEntryByIndexNotFoundCode is the HTTP code returned for type GetLogEntryByIndexNotFound
 const GetLogEntryByIndexNotFoundCode int = 404
 
-/*
-GetLogEntryByIndexNotFound The content requested could not be found
+/*GetLogEntryByIndexNotFound The content requested could not be found
 
 swagger:response getLogEntryByIndexNotFound
 */
@@ -102,8 +100,7 @@ func (o *GetLogEntryByIndexNotFound) WriteResponse(rw http.ResponseWriter, produ
 	rw.WriteHeader(404)
 }
 
-/*
-GetLogEntryByIndexDefault There was an internal error in the server while processing the request
+/*GetLogEntryByIndexDefault There was an internal error in the server while processing the request
 
 swagger:response getLogEntryByIndexDefault
 */

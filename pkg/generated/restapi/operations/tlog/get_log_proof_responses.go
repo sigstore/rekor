@@ -32,8 +32,7 @@ import (
 // GetLogProofOKCode is the HTTP code returned for type GetLogProofOK
 const GetLogProofOKCode int = 200
 
-/*
-GetLogProofOK All hashes required to compute the consistency proof
+/*GetLogProofOK All hashes required to compute the consistency proof
 
 swagger:response getLogProofOK
 */
@@ -77,8 +76,7 @@ func (o *GetLogProofOK) WriteResponse(rw http.ResponseWriter, producer runtime.P
 // GetLogProofBadRequestCode is the HTTP code returned for type GetLogProofBadRequest
 const GetLogProofBadRequestCode int = 400
 
-/*
-GetLogProofBadRequest The content supplied to the server was invalid
+/*GetLogProofBadRequest The content supplied to the server was invalid
 
 swagger:response getLogProofBadRequest
 */
@@ -119,8 +117,7 @@ func (o *GetLogProofBadRequest) WriteResponse(rw http.ResponseWriter, producer r
 	}
 }
 
-/*
-GetLogProofDefault There was an internal error in the server while processing the request
+/*GetLogProofDefault There was an internal error in the server while processing the request
 
 swagger:response getLogProofDefault
 */

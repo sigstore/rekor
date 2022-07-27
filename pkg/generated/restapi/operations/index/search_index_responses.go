@@ -32,8 +32,7 @@ import (
 // SearchIndexOKCode is the HTTP code returned for type SearchIndexOK
 const SearchIndexOKCode int = 200
 
-/*
-SearchIndexOK Returns zero or more entry UUIDs from the transparency log based on search query
+/*SearchIndexOK Returns zero or more entry UUIDs from the transparency log based on search query
 
 swagger:response searchIndexOK
 */
@@ -80,8 +79,7 @@ func (o *SearchIndexOK) WriteResponse(rw http.ResponseWriter, producer runtime.P
 // SearchIndexBadRequestCode is the HTTP code returned for type SearchIndexBadRequest
 const SearchIndexBadRequestCode int = 400
 
-/*
-SearchIndexBadRequest The content supplied to the server was invalid
+/*SearchIndexBadRequest The content supplied to the server was invalid
 
 swagger:response searchIndexBadRequest
 */
@@ -122,8 +120,7 @@ func (o *SearchIndexBadRequest) WriteResponse(rw http.ResponseWriter, producer r
 	}
 }
 
-/*
-SearchIndexDefault There was an internal error in the server while processing the request
+/*SearchIndexDefault There was an internal error in the server while processing the request
 
 swagger:response searchIndexDefault
 */

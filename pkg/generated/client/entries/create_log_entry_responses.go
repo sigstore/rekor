@@ -75,8 +75,7 @@ func NewCreateLogEntryCreated() *CreateLogEntryCreated {
 	return &CreateLogEntryCreated{}
 }
 
-/*
-CreateLogEntryCreated describes a response with status code 201, with default header values.
+/* CreateLogEntryCreated describes a response with status code 201, with default header values.
 
 Returns the entry created in the transparency log
 */
@@ -135,8 +134,7 @@ func NewCreateLogEntryBadRequest() *CreateLogEntryBadRequest {
 	return &CreateLogEntryBadRequest{}
 }
 
-/*
-CreateLogEntryBadRequest describes a response with status code 400, with default header values.
+/* CreateLogEntryBadRequest describes a response with status code 400, with default header values.
 
 The content supplied to the server was invalid
 */
@@ -168,8 +166,7 @@ func NewCreateLogEntryConflict() *CreateLogEntryConflict {
 	return &CreateLogEntryConflict{}
 }
 
-/*
-CreateLogEntryConflict describes a response with status code 409, with default header values.
+/* CreateLogEntryConflict describes a response with status code 409, with default header values.
 
 The request conflicts with the current state of the transparency log
 */
@@ -216,8 +213,7 @@ func NewCreateLogEntryDefault(code int) *CreateLogEntryDefault {
 	}
 }
 
-/*
-CreateLogEntryDefault describes a response with status code -1, with default header values.
+/* CreateLogEntryDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */

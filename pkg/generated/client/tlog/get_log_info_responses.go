@@ -62,8 +62,7 @@ func NewGetLogInfoOK() *GetLogInfoOK {
 	return &GetLogInfoOK{}
 }
 
-/*
-GetLogInfoOK describes a response with status code 200, with default header values.
+/* GetLogInfoOK describes a response with status code 200, with default header values.
 
 A JSON object with the root hash and tree size as properties
 */
@@ -97,8 +96,7 @@ func NewGetLogInfoDefault(code int) *GetLogInfoDefault {
 	}
 }
 
-/*
-GetLogInfoDefault describes a response with status code -1, with default header values.
+/* GetLogInfoDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */
