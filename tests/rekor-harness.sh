@@ -1,0 +1,103 @@
+#!/bin/bash
+#
+# Copyright 2022 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+set -e
+
+function start_server () {
+    server_version=$1
+    current_branch=$(git rev-parse --abbrev-ref HEAD)
+    git checkout $server_version
+    if [ $(docker-compose ps | grep -c "(healthy)") == 0 ]; then
+        echo "starting services with version $server_version"
+        docker-compose up -d --build
+    else
+        echo "turning down rekor and restarting at version $server_version"
+        docker stop $(docker ps --filter name=rekor-server --format {{.ID}})
+        docker-compose up -d --build rekor-server
+    fi
+    git checkout $current_branch
+
+    count=0
+    echo -n "waiting up to 60 sec for system to start"
+    until [ $(docker-compose ps | grep -c "(healthy)") == 3 ];
+    do
+        if [ $count -eq 6 ]; then
+            echo "! timeout reached"
+            exit 1
+        else
+            echo -n "."
+            sleep 10
+            let 'count+=1'
+        fi
+    done
+    echo
+}
+
+function build_cli () {
+    echo "Building CLI at version $cli_version"
+    cli_version=$1
+    current_branch=$(git rev-parse --abbrev-ref HEAD)
+    git checkout $cli_version
+    make rekor-cli
+    git checkout $current_branch
+}
+
+function run_tests () {
+    REKORTMPDIR="$(mktemp -d -t rekor_test.XXXXXX)"
+    touch $REKORTMPDIR.rekor.yaml
+    trap "rm -rf $REKORTMPDIR" EXIT
+
+
+    go clean -testcache
+    for test in $HARNESS_TESTS
+    do
+        if ! REKORTMPDIR=$REKORTMPDIR go test -run $test -v -tags=e2e ./tests/ > $REKORTMPDIR/logs ; then 
+            cat $REKORTMPDIR/logs
+            docker-compose logs --no-color > /tmp/docker-compose.log
+            exit 1
+        fi
+        if docker-compose logs --no-color | grep -q "panic: runtime error:" ; then
+            # if we're here, we found a panic
+            echo "Failing due to panics detected in logs"
+            docker-compose logs --no-color > /tmp/docker-compose.log
+            exit 1
+        fi
+    done
+}
+
+# Get last 3 server versions
+git fetch origin
+VERSIONS=$(git tag --sort=-version:refname | head -n 3 | tac)
+echo $VERSIONS
+
+HARNESS_TESTS="TestUploadVerify TestLogInfo TestGetCLI TestSSH TestJAR TestAPK TestIntoto TestX509 TestEntryUpload"
+
+for server_version in $VERSIONS 
+do
+    start_server $server_version
+    for cli_version in $VERSIONS 
+    do
+        echo "======================================================="
+        echo "Running tests with server version $server_version and CLI version $cli_version"
+
+        build_cli $cli_version
+        run_tests
+
+        echo "Tests passed successfully."
+        echo "======================================================="
+    done
+done
+
+echo "Harness testing successful :)"
