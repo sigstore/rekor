@@ -1,3 +1,5 @@
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/sigstore/rekor/badge)](https://api.securityscorecards.dev/projects/github.com/sigstore/rekor)
+
 <p align="center">
   <img style="max-width: 100%;width: 300px;" src="./images/logo.svg" alt="Rekor logo"/>
 </p>
