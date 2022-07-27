@@ -26,12 +26,10 @@
 //
 //  Consumes:
 //    - application/json
-//    - application/yaml
 //
 //  Produces:
 //    - application/x-pem-file
 //    - application/json
-//    - application/yaml
 //
 // swagger:meta
 package restapi
