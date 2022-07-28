@@ -1,3 +1,43 @@
+# v0.10.0
+
+** Note: Rekor will not send `application/yaml` responses anymore only `application/json` responses
+
+## Enhancements
+
+* Drop application/yaml content type (https://github.com/sigstore/rekor/pull/933)
+* Return 404 if entry isn't found in log (https://github.com/sigstore/rekor/pull/915)
+* reuse dsse signature wrappers instead of having a copy (https://github.com/sigstore/rekor/pull/912)
+
+## Others
+
+* update go mod in hack/tools to go1.18 (https://github.com/sigstore/rekor/pull/935)
+* Enable Scorecard badge (https://github.com/sigstore/rekor/pull/941)
+* Add rekor test harness to presubmit tests (https://github.com/sigstore/rekor/pull/921)
+* Bump imjasonh/setup-ko from 0.4 to 0.5 (https://github.com/sigstore/rekor/pull/940)
+* update go builder and cosign image (https://github.com/sigstore/rekor/pull/934)
+* Bump sigs.k8s.io/release-utils from 0.7.2 to 0.7.3 (https://github.com/sigstore/rekor/pull/937)
+* Bump github.com/google/trillian from 1.4.1 to 1.4.2 in /hack/tools (https://github.com/sigstore/rekor/pull/939)
+* Bump sigstore/cosign-installer from 2.4.1 to 2.5.0 (https://github.com/sigstore/rekor/pull/936)
+* Bump github.com/go-openapi/strfmt from 0.21.2 to 0.21.3 (https://github.com/sigstore/rekor/pull/930)
+* Update cosign image in validate-release job (https://github.com/sigstore/rekor/pull/931)
+* Bump sigs.k8s.io/release-utils from 0.7.1 to 0.7.2 (https://github.com/sigstore/rekor/pull/927)
+* Bump github.com/veraison/go-cose from 1.0.0-alpha.1 to 1.0.0-rc.1 (https://github.com/sigstore/rekor/pull/928)
+* Bump actions/dependency-review-action from 2.0.2 to 2.0.4 (https://github.com/sigstore/rekor/pull/925)
+* Bump github/codeql-action from 2.1.15 to 2.1.16 (https://github.com/sigstore/rekor/pull/924)
+* Bump golang from 1.18.3 to 1.18.4 (https://github.com/sigstore/rekor/pull/919)
+* Bump google.golang.org/grpc from 1.47.0 to 1.48.0 (https://github.com/sigstore/rekor/pull/920)
+* Bump actions/setup-go from 3.2.0 to 3.2.1 (https://github.com/sigstore/rekor/pull/916)
+* Updates on the release job/makefile cleanup (https://github.com/sigstore/rekor/pull/914)
+* add changelog for v0.9.1 (https://github.com/sigstore/rekor/pull/911)
+
+## Contributors
+
+* Azeem Shaikh (@azeemshaikh38)
+* Bob Callaway (@bobcallaway)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Hayden Blauzvern (@haydentherapper)
+* Priya Wadhwa (@priyawadhwa)
+
 # v0.9.1
 
 ## Enhancements
