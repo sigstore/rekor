@@ -15,6 +15,8 @@
 # limitations under the License.
 set -e
 
+TREE_ID=""
+
 function start_server () {
     server_version=$1
     current_branch=$(git rev-parse --abbrev-ref HEAD)
@@ -22,12 +24,20 @@ function start_server () {
     if [ $(docker-compose ps | grep -c "(healthy)") == 0 ]; then
         echo "starting services with version $server_version"
         docker-compose up -d --build
+        sleep 30
+        make rekor-cli
+        export TREE_ID=$(./rekor-cli loginfo --format json --rekor_server http://localhost:3000 --store_tree_state=false | jq -r .TreeID)
     else
         echo "turning down rekor and restarting at version $server_version"
         docker stop $(docker ps --filter name=rekor-server --format {{.ID}})
+        
+        # Replace log in docker-compose.yml with the Tree ID we want
+        search="# Uncomment this for production logging"
+        replace="\"--trillian_log_server.tlog_id=$TREE_ID\","
+        sed -i "s/$search/$replace/" docker-compose.yml
+
         docker-compose up -d --build rekor-server
     fi
-    git checkout $current_branch
 
     count=0
     echo -n "waiting up to 60 sec for system to start"
@@ -35,6 +45,8 @@ function start_server () {
     do
         if [ $count -eq 6 ]; then
             echo "! timeout reached"
+            cat docker-compose.yml
+            docker-compose logs --no-color > /tmp/docker-compose.log
             exit 1
         else
             echo -n "."
@@ -42,6 +54,8 @@ function start_server () {
             let 'count+=1'
         fi
     done
+    git checkout $server_version .
+    git checkout $current_branch
     echo
 }
 
@@ -51,6 +65,7 @@ function build_cli () {
     current_branch=$(git rev-parse --abbrev-ref HEAD)
     git checkout $cli_version
     make rekor-cli
+    git checkout $cli_version .
     git checkout $current_branch
 }
 
@@ -59,30 +74,25 @@ function run_tests () {
     touch $REKORTMPDIR.rekor.yaml
     trap "rm -rf $REKORTMPDIR" EXIT
 
-
     go clean -testcache
-    for test in $HARNESS_TESTS
-    do
-        if ! REKORTMPDIR=$REKORTMPDIR go test -run $test -v -tags=e2e ./tests/ > $REKORTMPDIR/logs ; then 
-            cat $REKORTMPDIR/logs
-            docker-compose logs --no-color > /tmp/docker-compose.log
-            exit 1
-        fi
-        if docker-compose logs --no-color | grep -q "panic: runtime error:" ; then
-            # if we're here, we found a panic
-            echo "Failing due to panics detected in logs"
-            docker-compose logs --no-color > /tmp/docker-compose.log
-            exit 1
-        fi
-    done
+    if ! REKORTMPDIR=$REKORTMPDIR go test -run TestHarness -v -tags=e2e ./tests/ ; then 
+        docker-compose logs --no-color > /tmp/docker-compose.log
+        exit 1
+    fi
+    if docker-compose logs --no-color | grep -q "panic: runtime error:" ; then
+        # if we're here, we found a panic
+        echo "Failing due to panics detected in logs"
+        docker-compose logs --no-color > /tmp/docker-compose.log
+        exit 1
+    fi
 }
 
 # Get last 3 server versions
 git fetch origin
-VERSIONS=$(git tag --sort=-version:refname | head -n 3 | tac)
+NUM_VERSIONS_TO_TEST=3
+VERSIONS=$(git tag --sort=-version:refname | head -n $NUM_VERSIONS_TO_TEST | tac)
 echo $VERSIONS
 
-HARNESS_TESTS="TestUploadVerify TestLogInfo TestGetCLI TestSSH TestJAR TestAPK TestIntoto TestX509 TestEntryUpload"
 
 for server_version in $VERSIONS 
 do
@@ -99,5 +109,14 @@ do
         echo "======================================================="
     done
 done
+
+# Since we add two entries to the log for every test, once all tests are run we should have 2*($NUM_VERSIONS_TO_TEST^2) entries
+make rekor-cli
+actual=$(./rekor-cli loginfo --rekor_server http://localhost:3000 --format json --store_tree_state=false | jq -r .ActiveTreeSize)
+expected=$((2*$NUM_VERSIONS_TO_TEST*$NUM_VERSIONS_TO_TEST))
+if [[ ! "$expected" == "$actual" ]]; then
+    echo "ERROR: Log had $actual entries instead of expected $expected"
+    exit 1
+fi
 
 echo "Harness testing successful :)"

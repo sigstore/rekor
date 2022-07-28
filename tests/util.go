@@ -74,6 +74,23 @@ func runCli(t *testing.T, arg ...string) string {
 	return run(t, "", cli, arg...)
 }
 
+func runCliStdout(t *testing.T, arg ...string) string {
+	t.Helper()
+	arg = append(arg, rekorServerFlag())
+	c := exec.Command(cli, arg...)
+
+	if os.Getenv("REKORTMPDIR") != "" {
+		// ensure that we use a clean state.json file for each run
+		c.Env = append(c.Env, "HOME="+os.Getenv("REKORTMPDIR"))
+	}
+	b, err := c.Output()
+	if err != nil {
+		t.Log(string(b))
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
 func runCliErr(t *testing.T, arg ...string) string {
 	t.Helper()
 	arg = append(arg, rekorServerFlag())
