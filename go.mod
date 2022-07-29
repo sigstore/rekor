@@ -49,7 +49,7 @@ require (
 	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 	google.golang.org/genproto v0.0.0-20220519153652-3a47de7e79bd
 	google.golang.org/grpc v1.48.0
-	google.golang.org/protobuf v1.28.0
+	google.golang.org/protobuf v1.28.1
 	gopkg.in/ini.v1 v1.66.6
 	sigs.k8s.io/release-utils v0.7.3
 )
