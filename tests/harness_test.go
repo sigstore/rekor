@@ -172,7 +172,6 @@ func TestHarnessAddIntoto(t *testing.T) {
 
 	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Entry already exists")
-
 	saveAttestation(t, g.Attestation)
 }
 
