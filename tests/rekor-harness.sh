@@ -93,6 +93,8 @@ NUM_VERSIONS_TO_TEST=3
 VERSIONS=$(git tag --sort=-version:refname | head -n $NUM_VERSIONS_TO_TEST | tac)
 echo $VERSIONS
 
+export REKOR_HARNESS_TMPDIR="$(mktemp -d -t rekor_test_harness.XXXXXX)"
+docker compose down
 
 for server_version in $VERSIONS 
 do
