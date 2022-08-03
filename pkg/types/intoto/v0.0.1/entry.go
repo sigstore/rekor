@@ -194,14 +194,12 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 	pkb := strfmt.Base64(pk)
 
-	h := sha256.Sum256([]byte(v.IntotoObj.Content.Envelope))
-
 	canonicalEntry := models.IntotoV001Schema{
 		PublicKey: &pkb,
 		Content: &models.IntotoV001SchemaContent{
 			Hash: &models.IntotoV001SchemaContentHash{
-				Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-				Value:     swag.String(hex.EncodeToString(h[:])),
+				Algorithm: v.IntotoObj.Content.Hash.Algorithm,
+				Value:     v.IntotoObj.Content.Hash.Value,
 			},
 		},
 	}
@@ -236,6 +234,12 @@ func (v *V001Entry) validate() error {
 
 	if err := dsseVerifier.VerifySignature(strings.NewReader(v.IntotoObj.Content.Envelope), nil); err != nil {
 		return err
+	}
+	// validation logic complete without errors, hydrate local object
+	h := sha256.Sum256([]byte(v.IntotoObj.Content.Envelope))
+	v.IntotoObj.Content.Hash = &models.IntotoV001SchemaContentHash{
+		Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+		Value:     swag.String(hex.EncodeToString(h[:])),
 	}
 	return json.Unmarshal([]byte(v.IntotoObj.Content.Envelope), &v.env)
 }

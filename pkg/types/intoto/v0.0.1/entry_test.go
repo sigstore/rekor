@@ -28,6 +28,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -239,6 +240,9 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				}
 				if err := v.validate(); err != nil {
 					return err
+				}
+				if v.IntotoObj.Content.Hash == nil || v.IntotoObj.Content.Hash.Algorithm != tt.it.Content.Hash.Algorithm || v.IntotoObj.Content.Hash.Value != tt.it.Content.Hash.Value {
+					return errors.New("missing envelope hash in validated object")
 				}
 				keysWanted := tt.additionalIndexKeys
 				if tt.it.PublicKey != nil {
