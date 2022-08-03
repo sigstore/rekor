@@ -28,6 +28,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -170,6 +171,55 @@ func TestHarnessAddIntoto(t *testing.T) {
 
 	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Entry already exists")
+	saveAttestation(t, attestationPath)
+}
+
+func saveAttestation(t *testing.T, attestationPath string) {
+	tmpDir := os.Getenv("REKOR_HARNESS_TMPDIR")
+	file := filepath.Join(tmpDir, "attestations")
+
+	attestations := map[int]string{}
+	contents, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(contents, &attestations); err != nil {
+		t.Fatal(err)
+	}
+
+	logIndex := activeTreeSize(t) - 1
+	attestation, err := os.ReadFile(attestationPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Storing attestation for logIndex %d", logIndex)
+	attestations[logIndex] = string(attestation)
+	if err := os.WriteFile(file, contents, 07555); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func compareAttestation(t *testing.T, logIndex int, got string) {
+	tmpDir := os.Getenv("REKOR_HARNESS_TMPDIR")
+	file := filepath.Join(tmpDir, "attestations")
+
+	attestations := map[int]string{}
+	contents, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(contents, &attestations); err != nil {
+		t.Fatal(err)
+	}
+
+	expected, ok := attestations[logIndex]
+	if !ok {
+		t.Fatalf("expected to find attestation with logIndex %d but none existed: %v", logIndex, attestations)
+	}
+
+	if got != expected {
+		t.Fatalf("attestations don't match, got %v expected %v", got, expected)
+	}
 }
 
 // Make sure we can get and verify all entries
@@ -190,11 +240,8 @@ func TestHarnessGetAllEntriesLogIndex(t *testing.T) {
 		if err := json.Unmarshal([]byte(out), &intotoObj); err != nil {
 			t.Fatal(err)
 		}
-		if intotoObj.Attestation == "" {
-			t.Log(out)
-			t.Fatalf("intotoObj attestation is empty for log index %d", i)
-		}
-		t.Log("Got IntotoObj type with attestation")
+		compareAttestation(t, i, intotoObj.Attestation)
+		t.Log("IntotoObj matches stored attestation")
 	}
 }
 
