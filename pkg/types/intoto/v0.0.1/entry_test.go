@@ -244,6 +244,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				if v.IntotoObj.Content.Hash == nil || v.IntotoObj.Content.Hash.Algorithm != tt.it.Content.Hash.Algorithm || v.IntotoObj.Content.Hash.Value != tt.it.Content.Hash.Value {
 					return errors.New("missing envelope hash in validated object")
 				}
+
 				keysWanted := tt.additionalIndexKeys
 				if tt.it.PublicKey != nil {
 					h := sha256.Sum256(*tt.it.PublicKey)
@@ -256,7 +257,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				keysWanted = append(keysWanted, "sha256:"+payloadHash)
 				hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *tt.it.Content.Hash.Algorithm, *tt.it.Content.Hash.Value))
 				keysWanted = append(keysWanted, hashkey)
-				if got, _ := v.IndexKeys(); !cmp.Equal(got, keysWanted, cmpopts.SortSlices(func(x, y string) bool { return x < y })) {
+				got, _ := v.IndexKeys()
+				if !cmp.Equal(got, keysWanted, cmpopts.SortSlices(func(x, y string) bool { return x < y })) {
 					t.Errorf("V001Entry.IndexKeys() = %v, want %v", got, keysWanted)
 				}
 				canonicalBytes, err := v.Canonicalize(context.Background())
@@ -279,6 +281,10 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				}
 				if canonicalV001.AttestationKey() != "" && *canonicalV001.IntotoObj.Content.PayloadHash.Value != payloadHash {
 					t.Errorf("payload hashes do not match post canonicalization: %v %v", canonicalV001.IntotoObj.Content.PayloadHash.Value, payloadHash)
+				}
+				canonicalIndexKeys, _ := canonicalV001.IndexKeys()
+				if !cmp.Equal(got, canonicalIndexKeys, cmpopts.SortSlices(func(x, y string) bool { return x < y })) {
+					t.Errorf("index keys from hydrated object do not match those generated from canonicalized (and re-hydrated) object: %v %v", got, canonicalIndexKeys)
 				}
 
 				return nil
@@ -347,12 +353,17 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 				t.Fatal(err)
 			}
 			payload := base64.StdEncoding.EncodeToString(b)
+			payloadHash := sha256.Sum256(b)
 			v := V001Entry{
 				IntotoObj: models.IntotoV001Schema{
 					Content: &models.IntotoV001SchemaContent{
 						Hash: &models.IntotoV001SchemaContentHash{
 							Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
 							Value:     swag.String(dataSHA),
+						},
+						PayloadHash: &models.IntotoV001SchemaContentPayloadHash{
+							Algorithm: swag.String(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
+							Value:     swag.String(hex.EncodeToString(payloadHash[:])),
 						},
 					},
 				},
@@ -372,45 +383,5 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 				t.Errorf("V001Entry.IndexKeys() = %v, want %v", got, want)
 			}
 		})
-	}
-}
-
-func TestIndexKeysNoContentHash(t *testing.T) {
-	statement := in_toto.Statement{
-		Predicate: "hello",
-		StatementHeader: in_toto.StatementHeader{
-			Subject: []in_toto.Subject{
-				{
-					Name: "myimage",
-					Digest: slsa.DigestSet{
-						"sha256": "mysha256digest",
-					},
-				},
-			},
-		},
-	}
-	b, err := json.Marshal(statement)
-	if err != nil {
-		t.Fatal(err)
-	}
-	payload := base64.StdEncoding.EncodeToString(b)
-	v := V001Entry{
-		env: dsse.Envelope{
-			Payload:     payload,
-			PayloadType: in_toto.PayloadType,
-		},
-	}
-	sha := sha256.Sum256(b)
-	// Always start with the hash
-	want := []string{"sha256:" + hex.EncodeToString(sha[:])}
-	want = append(want, "sha256:mysha256digest")
-	got, err := v.IndexKeys()
-	if err != nil {
-		t.Fatal(err)
-	}
-	sort.Strings(got)
-	sort.Strings(want)
-	if !cmp.Equal(got, want) {
-		t.Errorf("V001Entry.IndexKeys() = %v, want %v", got, want)
 	}
 }
