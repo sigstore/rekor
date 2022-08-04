@@ -26,8 +26,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -170,6 +172,55 @@ func TestHarnessAddIntoto(t *testing.T) {
 
 	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Entry already exists")
+	saveAttestation(t, g.Attestation)
+}
+
+func getAttestations(t *testing.T) (string, map[int]string) {
+	tmpDir := os.Getenv("REKOR_HARNESS_TMPDIR")
+	if tmpDir == "" {
+		t.Skip("Skipping test, REKOR_HARNESS_TMPDIR is not set")
+	}
+	file := filepath.Join(tmpDir, "attestations")
+
+	t.Log("Reading", file)
+	attestations := map[int]string{}
+	contents, err := os.ReadFile(file)
+	if errors.Is(err, os.ErrNotExist) || contents == nil {
+		return file, attestations
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(contents, &attestations); err != nil {
+		t.Fatal(err)
+	}
+	return file, attestations
+}
+
+func saveAttestation(t *testing.T, attestation string) {
+	file, attestations := getAttestations(t)
+	logIndex := activeTreeSize(t) - 1
+	t.Logf("Storing attestation for logIndex %d", logIndex)
+	attestations[logIndex] = string(attestation)
+	contents, err := json.Marshal(attestations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, contents, 0777); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func compareAttestation(t *testing.T, logIndex int, got string) {
+	_, attestations := getAttestations(t)
+	expected, ok := attestations[logIndex]
+	if !ok {
+		t.Fatalf("expected to find attestation with logIndex %d but none existed: %v", logIndex, attestations)
+	}
+
+	if got != expected {
+		t.Fatalf("attestations don't match, got %v expected %v", got, expected)
+	}
 }
 
 // Make sure we can get and verify all entries
@@ -190,11 +241,8 @@ func TestHarnessGetAllEntriesLogIndex(t *testing.T) {
 		if err := json.Unmarshal([]byte(out), &intotoObj); err != nil {
 			t.Fatal(err)
 		}
-		if intotoObj.Attestation == "" {
-			t.Log(out)
-			t.Fatalf("intotoObj attestation is empty for log index %d", i)
-		}
-		t.Log("Got IntotoObj type with attestation")
+		compareAttestation(t, i, intotoObj.Attestation)
+		t.Log("IntotoObj matches stored attestation")
 	}
 }
 
