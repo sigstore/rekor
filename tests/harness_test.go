@@ -31,6 +31,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -39,8 +40,14 @@ import (
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types"
 )
+
+type StoredEntry struct {
+	Attestation string
+	UUID        string
+}
 
 // Make sure we can add an entry
 func TestHarnessAddEntry(t *testing.T) {
@@ -65,10 +72,12 @@ func TestHarnessAddEntry(t *testing.T) {
 	// It should upload successfully.
 	out := runCli(t, "upload", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
+	uuid := getUUIDFromUploadOutput(t, out)
 
 	// Now we should be able to verify it.
 	out = runCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Inclusion Proof:")
+	saveEntry(t, StoredEntry{UUID: uuid})
 }
 
 // Make sure we can add an intoto entry
@@ -172,10 +181,10 @@ func TestHarnessAddIntoto(t *testing.T) {
 
 	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Entry already exists")
-	saveAttestation(t, g.Attestation)
+	saveEntry(t, StoredEntry{Attestation: g.Attestation, UUID: uuid})
 }
 
-func getAttestations(t *testing.T) (string, map[int]string) {
+func getEntries(t *testing.T) (string, map[int]StoredEntry) {
 	tmpDir := os.Getenv("REKOR_HARNESS_TMPDIR")
 	if tmpDir == "" {
 		t.Skip("Skipping test, REKOR_HARNESS_TMPDIR is not set")
@@ -183,7 +192,7 @@ func getAttestations(t *testing.T) (string, map[int]string) {
 	file := filepath.Join(tmpDir, "attestations")
 
 	t.Log("Reading", file)
-	attestations := map[int]string{}
+	attestations := map[int]StoredEntry{}
 	contents, err := os.ReadFile(file)
 	if errors.Is(err, os.ErrNotExist) || contents == nil {
 		return file, attestations
@@ -197,11 +206,11 @@ func getAttestations(t *testing.T) (string, map[int]string) {
 	return file, attestations
 }
 
-func saveAttestation(t *testing.T, attestation string) {
-	file, attestations := getAttestations(t)
+func saveEntry(t *testing.T, entry StoredEntry) {
+	file, attestations := getEntries(t)
 	logIndex := activeTreeSize(t) - 1
-	t.Logf("Storing attestation for logIndex %d", logIndex)
-	attestations[logIndex] = string(attestation)
+	t.Logf("Storing entry for logIndex %d", logIndex)
+	attestations[logIndex] = entry
 	contents, err := json.Marshal(attestations)
 	if err != nil {
 		t.Fatal(err)
@@ -212,13 +221,13 @@ func saveAttestation(t *testing.T, attestation string) {
 }
 
 func compareAttestation(t *testing.T, logIndex int, got string) {
-	_, attestations := getAttestations(t)
-	expected, ok := attestations[logIndex]
+	_, entries := getEntries(t)
+	expected, ok := entries[logIndex]
 	if !ok {
-		t.Fatalf("expected to find attestation with logIndex %d but none existed: %v", logIndex, attestations)
+		t.Fatalf("expected to find persisted entries with logIndex %d but none existed: %v", logIndex, entries)
 	}
 
-	if got != expected {
+	if got != expected.Attestation {
 		t.Fatalf("attestations don't match, got %v expected %v", got, expected)
 	}
 }
@@ -244,6 +253,48 @@ func TestHarnessGetAllEntriesLogIndex(t *testing.T) {
 		compareAttestation(t, i, intotoObj.Attestation)
 		t.Log("IntotoObj matches stored attestation")
 	}
+}
+
+func TestHarnessGetAllEntriesUUID(t *testing.T) {
+	treeSize := activeTreeSize(t)
+	if treeSize == 0 {
+		t.Fatal("There are 0 entries in the log, there should be at least 2")
+	}
+	_, entries := getEntries(t)
+	for _, e := range entries {
+		outUUID := runCli(t, "get", "--uuid", e.UUID, "--format", "json")
+		outEntryID := runCli(t, "get", "--uuid", entryID(t, e.UUID), "--format", "json")
+
+		if outUUID != outEntryID {
+			t.Fatalf("Getting by uuid %s and entryID %s gave different outputs:\nuuid: %v\nentryID:%v\n", e.UUID, entryID(t, e.UUID), outUUID, outEntryID)
+		}
+
+		if !strings.Contains(outUUID, "IntotoObj") {
+			continue
+		}
+		var intotoObj struct {
+			Attestation string
+		}
+		if err := json.Unmarshal([]byte(outUUID), &intotoObj); err != nil {
+			t.Fatal(err)
+		}
+		if intotoObj.Attestation != e.Attestation {
+			t.Fatalf("attestations don't match, got %v expected %v", intotoObj.Attestation, e.Attestation)
+		}
+	}
+}
+
+func entryID(t *testing.T, uuid string) string {
+	treeID, err := strconv.Atoi(os.Getenv("TREE_ID"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tid := strconv.FormatInt(int64(treeID), 16)
+	ts, err := sharding.PadToTreeIDLen(tid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ts + uuid
 }
 
 func activeTreeSize(t *testing.T) int {
