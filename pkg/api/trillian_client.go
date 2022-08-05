@@ -69,6 +69,14 @@ type Response struct {
 	getConsistencyProofResult *trillian.GetConsistencyProofResponse
 }
 
+func unmarshalLogRoot(logRoot []byte) (types.LogRootV1, error) {
+	var root types.LogRootV1
+	if err := root.UnmarshalBinary(logRoot); err != nil {
+		return types.LogRootV1{}, err
+	}
+	return root, nil
+}
+
 func (t *TrillianClient) root() (types.LogRootV1, error) {
 	rqst := &trillian.GetLatestSignedLogRootRequest{
 		LogId: t.logID,
@@ -77,11 +85,7 @@ func (t *TrillianClient) root() (types.LogRootV1, error) {
 	if err != nil {
 		return types.LogRootV1{}, err
 	}
-	var root types.LogRootV1
-	if err := root.UnmarshalBinary(resp.SignedLogRoot.LogRoot); err != nil {
-		return types.LogRootV1{}, err
-	}
-	return root, nil
+	return unmarshalLogRoot(resp.SignedLogRoot.LogRoot)
 }
 
 func (t *TrillianClient) addLeaf(byteValue []byte) *Response {
@@ -210,8 +214,15 @@ func (t *TrillianClient) getLeafAndProofByIndex(index int64) *Response {
 	ctx, cancel := context.WithTimeout(t.context, 20*time.Second)
 	defer cancel()
 
-	root, err := t.root()
-	if err != nil {
+	rootResp := t.getLatest(0)
+	if rootResp.err != nil {
+		return &Response{
+			status: status.Code(rootResp.err),
+			err:    rootResp.err,
+		}
+	}
+	var root types.LogRootV1
+	if err := root.UnmarshalBinary(rootResp.getLatestResult.SignedLogRoot.LogRoot); err != nil {
 		return &Response{
 			status: status.Code(err),
 			err:    err,
@@ -232,12 +243,20 @@ func (t *TrillianClient) getLeafAndProofByIndex(index int64) *Response {
 				err:    err,
 			}
 		}
+		return &Response{
+			status: status.Code(err),
+			err:    err,
+			getLeafAndProofResult: &trillian.GetEntryAndProofResponse{
+				Proof:         resp.Proof,
+				Leaf:          resp.Leaf,
+				SignedLogRoot: rootResp.getLatestResult.SignedLogRoot,
+			},
+		}
 	}
 
 	return &Response{
-		status:                status.Code(err),
-		err:                   err,
-		getLeafAndProofResult: resp,
+		status: status.Code(err),
+		err:    err,
 	}
 }
 
@@ -245,8 +264,15 @@ func (t *TrillianClient) getProofByHash(hashValue []byte) *Response {
 	ctx, cancel := context.WithTimeout(t.context, 20*time.Second)
 	defer cancel()
 
-	root, err := t.root()
-	if err != nil {
+	rootResp := t.getLatest(0)
+	if rootResp.err != nil {
+		return &Response{
+			status: status.Code(rootResp.err),
+			err:    rootResp.err,
+		}
+	}
+	var root types.LogRootV1
+	if err := root.UnmarshalBinary(rootResp.getLatestResult.SignedLogRoot.LogRoot); err != nil {
 		return &Response{
 			status: status.Code(err),
 			err:    err,
@@ -263,7 +289,6 @@ func (t *TrillianClient) getProofByHash(hashValue []byte) *Response {
 	if resp != nil {
 		v := client.NewLogVerifier(rfc6962.DefaultHasher)
 		for _, proof := range resp.Proof {
-
 			if err := v.VerifyInclusionByHash(&root, hashValue, proof); err != nil {
 				return &Response{
 					status: status.Code(err),
@@ -271,12 +296,20 @@ func (t *TrillianClient) getProofByHash(hashValue []byte) *Response {
 				}
 			}
 		}
+		// Return an inclusion proof response with the requested
+		return &Response{
+			status: status.Code(err),
+			err:    err,
+			getProofResult: &trillian.GetInclusionProofByHashResponse{
+				Proof:         resp.Proof,
+				SignedLogRoot: rootResp.getLatestResult.SignedLogRoot,
+			},
+		}
 	}
 
 	return &Response{
-		status:         status.Code(err),
-		err:            err,
-		getProofResult: resp,
+		status: status.Code(err),
+		err:    err,
 	}
 }
 
