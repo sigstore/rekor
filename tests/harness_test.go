@@ -73,11 +73,12 @@ func TestHarnessAddEntry(t *testing.T) {
 	out := runCli(t, "upload", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromUploadOutput(t, out)
+	logIndex := getLogIndexFromUploadOutput(t, out)
 
 	// Now we should be able to verify it.
 	out = runCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Inclusion Proof:")
-	saveEntry(t, StoredEntry{UUID: uuid})
+	saveEntry(t, logIndex, StoredEntry{UUID: uuid})
 }
 
 // Make sure we can add an intoto entry
@@ -144,6 +145,7 @@ func TestHarnessAddIntoto(t *testing.T) {
 	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromUploadOutput(t, out)
+	logIndex := getLogIndexFromUploadOutput(t, out)
 
 	out = runCli(t, "get", "--uuid", uuid, "--format=json")
 	g := getOut{}
@@ -181,7 +183,7 @@ func TestHarnessAddIntoto(t *testing.T) {
 
 	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Entry already exists")
-	saveEntry(t, StoredEntry{Attestation: g.Attestation, UUID: uuid})
+	saveEntry(t, logIndex, StoredEntry{Attestation: g.Attestation, UUID: uuid})
 }
 
 func getEntries(t *testing.T) (string, map[int]StoredEntry) {
@@ -206,9 +208,8 @@ func getEntries(t *testing.T) (string, map[int]StoredEntry) {
 	return file, attestations
 }
 
-func saveEntry(t *testing.T, entry StoredEntry) {
+func saveEntry(t *testing.T, logIndex int, entry StoredEntry) {
 	file, attestations := getEntries(t)
-	logIndex := activeTreeSize(t) - 1
 	t.Logf("Storing entry for logIndex %d", logIndex)
 	attestations[logIndex] = entry
 	contents, err := json.Marshal(attestations)

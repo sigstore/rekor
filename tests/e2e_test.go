@@ -68,6 +68,19 @@ func getUUIDFromUploadOutput(t *testing.T, out string) string {
 	return splitUrl[len(splitUrl)-1]
 }
 
+func getLogIndexFromUploadOutput(t *testing.T, out string) int {
+	t.Helper()
+	t.Log(out)
+	// Output looks like "Created entry at index X, available at $URL/UUID", so grab the index X:
+	split := strings.Split(strings.TrimSpace(out), ",")
+	ss := strings.Split(split[0], " ")
+	i, err := strconv.Atoi(ss[len(ss)-1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return i
+}
+
 func getUUIDFromTimestampOutput(t *testing.T, out string) string {
 	t.Helper()
 	// Output looks like "Created entry at index X, available at $URL/UUID", so grab the UUID:
