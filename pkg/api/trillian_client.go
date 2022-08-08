@@ -221,11 +221,12 @@ func (t *TrillianClient) getLeafAndProofByIndex(index int64) *Response {
 			err:    rootResp.err,
 		}
 	}
-	var root types.LogRootV1
-	if err := root.UnmarshalBinary(rootResp.getLatestResult.SignedLogRoot.LogRoot); err != nil {
+
+	root, err := unmarshalLogRoot(rootResp.getLatestResult.SignedLogRoot.LogRoot)
+	if err != nil {
 		return &Response{
-			status: status.Code(err),
-			err:    err,
+			status: status.Code(rootResp.err),
+			err:    rootResp.err,
 		}
 	}
 
@@ -271,11 +272,11 @@ func (t *TrillianClient) getProofByHash(hashValue []byte) *Response {
 			err:    rootResp.err,
 		}
 	}
-	var root types.LogRootV1
-	if err := root.UnmarshalBinary(rootResp.getLatestResult.SignedLogRoot.LogRoot); err != nil {
+	root, err := unmarshalLogRoot(rootResp.getLatestResult.SignedLogRoot.LogRoot)
+	if err != nil {
 		return &Response{
-			status: status.Code(err),
-			err:    err,
+			status: status.Code(rootResp.err),
+			err:    rootResp.err,
 		}
 	}
 
