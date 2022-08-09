@@ -41,7 +41,7 @@ require (
 	github.com/veraison/go-cose v1.0.0-rc.1
 	github.com/zalando/go-keyring v0.1.1 // indirect
 	go.uber.org/goleak v1.1.12
-	go.uber.org/zap v1.21.0
+	go.uber.org/zap v1.22.0
 	gocloud.dev v0.24.1-0.20211119014450-028788aaaa4c
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
