@@ -30,6 +30,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"golang.org/x/sync/errgroup"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -770,4 +771,67 @@ func TestTufVerifyUpload(t *testing.T) {
 
 	out = runCli(t, "search", "--public-key", rootPath, "--pki-format", "tuf")
 	outputContains(t, out, uuid)
+}
+
+// Regression test for https://github.com/sigstore/rekor/pull/956
+// Requesting an inclusion proof concurrently with an entry write triggers
+// a race where the inclusion proof returned does not verify because the
+// tree head changes.
+func TestInclusionProofRace(t *testing.T) {
+	// Create a random artifact and sign it.
+	artifactPath := filepath.Join(t.TempDir(), "artifact")
+	sigPath := filepath.Join(t.TempDir(), "signature.asc")
+
+	createdX509SignedArtifact(t, artifactPath, sigPath)
+	dataBytes, _ := ioutil.ReadFile(artifactPath)
+	h := sha256.Sum256(dataBytes)
+	dataSHA := hex.EncodeToString(h[:])
+
+	// Write the public key to a file
+	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
+	if err := ioutil.WriteFile(pubPath, []byte(rsaCert), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Upload an entry
+	runCli(t, "upload", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+
+	// Constantly uploads new signatures on an entry.
+	var uploadRoutine = func(pubPath string) error {
+		// Create a random artifact and sign it.
+		artifactPath := filepath.Join(t.TempDir(), "artifact")
+		sigPath := filepath.Join(t.TempDir(), "signature.asc")
+
+		createdX509SignedArtifact(t, artifactPath, sigPath)
+		dataBytes, _ := ioutil.ReadFile(artifactPath)
+		h := sha256.Sum256(dataBytes)
+		dataSHA := hex.EncodeToString(h[:])
+
+		// Upload an entry
+		out := runCli(t, "upload", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+		outputContains(t, out, "Created entry at")
+
+		return nil
+	}
+
+	// Attempts to verify the original entry.
+	var verifyRoutine = func(dataSHA, sigPath, pubPath string) error {
+		out := runCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+
+		if strings.Contains(out, "calculated root") || strings.Contains(out, "wrong") {
+			return fmt.Errorf(out)
+		}
+
+		return nil
+	}
+
+	var g errgroup.Group
+	for i := 0; i < 50; i++ {
+		g.Go(func() error { return uploadRoutine(pubPath) })
+		g.Go(func() error { return verifyRoutine(dataSHA, sigPath, pubPath) })
+	}
+
+	if err := g.Wait(); err != nil {
+		t.Fatal(err)
+	}
 }
