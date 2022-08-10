@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"golang.org/x/sync/errgroup"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -833,5 +834,27 @@ func TestInclusionProofRace(t *testing.T) {
 
 	if err := g.Wait(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestHostnameInSTH(t *testing.T) {
+	// get ID of container
+	rekorContainerID := strings.Trim(run(t, "", "docker", "ps", "-q", "-f", "name=rekor-server"), "\n")
+	resp, err := http.Get("http://localhost:3000/api/v1/log")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(string(body), fmt.Sprintf(" %s ", rekorContainerID)) {
+		t.Errorf("logInfo does not contain the hostname (%v) of the rekor-server container: %v", rekorContainerID, string(body))
+	}
+	if strings.Contains(string(body), "rekor.sigstore.dev") {
+		t.Errorf("logInfo contains rekor.sigstore.dev which should not be set by default")
 	}
 }
