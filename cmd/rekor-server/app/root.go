@@ -66,7 +66,11 @@ func init() {
 	rootCmd.PersistentFlags().Uint("trillian_log_server.tlog_id", 0, "Trillian tree id")
 	rootCmd.PersistentFlags().String("trillian_log_server.sharding_config", "", "path to config file for inactive shards")
 
-	rootCmd.PersistentFlags().String("rekor_server.hostname", "rekor.sigstore.dev", "public hostname of instance")
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "localhost"
+	}
+	rootCmd.PersistentFlags().String("rekor_server.hostname", hostname, "public hostname of instance")
 	rootCmd.PersistentFlags().String("rekor_server.address", "127.0.0.1", "Address to bind to")
 	rootCmd.PersistentFlags().String("rekor_server.signer", "memory", "Rekor signer to use. Current valid options include: [gcpkms, memory]")
 
