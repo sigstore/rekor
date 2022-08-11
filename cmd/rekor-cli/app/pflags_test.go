@@ -433,7 +433,10 @@ func TestArtifactPFlags(t *testing.T) {
 				if err != nil {
 					t.Errorf("error parsing typeStr: %v", err)
 				}
-				props := CreatePropsFromPflags()
+				props, err := CreatePropsFromPflags()
+				if err != nil {
+					t.Errorf("error creating props: %v", err)
+				}
 				if _, err := types.NewProposedEntry(context.Background(), typeStr, versionStr, *props); err != nil {
 					t.Errorf("unexpected result in '%v' building entry: %v", tc.caseDesc, err)
 				}
