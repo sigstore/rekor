@@ -167,11 +167,13 @@ func wrapMetrics(handler http.Handler) http.Handler {
 		start := time.Now()
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		defer func() {
-			// This logs latency broken down by URL path and response code
-			pkgapi.MetricLatency.With(map[string]string{
+			labels := map[string]string{
 				"path": r.URL.Path,
 				"code": strconv.Itoa(ww.Status()),
-			}).Observe(float64(time.Since(start)))
+			}
+			// This logs latency broken down by URL path and response code
+			pkgapi.MetricLatency.With(labels).Observe(float64(time.Since(start)))
+			pkgapi.MetricLatencySummary.With(labels).Observe(float64(time.Since(start)))
 		}()
 
 		handler.ServeHTTP(ww, r)
