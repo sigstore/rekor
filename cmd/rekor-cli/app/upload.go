@@ -108,10 +108,7 @@ var uploadCmd = &cobra.Command{
 				return nil, err
 			}
 
-			props, err := CreatePropsFromPflags()
-			if err != nil {
-				return nil, err
-			}
+			props := CreatePropsFromPflags()
 
 			entry, err = types.NewProposedEntry(context.Background(), typeStr, versionStr, *props)
 			if err != nil {

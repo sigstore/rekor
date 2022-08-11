@@ -122,14 +122,10 @@ func validateArtifactPFlags(uuidValid, indexValid bool) error {
 		return errors.New("either 'entry' or 'artifact' or 'artifact-hash' must be specified")
 	}
 
-	if viper.GetString("artifact-hash") != "" && viper.GetString("artifact") == "" {
-		return errors.New("'artifact-hash' can only be used with 'artifact'")
-	}
-
 	return nil
 }
 
-func CreatePropsFromPflags() (*types.ArtifactProperties, error) {
+func CreatePropsFromPflags() *types.ArtifactProperties {
 	props := &types.ArtifactProperties{}
 
 	artifactString := viper.GetString("artifact")
@@ -142,9 +138,6 @@ func CreatePropsFromPflags() (*types.ArtifactProperties, error) {
 	}
 
 	props.ArtifactHash = viper.GetString("artifact-hash")
-	if props.ArtifactHash != "" && props.ArtifactPath == nil {
-		return nil, errors.New("'artifact-hash' can only be used with 'artifact'")
-	}
 
 	signatureString := viper.GetString("signature")
 	if signatureString != "" {
@@ -170,7 +163,7 @@ func CreatePropsFromPflags() (*types.ArtifactProperties, error) {
 		props.AdditionalAuthenticatedData, _ = base64.StdEncoding.DecodeString(b64aad)
 	}
 
-	return props, nil
+	return props
 }
 
 //TODO: add tests for this
