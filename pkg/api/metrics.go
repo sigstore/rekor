@@ -30,4 +30,9 @@ var (
 		Name: "rekor_api_latency",
 		Help: "Api Latency on calls",
 	}, []string{"path", "code"})
+
+	MetricLatencySummary = promauto.NewSummaryVec(prometheus.SummaryOpts{
+		Name: "rekor_api_latency_summary",
+		Help: "Api Latency on calls",
+	}, []string{"path", "code"})
 )
