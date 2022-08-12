@@ -1598,11 +1598,11 @@ func init() {
           "format": "byte"
         },
         "publicKey": {
-          "description": "The public key that can verify the signature",
+          "description": "The public key that can verify the signature; this can also be an X509 code signing certificate that contains the raw public key information",
           "type": "object",
           "properties": {
             "content": {
-              "description": "Specifies the content of the public key inline within the document",
+              "description": "Specifies the content of the public key or code signing certificate inline within the document",
               "type": "string",
               "format": "byte"
             }
@@ -1611,11 +1611,11 @@ func init() {
       }
     },
     "HashedrekordV001SchemaSignaturePublicKey": {
-      "description": "The public key that can verify the signature",
+      "description": "The public key that can verify the signature; this can also be an X509 code signing certificate that contains the raw public key information",
       "type": "object",
       "properties": {
         "content": {
-          "description": "Specifies the content of the public key inline within the document",
+          "description": "Specifies the content of the public key or code signing certificate inline within the document",
           "type": "string",
           "format": "byte"
         }
@@ -2870,11 +2870,11 @@ func init() {
               "format": "byte"
             },
             "publicKey": {
-              "description": "The public key that can verify the signature",
+              "description": "The public key that can verify the signature; this can also be an X509 code signing certificate that contains the raw public key information",
               "type": "object",
               "properties": {
                 "content": {
-                  "description": "Specifies the content of the public key inline within the document",
+                  "description": "Specifies the content of the public key or code signing certificate inline within the document",
                   "type": "string",
                   "format": "byte"
                 }
