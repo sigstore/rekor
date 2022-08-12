@@ -34,8 +34,15 @@ import (
 
 func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 	httpReqCtx := params.HTTPRequest.Context()
+	var result Container
 
-	var result []string
+	// default behaviour mimics "or"
+	if params.Query.Operator == "and" {
+		result = make(Uniq)
+	} else {
+		result = &Arr{}
+	}
+
 	if params.Query.Hash != "" {
 		// This must be a valid sha256 hash
 		sha := util.PrefixSHA(params.Query.Hash)
@@ -43,7 +50,7 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(sha), "0", "-1")); err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, err, redisUnexpectedResult)
 		}
-		result = append(result, resultUUIDs...)
+		result.Add(resultUUIDs)
 	}
 	if params.Query.PublicKey != nil {
 		af, err := pki.NewArtifactFactory(pki.Format(swag.StringValue(params.Query.PublicKey.Format)))
@@ -70,17 +77,17 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(hex.EncodeToString(keyHash[:])), "0", "-1")); err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, err, redisUnexpectedResult)
 		}
-		result = append(result, resultUUIDs...)
+		result.Add(resultUUIDs)
 	}
 	if params.Query.Email != "" {
 		var resultUUIDs []string
 		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(params.Query.Email.String()), "0", "-1")); err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, err, redisUnexpectedResult)
 		}
-		result = append(result, resultUUIDs...)
+		result.Add(resultUUIDs)
 	}
 
-	return index.NewSearchIndexOK().WithPayload(result)
+	return index.NewSearchIndexOK().WithPayload(result.Result())
 }
 
 func SearchIndexNotImplementedHandler(params index.SearchIndexParams) middleware.Responder {
@@ -99,4 +106,33 @@ func addToIndex(ctx context.Context, key, value string) error {
 
 func storeAttestation(ctx context.Context, uuid string, attestation []byte) error {
 	return storageClient.StoreAttestation(ctx, uuid, attestation)
+}
+
+type Container interface {
+	Add([]string)
+	Result() []string
+}
+
+type Uniq map[string]struct{}
+
+func (u Uniq) Add(elements []string) {
+	for _, v := range elements {
+		u[v] = struct{}{}
+	}
+}
+func (u Uniq) Result() []string {
+	var result []string
+	for k := range u {
+		result = append(result, k)
+	}
+	return result
+}
+
+type Arr []string
+
+func (a *Arr) Add(elements []string) {
+	*a = append(*a, elements...)
+}
+func (a Arr) Result() []string {
+	return a
 }

@@ -58,6 +58,8 @@ func addSearchPFlags(cmd *cobra.Command) error {
 	cmd.Flags().Var(NewFlagValue(shaFlag, ""), "sha", "the SHA256 or SHA1 sum of the artifact")
 
 	cmd.Flags().Var(NewFlagValue(emailFlag, ""), "email", "email associated with the public key's subject")
+
+	cmd.Flags().Var(NewFlagValue(operatorFlag, ""), "operator", "operator to use for the search")
 	return nil
 }
 
@@ -141,6 +143,8 @@ var searchCmd = &cobra.Command{
 			hashVal := strings.ToLower(hex.EncodeToString(hasher.Sum(nil)))
 			params.Query.Hash = "sha256:" + hashVal
 		}
+
+		params.Query.Operator = viper.GetString("operator")
 
 		publicKeyStr := viper.GetString("public-key")
 		if publicKeyStr != "" {
