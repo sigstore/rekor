@@ -567,12 +567,22 @@ func TestX509(t *testing.T) {
 	out = runCli(t, "search", "--email", "test@rekor.dev")
 	outputContains(t, out, uuid)
 
-	doubleUUID := fmt.Sprintf("%s\n%s", uuid, uuid)
-	out = runCli(t, "search", "--email", "test@rekor.dev", "--operator", "or","--public-key", pubKeyPath)
-	outputContains(t, out, doubleUUID)
+	artifactBytes, err := ioutil.ReadFile(artifactPath)
+	if err != nil {
+		t.Error(err)
+	}
+	sha := sha256.Sum256(artifactBytes)
+	dataSHA := hex.EncodeToString(sha[:])
 
-	out = runCli(t, "search", "--email", "test@rekor.dev", "--operator", "and","--public-key", pubKeyPath)
-	outputContains(t, out, uuid)
+	out = runCli(t, "search", "--email", "test@rekor.dev", "--operator", "and","--sha", dataSHA)
+	if strings.Count(out, uuid) != 1 {
+		t.Errorf("expected to find one match for %v, found %v", uuid, strings.Count(out, uuid))
+	}
+	
+	out = runCli(t, "search", "--email", "test@rekor.dev", "--operator", "or","--sha", dataSHA)
+	if strings.Count(out, uuid) != 2 {
+		t.Errorf("expected to find two matches for %v, found %v", uuid, strings.Count(out, uuid))
+	}
 
 }
 
