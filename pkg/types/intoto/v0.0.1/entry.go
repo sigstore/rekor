@@ -98,12 +98,11 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	}
 
 	// add digest base64-decoded payload inside of DSSE envelope
-	payloadBytes, err := base64.StdEncoding.DecodeString(v.env.Payload)
-	if err == nil {
-		payloadHash := sha256.Sum256(payloadBytes)
-		result = append(result, fmt.Sprintf("sha256:%s", strings.ToLower(hex.EncodeToString(payloadHash[:]))))
+	if v.IntotoObj.Content != nil && v.IntotoObj.Content.PayloadHash != nil {
+		payloadHash := strings.ToLower(fmt.Sprintf("%s:%s", swag.StringValue(v.IntotoObj.Content.PayloadHash.Algorithm), swag.StringValue(v.IntotoObj.Content.PayloadHash.Value)))
+		result = append(result, payloadHash)
 	} else {
-		log.Logger.Errorf("error decoding intoto payload to compute digest: %w", err)
+		log.Logger.Error("could not find payload digest to include in index keys")
 	}
 
 	switch v.env.PayloadType {
@@ -194,22 +193,18 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 	pkb := strfmt.Base64(pk)
 
-	h := sha256.Sum256([]byte(v.IntotoObj.Content.Envelope))
-
 	canonicalEntry := models.IntotoV001Schema{
 		PublicKey: &pkb,
 		Content: &models.IntotoV001SchemaContent{
 			Hash: &models.IntotoV001SchemaContentHash{
-				Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-				Value:     swag.String(hex.EncodeToString(h[:])),
+				Algorithm: v.IntotoObj.Content.Hash.Algorithm,
+				Value:     v.IntotoObj.Content.Hash.Value,
+			},
+			PayloadHash: &models.IntotoV001SchemaContentPayloadHash{
+				Algorithm: v.IntotoObj.Content.PayloadHash.Algorithm,
+				Value:     v.IntotoObj.Content.PayloadHash.Value,
 			},
 		},
-	}
-	if attKey, attValue := v.AttestationKeyValue(); attValue != nil {
-		canonicalEntry.Content.PayloadHash = &models.IntotoV001SchemaContentPayloadHash{
-			Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-			Value:     swag.String(strings.Replace(attKey, fmt.Sprintf("%s:", models.IntotoV001SchemaContentHashAlgorithmSha256), "", 1)),
-		}
 	}
 
 	itObj := models.Intoto{}
@@ -237,7 +232,27 @@ func (v *V001Entry) validate() error {
 	if err := dsseVerifier.VerifySignature(strings.NewReader(v.IntotoObj.Content.Envelope), nil); err != nil {
 		return err
 	}
-	return json.Unmarshal([]byte(v.IntotoObj.Content.Envelope), &v.env)
+	if err := json.Unmarshal([]byte(v.IntotoObj.Content.Envelope), &v.env); err != nil {
+		return err
+	}
+
+	attBytes, err := base64.StdEncoding.DecodeString(v.env.Payload)
+	if err != nil {
+		return err
+	}
+	// validation logic complete without errors, hydrate local object
+	attHash := sha256.Sum256(attBytes)
+	v.IntotoObj.Content.PayloadHash = &models.IntotoV001SchemaContentPayloadHash{
+		Algorithm: swag.String(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
+		Value:     swag.String(hex.EncodeToString(attHash[:])),
+	}
+
+	h := sha256.Sum256([]byte(v.IntotoObj.Content.Envelope))
+	v.IntotoObj.Content.Hash = &models.IntotoV001SchemaContentHash{
+		Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+		Value:     swag.String(hex.EncodeToString(h[:])),
+	}
+	return nil
 }
 
 // AttestationKey returns the digest of the attestation that was uploaded, to be used to lookup the attestation from storage
@@ -256,9 +271,7 @@ func (v *V001Entry) AttestationKeyValue() (string, []byte) {
 		return "", nil
 	}
 	attBytes, _ := base64.StdEncoding.DecodeString(v.env.Payload)
-	attHash := sha256.Sum256(attBytes)
-	attKey := fmt.Sprintf("%s:%s", models.IntotoV001SchemaContentHashAlgorithmSha256, hex.EncodeToString(attHash[:]))
-	return attKey, attBytes
+	return v.AttestationKey(), attBytes
 }
 
 func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
