@@ -269,4 +269,14 @@ stringsMatch $NUM_ELEMENTS "2"
 RETRIEVE_LOGINDEX1=$(curl -f http://localhost:3000/api/v1/log/entries/retrieve -H "Content-Type: application/json" -H "Accept: application/json" -d "{ \"logIndexes\": [1]}" | jq '.[0]' | jq  -r .$UUID1.logIndex)
 stringsMatch $RETRIEVE_LOGINDEX1 "1"
 
+# Make sure that verification succeeds via UUID
+echo
+echo "Testing rekor-cli verification via UUID..."
+$REKOR_CLI verify --uuid $UUID1 --rekor_server http://localhost:3000
+
+# Make sure that verification succeeds via Entry ID (Tree ID in hex + UUID)
+echo
+echo "Testing rekor-cli verification via Entry ID..."
+DEBUG=1 $REKOR_CLI verify --uuid $ENTRY_ID_1 --rekor_server http://localhost:3000
+
 echo "Test passed successfully :)"
