@@ -567,6 +567,13 @@ func TestX509(t *testing.T) {
 	out = runCli(t, "search", "--email", "test@rekor.dev")
 	outputContains(t, out, uuid)
 
+	doubleUUID := fmt.Sprintf("%s\n%s", uuid, uuid)
+	out = runCli(t, "search", "--email", "test@rekor.dev", "--operator", "or","--public-key", pubKeyPath)
+	outputContains(t, out, doubleUUID)
+
+	out = runCli(t, "search", "--email", "test@rekor.dev", "--operator", "and","--public-key", pubKeyPath)
+	outputContains(t, out, uuid)
+
 }
 
 func TestUploadNoAPIKeyInOutput(t *testing.T) {
