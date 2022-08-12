@@ -30,7 +30,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -41,6 +40,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
@@ -559,7 +560,7 @@ func TestIntoto(t *testing.T) {
 
 }
 
-func TestDsse(t *testing.T) {
+func TestIntotoV002(t *testing.T) {
 	td := t.TempDir()
 	attestationPath := filepath.Join(td, "attestation.json")
 	pubKeyPath := filepath.Join(td, "pub.pem")
@@ -619,7 +620,7 @@ func TestDsse(t *testing.T) {
 	write(t, ecdsaPub, pubKeyPath)
 
 	// If we do it twice, it should already exist
-	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "dsse", "--public-key", pubKeyPath)
+	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromUploadOutput(t, out)
 
@@ -640,23 +641,24 @@ func TestDsse(t *testing.T) {
 
 	attHash := sha256.Sum256(dsse.PAE("application/vnd.in-toto+json", []byte(g.Attestation)))
 
-	dsseModel := &models.DsseV001Schema{}
-	if err := types.DecodeEntry(g.Body.(map[string]interface{})["DsseObj"], dsseModel); err != nil {
-		t.Errorf("could not convert body into dsse type: %v", err)
+	intotoV002Model := &models.IntotoV002Schema{}
+	if err := types.DecodeEntry(g.Body.(map[string]interface{})["IntotoObj"], intotoV002Model); err != nil {
+		t.Errorf("could not convert body into intoto type: %v", err)
 	}
-	if dsseModel.PayloadHash == nil {
-		t.Errorf("could not find hash over attestation %v", dsseModel)
+	if intotoV002Model.Content.Hash == nil {
+		t.Errorf("could not find hash over attestation %v", intotoV002Model)
 	}
-	recordedPayloadHash, err := hex.DecodeString(dsseModel.PayloadHash.Value)
+	recordedPayloadHash, err := hex.DecodeString(*intotoV002Model.Content.PayloadHash.Value)
 	if err != nil {
 		t.Errorf("error converting attestation hash to []byte: %v", err)
 	}
 
 	if !bytes.Equal(attHash[:], recordedPayloadHash) {
-		t.Fatal(fmt.Errorf("attestation hash %v doesnt match the payload we sent %v", hex.EncodeToString(attHash[:]), dsseModel.PayloadHash.Value))
+		t.Fatal(fmt.Errorf("attestation hash %v doesnt match the payload we sent %v", hex.EncodeToString(attHash[:]),
+			*intotoV002Model.Content.PayloadHash.Value))
 	}
 
-	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "dsse", "--public-key", pubKeyPath)
+	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Entry already exists")
 
 }

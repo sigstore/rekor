@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Sigstore Authors.
+// Copyright 2021 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dsse
+package intoto
 
 import (
 	"bytes"
@@ -28,6 +28,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"path/filepath"
+	"strings"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
@@ -40,96 +41,141 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
-	rekordsse "github.com/sigstore/rekor/pkg/types/dsse"
+	"github.com/sigstore/rekor/pkg/types/intoto"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 const (
-	APIVERSION = "0.0.1"
+	APIVERSION = "0.0.2"
 )
 
 func init() {
-	if err := rekordsse.VersionMap.SetEntryFactory(APIVERSION, NewEntry); err != nil {
+	if err := intoto.VersionMap.SetEntryFactory(APIVERSION, NewEntry); err != nil {
 		log.Logger.Panic(err)
 	}
 }
 
-type V001Entry struct {
-	DsseObj models.DsseV001Schema
+type V002Entry struct {
+	IntotoObj models.IntotoV002Schema
+	env       dsse.Envelope
 }
 
-func (v V001Entry) APIVersion() string {
+func (v V002Entry) APIVersion() string {
 	return APIVERSION
 }
 
 func NewEntry() types.EntryImpl {
-	return &V001Entry{}
+	return &V002Entry{}
 }
 
-func (v V001Entry) IndexKeys() ([]string, error) {
+func (v V002Entry) IndexKeys() ([]string, error) {
 	var result []string
-	fmt.Printf("%+v\n", v.DsseObj)
-	result = append(result, v.DsseObj.PayloadHash.Algorithm+":"+v.DsseObj.PayloadHash.Value)
 
-	for _, sig := range v.DsseObj.Signatures {
-		keyHash := sha256.Sum256(sig.PublicKey)
-		result = append(result, "sha256:"+hex.EncodeToString(keyHash[:]))
+	if v.IntotoObj.Content == nil || v.IntotoObj.Content.Envelope == nil {
+		log.Logger.Info("IntotoObj content or dsse envelope is nil")
+		return result, nil
 	}
 
-	switch *v.DsseObj.PayloadType {
+	for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
+		keyHash := sha256.Sum256(sig.PublicKey)
+		result = append(result, "sha256:"+hex.EncodeToString(keyHash[:]))
+
+		keyObj, err := x509.NewPublicKey(bytes.NewReader(sig.PublicKey))
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, keyObj.EmailAddresses()...)
+	}
+
+	payloadKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.PayloadHash.Algorithm, *v.IntotoObj.Content.PayloadHash.Value))
+	result = append(result, payloadKey)
+
+	switch *v.IntotoObj.Content.Envelope.PayloadType {
 	case in_toto.PayloadType:
-		statement, err := parseIntotoStatement(v.DsseObj.Payload)
+
+		hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.Hash.Algorithm, *v.IntotoObj.Content.Hash.Value))
+		result = append(result, hashkey)
+
+		if v.IntotoObj.Content.Envelope.Payload == "" {
+			log.Logger.Info("IntotoObj DSSE payload is empty")
+			return result, nil
+		}
+		decodedPayload, err := base64.StdEncoding.DecodeString(string(v.IntotoObj.Content.Envelope.Payload))
+		if err != nil {
+			return result, fmt.Errorf("could not decode envelope payload: %w", err)
+		}
+		statement, err := parseStatement(decodedPayload)
 		if err != nil {
 			return result, err
 		}
-
 		for _, s := range statement.Subject {
 			for alg, ds := range s.Digest {
 				result = append(result, alg+":"+ds)
 			}
 		}
+		// Not all in-toto statements will contain a SLSA provenance predicate.
+		// See https://github.com/in-toto/attestation/blob/main/spec/README.md#predicate
+		// for other predicates.
+		if predicate, err := parseSlsaPredicate(decodedPayload); err == nil {
+			if predicate.Predicate.Materials != nil {
+				for _, s := range predicate.Predicate.Materials {
+					for alg, ds := range s.Digest {
+						result = append(result, alg+":"+ds)
+					}
+				}
+			}
+		}
 	default:
-		log.Logger.Infof("Cannot index payload of type: %s", *v.DsseObj.PayloadType)
+		log.Logger.Infof("Unknown in_toto DSSE envelope Type: %s", *v.IntotoObj.Content.Envelope.PayloadType)
 	}
-
 	return result, nil
 }
 
-func parseIntotoStatement(p []byte) (*in_toto.Statement, error) {
+func parseStatement(p []byte) (*in_toto.Statement, error) {
 	ps := in_toto.Statement{}
 	if err := json.Unmarshal(p, &ps); err != nil {
 		return nil, err
 	}
-
 	return &ps, nil
 }
 
-func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
-	dsseModel, ok := pe.(*models.Dsse)
+func parseSlsaPredicate(p []byte) (*in_toto.ProvenanceStatement, error) {
+	predicate := in_toto.ProvenanceStatement{}
+	if err := json.Unmarshal(p, &predicate); err != nil {
+		return nil, err
+	}
+	return &predicate, nil
+}
+
+func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
+	it, ok := pe.(*models.Intoto)
 	if !ok {
-		return errors.New("cannot unmarshal non DSSE v0.0.1 type")
+		return errors.New("cannot unmarshal non Intoto v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(dsseModel.Spec, &v.DsseObj); err != nil {
+	var err error
+	if err := types.DecodeEntry(it.Spec, &v.IntotoObj); err != nil {
 		return err
 	}
 
 	// field validation
-	if err := v.DsseObj.Validate(strfmt.Default); err != nil {
+	if err := v.IntotoObj.Validate(strfmt.Default); err != nil {
 		return err
 	}
 
-	if string(v.DsseObj.Payload) == "" {
+	if string(v.IntotoObj.Content.Envelope.Payload) == "" {
 		return nil
 	}
 
 	env := &dsse.Envelope{
-		Payload:     string(v.DsseObj.Payload),
-		PayloadType: *v.DsseObj.PayloadType,
+		Payload:     string(v.IntotoObj.Content.Envelope.Payload),
+		PayloadType: *v.IntotoObj.Content.Envelope.PayloadType,
 	}
 
 	allPubKeyBytes := make([][]byte, 0)
-	for _, sig := range v.DsseObj.Signatures {
+	for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
 		env.Signatures = append(env.Signatures, dsse.Signature{
 			KeyID: sig.Keyid,
 			Sig:   string(sig.Sig),
@@ -142,59 +188,61 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
-	decodedPayload, err := base64.StdEncoding.DecodeString(string(v.DsseObj.Payload))
+	v.env = *env
+
+	decodedPayload, err := base64.StdEncoding.DecodeString(string(v.IntotoObj.Content.Envelope.Payload))
 	if err != nil {
 		return fmt.Errorf("could not decode envelope payload: %w", err)
 	}
 
-	paeEncodedPayload := dsse.PAE(*v.DsseObj.PayloadType, decodedPayload)
+	paeEncodedPayload := dsse.PAE(*v.IntotoObj.Content.Envelope.PayloadType, decodedPayload)
 	h := sha256.Sum256(paeEncodedPayload)
-	v.DsseObj.PayloadHash = &models.DsseV001SchemaPayloadHash{
-		Algorithm: models.DsseV001SchemaPayloadHashAlgorithmSha256,
-		Value:     hex.EncodeToString(h[:]),
+	v.IntotoObj.Content.PayloadHash = &models.IntotoV002SchemaContentPayloadHash{
+		Algorithm: swag.String(models.IntotoV002SchemaContentPayloadHashAlgorithmSha256),
+		Value:     swag.String(hex.EncodeToString(h[:])),
 	}
 
 	return nil
 }
 
-func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
-	canonicalEntry := models.DsseV001Schema{
-		PayloadHash: v.DsseObj.PayloadHash,
-		Signatures:  v.DsseObj.Signatures,
-		PayloadType: v.DsseObj.PayloadType,
+func (v *V002Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+
+	canonicalEntry := models.IntotoV002Schema{
+		Content: &models.IntotoV002SchemaContent{
+			Envelope:    v.IntotoObj.Content.Envelope,
+			Hash:        v.IntotoObj.Content.Hash,
+			PayloadHash: v.IntotoObj.Content.PayloadHash,
+		},
 	}
 
-	model := models.Dsse{}
-	model.APIVersion = swag.String(APIVERSION)
-	model.Spec = canonicalEntry
-	return json.Marshal(&model)
+	itObj := models.Intoto{}
+	itObj.APIVersion = swag.String(APIVERSION)
+	itObj.Spec = &canonicalEntry
+
+	return json.Marshal(&itObj)
 }
 
-func (v *V001Entry) AttestationKey() string {
-	if v.DsseObj.PayloadHash != nil {
-		return fmt.Sprintf("%s:%s", v.DsseObj.PayloadHash.Algorithm, v.DsseObj.PayloadHash.Value)
+// AttestationKey returns the digest of the attestation that was uploaded, to be used to lookup the attestation from storage
+func (v *V002Entry) AttestationKey() string {
+	if v.IntotoObj.Content != nil && v.IntotoObj.Content.PayloadHash != nil {
+		return fmt.Sprintf("%s:%s", *v.IntotoObj.Content.PayloadHash.Algorithm, *v.IntotoObj.Content.PayloadHash.Value)
 	}
-
 	return ""
 }
 
-func (v *V001Entry) AttestationKeyValue() (string, []byte) {
-	storageSize := base64.StdEncoding.DecodedLen(len(v.DsseObj.Payload))
+// AttestationKeyValue returns both the key and value to be persisted into attestation storage
+func (v *V002Entry) AttestationKeyValue() (string, []byte) {
+	storageSize := base64.StdEncoding.DecodedLen(len(v.env.Payload))
 	if storageSize > viper.GetInt("max_attestation_size") {
 		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, viper.GetInt("max_attestation_size"))
 		return "", nil
 	}
-
-	decodedPayload, err := base64.StdEncoding.DecodeString(string(v.DsseObj.Payload))
-	if err != nil {
-		log.Logger.Infof("Skipping attestation storage, error while decoding attestation: %v", err)
-		return "", nil
-	}
-
-	return v.AttestationKey(), decodedPayload
+	attBytes, _ := base64.StdEncoding.DecodeString(v.env.Payload)
+	return v.AttestationKey(), attBytes
 }
 
 type verifier struct {
+	s signature.Signer
 	v signature.Verifier
 }
 
@@ -211,6 +259,17 @@ func (v *verifier) Public() crypto.PublicKey {
 	return nil
 }
 
+func (v *verifier) Sign(data []byte) (sig []byte, err error) {
+	if v.s == nil {
+		return nil, errors.New("nil signer")
+	}
+	sig, err = v.s.SignMessage(bytes.NewReader(data), options.WithCryptoSignerOpts(crypto.SHA256))
+	if err != nil {
+		return nil, err
+	}
+	return sig, nil
+}
+
 func (v *verifier) Verify(data, sig []byte) error {
 	if v.v == nil {
 		return errors.New("nil verifier")
@@ -218,20 +277,19 @@ func (v *verifier) Verify(data, sig []byte) error {
 	return v.v.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data))
 }
 
-func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
-	returnVal := models.Dsse{}
-	re := V001Entry{}
+func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+	returnVal := models.Intoto{}
+	re := V002Entry{}
 
+	var err error
 	artifactBytes := props.ArtifactBytes
 	if artifactBytes == nil {
 		if props.ArtifactPath == nil {
 			return nil, errors.New("path to artifact file must be specified")
 		}
 		if props.ArtifactPath.IsAbs() {
-			return nil, errors.New("dsse envelopes cannot be fetched over HTTP(S)")
+			return nil, errors.New("intoto envelopes cannot be fetched over HTTP(S)")
 		}
-
-		var err error
 		artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
 		if err != nil {
 			return nil, err
@@ -248,10 +306,14 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		allPubKeyBytes = append(allPubKeyBytes, props.PublicKeyBytes)
 	}
 
-	allPubKeyBytes = append(allPubKeyBytes, props.PublicKeysBytes...)
+	allPubKeyBytes = append(allPubKeyBytes, props.MultiPublicKeyBytes...)
 	allPubKeyPaths := make([]*url.URL, 0)
 	if props.PublicKeyPath != nil {
 		allPubKeyPaths = append(allPubKeyPaths, props.PublicKeyPath)
+	}
+
+	if props.MultiPublicKeyPaths != nil {
+		allPubKeyPaths = append(allPubKeyPaths, props.MultiPublicKeyPaths...)
 	}
 
 	for _, path := range allPubKeyPaths {
@@ -272,8 +334,9 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		return nil, err
 	}
 
-	re.DsseObj.Payload = strfmt.Base64(env.Payload)
-	re.DsseObj.PayloadType = &env.PayloadType
+	re.IntotoObj.Content.Envelope.Payload = env.Payload
+	re.IntotoObj.Content.Envelope.PayloadType = &env.PayloadType
+
 	for _, sig := range env.Signatures {
 		key, ok := keysBySig[sig.Sig]
 		if !ok {
@@ -286,15 +349,22 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		}
 
 		keyBytes := strfmt.Base64(canonKey)
-		re.DsseObj.Signatures = append(re.DsseObj.Signatures, &models.DsseV001SchemaSignaturesItems0{
+		re.IntotoObj.Content.Envelope.Signatures = append(re.IntotoObj.Content.Envelope.Signatures, &models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 			Keyid:     sig.KeyID,
 			Sig:       sig.Sig,
 			PublicKey: keyBytes,
 		})
 	}
 
+	h := sha256.Sum256([]byte(artifactBytes))
+	re.IntotoObj.Content.Hash = &models.IntotoV002SchemaContentHash{
+		Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+		Value:     swag.String(hex.EncodeToString(h[:])),
+	}
+
+	returnVal.Spec = re.IntotoObj
 	returnVal.APIVersion = swag.String(re.APIVersion())
-	returnVal.Spec = re.DsseObj
+
 	return &returnVal, nil
 }
 

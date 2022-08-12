@@ -70,5 +70,5 @@ func (it *BaseIntotoType) CreateProposedEntry(ctx context.Context, version strin
 }
 
 func (it BaseIntotoType) DefaultVersion() string {
-	return "0.0.1"
+	return "0.0.2"
 }

@@ -33,13 +33,12 @@ import (
 	alpine_v001 "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/cose"
 	cose_v001 "github.com/sigstore/rekor/pkg/types/cose/v0.0.1"
-	"github.com/sigstore/rekor/pkg/types/dsse"
 	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/helm"
 	helm_v001 "github.com/sigstore/rekor/pkg/types/helm/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/intoto"
-	intoto_v001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
+	intoto_v002 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.2"
 	"github.com/sigstore/rekor/pkg/types/jar"
 	jar_v001 "github.com/sigstore/rekor/pkg/types/jar/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/rekord"
@@ -89,14 +88,13 @@ var serveCmd = &cobra.Command{
 			rekord.KIND:       rekord_v001.APIVERSION,
 			rpm.KIND:          rpm_v001.APIVERSION,
 			jar.KIND:          jar_v001.APIVERSION,
-			intoto.KIND:       intoto_v001.APIVERSION,
+			intoto.KIND:       intoto_v002.APIVERSION,
 			cose.KIND:         cose_v001.APIVERSION,
 			rfc3161.KIND:      rfc3161_v001.APIVERSION,
 			alpine.KIND:       alpine_v001.APIVERSION,
 			helm.KIND:         helm_v001.APIVERSION,
 			tuf.KIND:          tuf_v001.APIVERSION,
 			hashedrekord.KIND: hashedrekord_v001.APIVERSION,
-			dsse.KIND:         dsse_v001.APIVERSION,
 		}
 
 		for k, v := range pluggableTypeMap {
