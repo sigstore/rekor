@@ -70,7 +70,7 @@ func initializePFlagMap() {
 		},
 		operatorFlag: func() pflag.Value {
 			// this validates a valid operator name
-			return valueFactory(shaFlag, validateString(""), "")
+			return valueFactory(shaFlag, validateString("oneof=and or"), "")
 		},
 		emailFlag: func() pflag.Value {
 			// this validates an email address
