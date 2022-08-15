@@ -18,6 +18,7 @@ package sharding
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -82,6 +83,10 @@ func logRangesFromPath(path string) (Ranges, error) {
 		return Ranges{}, nil
 	}
 	if err := yaml.Unmarshal(contents, &ranges); err != nil {
+		// Try to use JSON
+		if jerr := json.Unmarshal(contents, &ranges); jerr == nil {
+			return ranges, nil
+		}
 		return Ranges{}, err
 	}
 	return ranges, nil

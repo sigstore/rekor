@@ -64,7 +64,7 @@ func init() {
 	rootCmd.PersistentFlags().String("trillian_log_server.address", "127.0.0.1", "Trillian log server address")
 	rootCmd.PersistentFlags().Uint16("trillian_log_server.port", 8090, "Trillian log server port")
 	rootCmd.PersistentFlags().Uint("trillian_log_server.tlog_id", 0, "Trillian tree id")
-	rootCmd.PersistentFlags().String("trillian_log_server.sharding_config", "", "path to config file for inactive shards")
+	rootCmd.PersistentFlags().String("trillian_log_server.sharding_config", "", "path to config file for inactive shards, in JSON or YAML")
 
 	hostname, err := os.Hostname()
 	if err != nil {
