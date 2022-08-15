@@ -96,6 +96,32 @@ func TestLogRangesFromPath(t *testing.T) {
 	}
 }
 
+func TestLogRangesFromPathJSON(t *testing.T) {
+	contents := `[{"treeID": 0001, "treeLength": 3, "encodedPublicKey":"c2hhcmRpbmcK"}, {"treeID": 0002, "treeLength": 4}]`
+	file := filepath.Join(t.TempDir(), "sharding-config")
+	if err := ioutil.WriteFile(file, []byte(contents), 0644); err != nil {
+		t.Fatal(err)
+	}
+	expected := Ranges{
+		{
+			TreeID:           1,
+			TreeLength:       3,
+			EncodedPublicKey: "c2hhcmRpbmcK",
+		}, {
+			TreeID:     2,
+			TreeLength: 4,
+		},
+	}
+
+	got, err := logRangesFromPath(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(expected, got) {
+		t.Fatalf("expected %v got %v", expected, got)
+	}
+}
+
 func TestLogRanges_ResolveVirtualIndex(t *testing.T) {
 	lrs := LogRanges{
 		inactive: []LogRange{
