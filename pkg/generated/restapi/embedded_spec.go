@@ -2785,7 +2785,7 @@ func init() {
         }
       },
       "$schema": "http://json-schema.org/draft-07/schema",
-      "$id": "http://rekor.sigstore.dev/types/intoto/intoto_v0_0_1_schema.json"
+      "$id": "http://rekor.sigstore.dev/types/cose/cose_v0_0_1_schema.json"
     },
     "hashedrekord": {
       "description": "Hashed Rekord object",
