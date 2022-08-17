@@ -17,6 +17,9 @@ package api
 
 import (
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func Test_Collection(t *testing.T) {
@@ -31,10 +34,8 @@ func Test_Collection(t *testing.T) {
 			t.Errorf("expected 3 unique values, got %d", len(unq.Values()))
 		}
 		expected := []string{"foo", "bar", "baz"}
-		for i, v := range unq.Values() {
-			if v != expected[i] {
-				t.Errorf("expected %s, got %s", expected[i], v)
-			}
+		if !testEqualNoOrder(t, expected, unq.Values()) {
+			t.Errorf("expected %v, got %v", expected, unq.Values())
 		}
 	})
 
@@ -44,33 +45,41 @@ func Test_Collection(t *testing.T) {
 		uniq2 := []string{"foo", "bar", "baz"}
 		uniq3 := []string{"corge", "grault", "garply", "foo"}
 
-		t.Run("with 'and' operator", func(t *testing.T) {
-			set := NewCollection("and")
-			set.Add(uniq1)
-			set.Add(uniq2)
-			set.Add(uniq3)
+		tests := []struct {
+			name     string
+			operator string
+			expected []string
+		}{
+			{name: "with 'and' operator",
+				operator: "and",
+				expected: []string{"foo"},
+			},
+			{name: "with 'or' operator",
+				operator: "or",
+				expected: []string{"foo", "bar", "baz", "corge", "grault", "garply"},
+			},
+		}
 
-			if len(set.Values()) != 1 {
-				t.Errorf("expected 1 value, got %d", len(set.Values()))
-			}
-			expected := []string{"foo", "bar", "baz", "baz", "baz"}
-			for i, v := range set.Values() {
-				if v != expected[i] {
-					t.Errorf("expected %s, got %s", expected[i], v)
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				c := NewCollection(test.operator)
+				c.Add(uniq1)
+				c.Add(uniq2)
+				c.Add(uniq3)
+
+				if !testEqualNoOrder(t, test.expected, c.Values()) {
+					t.Errorf("expected %v, got %v", test.expected, c.Values())
 				}
-			}
-		})
-		t.Run("with 'or' operator", func(t *testing.T) {
-			set := NewCollection("or")
-			set.Add(uniq1)
-			set.Add(uniq2)
-			set.Add(uniq3)
+			})
+		}
 
-			if len(set.Values()) != 6 {
-				t.Errorf("expected 6 values, got %d", len(set.Values()))
-			}
-
-		})
 	})
 
+}
+
+// testEqualNoOrder compares two slices of strings without considering order.
+func testEqualNoOrder(t *testing.T, expected, actual []string) bool {
+	t.Helper()
+	less := func(a, b string) bool { return a < b }
+	return cmp.Diff(actual, expected, cmpopts.SortSlices(less)) == ""
 }
