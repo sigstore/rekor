@@ -639,7 +639,7 @@ func TestIntotoV002(t *testing.T) {
 		t.Errorf("diff: %s", diff)
 	}
 
-	attHash := sha256.Sum256(dsse.PAE("application/vnd.in-toto+json", []byte(g.Attestation)))
+	attHash := sha256.Sum256([]byte(g.Attestation))
 
 	intotoV002Model := &models.IntotoV002Schema{}
 	if err := types.DecodeEntry(g.Body.(map[string]interface{})["IntotoObj"], intotoV002Model); err != nil {

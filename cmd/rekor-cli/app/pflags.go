@@ -35,20 +35,21 @@ import (
 type FlagType string
 
 const (
-	uuidFlag      FlagType = "uuid"
-	shaFlag       FlagType = "sha"
-	emailFlag     FlagType = "email"
-	operatorFlag  FlagType = "operator"
-	logIndexFlag  FlagType = "logIndex"
-	pkiFormatFlag FlagType = "pkiFormat"
-	typeFlag      FlagType = "type"
-	fileFlag      FlagType = "file"
-	urlFlag       FlagType = "url"
-	fileOrURLFlag FlagType = "fileOrURL"
-	oidFlag       FlagType = "oid"
-	formatFlag    FlagType = "format"
-	timeoutFlag   FlagType = "timeout"
-	base64Flag    FlagType = "base64"
+	uuidFlag           FlagType = "uuid"
+	shaFlag            FlagType = "sha"
+	emailFlag          FlagType = "email"
+	operatorFlag       FlagType = "operator"
+	logIndexFlag       FlagType = "logIndex"
+	pkiFormatFlag      FlagType = "pkiFormat"
+	typeFlag           FlagType = "type"
+	fileFlag           FlagType = "file"
+	urlFlag            FlagType = "url"
+	fileOrURLFlag      FlagType = "fileOrURL"
+	multiFileOrURLFlag FlagType = "multiFileOrURL"
+	oidFlag            FlagType = "oid"
+	formatFlag         FlagType = "format"
+	timeoutFlag        FlagType = "timeout"
+	base64Flag         FlagType = "base64"
 )
 
 type newPFlagValueFunc func() pflag.Value
@@ -100,6 +101,10 @@ func initializePFlagMap() {
 			// applies logic of fileFlag OR urlFlag validators from above
 			return valueFactory(fileOrURLFlag, validateFileOrURL, "")
 		},
+		multiFileOrURLFlag: func() pflag.Value {
+			// applies logic of fileFlag OR urlFlag validators from above for multi file and URL
+			return multiValueFactory(multiFileOrURLFlag, validateFileOrURL, []string{})
+		},
 		oidFlag: func() pflag.Value {
 			// this validates for an OID, which is a sequence of positive integers separated by periods
 			return valueFactory(oidFlag, validateOID, "")
@@ -140,6 +145,38 @@ func valueFactory(flagType FlagType, v validationFunc, defaultVal string) pflag.
 		validationFunc: v,
 		value:          defaultVal,
 	}
+}
+
+func multiValueFactory(flagType FlagType, v validationFunc, defaultVal []string) pflag.Value {
+	return &multiBaseValue{
+		flagType:       flagType,
+		validationFunc: v,
+		value:          defaultVal,
+	}
+}
+
+// multiBaseValue implements pflag.Value
+type multiBaseValue struct {
+	flagType       FlagType
+	value          []string
+	validationFunc validationFunc
+}
+
+func (b *multiBaseValue) String() string {
+	return strings.Join(b.value, ",")
+}
+
+// Type returns the type of this Value
+func (b multiBaseValue) Type() string {
+	return string(b.flagType)
+}
+
+func (b *multiBaseValue) Set(value string) error {
+	if err := b.validationFunc(value); err != nil {
+		return err
+	}
+	b.value = append(b.value, value)
+	return nil
 }
 
 // baseValue implements pflag.Value

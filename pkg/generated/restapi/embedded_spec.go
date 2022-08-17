@@ -1864,6 +1864,7 @@ func init() {
           "description": "dsse envelope",
           "type": "object",
           "required": [
+            "payload",
             "payloadType",
             "signatures"
           ],
@@ -1911,7 +1912,7 @@ func init() {
           "readOnly": true
         },
         "payloadHash": {
-          "description": "Specifies the hash algorithm and value covering the envelope's payload after being PAE encoded",
+          "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
           "type": "object",
           "required": [
             "algorithm",
@@ -1938,6 +1939,7 @@ func init() {
       "description": "dsse envelope",
       "type": "object",
       "required": [
+        "payload",
         "payloadType",
         "signatures"
       ],
@@ -2005,7 +2007,7 @@ func init() {
       "readOnly": true
     },
     "IntotoV002SchemaContentPayloadHash": {
-      "description": "Specifies the hash algorithm and value covering the envelope's payload after being PAE encoded",
+      "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
       "type": "object",
       "required": [
         "algorithm",
@@ -3157,6 +3159,7 @@ func init() {
               "description": "dsse envelope",
               "type": "object",
               "required": [
+                "payload",
                 "payloadType",
                 "signatures"
               ],
@@ -3204,7 +3207,7 @@ func init() {
               "readOnly": true
             },
             "payloadHash": {
-              "description": "Specifies the hash algorithm and value covering the envelope's payload after being PAE encoded",
+              "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
               "type": "object",
               "required": [
                 "algorithm",

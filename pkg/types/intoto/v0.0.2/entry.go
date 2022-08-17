@@ -1,5 +1,5 @@
 //
-// Copyright 2021 The Sigstore Authors.
+// Copyright 2022 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ func (v V002Entry) IndexKeys() ([]string, error) {
 			return nil, err
 		}
 
-		result = append(result, keyObj.EmailAddresses()...)
+		result = append(result, keyObj.Subjects()...)
 	}
 
 	payloadKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.PayloadHash.Algorithm, *v.IntotoObj.Content.PayloadHash.Value))
@@ -98,11 +98,11 @@ func (v V002Entry) IndexKeys() ([]string, error) {
 		hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.Hash.Algorithm, *v.IntotoObj.Content.Hash.Value))
 		result = append(result, hashkey)
 
-		if v.IntotoObj.Content.Envelope.Payload == "" {
+		if *v.IntotoObj.Content.Envelope.Payload == "" {
 			log.Logger.Info("IntotoObj DSSE payload is empty")
 			return result, nil
 		}
-		decodedPayload, err := base64.StdEncoding.DecodeString(string(v.IntotoObj.Content.Envelope.Payload))
+		decodedPayload, err := base64.StdEncoding.DecodeString(string(*v.IntotoObj.Content.Envelope.Payload))
 		if err != nil {
 			return result, fmt.Errorf("could not decode envelope payload: %w", err)
 		}
@@ -152,7 +152,7 @@ func parseSlsaPredicate(p []byte) (*in_toto.ProvenanceStatement, error) {
 func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 	it, ok := pe.(*models.Intoto)
 	if !ok {
-		return errors.New("cannot unmarshal non Intoto v0.0.1 type")
+		return errors.New("cannot unmarshal non Intoto v0.0.2 type")
 	}
 
 	var err error
@@ -165,12 +165,12 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
-	if string(v.IntotoObj.Content.Envelope.Payload) == "" {
-		return nil
+	if string(*v.IntotoObj.Content.Envelope.Payload) == "" {
+		return errors.New("DSSE envelope does not contain a payload")
 	}
 
 	env := &dsse.Envelope{
-		Payload:     string(v.IntotoObj.Content.Envelope.Payload),
+		Payload:     string(*v.IntotoObj.Content.Envelope.Payload),
 		PayloadType: *v.IntotoObj.Content.Envelope.PayloadType,
 	}
 
@@ -190,13 +190,12 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 
 	v.env = *env
 
-	decodedPayload, err := base64.StdEncoding.DecodeString(string(v.IntotoObj.Content.Envelope.Payload))
+	decodedPayload, err := base64.StdEncoding.DecodeString(string(*v.IntotoObj.Content.Envelope.Payload))
 	if err != nil {
 		return fmt.Errorf("could not decode envelope payload: %w", err)
 	}
 
-	paeEncodedPayload := dsse.PAE(*v.IntotoObj.Content.Envelope.PayloadType, decodedPayload)
-	h := sha256.Sum256(paeEncodedPayload)
+	h := sha256.Sum256(decodedPayload)
 	v.IntotoObj.Content.PayloadHash = &models.IntotoV002SchemaContentPayloadHash{
 		Algorithm: swag.String(models.IntotoV002SchemaContentPayloadHashAlgorithmSha256),
 		Value:     swag.String(hex.EncodeToString(h[:])),
@@ -209,11 +208,16 @@ func (v *V002Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	canonicalEntry := models.IntotoV002Schema{
 		Content: &models.IntotoV002SchemaContent{
-			Envelope:    v.IntotoObj.Content.Envelope,
-			Hash:        v.IntotoObj.Content.Hash,
-			PayloadHash: v.IntotoObj.Content.PayloadHash,
+			Envelope:    &models.IntotoV002SchemaContentEnvelope{},
+			Hash:        &models.IntotoV002SchemaContentHash{},
+			PayloadHash: &models.IntotoV002SchemaContentPayloadHash{},
 		},
 	}
+
+	canonicalEntry.Content.Envelope.PayloadType = v.IntotoObj.Content.Envelope.PayloadType
+	canonicalEntry.Content.Envelope.Signatures = v.IntotoObj.Content.Envelope.Signatures
+	canonicalEntry.Content.Hash = v.IntotoObj.Content.Hash
+	canonicalEntry.Content.PayloadHash = v.IntotoObj.Content.PayloadHash
 
 	itObj := models.Intoto{}
 	itObj.APIVersion = swag.String(APIVERSION)
@@ -237,7 +241,11 @@ func (v *V002Entry) AttestationKeyValue() (string, []byte) {
 		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, viper.GetInt("max_attestation_size"))
 		return "", nil
 	}
-	attBytes, _ := base64.StdEncoding.DecodeString(v.env.Payload)
+	attBytes, err := base64.StdEncoding.DecodeString(v.env.Payload)
+	if err != nil {
+		log.Logger.Infof("could not decode envelope payload: %w", err)
+		return "", nil
+	}
 	return v.AttestationKey(), attBytes
 }
 
@@ -279,8 +287,12 @@ func (v *verifier) Verify(data, sig []byte) error {
 
 func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	returnVal := models.Intoto{}
-	re := V002Entry{}
-
+	re := V002Entry{
+		IntotoObj: models.IntotoV002Schema{
+			Content: &models.IntotoV002SchemaContent{
+				Envelope: &models.IntotoV002SchemaContentEnvelope{},
+			},
+		}}
 	var err error
 	artifactBytes := props.ArtifactBytes
 	if artifactBytes == nil {
@@ -334,7 +346,7 @@ func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		return nil, err
 	}
 
-	re.IntotoObj.Content.Envelope.Payload = env.Payload
+	re.IntotoObj.Content.Envelope.Payload = swag.String(env.Payload)
 	re.IntotoObj.Content.Envelope.PayloadType = &env.PayloadType
 
 	for _, sig := range env.Signatures {

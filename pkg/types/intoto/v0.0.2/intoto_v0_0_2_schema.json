@@ -47,7 +47,7 @@
                             }
                         }
                     },
-                    "required": ["payloadType", "signatures"],
+                    "required": ["payload", "payloadType", "signatures"],
                     "writeOnly": true
                 },
                 "hash": {
@@ -73,7 +73,7 @@
                     "readOnly": true
                 },
                 "payloadHash": {
-                    "description": "Specifies the hash algorithm and value covering the envelope's payload after being PAE encoded",
+                    "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
                     "type": "object",
                     "properties": {
                         "algorithm": {

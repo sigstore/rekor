@@ -314,7 +314,8 @@ func (m *IntotoV002SchemaContent) UnmarshalBinary(b []byte) error {
 type IntotoV002SchemaContentEnvelope struct {
 
 	// payload of the envelope
-	Payload string `json:"payload,omitempty"`
+	// Required: true
+	Payload *string `json:"payload"`
 
 	// type describing the payload
 	// Required: true
@@ -330,6 +331,10 @@ type IntotoV002SchemaContentEnvelope struct {
 func (m *IntotoV002SchemaContentEnvelope) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validatePayload(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validatePayloadType(formats); err != nil {
 		res = append(res, err)
 	}
@@ -341,6 +346,15 @@ func (m *IntotoV002SchemaContentEnvelope) Validate(formats strfmt.Registry) erro
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *IntotoV002SchemaContentEnvelope) validatePayload(formats strfmt.Registry) error {
+
+	if err := validate.Required("content"+"."+"envelope"+"."+"payload", "body", m.Payload); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -611,7 +625,7 @@ func (m *IntotoV002SchemaContentHash) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-// IntotoV002SchemaContentPayloadHash Specifies the hash algorithm and value covering the envelope's payload after being PAE encoded
+// IntotoV002SchemaContentPayloadHash Specifies the hash algorithm and value covering the payload within the DSSE envelope
 //
 // swagger:model IntotoV002SchemaContentPayloadHash
 type IntotoV002SchemaContentPayloadHash struct {

@@ -1,5 +1,5 @@
 //
-// Copyright 2021 The Sigstore Authors.
+// Copyright 2022 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -103,7 +103,7 @@ func multiSignEnvelope(t *testing.T, k []*ecdsa.PrivateKey, payload []byte) *dss
 func createRekorEnvelope(dsseEnv *dsse.Envelope, pub [][]byte) *models.IntotoV002SchemaContentEnvelope {
 
 	env := &models.IntotoV002SchemaContentEnvelope{
-		Payload:     dsseEnv.Payload,
+		Payload:     swag.String(dsseEnv.Payload),
 		PayloadType: &dsseEnv.PayloadType,
 	}
 
@@ -282,8 +282,7 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 				if err != nil {
 					return fmt.Errorf("could not decode envelope payload: %w", err)
 				}
-				paeEncodedPayload := dsse.PAE(tt.env.PayloadType, decodedPayload)
-				h := sha256.Sum256(paeEncodedPayload)
+				h := sha256.Sum256(decodedPayload)
 				want = append(want, "sha256:"+hex.EncodeToString(h[:]))
 
 				if !reflect.DeepEqual(v.AttestationKey(), "sha256:"+hex.EncodeToString(h[:])) {
@@ -398,8 +397,7 @@ func TestV002Entry_IndexKeys(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			paeEncodedPayload := dsse.PAE(in_toto.PayloadType, b)
-			payloadHash := sha256.Sum256(paeEncodedPayload)
+			payloadHash := sha256.Sum256(b)
 			v := V002Entry{
 				IntotoObj: models.IntotoV002Schema{
 					Content: &models.IntotoV002SchemaContent{
