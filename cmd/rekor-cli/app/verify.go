@@ -34,6 +34,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types"
 )
 
@@ -153,10 +154,17 @@ var verifyCmd = &cobra.Command{
 			}
 		}
 
-		if viper.IsSet("uuid") && (viper.GetString("uuid") != o.EntryUUID) {
-			return nil, fmt.Errorf("unexpected entry returned from rekor server")
+		if viper.IsSet("uuid") {
+			uuid, err := sharding.GetUUIDFromIDString(viper.GetString("uuid"))
+			if err != nil {
+				return nil, err
+			}
+			if uuid != o.EntryUUID {
+				return nil, fmt.Errorf("unexpected entry returned from rekor server")
+			}
 		}
 
+		// Note: the returned entry UUID is the UUID (not include the Tree ID)
 		leafHash, _ := hex.DecodeString(o.EntryUUID)
 		if !bytes.Equal(rfc6962.DefaultHasher.HashLeaf(entryBytes), leafHash) {
 			return nil, fmt.Errorf("computed leaf hash did not match entry UUID")
