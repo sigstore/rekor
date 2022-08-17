@@ -114,7 +114,7 @@ func NewUniq() Uniq {
 	return make(Uniq)
 }
 
-func (u Uniq) Add(elements []string) {
+func (u Uniq) Add(elements ...string) {
 	for _, e := range elements {
 		u[e] = struct{}{}
 	}
@@ -139,6 +139,7 @@ func (u Uniq) Intersect(other Uniq) Uniq {
 	return result
 }
 
+// Union returns the union of two collections.
 func (u Uniq) Union(other Uniq) Uniq {
 	result := make(Uniq)
 	for k := range u {
@@ -152,7 +153,7 @@ func (u Uniq) Union(other Uniq) Uniq {
 
 // Collection is a collection of sets.
 //
-// its result is a union or intersection of all the sets, depending on the operator.
+// its resulting values is a union or intersection of all the sets, depending on the operator.
 type Collection struct {
 	subsets  []Uniq
 	operator string
@@ -166,14 +167,14 @@ func NewCollection(operator string) *Collection {
 	}
 }
 
-// Add adds elements to a subset in the collection.
+// Add adds the elements into a new subset in the collection.
 func (u *Collection) Add(elements []string) {
 	subset := Uniq{}
-	subset.Add(elements)
+	subset.Add(elements...)
 	u.subsets = append(u.subsets, subset)
 }
 
-// Values returns the collection as a slice of strings.
+// Values flattens the subsets using the operator, and returns the collection as a slice of strings.
 func (u *Collection) Values() []string {
 	if len(u.subsets) == 0 {
 		return []string{}

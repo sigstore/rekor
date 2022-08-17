@@ -25,7 +25,7 @@ func Test_Collection(t *testing.T) {
 
 	t.Run("Unique", func(t *testing.T) {
 		unq := NewUniq()
-		unq.Add(vals)
+		unq.Add(vals...)
 
 		if len(unq.Values()) != 3 {
 			t.Errorf("expected 3 unique values, got %d", len(unq.Values()))
