@@ -38,29 +38,14 @@ func Test_Collection(t *testing.T) {
 		}
 	})
 
-	t.Run("Array", func(t *testing.T) {
-		arr := new(Arr)
-		arr.Add(vals)
-
-		if len(arr.Values()) != 5 {
-			t.Errorf("expected 5 values, got %d", len(arr.Values()))
-		}
-		expected := []string{"foo", "bar", "baz", "baz", "baz"}
-		for i, v := range arr.Values() {
-			if v != expected[i] {
-				t.Errorf("expected %s, got %s", expected[i], v)
-			}
-		}
-	})
-
-	t.Run("Superset", func(t *testing.T) {
+	t.Run("Collection", func(t *testing.T) {
 
 		uniq1 := []string{"foo", "bar", "baz"}
 		uniq2 := []string{"foo", "bar", "baz"}
 		uniq3 := []string{"corge", "grault", "garply", "foo"}
 
 		t.Run("with 'and' operator", func(t *testing.T) {
-			set := NewSuperSet("and")
+			set := NewCollection("and")
 			set.Add(uniq1)
 			set.Add(uniq2)
 			set.Add(uniq3)
@@ -76,7 +61,7 @@ func Test_Collection(t *testing.T) {
 			}
 		})
 		t.Run("with 'or' operator", func(t *testing.T) {
-			set := NewSuperSet("or")
+			set := NewCollection("or")
 			set.Add(uniq1)
 			set.Add(uniq2)
 			set.Add(uniq3)

@@ -34,13 +34,13 @@ import (
 
 func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 	httpReqCtx := params.HTTPRequest.Context()
-	var result Collection
 
-	if params.Query.Operator != "" {
-		result = NewSuperSet(params.Query.Operator)
-	} else {
-		result = &Arr{}
+	queryOperator := params.Query.Operator
+	// default to "or" if no operator is specified
+	if params.Query.Operator == "" {
+		queryOperator = "or"
 	}
+	var result = NewCollection(queryOperator)
 
 	if params.Query.Hash != "" {
 		// This must be a valid sha256 hash
@@ -107,15 +107,6 @@ func storeAttestation(ctx context.Context, uuid string, attestation []byte) erro
 	return storageClient.StoreAttestation(ctx, uuid, attestation)
 }
 
-// Collection is a collection of elements.
-type Collection interface {
-	// Add adds elements to the collection.
-	Add([]string)
-
-	// Values returns the collection as a slice of strings.
-	Values() []string
-}
-
 // Uniq is a collection of unique elements.
 type Uniq map[string]struct{}
 
@@ -159,29 +150,31 @@ func (u Uniq) Union(other Uniq) Uniq {
 	return result
 }
 
-// SuperSet is a collection of sets.
+// Collection is a collection of sets.
 //
 // its result is a union or intersection of all the sets, depending on the operator.
-type SuperSet struct {
+type Collection struct {
 	subsets  []Uniq
 	operator string
 }
 
-// NewSuperSet creates a new SuperSet.
-func NewSuperSet(operator string) *SuperSet {
-	return &SuperSet{
+// NewCollection creates a new collection.
+func NewCollection(operator string) *Collection {
+	return &Collection{
 		subsets:  []Uniq{},
 		operator: operator,
 	}
 }
 
-func (u *SuperSet) Add(elements []string) {
+// Add adds elements to a subset in the collection.
+func (u *Collection) Add(elements []string) {
 	subset := Uniq{}
 	subset.Add(elements)
 	u.subsets = append(u.subsets, subset)
 }
 
-func (u *SuperSet) Values() []string {
+// Values returns the collection as a slice of strings.
+func (u *Collection) Values() []string {
 	if len(u.subsets) == 0 {
 		return []string{}
 	}
@@ -194,14 +187,4 @@ func (u *SuperSet) Values() []string {
 		}
 	}
 	return subset.Values()
-}
-
-// Arr is a collection of elements.
-type Arr []string
-
-func (a *Arr) Add(elements []string) {
-	*a = append(*a, elements...)
-}
-func (a Arr) Values() []string {
-	return a
 }
