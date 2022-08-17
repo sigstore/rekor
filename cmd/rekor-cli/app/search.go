@@ -59,7 +59,7 @@ func addSearchPFlags(cmd *cobra.Command) error {
 
 	cmd.Flags().Var(NewFlagValue(emailFlag, ""), "email", "email associated with the public key's subject")
 
-	cmd.Flags().Var(NewFlagValue(operatorFlag, ""), "operator", "operator to use for the search")
+	cmd.Flags().Var(NewFlagValue(operatorFlag, ""), "operator", "operator to use for the search. supported values are 'and' and 'or'")
 	return nil
 }
 

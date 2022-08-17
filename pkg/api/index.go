@@ -34,11 +34,10 @@ import (
 
 func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 	httpReqCtx := params.HTTPRequest.Context()
-	var result Container
+	var result Collection
 
-	// default behaviour mimics "or"
-	if params.Query.Operator == "and" {
-		result = make(Uniq)
+	if params.Query.Operator != "" {
+		result = NewSuperSet(params.Query.Operator)
 	} else {
 		result = &Arr{}
 	}
@@ -87,7 +86,7 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 		result.Add(resultUUIDs)
 	}
 
-	return index.NewSearchIndexOK().WithPayload(result.Result())
+	return index.NewSearchIndexOK().WithPayload(result.Values())
 }
 
 func SearchIndexNotImplementedHandler(params index.SearchIndexParams) middleware.Responder {
@@ -108,19 +107,29 @@ func storeAttestation(ctx context.Context, uuid string, attestation []byte) erro
 	return storageClient.StoreAttestation(ctx, uuid, attestation)
 }
 
-type Container interface {
+// Collection is a collection of elements.
+type Collection interface {
+	// Add adds elements to the collection.
 	Add([]string)
-	Result() []string
+
+	// Values returns the collection as a slice of strings.
+	Values() []string
 }
 
+// Uniq is a collection of unique elements.
 type Uniq map[string]struct{}
 
+func NewUniq() Uniq {
+	return make(Uniq)
+}
+
 func (u Uniq) Add(elements []string) {
-	for _, v := range elements {
-		u[v] = struct{}{}
+	for _, e := range elements {
+		u[e] = struct{}{}
 	}
 }
-func (u Uniq) Result() []string {
+
+func (u Uniq) Values() []string {
 	var result []string
 	for k := range u {
 		result = append(result, k)
@@ -128,11 +137,71 @@ func (u Uniq) Result() []string {
 	return result
 }
 
+// Intersect returns the intersection of two collections.
+func (u Uniq) Intersect(other Uniq) Uniq {
+	result := make(Uniq)
+	for k := range u {
+		if _, ok := other[k]; ok {
+			result[k] = struct{}{}
+		}
+	}
+	return result
+}
+
+func (u Uniq) Union(other Uniq) Uniq {
+	result := make(Uniq)
+	for k := range u {
+		result[k] = struct{}{}
+	}
+	for k := range other {
+		result[k] = struct{}{}
+	}
+	return result
+}
+
+// SuperSet is a collection of sets.
+//
+// its result is a union or intersection of all the sets, depending on the operator.
+type SuperSet struct {
+	subsets  []Uniq
+	operator string
+}
+
+// NewSuperSet creates a new SuperSet.
+func NewSuperSet(operator string) *SuperSet {
+	return &SuperSet{
+		subsets:  []Uniq{},
+		operator: operator,
+	}
+}
+
+func (u *SuperSet) Add(elements []string) {
+	subset := Uniq{}
+	subset.Add(elements)
+	u.subsets = append(u.subsets, subset)
+}
+
+func (u *SuperSet) Values() []string {
+	if len(u.subsets) == 0 {
+		return []string{}
+	}
+	subset := u.subsets[0]
+	for i := 1; i < len(u.subsets); i++ {
+		if strings.EqualFold(u.operator, "and") {
+			subset = subset.Intersect(u.subsets[i])
+		} else {
+			subset = subset.Union(u.subsets[i])
+		}
+	}
+	return subset.Values()
+}
+
+// Arr is a collection of elements.
 type Arr []string
 
 func (a *Arr) Add(elements []string) {
 	*a = append(*a, elements...)
 }
-func (a Arr) Result() []string {
+func (a Arr) Values() []string {
 	return a
 }
