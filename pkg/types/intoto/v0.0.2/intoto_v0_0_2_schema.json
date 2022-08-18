@@ -15,6 +15,7 @@
                         "payload": {
                             "description": "payload of the envelope",
                             "type": "string",
+                            "format": "byte",
                             "writeOnly": true
                         },
                         "payloadType": {
@@ -35,7 +36,8 @@
                                     },
                                     "sig": {
                                         "description": "signature of the payload",
-                                        "type": "string"
+                                        "type": "string",
+                                        "format": "byte"
                                     },
                                     "publicKey": {
                                         "description": "public key that corresponds to this signature",
@@ -82,7 +84,7 @@
                             "enum": [ "sha256" ]
                         },
                         "value": {
-                            "description": "The hash value of the PAE encoded payload",
+                            "description": "The hash value of the payload",
                             "type": "string"
                         }
                     },

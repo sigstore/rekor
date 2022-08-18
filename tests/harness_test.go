@@ -19,6 +19,7 @@ package e2e
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
@@ -42,6 +43,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 type StoredEntry struct {
@@ -121,8 +123,14 @@ func TestHarnessAddIntoto(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	signer, err := dsse.NewEnvelopeSigner(&IntotoSigner{
-		priv: priv.(*ecdsa.PrivateKey),
+
+	s, err := signature.LoadECDSASigner(priv.(*ecdsa.PrivateKey), crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signer, err := dsse.NewEnvelopeSigner(&verifier{
+		s: s,
 	})
 	if err != nil {
 		t.Fatal(err)

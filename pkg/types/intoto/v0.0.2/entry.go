@@ -26,7 +26,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -98,7 +97,7 @@ func (v V002Entry) IndexKeys() ([]string, error) {
 		hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.Hash.Algorithm, *v.IntotoObj.Content.Hash.Value))
 		result = append(result, hashkey)
 
-		if *v.IntotoObj.Content.Envelope.Payload == "" {
+		if v.IntotoObj.Content.Envelope.Payload == nil {
 			log.Logger.Info("IntotoObj DSSE payload is empty")
 			return result, nil
 		}
@@ -208,17 +207,14 @@ func (v *V002Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	canonicalEntry := models.IntotoV002Schema{
 		Content: &models.IntotoV002SchemaContent{
-			Envelope:    &models.IntotoV002SchemaContentEnvelope{},
-			Hash:        &models.IntotoV002SchemaContentHash{},
-			PayloadHash: &models.IntotoV002SchemaContentPayloadHash{},
+			Envelope: &models.IntotoV002SchemaContentEnvelope{
+				PayloadType: v.IntotoObj.Content.Envelope.PayloadType,
+				Signatures:  v.IntotoObj.Content.Envelope.Signatures,
+			},
+			Hash:        v.IntotoObj.Content.Hash,
+			PayloadHash: v.IntotoObj.Content.PayloadHash,
 		},
 	}
-
-	canonicalEntry.Content.Envelope.PayloadType = v.IntotoObj.Content.Envelope.PayloadType
-	canonicalEntry.Content.Envelope.Signatures = v.IntotoObj.Content.Envelope.Signatures
-	canonicalEntry.Content.Hash = v.IntotoObj.Content.Hash
-	canonicalEntry.Content.PayloadHash = v.IntotoObj.Content.PayloadHash
-
 	itObj := models.Intoto{}
 	itObj.APIVersion = swag.String(APIVERSION)
 	itObj.Spec = &canonicalEntry
@@ -314,31 +310,23 @@ func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	}
 
 	allPubKeyBytes := make([][]byte, 0)
-	if props.PublicKeyBytes != nil {
-		allPubKeyBytes = append(allPubKeyBytes, props.PublicKeyBytes)
+	if len(props.PublicKeyBytes) > 0 {
+		allPubKeyBytes = append(allPubKeyBytes, props.PublicKeyBytes...)
 	}
 
-	allPubKeyBytes = append(allPubKeyBytes, props.MultiPublicKeyBytes...)
-	allPubKeyPaths := make([]*url.URL, 0)
-	if props.PublicKeyPath != nil {
-		allPubKeyPaths = append(allPubKeyPaths, props.PublicKeyPath)
-	}
+	if len(props.PublicKeyPath) > 0 {
+		for _, path := range props.PublicKeyPath {
+			if path.IsAbs() {
+				return nil, errors.New("dsse public keys cannot be fetched over HTTP(S)")
+			}
 
-	if props.MultiPublicKeyPaths != nil {
-		allPubKeyPaths = append(allPubKeyPaths, props.MultiPublicKeyPaths...)
-	}
+			publicKeyBytes, err := ioutil.ReadFile(filepath.Clean(path.Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading public key file: %w", err)
+			}
 
-	for _, path := range allPubKeyPaths {
-		if path.IsAbs() {
-			return nil, errors.New("dsse public keys cannot be fetched over HTTP(S)")
+			allPubKeyBytes = append(allPubKeyBytes, publicKeyBytes)
 		}
-
-		publicKeyBytes, err := ioutil.ReadFile(filepath.Clean(path.Path))
-		if err != nil {
-			return nil, fmt.Errorf("error reading public key file: %w", err)
-		}
-
-		allPubKeyBytes = append(allPubKeyBytes, publicKeyBytes)
 	}
 
 	keysBySig, err := verifyEnvelope(allPubKeyBytes, &env)
@@ -346,7 +334,8 @@ func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		return nil, err
 	}
 
-	re.IntotoObj.Content.Envelope.Payload = swag.String(env.Payload)
+	b64 := strfmt.Base64([]byte(env.Payload))
+	re.IntotoObj.Content.Envelope.Payload = &b64
 	re.IntotoObj.Content.Envelope.PayloadType = &env.PayloadType
 
 	for _, sig := range env.Signatures {
@@ -363,7 +352,7 @@ func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		keyBytes := strfmt.Base64(canonKey)
 		re.IntotoObj.Content.Envelope.Signatures = append(re.IntotoObj.Content.Envelope.Signatures, &models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 			Keyid:     sig.KeyID,
-			Sig:       sig.Sig,
+			Sig:       strfmt.Base64([]byte(sig.Sig)),
 			PublicKey: keyBytes,
 		})
 	}

@@ -23,6 +23,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
@@ -496,14 +497,20 @@ func TestIntoto(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	signer, err := dsse.NewEnvelopeSigner(&IntotoSigner{
-		priv: priv.(*ecdsa.PrivateKey),
+
+	s, err := signature.LoadECDSASigner(priv.(*ecdsa.PrivateKey), crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signer, err := dsse.NewEnvelopeSigner(&verifier{
+		s: s,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	env, err := signer.SignPayload("application/vnd.in-toto+json", b)
+	env, err := signer.SignPayload(in_toto.PayloadType, b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -563,7 +570,8 @@ func TestIntoto(t *testing.T) {
 func TestIntotoV002(t *testing.T) {
 	td := t.TempDir()
 	attestationPath := filepath.Join(td, "attestation.json")
-	pubKeyPath := filepath.Join(td, "pub.pem")
+	ecdsapubKeyPath := filepath.Join(td, "ecdsapub.pem")
+	rsapubKeyPath := filepath.Join(td, "rsapub.pem")
 
 	// Get some random data so it's unique each run
 	d := randomData(t, 10)
@@ -594,19 +602,44 @@ func TestIntotoV002(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	evps := []*verifier{}
+
 	pb, _ := pem.Decode([]byte(ecdsaPriv))
 	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
 	if err != nil {
 		t.Fatal(err)
 	}
-	signer, err := dsse.NewEnvelopeSigner(&IntotoSigner{
-		priv: priv.(*ecdsa.PrivateKey),
-	})
+
+	signECDSA, err := signature.LoadECDSASigner(priv.(*ecdsa.PrivateKey), crypto.SHA256)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	env, err := signer.SignPayload("application/vnd.in-toto+json", b)
+	evps = append(evps, &verifier{
+		s: signECDSA,
+	})
+
+	pbRSA, _ := pem.Decode([]byte(rsaKey))
+	rsaPriv, err := x509.ParsePKCS8PrivateKey(pbRSA.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signRSA, err := signature.LoadRSAPKCS1v15Signer(rsaPriv.(*rsa.PrivateKey), crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	evps = append(evps, &verifier{
+		s: signRSA,
+	})
+
+	signer, err := dsse.NewMultiEnvelopeSigner(2, evps[0], evps[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	env, err := signer.SignPayload(in_toto.PayloadType, b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -617,10 +650,11 @@ func TestIntotoV002(t *testing.T) {
 	}
 
 	write(t, string(eb), attestationPath)
-	write(t, ecdsaPub, pubKeyPath)
+	write(t, ecdsaPub, ecdsapubKeyPath)
+	write(t, pubKey, rsapubKeyPath)
 
 	// If we do it twice, it should already exist
-	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
+	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromUploadOutput(t, out)
 
@@ -658,7 +692,7 @@ func TestIntotoV002(t *testing.T) {
 			*intotoV002Model.Content.PayloadHash.Value))
 	}
 
-	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
+	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
 	outputContains(t, out, "Entry already exists")
 
 }

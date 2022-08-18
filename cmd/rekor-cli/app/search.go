@@ -164,15 +164,18 @@ var searchCmd = &cobra.Command{
 			default:
 				return nil, fmt.Errorf("unknown pki-format %v", pkiFormat)
 			}
-			publicKeyStr := viper.GetString("public-key")
-			if isURL(publicKeyStr) {
-				params.Query.PublicKey.URL = strfmt.URI(publicKeyStr)
-			} else {
-				keyBytes, err := ioutil.ReadFile(filepath.Clean(publicKeyStr))
-				if err != nil {
-					return nil, fmt.Errorf("error reading public key file: %w", err)
+
+			splitPubKeyString := strings.Split(publicKeyStr, ",")
+			if len(splitPubKeyString) == 1 {
+				if isURL(splitPubKeyString[0]) {
+					params.Query.PublicKey.URL = strfmt.URI(splitPubKeyString[0])
+				} else {
+					keyBytes, err := ioutil.ReadFile(filepath.Clean(splitPubKeyString[0]))
+					if err != nil {
+						return nil, fmt.Errorf("error reading public key file: %w", err)
+					}
+					params.Query.PublicKey.Content = strfmt.Base64(keyBytes)
 				}
-				params.Query.PublicKey.Content = strfmt.Base64(keyBytes)
 			}
 		}
 

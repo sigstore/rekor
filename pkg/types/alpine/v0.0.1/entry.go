@@ -322,14 +322,21 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 
 	re.AlpineModel.PublicKey = &models.AlpineV001SchemaPublicKey{}
 	publicKeyBytes := props.PublicKeyBytes
-	if publicKeyBytes == nil {
-		publicKeyBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
-		if err != nil {
-			return nil, fmt.Errorf("error reading public key file: %w", err)
+	if len(publicKeyBytes) == 0 {
+		if len(props.PublicKeyPath) > 1 {
+			return nil, errors.New("only one public key must be provided")
 		}
-		re.AlpineModel.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes)
+		if len(props.PublicKeyPath) == 1 {
+			keyBytes, err := ioutil.ReadFile(filepath.Clean(props.PublicKeyPath[0].Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading public key file: %w", err)
+			}
+			publicKeyBytes = append(publicKeyBytes, keyBytes)
+			re.AlpineModel.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes[0])
+		}
+
 	} else {
-		re.AlpineModel.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes)
+		re.AlpineModel.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes[0])
 	}
 
 	if err := re.validate(); err != nil {

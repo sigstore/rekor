@@ -375,10 +375,18 @@ func TestArtifactPFlags(t *testing.T) {
 			expectValidateSuccess: false,
 		},
 		{
+			caseDesc:              "valid intoto - one keys",
+			typeStr:               "intoto",
+			artifact:              "../../../tests/intoto_dsse.json",
+			publicKey:             "../../../tests/intoto_dsse.pem",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
 			caseDesc:              "valid intoto - multi keys",
 			typeStr:               "intoto",
 			artifact:              "../../../tests/intoto_multi_dsse.json",
-			multiPublicKey:        []string{"../../../tests/intoto_dsse.pem", "../../../tests/intoto_dsse.pem"},
+			multiPublicKey:        []string{"../../../tests/intoto_dsse.pem", "../../../tests/intoto_multi_pub2.pem"},
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -416,7 +424,7 @@ func TestArtifactPFlags(t *testing.T) {
 		}
 		if len(tc.multiPublicKey) > 0 {
 			for _, key := range tc.multiPublicKey {
-				args = append(args, "--multi-public-key", key)
+				args = append(args, "--public-key", key)
 			}
 		}
 		if tc.uuid != "" {

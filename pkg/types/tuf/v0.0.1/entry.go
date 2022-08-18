@@ -333,22 +333,28 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 
 	rootBytes := props.PublicKeyBytes
 	re.TufObj.Root = &models.TUFV001SchemaRoot{}
-	if rootBytes == nil {
-		if props.PublicKeyPath == nil {
+	if len(rootBytes) == 0 {
+		if len(props.PublicKeyPath) == 0 {
 			return nil, errors.New("path to root file must be specified")
 		}
-		rootBytes, err = ioutil.ReadFile(filepath.Clean(props.PublicKeyPath.Path))
-		if err != nil {
-			return nil, fmt.Errorf("error reading root file: %w", err)
+		if len(props.PublicKeyPath) > 1 {
+			return nil, errors.New("only one path to root file must be specified")
+		}
+		if len(props.PublicKeyPath) == 1 {
+			keyBytes, err := ioutil.ReadFile(filepath.Clean(props.PublicKeyPath[0].Path))
+			if err != nil {
+				return nil, fmt.Errorf("error reading root file: %w", err)
+			}
+			rootBytes = append(rootBytes, keyBytes)
 		}
 		s := &data.Signed{}
-		if err := json.Unmarshal(rootBytes, s); err != nil {
+		if err := json.Unmarshal(rootBytes[0], s); err != nil {
 			return nil, err
 		}
 		re.TufObj.Root.Content = s
 	} else {
 		s := &data.Signed{}
-		if err := json.Unmarshal(rootBytes, s); err != nil {
+		if err := json.Unmarshal(rootBytes[0], s); err != nil {
 			return nil, err
 		}
 		re.TufObj.Root.Content = s

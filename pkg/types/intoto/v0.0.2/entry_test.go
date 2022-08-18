@@ -102,16 +102,16 @@ func multiSignEnvelope(t *testing.T, k []*ecdsa.PrivateKey, payload []byte) *dss
 
 func createRekorEnvelope(dsseEnv *dsse.Envelope, pub [][]byte) *models.IntotoV002SchemaContentEnvelope {
 
-	env := &models.IntotoV002SchemaContentEnvelope{
-		Payload:     swag.String(dsseEnv.Payload),
-		PayloadType: &dsseEnv.PayloadType,
-	}
+	env := &models.IntotoV002SchemaContentEnvelope{}
+	b64 := strfmt.Base64([]byte(dsseEnv.Payload))
+	env.Payload = &b64
+	env.PayloadType = &dsseEnv.PayloadType
 
 	for i, sig := range dsseEnv.Signatures {
 		env.Signatures = append(env.Signatures, &models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 			Keyid:     sig.KeyID,
-			Sig:       sig.Sig,
-			PublicKey: pub[i],
+			Sig:       strfmt.Base64([]byte(sig.Sig)),
+			PublicKey: strfmt.Base64(pub[i]),
 		})
 	}
 	return env

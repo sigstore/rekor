@@ -315,7 +315,8 @@ type IntotoV002SchemaContentEnvelope struct {
 
 	// payload of the envelope
 	// Required: true
-	Payload *string `json:"payload"`
+	// Format: byte
+	Payload *strfmt.Base64 `json:"payload"`
 
 	// type describing the payload
 	// Required: true
@@ -466,7 +467,8 @@ type IntotoV002SchemaContentEnvelopeSignaturesItems0 struct {
 	PublicKey strfmt.Base64 `json:"publicKey,omitempty"`
 
 	// signature of the payload
-	Sig string `json:"sig,omitempty"`
+	// Format: byte
+	Sig strfmt.Base64 `json:"sig,omitempty"`
 }
 
 // Validate validates this intoto v002 schema content envelope signatures items0
@@ -635,7 +637,7 @@ type IntotoV002SchemaContentPayloadHash struct {
 	// Enum: [sha256]
 	Algorithm *string `json:"algorithm"`
 
-	// The hash value of the PAE encoded payload
+	// The hash value of the payload
 	// Required: true
 	Value *string `json:"value"`
 }

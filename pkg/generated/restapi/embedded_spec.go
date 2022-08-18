@@ -1872,6 +1872,7 @@ func init() {
             "payload": {
               "description": "payload of the envelope",
               "type": "string",
+              "format": "byte",
               "writeOnly": true
             },
             "payloadType": {
@@ -1927,7 +1928,7 @@ func init() {
               ]
             },
             "value": {
-              "description": "The hash value of the PAE encoded payload",
+              "description": "The hash value of the payload",
               "type": "string"
             }
           },
@@ -1947,6 +1948,7 @@ func init() {
         "payload": {
           "description": "payload of the envelope",
           "type": "string",
+          "format": "byte",
           "writeOnly": true
         },
         "payloadType": {
@@ -1980,7 +1982,8 @@ func init() {
         },
         "sig": {
           "description": "signature of the payload",
-          "type": "string"
+          "type": "string",
+          "format": "byte"
         }
       }
     },
@@ -2022,7 +2025,7 @@ func init() {
           ]
         },
         "value": {
-          "description": "The hash value of the PAE encoded payload",
+          "description": "The hash value of the payload",
           "type": "string"
         }
       },
@@ -3167,6 +3170,7 @@ func init() {
                 "payload": {
                   "description": "payload of the envelope",
                   "type": "string",
+                  "format": "byte",
                   "writeOnly": true
                 },
                 "payloadType": {
@@ -3222,7 +3226,7 @@ func init() {
                   ]
                 },
                 "value": {
-                  "description": "The hash value of the PAE encoded payload",
+                  "description": "The hash value of the payload",
                   "type": "string"
                 }
               },
