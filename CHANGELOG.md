@@ -1,3 +1,50 @@
+# v0.11.0
+
+## Enhancements
+
+* Allow sharding config to be written in yaml or json (https://github.com/sigstore/rekor/pull/974)
+* update field documentation on publicKey for hashedrekord (https://github.com/sigstore/rekor/pull/969)
+* compute payload and envelope hashes upon validating intoto proposed entries (https://github.com/sigstore/rekor/pull/967)
+* Add prometheus summary to track metric latency (https://github.com/sigstore/rekor/pull/966)
+* Add harness test for getting all entries by UUID and EntryID (https://github.com/sigstore/rekor/pull/957)
+* Persist and check attestations across harness tests (https://github.com/sigstore/rekor/pull/952)
+* Add rekor harness tests for adding and getting entries from previous versions (https://github.com/sigstore/rekor/pull/945)
+
+## Bug Fixes
+
+* fix: make rekor verify work with sharded uuids (https://github.com/sigstore/rekor/pull/970)
+* fix incorrect schema id for cose type (https://github.com/sigstore/rekor/pull/979)
+* fix nil-pointer error when artifact-hash is passed without artifact (https://github.com/sigstore/rekor/pull/965)
+* change default value for rekor_server.hostname to server's hostname (https://github.com/sigstore/rekor/pull/963)
+* api: fix inclusion proof verification flake (https://github.com/sigstore/rekor/pull/956)
+
+## Others
+
+* update builder and cosign images (https://github.com/sigstore/rekor/pull/981)
+* Bump github.com/go-openapi/spec from 0.20.6 to 0.20.7 (https://github.com/sigstore/rekor/pull/976)
+* Bump github.com/go-openapi/loads from 0.21.1 to 0.21.2 (https://github.com/sigstore/rekor/pull/977)
+* Bump github.com/go-openapi/swag from 0.22.0 to 0.22.1 (https://github.com/sigstore/rekor/pull/978)
+* Bump sigstore/cosign-installer from 2.5.0 to 2.5.1 (https://github.com/sigstore/rekor/pull/975)
+* Bump github.com/mediocregopher/radix/v4 from 4.1.0 to 4.1.1 (https://github.com/sigstore/rekor/pull/972)
+* Bump actions/github-script from 6.1.0 to 6.1.1 (https://github.com/sigstore/rekor/pull/971)
+* Bump github.com/go-openapi/errors from 0.20.2 to 0.20.3 (https://github.com/sigstore/rekor/pull/964)
+* Bump gopkg.in/ini.v1 from 1.66.6 to 1.67.0 (https://github.com/sigstore/rekor/pull/960)
+* Bump go.uber.org/zap from 1.21.0 to 1.22.0 (https://github.com/sigstore/rekor/pull/961)
+* Bump github.com/prometheus/client_golang from 1.12.2 to 1.13.0 (https://github.com/sigstore/rekor/pull/959)
+* Bump github.com/go-openapi/swag from 0.21.1 to 0.22.0 (https://github.com/sigstore/rekor/pull/958)
+* Bump github/codeql-action from 2.1.17 to 2.1.18 (https://github.com/sigstore/rekor/pull/955)
+* Bump golang from 1.18.4 to 1.18.5 (https://github.com/sigstore/rekor/pull/950)
+* Bump golang from `6e10f44` to `8a62670` (https://github.com/sigstore/rekor/pull/948)
+* Bump google.golang.org/protobuf from 1.28.0 to 1.28.1 (https://github.com/sigstore/rekor/pull/947)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Bob Callaway (@bobcallaway)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Samsondeen (@dsa0x)
+* Priya Wadhwa (@priyawadhwa)
+
 # v0.10.0
 
 ** Note: Rekor will not send `application/yaml` responses anymore only `application/json` responses
