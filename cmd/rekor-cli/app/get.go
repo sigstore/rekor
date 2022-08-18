@@ -36,6 +36,7 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/verify"
 )
 
 type getCmdOutput struct {
@@ -79,6 +80,7 @@ var getCmd = &cobra.Command{
 		}
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
+		ctx := context.Background()
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()))
 		if err != nil {
 			return nil, err
@@ -88,6 +90,11 @@ var getCmd = &cobra.Command{
 		uuid := viper.GetString("uuid")
 		if logIndex == "" && uuid == "" {
 			return nil, errors.New("either --uuid or --log-index must be specified")
+		}
+		// retrieve rekor pubkey for verification
+		verifier, err := loadVerifier(rekorClient)
+		if err != nil {
+			return nil, fmt.Errorf("retrieving rekor public key")
 		}
 
 		if logIndex != "" {
@@ -103,9 +110,12 @@ var getCmd = &cobra.Command{
 			if err != nil {
 				return nil, err
 			}
+			var e models.LogEntryAnon
 			for ix, entry := range resp.Payload {
-				if verified, err := verifyLogEntry(context.Background(), rekorClient, entry); err != nil || !verified {
-					return nil, fmt.Errorf("unable to verify entry was added to log %w", err)
+				// verify log entry
+				e = entry
+				if err := verify.VerifyLogEntry(ctx, rekorClient, &e, verifier); err != nil {
+					return nil, fmt.Errorf("unable to verify entry was added to log: %w", err)
 				}
 
 				return parseEntry(ix, entry)
@@ -132,13 +142,16 @@ var getCmd = &cobra.Command{
 				return nil, err
 			}
 
+			var e models.LogEntryAnon
 			for k, entry := range resp.Payload {
 				if k != u {
 					continue
 				}
 
-				if verified, err := verifyLogEntry(context.Background(), rekorClient, entry); err != nil || !verified {
-					return nil, fmt.Errorf("unable to verify entry was added to log %w", err)
+				// verify log entry
+				e = entry
+				if err := verify.VerifyLogEntry(ctx, rekorClient, &e, verifier); err != nil {
+					return nil, fmt.Errorf("unable to verify entry was added to log: %w", err)
 				}
 
 				return parseEntry(k, entry)

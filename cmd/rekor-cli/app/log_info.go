@@ -16,10 +16,9 @@
 package app
 
 import (
-	"bytes"
+	"context"
 	"crypto"
 	"crypto/x509"
-	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -28,10 +27,10 @@ import (
 	"github.com/go-openapi/swag"
 	rclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
+
+	"github.com/sigstore/rekor/pkg/verify"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/transparency-dev/merkle/proof"
-	"github.com/transparency-dev/merkle/rfc6962"
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/state"
@@ -70,6 +69,7 @@ var logInfoCmd = &cobra.Command{
 	Long:  `Prints info about the transparency log`,
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		serverURL := viper.GetString("rekor_server")
+		ctx := context.Background()
 		rekorClient, err := client.GetRekorClient(serverURL, client.WithUserAgent(UserAgent()))
 		if err != nil {
 			return nil, err
@@ -85,7 +85,7 @@ var logInfoCmd = &cobra.Command{
 		logInfo := result.GetPayload()
 
 		// Verify inactive shards
-		if err := verifyInactiveTrees(rekorClient, serverURL, logInfo.InactiveShards); err != nil {
+		if err := verifyInactiveTrees(ctx, rekorClient, serverURL, logInfo.InactiveShards); err != nil {
 			return nil, err
 		}
 
@@ -97,7 +97,7 @@ var logInfoCmd = &cobra.Command{
 		}
 		treeID := swag.StringValue(logInfo.TreeID)
 
-		if err := verifyTree(rekorClient, signedTreeHead, serverURL, treeID); err != nil {
+		if err := verifyTree(ctx, rekorClient, signedTreeHead, serverURL, treeID); err != nil {
 			return nil, err
 		}
 
@@ -112,7 +112,7 @@ var logInfoCmd = &cobra.Command{
 	}),
 }
 
-func verifyInactiveTrees(rekorClient *rclient.Rekor, serverURL string, inactiveShards []*models.InactiveShardLogInfo) error {
+func verifyInactiveTrees(ctx context.Context, rekorClient *rclient.Rekor, serverURL string, inactiveShards []*models.InactiveShardLogInfo) error {
 	if inactiveShards == nil {
 		return nil
 	}
@@ -120,7 +120,7 @@ func verifyInactiveTrees(rekorClient *rclient.Rekor, serverURL string, inactiveS
 	for _, shard := range inactiveShards {
 		signedTreeHead := swag.StringValue(shard.SignedTreeHead)
 		treeID := swag.StringValue(shard.TreeID)
-		if err := verifyTree(rekorClient, signedTreeHead, serverURL, treeID); err != nil {
+		if err := verifyTree(ctx, rekorClient, signedTreeHead, serverURL, treeID); err != nil {
 			return fmt.Errorf("verifying inactive shard with ID %s: %w", treeID, err)
 		}
 	}
@@ -128,7 +128,7 @@ func verifyInactiveTrees(rekorClient *rclient.Rekor, serverURL string, inactiveS
 	return nil
 }
 
-func verifyTree(rekorClient *rclient.Rekor, signedTreeHead, serverURL, treeID string) error {
+func verifyTree(ctx context.Context, rekorClient *rclient.Rekor, signedTreeHead, serverURL, treeID string) error {
 	oldState := state.Load(serverURL)
 	if treeID != "" {
 		oldState = state.Load(treeID)
@@ -145,8 +145,12 @@ func verifyTree(rekorClient *rclient.Rekor, signedTreeHead, serverURL, treeID st
 		return errors.New("signature on tree head did not verify")
 	}
 
-	if err := proveConsistency(rekorClient, oldState, sth, treeID); err != nil {
-		return err
+	if oldState != nil {
+		if err := verify.ProveConsistency(ctx, rekorClient, oldState, &sth, treeID); err != nil {
+			return err
+		}
+	} else {
+		log.CliLogger.Infof("No previous log state stored, unable to prove consistency")
 	}
 
 	if viper.GetBool("store_tree_state") {
@@ -158,45 +162,6 @@ func verifyTree(rekorClient *rclient.Rekor, signedTreeHead, serverURL, treeID st
 		if err := state.Dump(serverURL, &sth); err != nil {
 			log.CliLogger.Infof("Unable to store previous state: %v", err)
 		}
-	}
-	return nil
-}
-
-func proveConsistency(rekorClient *rclient.Rekor, oldState *util.SignedCheckpoint, sth util.SignedCheckpoint, treeID string) error {
-	if oldState == nil {
-		log.CliLogger.Infof("No previous log state stored, unable to prove consistency")
-		return nil
-	}
-	persistedSize := oldState.Size
-	switch {
-	case persistedSize < sth.Size:
-		log.CliLogger.Infof("Found previous log state, proving consistency between %d and %d", oldState.Size, sth.Size)
-		params := tlog.NewGetLogProofParams()
-		firstSize := int64(persistedSize)
-		params.FirstSize = &firstSize
-		params.LastSize = int64(sth.Size)
-		params.TreeID = &treeID
-		logProof, err := rekorClient.Tlog.GetLogProof(params)
-		if err != nil {
-			return err
-		}
-		hashes := [][]byte{}
-		for _, h := range logProof.Payload.Hashes {
-			b, _ := hex.DecodeString(h)
-			hashes = append(hashes, b)
-		}
-		if err := proof.VerifyConsistency(rfc6962.DefaultHasher, persistedSize, sth.Size, hashes, oldState.Hash,
-			sth.Hash); err != nil {
-			return err
-		}
-		log.CliLogger.Infof("Consistency proof valid!")
-	case persistedSize == sth.Size:
-		if !bytes.Equal(oldState.Hash, sth.Hash) {
-			return errors.New("root hash returned from server does not match previously persisted state")
-		}
-		log.CliLogger.Infof("Persisted log state matches the current state of the log")
-	default:
-		return fmt.Errorf("current size of tree reported from server %d is less than previously persisted state %d", sth.Size, persistedSize)
 	}
 	return nil
 }

@@ -16,9 +16,7 @@
 package app
 
 import (
-	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"math/bits"
@@ -26,7 +24,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/transparency-dev/merkle/proof"
 	"github.com/transparency-dev/merkle/rfc6962"
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
@@ -36,6 +33,7 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/verify"
 )
 
 type verifyCmdOutput struct {
@@ -88,6 +86,7 @@ var verifyCmd = &cobra.Command{
 		return nil
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
+		ctx := context.Background()
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()))
 		if err != nil {
 			return nil, err
@@ -139,7 +138,7 @@ var verifyCmd = &cobra.Command{
 		logEntry := resp.Payload[0]
 
 		var o *verifyCmdOutput
-		var entryBytes []byte
+		var entry models.LogEntryAnon
 		for k, v := range logEntry {
 			o = &verifyCmdOutput{
 				RootHash:  *v.Verification.InclusionProof.RootHash,
@@ -148,10 +147,7 @@ var verifyCmd = &cobra.Command{
 				Size:      *v.Verification.InclusionProof.TreeSize,
 				Hashes:    v.Verification.InclusionProof.Hashes,
 			}
-			entryBytes, err = base64.StdEncoding.DecodeString(v.Body.(string))
-			if err != nil {
-				return nil, err
-			}
+			entry = v
 		}
 
 		if viper.IsSet("uuid") {
@@ -164,23 +160,17 @@ var verifyCmd = &cobra.Command{
 			}
 		}
 
-		// Note: the returned entry UUID is the UUID (not include the Tree ID)
-		leafHash, _ := hex.DecodeString(o.EntryUUID)
-		if !bytes.Equal(rfc6962.DefaultHasher.HashLeaf(entryBytes), leafHash) {
-			return nil, fmt.Errorf("computed leaf hash did not match entry UUID")
-		}
-
-		hashes := [][]byte{}
-		for _, h := range o.Hashes {
-			hb, _ := hex.DecodeString(h)
-			hashes = append(hashes, hb)
-		}
-
-		rootHash, _ := hex.DecodeString(o.RootHash)
-
-		if err := proof.VerifyInclusion(rfc6962.DefaultHasher, uint64(o.Index), uint64(o.Size), leafHash, hashes, rootHash); err != nil {
+		// Get Rekor Pub
+		// TODO(asraa): Replace with sigstore's GetRekorPubs to use TUF.
+		verifier, err := loadVerifier(rekorClient)
+		if err != nil {
 			return nil, err
 		}
+
+		if err := verify.VerifyLogEntry(ctx, rekorClient, &entry, verifier); err != nil {
+			return nil, fmt.Errorf("validating entry: %w", err)
+		}
+
 		return o, err
 	}),
 }
