@@ -38,6 +38,7 @@ const (
 	uuidFlag      FlagType = "uuid"
 	shaFlag       FlagType = "sha"
 	emailFlag     FlagType = "email"
+	operatorFlag  FlagType = "operator"
 	logIndexFlag  FlagType = "logIndex"
 	pkiFormatFlag FlagType = "pkiFormat"
 	typeFlag      FlagType = "type"
@@ -66,6 +67,10 @@ func initializePFlagMap() {
 		shaFlag: func() pflag.Value {
 			// this validates a valid sha256 checksum which is optionally prefixed with 'sha256:'
 			return valueFactory(shaFlag, validateSHAValue, "")
+		},
+		operatorFlag: func() pflag.Value {
+			// this validates a valid operator name
+			return valueFactory(shaFlag, validateString("oneof=and or"), "")
 		},
 		emailFlag: func() pflag.Value {
 			// this validates an email address

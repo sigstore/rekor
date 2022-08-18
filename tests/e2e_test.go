@@ -36,6 +36,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -311,14 +312,76 @@ func TestMinisign(t *testing.T) {
 		"--public-key", pubPath, "--pki-format", "minisign")
 	outputContains(t, out, "Created entry at")
 
-	uuid := getUUIDFromUploadOutput(t, out)
+	uuidA := getUUIDFromUploadOutput(t, out)
 
 	out = runCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", pubPath, "--pki-format", "minisign")
 	outputContains(t, out, "Inclusion Proof")
 
 	out = runCli(t, "search", "--public-key", pubPath, "--pki-format", "minisign")
-	outputContains(t, out, uuid)
+	outputContains(t, out, uuidA)
+
+	// crease a second artifact and sign it
+	artifactPath_B := filepath.Join(t.TempDir(), "artifact2")
+	createArtifact(t, artifactPath_B)
+	out = run(t, "\n", "minisign", "-S", "-s", keyPath, "-m", artifactPath_B, "-x", sigPath)
+	// Now upload to the log!
+	out = runCli(t, "upload", "--artifact", artifactPath_B, "--signature", sigPath,
+		"--public-key", pubPath, "--pki-format", "minisign")
+	outputContains(t, out, "Created entry at")
+	uuidB := getUUIDFromUploadOutput(t, out)
+
+	tests := []struct {
+		name               string
+		expectedUuidACount int
+		expectedUuidBCount int
+		artifact           string
+		operator           string
+	}{
+		{
+			name:               "artifact A AND signature should return artifact A",
+			expectedUuidACount: 1,
+			expectedUuidBCount: 0,
+			artifact:           artifactPath,
+			operator:           "and",
+		},
+		{
+			name:               "artifact A OR signature should return artifact A and B",
+			expectedUuidACount: 1,
+			expectedUuidBCount: 1,
+			artifact:           artifactPath,
+			operator:           "or",
+		},
+		{
+			name:               "artifact B AND signature should return artifact B",
+			expectedUuidACount: 0,
+			expectedUuidBCount: 1,
+			artifact:           artifactPath_B,
+			operator:           "and",
+		},
+		{
+			name:               "artifact B OR signature should return artifact A and B",
+			expectedUuidACount: 1,
+			expectedUuidBCount: 1,
+			artifact:           artifactPath_B,
+			operator:           "or",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			out = runCli(t, "search", "--public-key", pubPath, "--pki-format", "minisign",
+				"--operator", test.operator, "--artifact", test.artifact)
+
+			expected := map[string]int{uuidA: test.expectedUuidACount, uuidB: test.expectedUuidBCount}
+			actual := map[string]int{
+				uuidA: strings.Count(out, uuidA),
+				uuidB: strings.Count(out, uuidB),
+			}
+			if !reflect.DeepEqual(expected, actual) {
+				t.Errorf("expected to find %v, found %v", expected, actual)
+			}
+		})
+	}
 }
 
 func TestSSH(t *testing.T) {
