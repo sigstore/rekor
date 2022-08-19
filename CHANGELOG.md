@@ -2,6 +2,7 @@
 
 ## Enhancements
 
+* add support for `intersection` & `union` in search operations (https://github.com/sigstore/rekor/pull/968)
 * Allow sharding config to be written in yaml or json (https://github.com/sigstore/rekor/pull/974)
 * update field documentation on publicKey for hashedrekord (https://github.com/sigstore/rekor/pull/969)
 * compute payload and envelope hashes upon validating intoto proposed entries (https://github.com/sigstore/rekor/pull/967)
@@ -20,6 +21,9 @@
 
 ## Others
 
+* Update sccorecard-action to v2:alpha (https://github.com/sigstore/rekor/pull/987)
+* add changelog for v0.11.0 release (https://github.com/sigstore/rekor/pull/982)
+* remove trailing slash on directories (https://github.com/sigstore/rekor/pull/984)
 * update builder and cosign images (https://github.com/sigstore/rekor/pull/981)
 * Bump github.com/go-openapi/spec from 0.20.6 to 0.20.7 (https://github.com/sigstore/rekor/pull/976)
 * Bump github.com/go-openapi/loads from 0.21.1 to 0.21.2 (https://github.com/sigstore/rekor/pull/977)
@@ -40,6 +44,7 @@
 ## Contributors
 
 * Asra Ali (@asraa)
+* Azeem Shaikh (@azeemshaikh38)
 * Bob Callaway (@bobcallaway)
 * Carlos Tadeu Panato Junior (@cpanato)
 * Samsondeen (@dsa0x)
