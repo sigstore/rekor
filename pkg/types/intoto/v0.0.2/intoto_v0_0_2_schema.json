@@ -49,7 +49,7 @@
                             }
                         }
                     },
-                    "required": ["payload", "payloadType", "signatures"],
+                    "required": ["payloadType", "signatures"],
                     "writeOnly": true
                 },
                 "hash": {

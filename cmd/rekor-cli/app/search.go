@@ -176,6 +176,8 @@ var searchCmd = &cobra.Command{
 					}
 					params.Query.PublicKey.Content = strfmt.Base64(keyBytes)
 				}
+			} else {
+				return nil, errors.New("only one public key must be provided")
 			}
 		}
 

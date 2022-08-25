@@ -314,9 +314,8 @@ func (m *IntotoV002SchemaContent) UnmarshalBinary(b []byte) error {
 type IntotoV002SchemaContentEnvelope struct {
 
 	// payload of the envelope
-	// Required: true
 	// Format: byte
-	Payload *strfmt.Base64 `json:"payload"`
+	Payload strfmt.Base64 `json:"payload,omitempty"`
 
 	// type describing the payload
 	// Required: true
@@ -332,10 +331,6 @@ type IntotoV002SchemaContentEnvelope struct {
 func (m *IntotoV002SchemaContentEnvelope) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validatePayload(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validatePayloadType(formats); err != nil {
 		res = append(res, err)
 	}
@@ -347,15 +342,6 @@ func (m *IntotoV002SchemaContentEnvelope) Validate(formats strfmt.Registry) erro
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *IntotoV002SchemaContentEnvelope) validatePayload(formats strfmt.Registry) error {
-
-	if err := validate.Required("content"+"."+"envelope"+"."+"payload", "body", m.Payload); err != nil {
-		return err
-	}
-
 	return nil
 }
 

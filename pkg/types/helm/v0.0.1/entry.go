@@ -318,21 +318,19 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	re.HelmObj.PublicKey = &models.HelmV001SchemaPublicKey{}
 	publicKeyBytes := props.PublicKeyBytes
 	if len(publicKeyBytes) == 0 {
-		if len(props.PublicKeyPath) > 1 {
+		if len(props.PublicKeyPath) != 1 {
 			return nil, errors.New("only one public key must be provided")
 		}
-		if len(props.PublicKeyPath) == 1 {
-			keyBytes, err := ioutil.ReadFile(filepath.Clean(props.PublicKeyPath[0].Path))
-			if err != nil {
-				return nil, fmt.Errorf("error reading public key file: %w", err)
-			}
-			publicKeyBytes = append(publicKeyBytes, keyBytes)
-			re.HelmObj.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes[0])
+		keyBytes, err := ioutil.ReadFile(filepath.Clean(props.PublicKeyPath[0].Path))
+		if err != nil {
+			return nil, fmt.Errorf("error reading public key file: %w", err)
 		}
-	} else {
-		re.HelmObj.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes[0])
+		publicKeyBytes = append(publicKeyBytes, keyBytes)
+	} else if len(publicKeyBytes) != 1 {
+		return nil, errors.New("only one public key byte must be provided")
 	}
 
+	re.HelmObj.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes[0])
 	if err := re.validate(); err != nil {
 		return nil, err
 	}

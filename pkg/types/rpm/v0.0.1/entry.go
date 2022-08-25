@@ -343,23 +343,19 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	re.RPMModel.PublicKey = &models.RpmV001SchemaPublicKey{}
 	publicKeyBytes := props.PublicKeyBytes
 	if len(publicKeyBytes) == 0 {
-		if len(props.PublicKeyPath) == 0 {
-			return nil, errors.New("public key must be provided to verify RPM signature")
+		if len(props.PublicKeyPath) != 1 {
+			return nil, errors.New("only one public key must be provided to verify RPM signature")
 		}
-		if len(props.PublicKeyPath) > 1 {
-			return nil, errors.New("only one public key must be provided")
+		keyBytes, err := ioutil.ReadFile(filepath.Clean(props.PublicKeyPath[0].Path))
+		if err != nil {
+			return nil, fmt.Errorf("error reading public key file: %w", err)
 		}
-		if len(props.PublicKeyPath) == 1 {
-			keyBytes, err := ioutil.ReadFile(filepath.Clean(props.PublicKeyPath[0].Path))
-			if err != nil {
-				return nil, fmt.Errorf("error reading public key file: %w", err)
-			}
-			publicKeyBytes = append(publicKeyBytes, keyBytes)
-			re.RPMModel.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes[0])
-		}
-	} else {
-		re.RPMModel.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes[0])
+		publicKeyBytes = append(publicKeyBytes, keyBytes)
+	} else if len(publicKeyBytes) != 1 {
+		return nil, errors.New("only one public key byte must be provided")
 	}
+
+	re.RPMModel.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes[0])
 
 	if err := re.validate(); err != nil {
 		return nil, err

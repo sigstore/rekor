@@ -104,7 +104,7 @@ func createRekorEnvelope(dsseEnv *dsse.Envelope, pub [][]byte) *models.IntotoV00
 
 	env := &models.IntotoV002SchemaContentEnvelope{}
 	b64 := strfmt.Base64([]byte(dsseEnv.Payload))
-	env.Payload = &b64
+	env.Payload = b64
 	env.PayloadType = &dsseEnv.PayloadType
 
 	for i, sig := range dsseEnv.Signatures {

@@ -77,13 +77,18 @@ func (v V002Entry) IndexKeys() ([]string, error) {
 	}
 
 	for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
-		keyHash := sha256.Sum256(sig.PublicKey)
-		result = append(result, "sha256:"+hex.EncodeToString(keyHash[:]))
-
 		keyObj, err := x509.NewPublicKey(bytes.NewReader(sig.PublicKey))
 		if err != nil {
-			return nil, err
+			return result, err
 		}
+
+		canonKey, err := keyObj.CanonicalValue()
+		if err != nil {
+			return result, fmt.Errorf("could not canonicize key: %w", err)
+		}
+
+		keyHash := sha256.Sum256(canonKey)
+		result = append(result, "sha256:"+hex.EncodeToString(keyHash[:]))
 
 		result = append(result, keyObj.Subjects()...)
 	}
@@ -91,17 +96,17 @@ func (v V002Entry) IndexKeys() ([]string, error) {
 	payloadKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.PayloadHash.Algorithm, *v.IntotoObj.Content.PayloadHash.Value))
 	result = append(result, payloadKey)
 
+	hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.Hash.Algorithm, *v.IntotoObj.Content.Hash.Value))
+	result = append(result, hashkey)
+
 	switch *v.IntotoObj.Content.Envelope.PayloadType {
 	case in_toto.PayloadType:
-
-		hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.Hash.Algorithm, *v.IntotoObj.Content.Hash.Value))
-		result = append(result, hashkey)
 
 		if v.IntotoObj.Content.Envelope.Payload == nil {
 			log.Logger.Info("IntotoObj DSSE payload is empty")
 			return result, nil
 		}
-		decodedPayload, err := base64.StdEncoding.DecodeString(string(*v.IntotoObj.Content.Envelope.Payload))
+		decodedPayload, err := base64.StdEncoding.DecodeString(string(v.IntotoObj.Content.Envelope.Payload))
 		if err != nil {
 			return result, fmt.Errorf("could not decode envelope payload: %w", err)
 		}
@@ -164,12 +169,12 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
-	if string(*v.IntotoObj.Content.Envelope.Payload) == "" {
-		return errors.New("DSSE envelope does not contain a payload")
+	if string(v.IntotoObj.Content.Envelope.Payload) == "" {
+		return nil
 	}
 
 	env := &dsse.Envelope{
-		Payload:     string(*v.IntotoObj.Content.Envelope.Payload),
+		Payload:     string(v.IntotoObj.Content.Envelope.Payload),
 		PayloadType: *v.IntotoObj.Content.Envelope.PayloadType,
 	}
 
@@ -189,7 +194,7 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 
 	v.env = *env
 
-	decodedPayload, err := base64.StdEncoding.DecodeString(string(*v.IntotoObj.Content.Envelope.Payload))
+	decodedPayload, err := base64.StdEncoding.DecodeString(string(v.IntotoObj.Content.Envelope.Payload))
 	if err != nil {
 		return fmt.Errorf("could not decode envelope payload: %w", err)
 	}
@@ -335,7 +340,7 @@ func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	}
 
 	b64 := strfmt.Base64([]byte(env.Payload))
-	re.IntotoObj.Content.Envelope.Payload = &b64
+	re.IntotoObj.Content.Envelope.Payload = b64
 	re.IntotoObj.Content.Envelope.PayloadType = &env.PayloadType
 
 	for _, sig := range env.Signatures {

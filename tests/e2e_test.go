@@ -545,7 +545,7 @@ func TestIntoto(t *testing.T) {
 
 	attHash := sha256.Sum256(b)
 
-	intotoModel := &models.IntotoV001Schema{}
+	intotoModel := &models.IntotoV002Schema{}
 	if err := types.DecodeEntry(g.Body.(map[string]interface{})["IntotoObj"], intotoModel); err != nil {
 		t.Errorf("could not convert body into intoto type: %v", err)
 	}
@@ -567,7 +567,7 @@ func TestIntoto(t *testing.T) {
 
 }
 
-func TestIntotoV002(t *testing.T) {
+func TestIntotoMultiSig(t *testing.T) {
 	td := t.TempDir()
 	attestationPath := filepath.Join(td, "attestation.json")
 	ecdsapubKeyPath := filepath.Join(td, "ecdsapub.pem")

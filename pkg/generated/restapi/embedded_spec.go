@@ -1864,7 +1864,6 @@ func init() {
           "description": "dsse envelope",
           "type": "object",
           "required": [
-            "payload",
             "payloadType",
             "signatures"
           ],
@@ -1940,7 +1939,6 @@ func init() {
       "description": "dsse envelope",
       "type": "object",
       "required": [
-        "payload",
         "payloadType",
         "signatures"
       ],
@@ -3162,7 +3160,6 @@ func init() {
               "description": "dsse envelope",
               "type": "object",
               "required": [
-                "payload",
                 "payloadType",
                 "signatures"
               ],
