@@ -72,3 +72,10 @@ func (it *BaseIntotoType) CreateProposedEntry(ctx context.Context, version strin
 func (it BaseIntotoType) DefaultVersion() string {
 	return "0.0.2"
 }
+
+// SupportedVersions returns the supported versions for this type;
+// it deliberately omits 0.0.1 from the list of supported versions as that
+// version did not persist signatures inside the log entry
+func (it BaseIntotoType) SupportedVersions() []string {
+	return []string{"0.0.2"}
+}

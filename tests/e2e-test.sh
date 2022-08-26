@@ -18,7 +18,7 @@ set -e
 testdir=$(dirname "$0")
 
 echo "starting services"
-docker-compose up -d
+docker-compose up -d --build
 
 echo "building CLI and server"
 go build -o rekor-cli ./cmd/rekor-cli

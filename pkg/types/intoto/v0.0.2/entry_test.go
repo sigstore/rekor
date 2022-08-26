@@ -16,6 +16,8 @@
 package intoto
 
 import (
+	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -33,13 +35,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"go.uber.org/goleak"
 )
@@ -296,6 +301,35 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 				sort.Strings(want)
 				if !reflect.DeepEqual(got, want) {
 					t.Errorf("V002Entry.IndexKeys() = %v, want %v", got, want)
+				}
+				payloadBytes, _ := v.env.DecodeB64Payload()
+				payloadSha := sha256.Sum256(payloadBytes)
+				payloadHash := hex.EncodeToString(payloadSha[:])
+
+				canonicalBytes, err := v.Canonicalize(context.Background())
+				if err != nil {
+					t.Errorf("error canonicalizing entry: %v", err)
+				}
+
+				pe, err := models.UnmarshalProposedEntry(bytes.NewReader(canonicalBytes), runtime.JSONConsumer())
+				if err != nil {
+					t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tt.name, err)
+				}
+				canonicalEntry, err := types.UnmarshalEntry(pe)
+				if err != nil {
+					t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tt.name, err)
+				}
+				canonicalV002 := canonicalEntry.(*V002Entry)
+				fmt.Printf("%v", canonicalV002.IntotoObj.Content)
+				if *canonicalV002.IntotoObj.Content.Hash.Value != *tt.it.Content.Hash.Value {
+					t.Errorf("envelope hashes do not match post canonicalization: %v %v", *canonicalV002.IntotoObj.Content.Hash.Value, *tt.it.Content.Hash.Value)
+				}
+				if canonicalV002.AttestationKey() != "" && *canonicalV002.IntotoObj.Content.PayloadHash.Value != payloadHash {
+					t.Errorf("payload hashes do not match post canonicalization: %v %v", canonicalV002.IntotoObj.Content.PayloadHash.Value, payloadHash)
+				}
+				canonicalIndexKeys, _ := canonicalV002.IndexKeys()
+				if !cmp.Equal(got, canonicalIndexKeys, cmpopts.SortSlices(func(x, y string) bool { return x < y })) {
+					t.Errorf("index keys from hydrated object do not match those generated from canonicalized (and re-hydrated) object: %v %v", got, canonicalIndexKeys)
 				}
 
 				return nil
