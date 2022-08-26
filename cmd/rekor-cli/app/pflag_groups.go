@@ -26,8 +26,6 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	"golang.org/x/exp/slices"
 )
 
 // addFlagToCmd adds the specified command of a specified type to the command's flag set
@@ -188,7 +186,7 @@ func ParseTypeFlag(typeStr string) (string, string, error) {
 	case 1:
 		return typeStrings[0], "", nil
 	case 2:
-		if !slices.Contains(ti.SupportedVersions(), typeStrings[1]) {
+		if !ti.IsSupportedVersion(typeStrings[1]) {
 			return "", "", fmt.Errorf("type %v does not support version %v", typeStrings[0], typeStrings[1])
 		}
 		return typeStrings[0], typeStrings[1], nil
