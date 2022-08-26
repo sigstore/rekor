@@ -319,8 +319,8 @@ func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		allPubKeyBytes = append(allPubKeyBytes, props.PublicKeyBytes...)
 	}
 
-	if len(props.PublicKeyPath) > 0 {
-		for _, path := range props.PublicKeyPath {
+	if len(props.PublicKeyPaths) > 0 {
+		for _, path := range props.PublicKeyPaths {
 			if path.IsAbs() {
 				return nil, errors.New("dsse public keys cannot be fetched over HTTP(S)")
 			}

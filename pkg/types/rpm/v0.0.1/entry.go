@@ -343,10 +343,10 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	re.RPMModel.PublicKey = &models.RpmV001SchemaPublicKey{}
 	publicKeyBytes := props.PublicKeyBytes
 	if len(publicKeyBytes) == 0 {
-		if len(props.PublicKeyPath) != 1 {
+		if len(props.PublicKeyPaths) != 1 {
 			return nil, errors.New("only one public key must be provided to verify RPM signature")
 		}
-		keyBytes, err := ioutil.ReadFile(filepath.Clean(props.PublicKeyPath[0].Path))
+		keyBytes, err := ioutil.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
 		if err != nil {
 			return nil, fmt.Errorf("error reading public key file: %w", err)
 		}

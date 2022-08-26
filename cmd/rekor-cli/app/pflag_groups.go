@@ -160,7 +160,7 @@ func CreatePropsFromPflags() *types.ArtifactProperties {
 				collectedKeys = append(collectedKeys, &url.URL{Path: key})
 			}
 		}
-		props.PublicKeyPath = collectedKeys
+		props.PublicKeyPaths = collectedKeys
 	}
 
 	props.PKIFormat = viper.GetString("pki-format")
