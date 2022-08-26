@@ -364,7 +364,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 			return handleRekorAPIError(params, code, err, err.Error())
 		}
 		close(searchHashesChan)
-		for hash := range(searchHashesChan) {
+		for hash := range searchHashesChan {
 			searchHashes = append(searchHashes, hash)
 		}
 
@@ -422,7 +422,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", err), trillianUnexpectedResult)
 		}
 		close(resultPayloadChan)
-		for result := range(resultPayloadChan) {
+		for result := range resultPayloadChan {
 			resultPayload = append(resultPayload, result)
 		}
 	}
