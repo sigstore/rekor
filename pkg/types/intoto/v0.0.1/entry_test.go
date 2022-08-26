@@ -270,7 +270,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				if err != nil {
 					t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tt.name, err)
 				}
-				canonicalEntry, err := types.NewEntry(pe)
+				canonicalEntry, err := types.UnmarshalEntry(pe)
 				if err != nil {
 					t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tt.name, err)
 				}
