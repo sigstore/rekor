@@ -54,6 +54,8 @@ require (
 	sigs.k8s.io/release-utils v0.7.3
 )
 
+require golang.org/x/exp v0.0.0-20220823124025-807a23277127
+
 require (
 	cloud.google.com/go v0.103.0 // indirect
 	cloud.google.com/go/compute v1.7.0 // indirect
