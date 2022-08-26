@@ -65,7 +65,7 @@ func (e UnmarshalErrorValidEntry) ContextValidate(context context.Context, forma
 	return nil
 }
 
-func TestNewEntry(t *testing.T) {
+func TestUnmarshalEntry(t *testing.T) {
 	type TestCase struct {
 		entry         models.ProposedEntry
 		expectSuccess bool
@@ -83,7 +83,7 @@ func TestNewEntry(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if _, err := NewEntry(tc.entry); (err == nil) != tc.expectSuccess {
+		if _, err := UnmarshalEntry(tc.entry); (err == nil) != tc.expectSuccess {
 			t.Errorf("unexpected error creating entry of type '%v': %v", tc.entry.Kind(), err)
 		}
 	}

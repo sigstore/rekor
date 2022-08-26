@@ -159,7 +159,7 @@ func parseEntry(uuid string, e models.LogEntryAnon) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	eimpl, err := types.NewEntry(pe)
+	eimpl, err := types.UnmarshalEntry(pe)
 	if err != nil {
 		return nil, err
 	}

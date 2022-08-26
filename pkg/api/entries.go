@@ -101,7 +101,7 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 		if err != nil {
 			return nil, err
 		}
-		eimpl, err := types.NewEntry(pe)
+		eimpl, err := types.UnmarshalEntry(pe)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 
 func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middleware.Responder) {
 	ctx := params.HTTPRequest.Context()
-	entry, err := types.NewEntry(params.ProposedEntry)
+	entry, err := types.CreateVersionedEntry(params.ProposedEntry)
 	if err != nil {
 		return nil, handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf(validationError, err))
 	}
@@ -341,7 +341,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		for _, e := range params.Entry.Entries() {
 			e := e // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
-				entry, err := types.NewEntry(e)
+				entry, err := types.UnmarshalEntry(e)
 				if err != nil {
 					return err
 				}

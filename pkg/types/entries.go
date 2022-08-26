@@ -59,8 +59,28 @@ func NewProposedEntry(ctx context.Context, kind, version string, props ArtifactP
 	return nil, fmt.Errorf("could not create entry for kind '%v'", kind)
 }
 
-// NewEntry returns the specific instance for the type and version specified in the doc
-func NewEntry(pe models.ProposedEntry) (EntryImpl, error) {
+// CreateVersionedEntry returns the specific instance for the type and version specified in the doc
+// This method should be used on the insertion flow, which validates that the specific version proposed
+// is permitted to be entered into the log.
+func CreateVersionedEntry(pe models.ProposedEntry) (EntryImpl, error) {
+	ei, err := UnmarshalEntry(pe)
+	if err != nil {
+		return nil, err
+	}
+	kind := pe.Kind()
+	if tf, found := TypeMap.Load(kind); found {
+		if !tf.(func() TypeImpl)().IsSupportedVersion(ei.APIVersion()) {
+			return nil, fmt.Errorf("entry kind '%v' does not support inserting entries of version '%v'", kind, ei.APIVersion())
+		}
+	}
+
+	return ei, nil
+}
+
+// UnmarshalEntry returns the specific instance for the type and version specified in the doc
+// This method does not check for whether the version of the entry could be currently inserted into the log,
+// and is useful when dealing with entries that have been persisted to the log.
+func UnmarshalEntry(pe models.ProposedEntry) (EntryImpl, error) {
 	if pe == nil {
 		return nil, errors.New("proposed entry cannot be nil")
 	}
@@ -73,7 +93,7 @@ func NewEntry(pe models.ProposedEntry) (EntryImpl, error) {
 		}
 		return t.UnmarshalEntry(pe)
 	}
-	return nil, fmt.Errorf("could not create entry for kind '%v'", kind)
+	return nil, fmt.Errorf("could not unmarshal entry for kind '%v'", kind)
 }
 
 // DecodeEntry maps the (abstract) input structure into the specific entry implementation class;

@@ -173,7 +173,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
 			}
-			if _, err := types.NewEntry(pe); err != nil {
+			if _, err := types.UnmarshalEntry(pe); err != nil {
 				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
 			}
 		}
