@@ -338,7 +338,9 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		}
 
 		code := http.StatusBadRequest
-		for _, e := range params.Entry.Entries() {
+		entries := params.Entry.Entries()
+		searchHashesChan := make(chan []byte, len(entries))
+		for _, e := range entries {
 			e := e // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
 				entry, err := types.UnmarshalEntry(e)
@@ -353,13 +355,17 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 				}
 				hasher := rfc6962.DefaultHasher
 				leafHash := hasher.HashLeaf(leaf)
-				searchHashes = append(searchHashes, leafHash)
+				searchHashesChan <- leafHash
 				return nil
 			})
 		}
 
 		if err := g.Wait(); err != nil {
 			return handleRekorAPIError(params, code, err, err.Error())
+		}
+		close(searchHashesChan)
+		for hash := range searchHashesChan {
+			searchHashes = append(searchHashes, hash)
 		}
 
 		searchByHashResults := make([]*trillian.GetEntryAndProofResponse, len(searchHashes))
@@ -399,7 +405,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 
 	if len(params.Entry.LogIndexes) > 0 {
 		g, _ := errgroup.WithContext(httpReqCtx)
-
+		resultPayloadChan := make(chan models.LogEntry, len(params.Entry.LogIndexes))
 		for _, logIndex := range params.Entry.LogIndexes {
 			logIndex := logIndex // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
@@ -407,13 +413,17 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 				if err != nil {
 					return err
 				}
-				resultPayload = append(resultPayload, logEntry)
+				resultPayloadChan <- logEntry
 				return nil
 			})
 		}
 
 		if err := g.Wait(); err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", err), trillianUnexpectedResult)
+		}
+		close(resultPayloadChan)
+		for result := range resultPayloadChan {
+			resultPayload = append(resultPayload, result)
 		}
 	}
 
