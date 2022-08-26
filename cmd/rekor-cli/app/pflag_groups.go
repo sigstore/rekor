@@ -166,21 +166,29 @@ func CreatePropsFromPflags() *types.ArtifactProperties {
 	return props
 }
 
-//TODO: add tests for this
+// ParseTypeFlag validates the requested type (and optional version) are supported
 func ParseTypeFlag(typeStr string) (string, string, error) {
 	// typeStr can come in as:
 	// type -> use default version for this kind
 	// type:version_string -> attempt to use specified version string
 
 	typeStrings := strings.SplitN(typeStr, ":", 2)
-	if _, ok := types.TypeMap.Load(typeStrings[0]); !ok {
+	tf, ok := types.TypeMap.Load(typeStrings[0])
+	if !ok {
 		return "", "", fmt.Errorf("unknown type %v", typeStrings[0])
+	}
+	ti := tf.(func() types.TypeImpl)()
+	if ti == nil {
+		return "", "", fmt.Errorf("type %v is not implemented", typeStrings[0])
 	}
 
 	switch len(typeStrings) {
 	case 1:
 		return typeStrings[0], "", nil
 	case 2:
+		if !ti.IsSupportedVersion(typeStrings[1]) {
+			return "", "", fmt.Errorf("type %v does not support version %v", typeStrings[0], typeStrings[1])
+		}
 		return typeStrings[0], typeStrings[1], nil
 	}
 	return "", "", errors.New("malformed type string")

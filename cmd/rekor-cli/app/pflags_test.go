@@ -179,7 +179,7 @@ func TestArtifactPFlags(t *testing.T) {
 			expectValidateSuccess: true,
 		},
 		{
-			caseDesc:              "nonexistant local artifact",
+			caseDesc:              "nonexistent local artifact",
 			artifact:              "../../../tests/not_a_file",
 			signature:             "../../../tests/test_file.sig",
 			publicKey:             "../../../tests/test_public_key.key",
@@ -187,7 +187,7 @@ func TestArtifactPFlags(t *testing.T) {
 			expectValidateSuccess: false,
 		},
 		{
-			caseDesc:              "nonexistant remote artifact",
+			caseDesc:              "nonexistent remote artifact",
 			artifact:              testServer.URL + "/not_found",
 			signature:             "../../../tests/test_file.sig",
 			publicKey:             "../../../tests/test_public_key.key",
@@ -531,13 +531,13 @@ func TestSearchPFlags(t *testing.T) {
 			expectValidateSuccess: true,
 		},
 		{
-			caseDesc:              "nonexistant local artifact",
+			caseDesc:              "nonexistent local artifact",
 			artifact:              "../../../tests/not_a_file",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
 		{
-			caseDesc:              "nonexistant remote artifact",
+			caseDesc:              "nonexistent remote artifact",
 			artifact:              testServer.URL + "/not_found",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
@@ -562,13 +562,13 @@ func TestSearchPFlags(t *testing.T) {
 			expectValidateSuccess: true,
 		},
 		{
-			caseDesc:              "nonexistant local public key",
+			caseDesc:              "nonexistent local public key",
 			publicKey:             "../../../tests/not_a_file",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
 		{
-			caseDesc:              "nonexistant remote public key",
+			caseDesc:              "nonexistent remote public key",
 			publicKey:             testServer.URL + "/not_found",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
@@ -640,6 +640,178 @@ func TestSearchPFlags(t *testing.T) {
 		if err := validateSearchPFlags(); (err == nil) != tc.expectValidateSuccess {
 			t.Errorf("unexpected result validating '%v': %v", tc.caseDesc, err)
 			continue
+		}
+	}
+}
+
+func TestParseTypeFlag(t *testing.T) {
+	type test struct {
+		caseDesc      string
+		typeStr       string
+		expectSuccess bool
+	}
+
+	tests := []test{
+		{
+			caseDesc:      "bogus",
+			typeStr:       "bogus",
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "rekord",
+			typeStr:       "rekord",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "explicit rekord v0.0.1",
+			typeStr:       "rekord:0.0.1",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "non-existent rekord v0.0.0",
+			typeStr:       "rekord:0.0.0",
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "hashedrekord",
+			typeStr:       "hashedrekord",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "explicit hashedrekord v0.0.1",
+			typeStr:       "hashedrekord:0.0.1",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "non-existent hashedrekord v0.0.0",
+			typeStr:       "hashedrekord:0.0.0",
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "alpine",
+			typeStr:       "alpine",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "explicit alpine v0.0.1",
+			typeStr:       "alpine:0.0.1",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "non-existent alpine v0.0.0",
+			typeStr:       "alpine:0.0.0",
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "cose",
+			typeStr:       "cose",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "explicit cose v0.0.1",
+			typeStr:       "cose:0.0.1",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "non-existent cose v0.0.0",
+			typeStr:       "cose:0.0.0",
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "helm",
+			typeStr:       "helm",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "explicit helm v0.0.1",
+			typeStr:       "helm:0.0.1",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "non-existent helm v0.0.0",
+			typeStr:       "helm:0.0.0",
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "intoto",
+			typeStr:       "intoto",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "explicit intoto v0.0.1",
+			typeStr:       "intoto:0.0.1",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "non-existent intoto v0.0.0",
+			typeStr:       "intoto:0.0.0",
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "jar",
+			typeStr:       "jar",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "explicit jar v0.0.1",
+			typeStr:       "jar:0.0.1",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "non-existent jar v0.0.0",
+			typeStr:       "jar:0.0.0",
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "rfc3161",
+			typeStr:       "rfc3161",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "explicit rfc3161 v0.0.1",
+			typeStr:       "rfc3161:0.0.1",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "non-existent rfc3161 v0.0.0",
+			typeStr:       "rfc3161:0.0.0",
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "rpm",
+			typeStr:       "rpm",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "explicit rpm v0.0.1",
+			typeStr:       "rpm:0.0.1",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "non-existent rpm v0.0.0",
+			typeStr:       "rpm:0.0.0",
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "tuf",
+			typeStr:       "tuf",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "explicit tuf v0.0.1",
+			typeStr:       "tuf:0.0.1",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "non-existent tuf v0.0.0",
+			typeStr:       "tuf:0.0.0",
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range tests {
+		if _, _, err := ParseTypeFlag(tc.typeStr); (err == nil) != tc.expectSuccess {
+			t.Fatalf("unexpected error parsing type flag in '%v': %v", tc.caseDesc, err)
 		}
 	}
 }
