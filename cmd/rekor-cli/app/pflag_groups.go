@@ -69,7 +69,7 @@ func addArtifactPFlags(cmd *cobra.Command) error {
 			false,
 		},
 		"public-key": {
-			fileOrURLFlag,
+			multiFileOrURLFlag,
 			"path or URL to public key file",
 			false,
 		},
@@ -149,12 +149,18 @@ func CreatePropsFromPflags() *types.ArtifactProperties {
 	}
 
 	publicKeyString := viper.GetString("public-key")
-	if publicKeyString != "" {
-		if isURL(publicKeyString) {
-			props.PublicKeyPath, _ = url.Parse(publicKeyString)
-		} else {
-			props.PublicKeyPath = &url.URL{Path: publicKeyString}
+	splitPubKeyString := strings.Split(publicKeyString, ",")
+	if len(splitPubKeyString) > 0 {
+		collectedKeys := []*url.URL{}
+		for _, key := range splitPubKeyString {
+			if isURL(key) {
+				keyPath, _ := url.Parse(key)
+				collectedKeys = append(collectedKeys, keyPath)
+			} else {
+				collectedKeys = append(collectedKeys, &url.URL{Path: key})
+			}
 		}
+		props.PublicKeyPaths = collectedKeys
 	}
 
 	props.PKIFormat = viper.GetString("pki-format")

@@ -19,8 +19,8 @@
 package e2e
 
 import (
+	"bytes"
 	"crypto"
-	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -30,7 +30,8 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/secure-systems-lab/go-securesystemslib/dsse"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // Generated with:
@@ -156,34 +157,33 @@ func createdX509SignedArtifact(t *testing.T, artifactPath, sigPath string) {
 	}
 }
 
-type IntotoSigner struct {
-	priv *ecdsa.PrivateKey
+type verifier struct {
+	s signature.Signer
+	v signature.Verifier
 }
 
-var _ dsse.SignVerifier = &IntotoSigner{}
+func (v *verifier) KeyID() (string, error) {
+	return "", nil
+}
 
-func (it *IntotoSigner) Sign(data []byte) ([]byte, error) {
-	h := sha256.Sum256(data)
-	sig, err := it.priv.Sign(rand.Reader, h[:], crypto.SHA256)
+func (v *verifier) Public() crypto.PublicKey {
+	return v.v.PublicKey
+}
+
+func (v *verifier) Sign(data []byte) (sig []byte, err error) {
+	if v.s == nil {
+		return nil, errors.New("nil signer")
+	}
+	sig, err = v.s.SignMessage(bytes.NewReader(data), options.WithCryptoSignerOpts(crypto.SHA256))
 	if err != nil {
 		return nil, err
 	}
 	return sig, nil
 }
 
-func (it *IntotoSigner) KeyID() (string, error) {
-	return "", nil
-}
-
-func (it *IntotoSigner) Public() crypto.PublicKey {
-	return it.priv.Public()
-}
-
-func (it *IntotoSigner) Verify(data, sig []byte) error {
-	h := sha256.Sum256(data)
-	ok := ecdsa.VerifyASN1(&it.priv.PublicKey, h[:], sig)
-	if ok {
-		return nil
+func (v *verifier) Verify(data, sig []byte) error {
+	if v.v == nil {
+		return errors.New("nil verifier")
 	}
-	return errors.New("invalid signature")
+	return v.v.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data))
 }

@@ -37,6 +37,7 @@ func TestArtifactPFlags(t *testing.T) {
 		artifact              string
 		signature             string
 		publicKey             string
+		multiPublicKey        []string
 		uuid                  string
 		aad                   string
 		uuidRequired          bool
@@ -373,6 +374,22 @@ func TestArtifactPFlags(t *testing.T) {
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
+		{
+			caseDesc:              "valid intoto - one keys",
+			typeStr:               "intoto",
+			artifact:              "../../../tests/intoto_dsse.json",
+			publicKey:             "../../../tests/intoto_dsse.pem",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "valid intoto - multi keys",
+			typeStr:               "intoto",
+			artifact:              "../../../tests/intoto_multi_dsse.json",
+			multiPublicKey:        []string{"../../../tests/intoto_dsse.pem", "../../../tests/intoto_multi_pub2.pem"},
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -404,6 +421,11 @@ func TestArtifactPFlags(t *testing.T) {
 		}
 		if tc.publicKey != "" {
 			args = append(args, "--public-key", tc.publicKey)
+		}
+		if len(tc.multiPublicKey) > 0 {
+			for _, key := range tc.multiPublicKey {
+				args = append(args, "--public-key", key)
+			}
 		}
 		if tc.uuid != "" {
 			args = append(args, "--uuid", tc.uuid)
@@ -740,6 +762,11 @@ func TestParseTypeFlag(t *testing.T) {
 		{
 			caseDesc:      "explicit intoto v0.0.1",
 			typeStr:       "intoto:0.0.1",
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "explicit intoto v0.0.2",
+			typeStr:       "intoto:0.0.2",
 			expectSuccess: true,
 		},
 		{
