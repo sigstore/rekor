@@ -152,7 +152,7 @@ type ArtifactProperties struct {
 	ArtifactBytes               []byte
 	SignaturePath               *url.URL
 	SignatureBytes              []byte
-	PublicKeyPath               *url.URL
-	PublicKeyBytes              []byte
+	PublicKeyPaths              []*url.URL
+	PublicKeyBytes              [][]byte
 	PKIFormat                   string
 }

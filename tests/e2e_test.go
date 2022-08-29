@@ -23,6 +23,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
@@ -30,17 +31,21 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"golang.org/x/sync/errgroup"
+	"sigs.k8s.io/release-utils/version"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
@@ -55,6 +60,7 @@ import (
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/rekor/pkg/types"
+	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/util"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -495,14 +501,20 @@ func TestIntoto(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	signer, err := dsse.NewEnvelopeSigner(&IntotoSigner{
-		priv: priv.(*ecdsa.PrivateKey),
+
+	s, err := signature.LoadECDSASigner(priv.(*ecdsa.PrivateKey), crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signer, err := dsse.NewEnvelopeSigner(&verifier{
+		s: s,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	env, err := signer.SignPayload("application/vnd.in-toto+json", b)
+	env, err := signer.SignPayload(in_toto.PayloadType, b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -514,6 +526,10 @@ func TestIntoto(t *testing.T) {
 
 	write(t, string(eb), attestationPath)
 	write(t, ecdsaPub, pubKeyPath)
+
+	// ensure that we can't upload a intoto v0.0.1 entry
+	v001out := runCliErr(t, "upload", "--artifact", attestationPath, "--type", "intoto:0.0.1", "--public-key", pubKeyPath)
+	outputContains(t, v001out, "type intoto does not support version 0.0.1")
 
 	// If we do it twice, it should already exist
 	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
@@ -537,7 +553,7 @@ func TestIntoto(t *testing.T) {
 
 	attHash := sha256.Sum256(b)
 
-	intotoModel := &models.IntotoV001Schema{}
+	intotoModel := &models.IntotoV002Schema{}
 	if err := types.DecodeEntry(g.Body.(map[string]interface{})["IntotoObj"], intotoModel); err != nil {
 		t.Errorf("could not convert body into intoto type: %v", err)
 	}
@@ -557,6 +573,237 @@ func TestIntoto(t *testing.T) {
 	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Entry already exists")
 
+}
+
+func TestIntotoMultiSig(t *testing.T) {
+	td := t.TempDir()
+	attestationPath := filepath.Join(td, "attestation.json")
+	ecdsapubKeyPath := filepath.Join(td, "ecdsapub.pem")
+	rsapubKeyPath := filepath.Join(td, "rsapub.pem")
+
+	// Get some random data so it's unique each run
+	d := randomData(t, 10)
+	id := base64.StdEncoding.EncodeToString(d)
+
+	it := in_toto.ProvenanceStatement{
+		StatementHeader: in_toto.StatementHeader{
+			Type:          in_toto.StatementInTotoV01,
+			PredicateType: slsa.PredicateSLSAProvenance,
+			Subject: []in_toto.Subject{
+				{
+					Name: "foobar",
+					Digest: slsa.DigestSet{
+						"foo": "bar",
+					},
+				},
+			},
+		},
+		Predicate: slsa.ProvenancePredicate{
+			Builder: slsa.ProvenanceBuilder{
+				ID: "foo" + id,
+			},
+		},
+	}
+
+	b, err := json.Marshal(it)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	evps := []*verifier{}
+
+	pb, _ := pem.Decode([]byte(ecdsaPriv))
+	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signECDSA, err := signature.LoadECDSASigner(priv.(*ecdsa.PrivateKey), crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	evps = append(evps, &verifier{
+		s: signECDSA,
+	})
+
+	pbRSA, _ := pem.Decode([]byte(rsaKey))
+	rsaPriv, err := x509.ParsePKCS8PrivateKey(pbRSA.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signRSA, err := signature.LoadRSAPKCS1v15Signer(rsaPriv.(*rsa.PrivateKey), crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	evps = append(evps, &verifier{
+		s: signRSA,
+	})
+
+	signer, err := dsse.NewMultiEnvelopeSigner(2, evps[0], evps[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	env, err := signer.SignPayload(in_toto.PayloadType, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	eb, err := json.Marshal(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	write(t, string(eb), attestationPath)
+	write(t, ecdsaPub, ecdsapubKeyPath)
+	write(t, pubKey, rsapubKeyPath)
+
+	// ensure that we can't upload a intoto v0.0.1 entry
+	v001out := runCliErr(t, "upload", "--artifact", attestationPath, "--type", "intoto:0.0.1", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
+	outputContains(t, v001out, "type intoto does not support version 0.0.1")
+
+	// If we do it twice, it should already exist
+	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
+	outputContains(t, out, "Created entry at")
+	uuid := getUUIDFromUploadOutput(t, out)
+
+	out = runCli(t, "get", "--uuid", uuid, "--format=json")
+	g := getOut{}
+	if err := json.Unmarshal([]byte(out), &g); err != nil {
+		t.Fatal(err)
+	}
+	// The attestation should be stored at /var/run/attestations/$uuid
+
+	got := in_toto.ProvenanceStatement{}
+	if err := json.Unmarshal([]byte(g.Attestation), &got); err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(it, got); diff != "" {
+		t.Errorf("diff: %s", diff)
+	}
+
+	attHash := sha256.Sum256([]byte(g.Attestation))
+
+	intotoV002Model := &models.IntotoV002Schema{}
+	if err := types.DecodeEntry(g.Body.(map[string]interface{})["IntotoObj"], intotoV002Model); err != nil {
+		t.Errorf("could not convert body into intoto type: %v", err)
+	}
+	if intotoV002Model.Content.Hash == nil {
+		t.Errorf("could not find hash over attestation %v", intotoV002Model)
+	}
+	recordedPayloadHash, err := hex.DecodeString(*intotoV002Model.Content.PayloadHash.Value)
+	if err != nil {
+		t.Errorf("error converting attestation hash to []byte: %v", err)
+	}
+
+	if !bytes.Equal(attHash[:], recordedPayloadHash) {
+		t.Fatal(fmt.Errorf("attestation hash %v doesnt match the payload we sent %v", hex.EncodeToString(attHash[:]),
+			*intotoV002Model.Content.PayloadHash.Value))
+	}
+
+	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
+	outputContains(t, out, "Entry already exists")
+
+}
+
+func TestIntotoBlockV001(t *testing.T) {
+	td := t.TempDir()
+	attestationPath := filepath.Join(td, "attestation.json")
+	pubKeyPath := filepath.Join(td, "pub.pem")
+
+	// Get some random data so it's unique each run
+	d := randomData(t, 10)
+	id := base64.StdEncoding.EncodeToString(d)
+
+	it := in_toto.ProvenanceStatement{
+		StatementHeader: in_toto.StatementHeader{
+			Type:          in_toto.StatementInTotoV01,
+			PredicateType: slsa.PredicateSLSAProvenance,
+			Subject: []in_toto.Subject{
+				{
+					Name: "foobar",
+					Digest: slsa.DigestSet{
+						"foo": "bar",
+					},
+				},
+			},
+		},
+		Predicate: slsa.ProvenancePredicate{
+			Builder: slsa.ProvenanceBuilder{
+				ID: "foo" + id,
+			},
+		},
+	}
+
+	b, err := json.Marshal(it)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pb, _ := pem.Decode([]byte(ecdsaPriv))
+	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := signature.LoadECDSASigner(priv.(*ecdsa.PrivateKey), crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signer, err := dsse.NewEnvelopeSigner(&verifier{
+		s: s,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	env, err := signer.SignPayload(in_toto.PayloadType, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	eb, err := json.Marshal(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	uaString := fmt.Sprintf("rekor-cli/%s (%s; %s)", version.GetVersionInfo().GitVersion, runtime.GOOS, runtime.GOARCH)
+
+	write(t, string(eb), attestationPath)
+	write(t, ecdsaPub, pubKeyPath)
+
+	rekorClient, err := client.GetRekorClient("http://localhost:3000", client.WithUserAgent(uaString))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var entry models.ProposedEntry
+	params := entries.NewCreateLogEntryParams()
+	params.SetTimeout(time.Duration(30) * time.Second)
+
+	props := &types.ArtifactProperties{}
+
+	props.ArtifactPath = &url.URL{Path: attestationPath}
+
+	collectedKeys := []*url.URL{{Path: pubKeyPath}}
+	props.PublicKeyPaths = collectedKeys
+
+	entry, err = types.NewProposedEntry(context.Background(), "intoto", "0.0.1", *props)
+	if err != nil {
+		t.Fatal(err)
+	}
+	params.SetProposedEntry(entry)
+
+	_, err = rekorClient.Entries.CreateLogEntry(params)
+	if err == nil {
+		t.Fatal("insertion of v0.0.1 entry should fail")
+	}
+	if !strings.Contains(err.Error(), "entry kind 'intoto' does not support inserting entries of version '0.0.1'") {
+		t.Errorf("Expected error as intoto v0.0.1 should not be allowed to be entered into rekor")
+	}
 }
 
 func TestTimestampArtifact(t *testing.T) {

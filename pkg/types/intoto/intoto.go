@@ -22,6 +22,7 @@ import (
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -70,5 +71,17 @@ func (it *BaseIntotoType) CreateProposedEntry(ctx context.Context, version strin
 }
 
 func (it BaseIntotoType) DefaultVersion() string {
-	return "0.0.1"
+	return "0.0.2"
+}
+
+// SupportedVersions returns the supported versions for this type;
+// it deliberately omits 0.0.1 from the list of supported versions as that
+// version did not persist signatures inside the log entry
+func (it BaseIntotoType) SupportedVersions() []string {
+	return []string{"0.0.2"}
+}
+
+// IsSupportedVersion returns true if the version can be inserted into the log, and false if not
+func (it *BaseIntotoType) IsSupportedVersion(proposedVersion string) bool {
+	return slices.Contains(it.SupportedVersions(), proposedVersion)
 }
