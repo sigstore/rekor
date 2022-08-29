@@ -322,7 +322,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 
 	totalQueries := len(params.Entry.EntryUUIDs) + len(params.Entry.Entries()) + len(params.Entry.LogIndexes)
 	if totalQueries > maxSearchQueries {
-		return handleRekorAPIError(params, http.StatusBadRequest, fmt.Errorf(maxSearchQueryLimit, maxSearchQueries), maxSearchQueryLimit, maxSearchQueries)
+		return handleRekorAPIError(params, http.StatusUnprocessableEntity, fmt.Errorf(maxSearchQueryLimit, maxSearchQueries), fmt.Sprintf(maxSearchQueryLimit, maxSearchQueries))
 	}
 
 	if len(params.Entry.EntryUUIDs) > 0 || len(params.Entry.Entries()) > 0 {
