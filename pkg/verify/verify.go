@@ -77,7 +77,7 @@ func ProveConsistency(ctx context.Context, rClient *client.Rekor,
 // against a newly fetched Checkpoint.
 //nolint
 func VerifyCurrentCheckpoint(ctx context.Context, rClient *client.Rekor, verifier signature.Verifier,
-	oldSTH *util.SignedCheckpoint, treeID string) error {
+	oldSTH *util.SignedCheckpoint) error {
 	// The oldSTH should already be verified, but check for robustness.
 	if !oldSTH.Verify(verifier) {
 		return errors.New("signature on old tree head did not verify")
@@ -102,7 +102,7 @@ func VerifyCurrentCheckpoint(ctx context.Context, rClient *client.Rekor, verifie
 	}
 
 	// Now verify consistency up to the STH.
-	return ProveConsistency(ctx, rClient, oldSTH, &sth, treeID)
+	return ProveConsistency(ctx, rClient, oldSTH, &sth, *logInfo.TreeID)
 }
 
 // VerifyInclusion verifies an entry's inclusion proof. Clients MUST either verify
