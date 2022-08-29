@@ -36,7 +36,7 @@ import (
 )
 
 // ProveConsistency verifies consistency between an initial, trusted STH
-// and a second new STH. Assumes that the signature on the STHs' are verified.
+// and a second new STH. Callers MUST verify signature on the STHs'.
 func ProveConsistency(ctx context.Context, rClient *client.Rekor,
 	oldSTH *util.SignedCheckpoint, newSTH *util.SignedCheckpoint, treeID string) error {
 	oldTreeSize := int64(oldSTH.Size)
@@ -78,6 +78,11 @@ func ProveConsistency(ctx context.Context, rClient *client.Rekor,
 //nolint
 func VerifyCurrentCheckpoint(ctx context.Context, rClient *client.Rekor, verifier signature.Verifier,
 	oldSTH *util.SignedCheckpoint, treeID string) error {
+	// The oldSTH should already be verified, but check for robustness.
+	if !oldSTH.Verify(verifier) {
+		return errors.New("signature on old tree head did not verify")
+	}
+
 	// Get and verify against the current STH.
 	infoParams := tlog.NewGetLogInfoParamsWithContext(ctx)
 	result, err := rClient.Tlog.GetLogInfo(infoParams)
@@ -100,8 +105,9 @@ func VerifyCurrentCheckpoint(ctx context.Context, rClient *client.Rekor, verifie
 	return ProveConsistency(ctx, rClient, oldSTH, &sth, treeID)
 }
 
-// VerifyInclusion verifies an entry's inclusion proof. Clients MUST also
-// verify the root hash via VerifyRootHash.
+// VerifyInclusion verifies an entry's inclusion proof. Clients MUST either verify
+// the root hash against a new STH (via VerifyCurrentCheckpoint) or against a
+// trusted, existing STH (via ProveConsistency).
 //nolint
 func VerifyInclusion(ctx context.Context, e *models.LogEntryAnon) error {
 	if e.Verification == nil || e.Verification.InclusionProof == nil {
