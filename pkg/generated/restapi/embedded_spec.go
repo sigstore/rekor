@@ -634,21 +634,24 @@ func init() {
       "properties": {
         "entries": {
           "type": "array",
+          "maxItems": 10,
+          "minItems": 1,
           "items": {
-            "minItems": 1,
             "$ref": "#/definitions/ProposedEntry"
           }
         },
         "entryUUIDs": {
           "type": "array",
+          "maxItems": 10,
+          "minItems": 1,
           "items": {
             "type": "string",
-            "pattern": "^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$",
-            "minItems": 1
+            "pattern": "^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$"
           }
         },
         "logIndexes": {
           "type": "array",
+          "maxItems": 10,
           "minItems": 1,
           "items": {
             "type": "integer"
@@ -2687,12 +2690,16 @@ func init() {
       "properties": {
         "entries": {
           "type": "array",
+          "maxItems": 10,
+          "minItems": 1,
           "items": {
             "$ref": "#/definitions/ProposedEntry"
           }
         },
         "entryUUIDs": {
           "type": "array",
+          "maxItems": 10,
+          "minItems": 1,
           "items": {
             "type": "string",
             "pattern": "^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$"
@@ -2700,6 +2707,7 @@ func init() {
         },
         "logIndexes": {
           "type": "array",
+          "maxItems": 10,
           "minItems": 1,
           "items": {
             "type": "integer",
