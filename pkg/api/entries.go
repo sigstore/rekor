@@ -46,6 +46,10 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
+const (
+	maxSearchQueries = 10
+)
+
 func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEntryAnon) ([]byte, error) {
 	payload, err := entry.MarshalBinary()
 	if err != nil {
@@ -315,6 +319,11 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	httpReqCtx := params.HTTPRequest.Context()
 	resultPayload := []models.LogEntry{}
 	tc := NewTrillianClient(httpReqCtx)
+
+	totalQueries := len(params.Entry.EntryUUIDs) + len(params.Entry.Entries()) + len(params.Entry.LogIndexes)
+	if totalQueries > maxSearchQueries {
+		return handleRekorAPIError(params, http.StatusBadRequest, fmt.Errorf(maxSearchQueryLimit, maxSearchQueries), maxSearchQueryLimit, maxSearchQueries)
+	}
 
 	if len(params.Entry.EntryUUIDs) > 0 || len(params.Entry.Entries()) > 0 {
 		g, _ := errgroup.WithContext(httpReqCtx)

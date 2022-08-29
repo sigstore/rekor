@@ -30,7 +30,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -41,6 +40,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
@@ -920,4 +921,55 @@ func TestHostnameInSTH(t *testing.T) {
 	if strings.Contains(string(body), "rekor.sigstore.dev") {
 		t.Errorf("logInfo contains rekor.sigstore.dev which should not be set by default")
 	}
+}
+
+func TestSearchQueryLimit(t *testing.T) {
+	tests := []struct {
+		description string
+		limit       int
+		shouldErr   bool
+	}{
+		{
+			description: "request 6 entries",
+			limit:       6,
+		}, {
+			description: "request 10 entries",
+			limit:       10,
+		}, {
+			description: "request more than max",
+			limit:       12,
+			shouldErr:   true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			b := bytes.NewReader(getBody(t, test.limit))
+			resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve", "application/json", b)
+			if err != nil {
+				t.Fatal(err)
+			}
+			c, _ := ioutil.ReadAll(resp.Body)
+			t.Log(string(c))
+			if resp.StatusCode != 200 && !test.shouldErr {
+				t.Fatalf("expected test to pass but it failed")
+			}
+			if resp.StatusCode != 400 && test.shouldErr {
+				t.Fatal("expected test to fail but it passed")
+			}
+			if test.shouldErr && !strings.Contains(string(c), "more than max allowed") {
+				t.Fatal("expected max limit error but didn't get it")
+			}
+		})
+	}
+}
+
+func getBody(t *testing.T, limit int) []byte {
+	t.Helper()
+	s := fmt.Sprintf("{\"logIndexes\": [%d", limit)
+	for i := 1; i < limit; i++ {
+		s = fmt.Sprintf("%s, %d", s, i)
+	}
+	s += "]}"
+	return []byte(s)
 }

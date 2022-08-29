@@ -48,6 +48,7 @@ const (
 	sthGenerateError               = "Error generating signed tree head"
 	unsupportedPKIFormat           = "The PKI format requested is not supported by this server"
 	unexpectedInactiveShardError   = "Unexpected error communicating with inactive shard"
+	maxSearchQueryLimit            = "more than max allowed %d entries in request"
 )
 
 func errorMsg(message string, code int) *models.Error {
