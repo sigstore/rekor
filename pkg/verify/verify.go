@@ -185,7 +185,7 @@ func VerifySignedEntryTimestamp(ctx context.Context, e *models.LogEntryAnon, ver
 // Performs inclusion proof verification up to a verified root hash and
 // SignedEntryTimestamp verification.
 //nolint
-func VerifyLogEntry(ctx context.Context, rClient *client.Rekor, e *models.LogEntryAnon, verifier signature.Verifier) error {
+func VerifyLogEntry(ctx context.Context, e *models.LogEntryAnon, verifier signature.Verifier) error {
 	// Verify the inclusion proof using the body's leaf hash.
 	if err := VerifyInclusion(ctx, e); err != nil {
 		return err

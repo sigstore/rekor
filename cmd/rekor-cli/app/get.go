@@ -114,7 +114,7 @@ var getCmd = &cobra.Command{
 			for ix, entry := range resp.Payload {
 				// verify log entry
 				e = entry
-				if err := verify.VerifyLogEntry(ctx, rekorClient, &e, verifier); err != nil {
+				if err := verify.VerifyLogEntry(ctx, &e, verifier); err != nil {
 					return nil, fmt.Errorf("unable to verify entry was added to log: %w", err)
 				}
 
@@ -150,7 +150,7 @@ var getCmd = &cobra.Command{
 
 				// verify log entry
 				e = entry
-				if err := verify.VerifyLogEntry(ctx, rekorClient, &e, verifier); err != nil {
+				if err := verify.VerifyLogEntry(ctx, &e, verifier); err != nil {
 					return nil, fmt.Errorf("unable to verify entry was added to log: %w", err)
 				}
 

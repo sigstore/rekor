@@ -167,7 +167,7 @@ var verifyCmd = &cobra.Command{
 			return nil, err
 		}
 
-		if err := verify.VerifyLogEntry(ctx, rekorClient, &entry, verifier); err != nil {
+		if err := verify.VerifyLogEntry(ctx, &entry, verifier); err != nil {
 			return nil, fmt.Errorf("validating entry: %w", err)
 		}
 
