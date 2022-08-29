@@ -344,7 +344,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		rootBytes = append(rootBytes, keyBytes)
 
 	} else if len(rootBytes) != 1 {
-		return nil, errors.New("only one root key byte must be provided")
+		return nil, errors.New("only one root key must be provided")
 	}
 
 	root := &data.Signed{}

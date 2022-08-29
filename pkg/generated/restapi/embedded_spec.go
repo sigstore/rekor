@@ -1984,8 +1984,7 @@ func init() {
                 "$ref": "#/definitions/IntotoV002SchemaContentEnvelopeSignaturesItems0"
               }
             }
-          },
-          "writeOnly": true
+          }
         },
         "hash": {
           "description": "Specifies the hash algorithm and value encompassing the entire signed envelope",
@@ -2059,8 +2058,7 @@ func init() {
             "$ref": "#/definitions/IntotoV002SchemaContentEnvelopeSignaturesItems0"
           }
         }
-      },
-      "writeOnly": true
+      }
     },
     "IntotoV002SchemaContentEnvelopeSignaturesItems0": {
       "description": "a signature of the envelope's payload along with the public key for the signature",
@@ -3355,8 +3353,7 @@ func init() {
                     "$ref": "#/definitions/IntotoV002SchemaContentEnvelopeSignaturesItems0"
                   }
                 }
-              },
-              "writeOnly": true
+              }
             },
             "hash": {
               "description": "Specifies the hash algorithm and value encompassing the entire signed envelope",

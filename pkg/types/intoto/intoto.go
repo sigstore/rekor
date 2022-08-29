@@ -22,6 +22,7 @@ import (
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
+	"golang.org/x/exp/slices"
 )
 
 const (
@@ -78,4 +79,9 @@ func (it BaseIntotoType) DefaultVersion() string {
 // version did not persist signatures inside the log entry
 func (it BaseIntotoType) SupportedVersions() []string {
 	return []string{"0.0.2"}
+}
+
+// IsSupportedVersion returns true if the version can be inserted into the log, and false if not
+func (it *BaseIntotoType) IsSupportedVersion(proposedVersion string) bool {
+	return slices.Contains(it.SupportedVersions(), proposedVersion)
 }

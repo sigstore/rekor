@@ -326,7 +326,7 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		}
 		publicKeyBytes = append(publicKeyBytes, keyBytes)
 	} else if len(publicKeyBytes) != 1 {
-		return nil, errors.New("only one public key byte must be provided")
+		return nil, errors.New("only one public key must be provided")
 	}
 
 	kb := strfmt.Base64(publicKeyBytes[0])

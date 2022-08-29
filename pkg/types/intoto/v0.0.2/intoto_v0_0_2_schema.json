@@ -49,8 +49,7 @@
                             }
                         }
                     },
-                    "required": ["payloadType", "signatures"],
-                    "writeOnly": true
+                    "required": ["payloadType", "signatures"]
                 },
                 "hash": {
                     "description": "Specifies the hash algorithm and value encompassing the entire signed envelope",

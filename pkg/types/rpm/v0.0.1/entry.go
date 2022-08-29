@@ -352,7 +352,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		}
 		publicKeyBytes = append(publicKeyBytes, keyBytes)
 	} else if len(publicKeyBytes) != 1 {
-		return nil, errors.New("only one public key byte must be provided")
+		return nil, errors.New("only one public key must be provided")
 	}
 
 	re.RPMModel.PublicKey.Content = (*strfmt.Base64)(&publicKeyBytes[0])
