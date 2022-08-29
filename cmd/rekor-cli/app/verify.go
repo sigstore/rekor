@@ -31,7 +31,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
-	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/verify"
 )
@@ -151,12 +150,8 @@ var verifyCmd = &cobra.Command{
 		}
 
 		if viper.IsSet("uuid") {
-			uuid, err := sharding.GetUUIDFromIDString(viper.GetString("uuid"))
-			if err != nil {
+			if err := compareEntryUUIDs(viper.GetString("uuid"), o.EntryUUID); err != nil {
 				return nil, err
-			}
-			if uuid != o.EntryUUID {
-				return nil, fmt.Errorf("unexpected entry returned from rekor server")
 			}
 		}
 
