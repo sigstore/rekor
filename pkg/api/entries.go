@@ -42,6 +42,7 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/util"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
@@ -92,11 +93,32 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 		return nil, fmt.Errorf("signing entry error: %w", err)
 	}
 
+	// sign a checkpoint as a commitment to the current root hash
+	sth, err := util.CreateSignedCheckpoint(util.Checkpoint{
+		Origin: fmt.Sprintf("%s - %d", viper.GetString("rekor_server.hostname"), tc.logID),
+		Size:   root.TreeSize,
+		Hash:   root.RootHash,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling checkpoint: %w", err)
+	}
+	sth.SetTimestamp(uint64(*logEntryAnon.IntegratedTime))
+	_, err = sth.Sign(viper.GetString("rekor_server.hostname"), api.signer, options.WithContext(ctx))
+	if err != nil {
+		return nil, fmt.Errorf("error signing checkpoint: %w", err)
+	}
+	scBytes, err := sth.SignedNote.MarshalText()
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling checkpoint: %w", err)
+	}
+	scString := string(scBytes)
+
 	inclusionProof := models.InclusionProof{
-		TreeSize: swag.Int64(int64(root.TreeSize)),
-		RootHash: swag.String(hex.EncodeToString(root.RootHash)),
-		LogIndex: swag.Int64(proof.GetLeafIndex()),
-		Hashes:   hashes,
+		TreeSize:   swag.Int64(int64(root.TreeSize)),
+		RootHash:   swag.String(hex.EncodeToString(root.RootHash)),
+		LogIndex:   swag.Int64(proof.GetLeafIndex()),
+		Hashes:     hashes,
+		Checkpoint: &scString,
 	}
 
 	uuid := hex.EncodeToString(leaf.MerkleLeafHash)
@@ -261,7 +283,45 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing entry error: %v", err), signingError)
 	}
 
+	root := &ttypes.LogRootV1{}
+	if err := root.UnmarshalBinary(resp.getLeafAndProofResult.SignedLogRoot.LogRoot); err != nil {
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("error unmarshalling log root: %v", err), sthGenerateError)
+	}
+	hashes := []string{}
+	for _, hash := range resp.getLeafAndProofResult.Proof.Hashes {
+		hashes = append(hashes, hex.EncodeToString(hash))
+	}
+
+	// sign a checkpoint as a commitment to the current root hash
+	sth, err := util.CreateSignedCheckpoint(util.Checkpoint{
+		Origin: fmt.Sprintf("%s - %d", viper.GetString("rekor_server.hostname"), tc.logID),
+		Size:   root.TreeSize,
+		Hash:   root.RootHash,
+	})
+	if err != nil {
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("error creating checkpoint: %v", err), sthGenerateError)
+	}
+	sth.SetTimestamp(uint64(*logEntryAnon.IntegratedTime))
+	_, err = sth.Sign(viper.GetString("rekor_server.hostname"), api.signer, options.WithContext(ctx))
+	if err != nil {
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("error signing checkpoint: %v", err), sthGenerateError)
+	}
+	scBytes, err := sth.SignedNote.MarshalText()
+	if err != nil {
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("error marshalling checkpoint: %v", err), sthGenerateError)
+	}
+	scString := string(scBytes)
+
+	inclusionProof := models.InclusionProof{
+		TreeSize:   swag.Int64(int64(root.TreeSize)),
+		RootHash:   swag.String(hex.EncodeToString(root.RootHash)),
+		LogIndex:   swag.Int64(queuedLeaf.LeafIndex),
+		Hashes:     hashes,
+		Checkpoint: &scString,
+	}
+
 	logEntryAnon.Verification = &models.LogEntryAnonVerification{
+		InclusionProof:       &inclusionProof,
 		SignedEntryTimestamp: strfmt.Base64(signature),
 	}
 

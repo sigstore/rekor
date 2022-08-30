@@ -432,9 +432,15 @@ func init() {
         "logIndex",
         "rootHash",
         "treeSize",
-        "hashes"
+        "hashes",
+        "checkpoint"
       ],
       "properties": {
+        "checkpoint": {
+          "description": "The checkpoint (signed tree head) that the inclusion proof is based on",
+          "type": "string",
+          "format": "signedCheckpoint"
+        },
         "hashes": {
           "description": "A list of hashes required to compute the inclusion proof, sorted in order from leaf to root",
           "type": "array",
@@ -1831,9 +1837,15 @@ func init() {
         "logIndex",
         "rootHash",
         "treeSize",
-        "hashes"
+        "hashes",
+        "checkpoint"
       ],
       "properties": {
+        "checkpoint": {
+          "description": "The checkpoint (signed tree head) that the inclusion proof is based on",
+          "type": "string",
+          "format": "signedCheckpoint"
+        },
         "hashes": {
           "description": "A list of hashes required to compute the inclusion proof, sorted in order from leaf to root",
           "type": "array",

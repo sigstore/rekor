@@ -631,11 +631,16 @@ definitions:
           type: string
           description: SHA256 hash value expressed in hexadecimal format
           pattern: '^[0-9a-fA-F]{64}$'
+      checkpoint:
+        type: string
+        format: signedCheckpoint
+        description: The checkpoint (signed tree head) that the inclusion proof is based on
     required:
       - logIndex
       - rootHash
       - treeSize
       - hashes
+      - checkpoint
 
   Error:
     type: object
