@@ -279,12 +279,7 @@ func TestGetCLI(t *testing.T) {
 	outputContains(t, out, uuid)
 
 	// Exercise GET with the new EntryID (TreeID + UUID)
-	out = runCli(t, "loginfo")
-	tidStr := strings.TrimSpace(strings.Split(out, "TreeID: ")[1])
-	tid, err := strconv.ParseInt(tidStr, 10, 64)
-	if err != nil {
-		t.Errorf(err.Error())
-	}
+	tid := getTreeID(t)
 	entryID, err := sharding.CreateEntryIDFromParts(fmt.Sprintf("%x", tid), uuid)
 	if err != nil {
 		t.Error(err)
@@ -1218,4 +1213,66 @@ func getBody(t *testing.T, limit int) []byte {
 	}
 	s += "]}"
 	return []byte(s)
+}
+
+func getTreeID(t *testing.T) int64 {
+	out := runCli(t, "loginfo")
+	tidStr := strings.TrimSpace(strings.Split(out, "TreeID: ")[1])
+	tid, err := strconv.ParseInt(tidStr, 10, 64)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	t.Log("Tree ID:", tid)
+	return tid
+}
+
+// This test confirms that we validate tree ID when using the /api/v1/log/entries/retrieve endpoint
+// https://github.com/sigstore/rekor/issues/1014
+func TestSearchValidateTreeID(t *testing.T) {
+	// Create something and add it to the log
+	artifactPath := filepath.Join(t.TempDir(), "artifact")
+	sigPath := filepath.Join(t.TempDir(), "signature.asc")
+
+	createdPGPSignedArtifact(t, artifactPath, sigPath)
+
+	// Write the public key to a file
+	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
+	if err := ioutil.WriteFile(pubPath, []byte(publicKey), 0644); err != nil {
+		t.Fatal(err)
+	}
+	out := runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	outputContains(t, out, "Created entry at")
+
+	uuid, err := sharding.GetUUIDFromIDString(getUUIDFromUploadOutput(t, out))
+	if err != nil {
+		t.Error(err)
+	}
+	// Make sure we can get by Entry ID
+	tid := getTreeID(t)
+	entryID, err := sharding.CreateEntryIDFromParts(fmt.Sprintf("%x", tid), uuid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := "{\"entryUUIDs\":[\"%s\"]}"
+	resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve", "application/json", bytes.NewBuffer([]byte(fmt.Sprintf(body, entryID.ReturnEntryIDString()))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200 status code but got %d", resp.StatusCode)
+	}
+
+	// Make sure we fail with a random tree ID
+	fakeTID := tid + 1
+	entryID, err = sharding.CreateEntryIDFromParts(fmt.Sprintf("%x", fakeTID), uuid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err = http.Post("http://localhost:3000/api/v1/log/entries/retrieve", "application/json", bytes.NewBuffer([]byte(fmt.Sprintf(body, entryID.ReturnEntryIDString()))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != 400 {
+		t.Fatalf("expected 400 status code but got %d", resp.StatusCode)
+	}
 }

@@ -330,15 +330,19 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 
 		var searchHashes [][]byte
 		for _, entryID := range params.Entry.EntryUUIDs {
-			uuid, err := sharding.GetUUIDFromIDString(entryID)
-			if err != nil {
-				return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("could not get UUID from ID string %v", entryID))
-			}
-			if logEntry, err := retrieveLogEntry(httpReqCtx, entryID); err == nil {
+			if sharding.ValidateEntryID(entryID) == nil {
+				logEntry, err := retrieveLogEntry(httpReqCtx, entryID)
+				if err != nil {
+					return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("error getting log entry for %s", entryID))
+				}
 				resultPayload = append(resultPayload, logEntry)
 				continue
 			}
-			// If we couldn't get the entry, search for the hash later
+			// At this point, check if we got a uuid instead of an EntryID, so search for the hash later
+			uuid := entryID
+			if err := sharding.ValidateUUID(uuid); err != nil {
+				return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("validating uuid %s", uuid))
+			}
 			hash, err := hex.DecodeString(uuid)
 			if err != nil {
 				return handleRekorAPIError(params, http.StatusBadRequest, err, malformedUUID)
