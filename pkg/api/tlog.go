@@ -69,7 +69,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	treeSize := int64(root.TreeSize)
 
 	sth, err := util.CreateSignedCheckpoint(util.Checkpoint{
-		Origin: "Rekor",
+		Origin: fmt.Sprintf("%s - %d", viper.GetString("rekor_server.hostname"), tc.ranges.ActiveTreeID()),
 		Size:   root.TreeSize,
 		Hash:   root.RootHash,
 	})
@@ -170,7 +170,7 @@ func inactiveShardLogInfo(ctx context.Context, tid int64) (*models.InactiveShard
 	treeSize := int64(root.TreeSize)
 
 	sth, err := util.CreateSignedCheckpoint(util.Checkpoint{
-		Origin: "Rekor",
+		Origin: fmt.Sprintf("%s - %d", viper.GetString("rekor_server.hostname"), tid),
 		Size:   root.TreeSize,
 		Hash:   root.RootHash,
 	})
