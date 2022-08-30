@@ -77,32 +77,35 @@ func ProveConsistency(ctx context.Context, rClient *client.Rekor,
 // against a newly fetched Checkpoint.
 //nolint
 func VerifyCurrentCheckpoint(ctx context.Context, rClient *client.Rekor, verifier signature.Verifier,
-	oldSTH *util.SignedCheckpoint) error {
+	oldSTH *util.SignedCheckpoint) (*util.SignedCheckpoint, error) {
 	// The oldSTH should already be verified, but check for robustness.
 	if !oldSTH.Verify(verifier) {
-		return errors.New("signature on old tree head did not verify")
+		return nil, errors.New("signature on old tree head did not verify")
 	}
 
 	// Get and verify against the current STH.
 	infoParams := tlog.NewGetLogInfoParamsWithContext(ctx)
 	result, err := rClient.Tlog.GetLogInfo(infoParams)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	logInfo := result.GetPayload()
 	sth := util.SignedCheckpoint{}
 	if err := sth.UnmarshalText([]byte(*logInfo.SignedTreeHead)); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Verify the signature on the SignedCheckpoint.
 	if !sth.Verify(verifier) {
-		return errors.New("signature on tree head did not verify")
+		return nil, errors.New("signature on tree head did not verify")
 	}
 
 	// Now verify consistency up to the STH.
-	return ProveConsistency(ctx, rClient, oldSTH, &sth, *logInfo.TreeID)
+	if err := ProveConsistency(ctx, rClient, oldSTH, &sth, *logInfo.TreeID); err != nil {
+		return nil, err
+	}
+	return &sth, nil
 }
 
 // VerifyInclusion verifies an entry's inclusion proof. Clients MUST either verify
