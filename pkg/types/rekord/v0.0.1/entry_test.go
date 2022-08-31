@@ -18,7 +18,7 @@ package rekord
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 
@@ -50,9 +50,9 @@ func TestCrossFieldValidation(t *testing.T) {
 		expectCanonicalizeSuccess bool
 	}
 
-	sigBytes, _ := ioutil.ReadFile("../../../../tests/test_file.sig")
-	keyBytes, _ := ioutil.ReadFile("../../../../tests/test_public_key.key")
-	dataBytes, _ := ioutil.ReadFile("../../../../tests/test_file.txt")
+	sigBytes, _ := os.ReadFile("../../../../tests/test_file.sig")
+	keyBytes, _ := os.ReadFile("../../../../tests/test_public_key.key")
+	dataBytes, _ := os.ReadFile("../../../../tests/test_file.txt")
 
 	testCases := []TestCase{
 		{

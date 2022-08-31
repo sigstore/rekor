@@ -45,12 +45,12 @@ func NewGetLogProof(ctx *middleware.Context, handler GetLogProofHandler) *GetLog
 	return &GetLogProof{Context: ctx, Handler: handler}
 }
 
-/* GetLogProof swagger:route GET /api/v1/log/proof tlog getLogProof
+/*
+	GetLogProof swagger:route GET /api/v1/log/proof tlog getLogProof
 
-Get information required to generate a consistency proof for the transparency log
+# Get information required to generate a consistency proof for the transparency log
 
 Returns a list of hashes for specified tree sizes that can be used to confirm the consistency of the transparency log
-
 */
 type GetLogProof struct {
 	Context *middleware.Context

@@ -50,7 +50,7 @@ type ClientService interface {
 }
 
 /*
-  SearchIndex searches index by entry metadata
+SearchIndex searches index by entry metadata
 */
 func (a *Client) SearchIndex(params *SearchIndexParams, opts ...ClientOption) (*SearchIndexOK, error) {
 	// TODO: Validate the params before sending

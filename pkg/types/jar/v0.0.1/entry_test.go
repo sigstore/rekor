@@ -18,7 +18,7 @@ package jar
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 
@@ -49,7 +49,7 @@ func TestCrossFieldValidation(t *testing.T) {
 		expectCanonicalizeSuccess bool
 	}
 
-	jarBytes, _ := ioutil.ReadFile("../../../../tests/test.jar")
+	jarBytes, _ := os.ReadFile("../../../../tests/test.jar")
 
 	testCases := []TestCase{
 		{

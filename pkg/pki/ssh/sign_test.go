@@ -17,7 +17,7 @@ package ssh
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -158,7 +158,7 @@ func TestFromOpenSSH(t *testing.T) {
 			sigPath := dataPath + ".sig"
 			run(t, nil, "ssh-keygen", "-Y", "sign", "-n", "file", "-f", privPath, dataPath)
 
-			sigBytes, err := ioutil.ReadFile(sigPath)
+			sigBytes, err := os.ReadFile(sigPath)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -301,7 +301,7 @@ func TestRoundTrip(t *testing.T) {
 
 func write(t *testing.T, d []byte, fp ...string) string {
 	p := filepath.Join(fp...)
-	if err := ioutil.WriteFile(p, d, 0600); err != nil {
+	if err := os.WriteFile(p, d, 0600); err != nil {
 		t.Fatal(err)
 	}
 	return p

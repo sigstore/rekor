@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 
@@ -74,7 +74,7 @@ func NewLogRanges(ctx context.Context, logClient trillian.TrillianLogClient, pat
 
 func logRangesFromPath(path string) (Ranges, error) {
 	var ranges Ranges
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	if err != nil {
 		return Ranges{}, err
 	}

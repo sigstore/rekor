@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sigstore/rekor/pkg/log"
@@ -100,7 +101,14 @@ func init() {
 			mux.HandleFunc("/debug/pprof/{action}", pprof.Index)
 			mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 
-			if err := http.ListenAndServe(":6060", mux); err != nil && err != http.ErrServerClosed {
+			srv := &http.Server{
+				Addr:         ":6060",
+				ReadTimeout:  10 * time.Second,
+				WriteTimeout: 10 * time.Second,
+				Handler:      mux,
+			}
+
+			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Logger.Fatalf("Error when starting or running http server: %v", err)
 			}
 		}()

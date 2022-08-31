@@ -17,7 +17,6 @@ package state
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -44,7 +43,7 @@ func Dump(key string, sth *util.SignedCheckpoint) error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(statePath, b, 0600); err != nil {
+	if err := os.WriteFile(statePath, b, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -56,7 +55,7 @@ func loadStateFile() persistedState {
 		return nil
 	}
 	fp := filepath.Join(rekorDir, "state.json")
-	b, err := ioutil.ReadFile(filepath.Clean(fp))
+	b, err := os.ReadFile(filepath.Clean(fp))
 	if err != nil {
 		return nil
 	}

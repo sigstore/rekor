@@ -25,7 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -303,7 +303,7 @@ func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		if props.ArtifactPath.IsAbs() {
 			return nil, errors.New("intoto envelopes cannot be fetched over HTTP(S)")
 		}
-		artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+		artifactBytes, err = os.ReadFile(filepath.Clean(props.ArtifactPath.Path))
 		if err != nil {
 			return nil, err
 		}
@@ -325,7 +325,7 @@ func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 				return nil, errors.New("dsse public keys cannot be fetched over HTTP(S)")
 			}
 
-			publicKeyBytes, err := ioutil.ReadFile(filepath.Clean(path.Path))
+			publicKeyBytes, err := os.ReadFile(filepath.Clean(path.Path))
 			if err != nil {
 				return nil, fmt.Errorf("error reading public key file: %w", err)
 			}

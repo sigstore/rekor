@@ -68,7 +68,8 @@ func NewGetLogEntryByIndexOK() *GetLogEntryByIndexOK {
 	return &GetLogEntryByIndexOK{}
 }
 
-/* GetLogEntryByIndexOK describes a response with status code 200, with default header values.
+/*
+GetLogEntryByIndexOK describes a response with status code 200, with default header values.
 
 the entry in the transparency log requested along with an inclusion proof
 */
@@ -98,7 +99,8 @@ func NewGetLogEntryByIndexNotFound() *GetLogEntryByIndexNotFound {
 	return &GetLogEntryByIndexNotFound{}
 }
 
-/* GetLogEntryByIndexNotFound describes a response with status code 404, with default header values.
+/*
+GetLogEntryByIndexNotFound describes a response with status code 404, with default header values.
 
 The content requested could not be found
 */
@@ -121,7 +123,8 @@ func NewGetLogEntryByIndexDefault(code int) *GetLogEntryByIndexDefault {
 	}
 }
 
-/* GetLogEntryByIndexDefault describes a response with status code -1, with default header values.
+/*
+GetLogEntryByIndexDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */

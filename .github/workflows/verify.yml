@@ -15,7 +15,11 @@
 
 name: Verify
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
 
 permissions:
   contents: read
@@ -31,6 +35,7 @@ jobs:
       - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
+
       - name: Install addlicense
         run: go install github.com/google/addlicense@v1.0.0
       - name: Check license headers
@@ -49,8 +54,9 @@ jobs:
       - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@537aa1903e5d359d0b27dbc19ddd22c5087f3fbc # v3.2.0
         timeout-minutes: 5
         with:
-          version: v1.46.0
+          version: v1.49

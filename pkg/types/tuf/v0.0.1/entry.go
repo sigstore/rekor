@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,7 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -320,7 +319,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 				return nil, fmt.Errorf("error opening RPM file: %w", err)
 			}
 		}
-		artifactBytes, err = ioutil.ReadAll(artifactReader)
+		artifactBytes, err = io.ReadAll(artifactReader)
 		if err != nil {
 			return nil, fmt.Errorf("error reading RPM file: %w", err)
 		}
@@ -337,7 +336,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		if len(props.PublicKeyPaths) != 1 {
 			return nil, errors.New("only one path to root file must be specified")
 		}
-		keyBytes, err := ioutil.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
+		keyBytes, err := os.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
 		if err != nil {
 			return nil, fmt.Errorf("error reading root file: %w", err)
 		}
