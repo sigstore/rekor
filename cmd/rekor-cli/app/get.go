@@ -120,7 +120,7 @@ var getCmd = &cobra.Command{
 
 				// verify checkpoint
 				if entry.Verification.InclusionProof.Checkpoint != nil {
-					if err := verify.VerifyCheckpointSignature(&entry, verifier); err != nil {
+					if err := verify.VerifyCheckpointSignature(&e, verifier); err != nil {
 						return nil, err
 					}
 				}

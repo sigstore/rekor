@@ -458,7 +458,7 @@ func TestSignCheckpoint(t *testing.T) {
 		t.Fatalf("error generating signer: %v", err)
 	}
 	ctx := context.Background()
-	scBytes, err := CreateAndSignCheckpoint(hostname, treeID, &types.LogRootV1{TreeSize: treeSize, RootHash: rootHash[:]}, signer, ctx)
+	scBytes, err := CreateAndSignCheckpoint(ctx, hostname, treeID, &types.LogRootV1{TreeSize: treeSize, RootHash: rootHash[:]}, signer)
 	if err != nil {
 		t.Fatalf("error creating signed checkpoint: %v", err)
 	}

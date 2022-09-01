@@ -168,7 +168,7 @@ func (r *SignedCheckpoint) GetTimestamp() uint64 {
 }
 
 // CreateAndSignCheckpoint creates a signed checkpoint as a commitment to the current root hash
-func CreateAndSignCheckpoint(hostname string, treeID int64, root *types.LogRootV1, signer signature.Signer, ctx context.Context) ([]byte, error) {
+func CreateAndSignCheckpoint(ctx context.Context, hostname string, treeID int64, root *types.LogRootV1, signer signature.Signer) ([]byte, error) {
 	sth, err := CreateSignedCheckpoint(Checkpoint{
 		Origin: fmt.Sprintf("%s - %d", hostname, treeID),
 		Size:   root.TreeSize,

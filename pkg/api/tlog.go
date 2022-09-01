@@ -66,8 +66,8 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	hashString := hex.EncodeToString(root.RootHash)
 	treeSize := int64(root.TreeSize)
 
-	scBytes, err := util.CreateAndSignCheckpoint(viper.GetString("rekor_server.hostname"),
-		tc.ranges.ActiveTreeID(), root, api.signer, params.HTTPRequest.Context())
+	scBytes, err := util.CreateAndSignCheckpoint(params.HTTPRequest.Context(),
+		viper.GetString("rekor_server.hostname"), tc.ranges.ActiveTreeID(), root, api.signer)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, sthGenerateError)
 	}
@@ -151,7 +151,7 @@ func inactiveShardLogInfo(ctx context.Context, tid int64) (*models.InactiveShard
 	hashString := hex.EncodeToString(root.RootHash)
 	treeSize := int64(root.TreeSize)
 
-	scBytes, err := util.CreateAndSignCheckpoint(viper.GetString("rekor_server.hostname"), tid, root, api.signer, ctx)
+	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tid, root, api.signer)
 	if err != nil {
 		return nil, err
 	}
