@@ -141,6 +141,7 @@ var uploadCmd = &cobra.Command{
 		if err := verify.VerifySignedEntryTimestamp(ctx, &logEntry, verifier); err != nil {
 			return nil, fmt.Errorf("unable to verify entry was added to log: %w", err)
 		}
+		// TODO: Remove conditional once inclusion proof/checkpoint is always returned by server.
 		if logEntry.Verification.InclusionProof != nil {
 			// verify inclusion proof
 			if err := verify.VerifyInclusion(ctx, &logEntry); err != nil {

@@ -176,15 +176,9 @@ var verifyCmd = &cobra.Command{
 			return nil, err
 		}
 
+		// verify inclusion proof, checkpoint, and SET
 		if err := verify.VerifyLogEntry(ctx, &entry, verifier); err != nil {
 			return nil, fmt.Errorf("validating entry: %w", err)
-		}
-
-		// verify checkpoint
-		if entry.Verification.InclusionProof.Checkpoint != nil {
-			if err := verify.VerifyCheckpointSignature(&entry, verifier); err != nil {
-				return nil, err
-			}
 		}
 
 		return o, err

@@ -199,8 +199,8 @@ func VerifySignedEntryTimestamp(ctx context.Context, e *models.LogEntryAnon, ver
 }
 
 // VerifyLogEntry performs verification of a LogEntry given a Rekor verifier.
-// Performs inclusion proof verification up to a verified root hash and
-// SignedEntryTimestamp verification.
+// Performs inclusion proof verification up to a verified root hash,
+// SignedEntryTimestamp verification, and checkpoint verification.
 // nolint
 func VerifyLogEntry(ctx context.Context, e *models.LogEntryAnon, verifier signature.Verifier) error {
 	// Verify the inclusion proof using the body's leaf hash.
@@ -208,9 +208,14 @@ func VerifyLogEntry(ctx context.Context, e *models.LogEntryAnon, verifier signat
 		return err
 	}
 
-	// TODO: If/when we return an STH in the response, verify that too, against an
-	// optional known STH as well.
+	// TODO: Add support for verifying consistency against an optional provided checkpoint.
 	// See https://github.com/sigstore/rekor/issues/988
+	// TODO: Remove conditional once checkpoint is always returned by server.
+	if e.Verification.InclusionProof.Checkpoint != nil {
+		if err := VerifyCheckpointSignature(e, verifier); err != nil {
+			return err
+		}
+	}
 
 	// Verify the Signed Entry Timestamp.
 	if err := VerifySignedEntryTimestamp(ctx, e, verifier); err != nil {

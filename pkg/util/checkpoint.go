@@ -175,15 +175,15 @@ func CreateAndSignCheckpoint(ctx context.Context, hostname string, treeID int64,
 		Hash:   root.RootHash,
 	})
 	if err != nil {
-		return []byte{}, fmt.Errorf("error creating checkpoint: %v", err)
+		return nil, fmt.Errorf("error creating checkpoint: %v", err)
 	}
 	sth.SetTimestamp(uint64(time.Now().UnixNano()))
 	if _, err := sth.Sign(hostname, signer, options.WithContext(ctx)); err != nil {
-		return []byte{}, fmt.Errorf("error signing checkpoint: %v", err)
+		return nil, fmt.Errorf("error signing checkpoint: %v", err)
 	}
 	scBytes, err := sth.SignedNote.MarshalText()
 	if err != nil {
-		return []byte{}, fmt.Errorf("error marshalling checkpoint: %v", err)
+		return nil, fmt.Errorf("error marshalling checkpoint: %v", err)
 	}
 	return scBytes, nil
 }
