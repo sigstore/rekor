@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/swag"
@@ -33,7 +32,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
-	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // GetLogInfoHandler returns the current size of the tree and the STH
@@ -68,32 +66,16 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	hashString := hex.EncodeToString(root.RootHash)
 	treeSize := int64(root.TreeSize)
 
-	sth, err := util.CreateSignedCheckpoint(util.Checkpoint{
-		Origin: fmt.Sprintf("%s - %d", viper.GetString("rekor_server.hostname"), tc.ranges.ActiveTreeID()),
-		Size:   root.TreeSize,
-		Hash:   root.RootHash,
-	})
+	scBytes, err := util.CreateAndSignCheckpoint(viper.GetString("rekor_server.hostname"),
+		tc.ranges.ActiveTreeID(), root, api.signer, params.HTTPRequest.Context())
 	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("marshalling error: %w", err), sthGenerateError)
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, sthGenerateError)
 	}
-	sth.SetTimestamp(uint64(time.Now().UnixNano()))
-
-	// sign the log root ourselves to get the log root signature
-	_, err = sth.Sign(viper.GetString("rekor_server.hostname"), api.signer, options.WithContext(params.HTTPRequest.Context()))
-	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing error: %w", err), signingError)
-	}
-
-	scBytes, err := sth.SignedNote.MarshalText()
-	if err != nil {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("marshalling error: %w", err), sthGenerateError)
-	}
-	scString := string(scBytes)
 
 	logInfo := models.LogInfo{
 		RootHash:       &hashString,
 		TreeSize:       &treeSize,
-		SignedTreeHead: &scString,
+		SignedTreeHead: stringPointer(string(scBytes)),
 		TreeID:         stringPointer(fmt.Sprintf("%d", tc.logID)),
 		InactiveShards: inactiveShards,
 	}
@@ -169,25 +151,11 @@ func inactiveShardLogInfo(ctx context.Context, tid int64) (*models.InactiveShard
 	hashString := hex.EncodeToString(root.RootHash)
 	treeSize := int64(root.TreeSize)
 
-	sth, err := util.CreateSignedCheckpoint(util.Checkpoint{
-		Origin: fmt.Sprintf("%s - %d", viper.GetString("rekor_server.hostname"), tid),
-		Size:   root.TreeSize,
-		Hash:   root.RootHash,
-	})
+	scBytes, err := util.CreateAndSignCheckpoint(viper.GetString("rekor_server.hostname"), tid, root, api.signer, ctx)
 	if err != nil {
 		return nil, err
 	}
-	sth.SetTimestamp(uint64(time.Now().UnixNano()))
 
-	// sign the log root ourselves to get the log root signature
-	if _, err := sth.Sign(viper.GetString("rekor_server.hostname"), api.signer, options.WithContext(ctx)); err != nil {
-		return nil, err
-	}
-
-	scBytes, err := sth.SignedNote.MarshalText()
-	if err != nil {
-		return nil, err
-	}
 	m := models.InactiveShardLogInfo{
 		RootHash:       &hashString,
 		TreeSize:       &treeSize,

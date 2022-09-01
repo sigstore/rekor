@@ -16,16 +16,21 @@
 package util
 
 import (
+	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/trillian/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	"golang.org/x/mod/sumdb/note"
@@ -440,5 +445,39 @@ func TestUnmarshalSignedCheckpoint(t *testing.T) {
 				t.Fatalf("Validator failed for %s", test.desc)
 			}
 		})
+	}
+}
+
+func TestSignCheckpoint(t *testing.T) {
+	hostname := "rekor.localhost"
+	treeID := int64(123)
+	rootHash := sha256.Sum256([]byte{1, 2, 3})
+	treeSize := uint64(42)
+	signer, _, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatalf("error generating signer: %v", err)
+	}
+	ctx := context.Background()
+	scBytes, err := CreateAndSignCheckpoint(hostname, treeID, &types.LogRootV1{TreeSize: treeSize, RootHash: rootHash[:]}, signer, ctx)
+	if err != nil {
+		t.Fatalf("error creating signed checkpoint: %v", err)
+	}
+
+	sth := SignedCheckpoint{}
+	if err := sth.UnmarshalText(scBytes); err != nil {
+		t.Fatalf("error unmarshalling signed checkpoint: %v", err)
+	}
+	if !sth.Verify(signer) {
+		t.Fatalf("checkpoint signature invalid")
+	}
+	expectedOrigin := fmt.Sprintf("%s - %d", hostname, treeID)
+	if sth.Origin != fmt.Sprintf("%s - %d", hostname, treeID) {
+		t.Fatalf("unexpected origin: got %s, expected %s", expectedOrigin, sth.Origin)
+	}
+	if !bytes.Equal(sth.Hash, rootHash[:]) {
+		t.Fatalf("unexpected mismatch of root hash")
+	}
+	if sth.Size != treeSize {
+		t.Fatalf("unexpected tree size: got %d, expected %d", sth.Size, treeSize)
 	}
 }
