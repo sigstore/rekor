@@ -75,7 +75,7 @@ func ProveConsistency(ctx context.Context, rClient *client.Rekor,
 
 // VerifyCurrentCheckpoint verifies the provided checkpoint by verifying consistency
 // against a newly fetched Checkpoint.
-//nolint
+// nolint
 func VerifyCurrentCheckpoint(ctx context.Context, rClient *client.Rekor, verifier signature.Verifier,
 	oldSTH *util.SignedCheckpoint) (*util.SignedCheckpoint, error) {
 	// The oldSTH should already be verified, but check for robustness.
@@ -108,10 +108,24 @@ func VerifyCurrentCheckpoint(ctx context.Context, rClient *client.Rekor, verifie
 	return &sth, nil
 }
 
+// VerifyCheckpointSignature verifies the signature on a checkpoint (signed tree head). It does
+// not verify consistency against other checkpoints.
+// nolint
+func VerifyCheckpointSignature(e *models.LogEntryAnon, verifier signature.Verifier) error {
+	sth := &util.SignedCheckpoint{}
+	if err := sth.UnmarshalText([]byte(*e.Verification.InclusionProof.Checkpoint)); err != nil {
+		return fmt.Errorf("unmarshalling log entry checkpoint to SignedCheckpoint: %w", err)
+	}
+	if !sth.Verify(verifier) {
+		return errors.New("signature on checkpoint did not verify")
+	}
+	return nil
+}
+
 // VerifyInclusion verifies an entry's inclusion proof. Clients MUST either verify
 // the root hash against a new STH (via VerifyCurrentCheckpoint) or against a
 // trusted, existing STH (via ProveConsistency).
-//nolint
+// nolint
 func VerifyInclusion(ctx context.Context, e *models.LogEntryAnon) error {
 	if e.Verification == nil || e.Verification.InclusionProof == nil {
 		return errors.New("inclusion proof not provided")
@@ -145,7 +159,7 @@ func VerifyInclusion(ctx context.Context, e *models.LogEntryAnon) error {
 
 // VerifySignedEntryTimestamp verifies the entry's SET against the provided
 // public key.
-//nolint
+// nolint
 func VerifySignedEntryTimestamp(ctx context.Context, e *models.LogEntryAnon, verifier signature.Verifier) error {
 	if e.Verification == nil {
 		return fmt.Errorf("missing verification")
@@ -187,7 +201,7 @@ func VerifySignedEntryTimestamp(ctx context.Context, e *models.LogEntryAnon, ver
 // VerifyLogEntry performs verification of a LogEntry given a Rekor verifier.
 // Performs inclusion proof verification up to a verified root hash and
 // SignedEntryTimestamp verification.
-//nolint
+// nolint
 func VerifyLogEntry(ctx context.Context, e *models.LogEntryAnon, verifier signature.Verifier) error {
 	// Verify the inclusion proof using the body's leaf hash.
 	if err := VerifyInclusion(ctx, e); err != nil {

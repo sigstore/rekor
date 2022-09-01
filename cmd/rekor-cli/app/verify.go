@@ -153,6 +153,9 @@ var verifyCmd = &cobra.Command{
 				Size:      *v.Verification.InclusionProof.TreeSize,
 				Hashes:    v.Verification.InclusionProof.Hashes,
 			}
+			if v.Verification.InclusionProof.Checkpoint != nil {
+				o.Checkpoint = *v.Verification.InclusionProof.Checkpoint
+			}
 			entry = v
 		}
 
@@ -175,6 +178,13 @@ var verifyCmd = &cobra.Command{
 
 		if err := verify.VerifyLogEntry(ctx, &entry, verifier); err != nil {
 			return nil, fmt.Errorf("validating entry: %w", err)
+		}
+
+		// verify checkpoint
+		if entry.Verification.InclusionProof.Checkpoint != nil {
+			if err := verify.VerifyCheckpointSignature(&entry, verifier); err != nil {
+				return nil, err
+			}
 		}
 
 		return o, err

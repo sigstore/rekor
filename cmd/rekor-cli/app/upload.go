@@ -141,6 +141,16 @@ var uploadCmd = &cobra.Command{
 		if err := verify.VerifySignedEntryTimestamp(ctx, &logEntry, verifier); err != nil {
 			return nil, fmt.Errorf("unable to verify entry was added to log: %w", err)
 		}
+		if logEntry.Verification.InclusionProof != nil {
+			// verify inclusion proof
+			if err := verify.VerifyInclusion(ctx, &logEntry); err != nil {
+				return nil, fmt.Errorf("error verifying inclusion proof: %w", err)
+			}
+			// verify checkpoint
+			if err := verify.VerifyCheckpointSignature(&logEntry, verifier); err != nil {
+				return nil, err
+			}
+		}
 
 		return &uploadCmdOutput{
 			Location: string(resp.Location),
