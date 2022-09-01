@@ -185,6 +185,8 @@ func (t *TrillianClient) addLeaf(byteValue []byte) *Response {
 		status:       status.Code(err),
 		err:          err,
 		getAddResult: resp,
+		// include getLeafAndProofResult for inclusion proof
+		getLeafAndProofResult: leafResp.getLeafAndProofResult,
 	}
 }
 

@@ -154,6 +154,7 @@ func TestUploadVerifyRekord(t *testing.T) {
 	// Now we should be able to verify it.
 	out = runCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Inclusion Proof:")
+	outputContains(t, out, "Checkpoint:")
 }
 
 func TestUploadVerifyHashedRekord(t *testing.T) {
@@ -183,6 +184,7 @@ func TestUploadVerifyHashedRekord(t *testing.T) {
 	// Now we should be able to verify it.
 	out = runCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Inclusion Proof:")
+	outputContains(t, out, "Checkpoint:")
 }
 
 func TestUploadVerifyRpm(t *testing.T) {

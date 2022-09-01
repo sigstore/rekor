@@ -42,6 +42,7 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/util"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
@@ -92,11 +93,17 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 		return nil, fmt.Errorf("signing entry error: %w", err)
 	}
 
+	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tc.logID, root, api.signer)
+	if err != nil {
+		return nil, err
+	}
+
 	inclusionProof := models.InclusionProof{
-		TreeSize: swag.Int64(int64(root.TreeSize)),
-		RootHash: swag.String(hex.EncodeToString(root.RootHash)),
-		LogIndex: swag.Int64(proof.GetLeafIndex()),
-		Hashes:   hashes,
+		TreeSize:   swag.Int64(int64(root.TreeSize)),
+		RootHash:   swag.String(hex.EncodeToString(root.RootHash)),
+		LogIndex:   swag.Int64(proof.GetLeafIndex()),
+		Hashes:     hashes,
+		Checkpoint: stringPointer(string(scBytes)),
 	}
 
 	uuid := hex.EncodeToString(leaf.MerkleLeafHash)
@@ -261,7 +268,30 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing entry error: %v", err), signingError)
 	}
 
+	root := &ttypes.LogRootV1{}
+	if err := root.UnmarshalBinary(resp.getLeafAndProofResult.SignedLogRoot.LogRoot); err != nil {
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("error unmarshalling log root: %v", err), sthGenerateError)
+	}
+	hashes := []string{}
+	for _, hash := range resp.getLeafAndProofResult.Proof.Hashes {
+		hashes = append(hashes, hex.EncodeToString(hash))
+	}
+
+	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tc.logID, root, api.signer)
+	if err != nil {
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, sthGenerateError)
+	}
+
+	inclusionProof := models.InclusionProof{
+		TreeSize:   swag.Int64(int64(root.TreeSize)),
+		RootHash:   swag.String(hex.EncodeToString(root.RootHash)),
+		LogIndex:   swag.Int64(queuedLeaf.LeafIndex),
+		Hashes:     hashes,
+		Checkpoint: stringPointer(string(scBytes)),
+	}
+
 	logEntryAnon.Verification = &models.LogEntryAnonVerification{
+		InclusionProof:       &inclusionProof,
 		SignedEntryTimestamp: strfmt.Base64(signature),
 	}
 

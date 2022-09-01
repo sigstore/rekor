@@ -118,6 +118,13 @@ var getCmd = &cobra.Command{
 					return nil, fmt.Errorf("unable to verify entry was added to log: %w", err)
 				}
 
+				// verify checkpoint
+				if entry.Verification.InclusionProof.Checkpoint != nil {
+					if err := verify.VerifyCheckpointSignature(&e, verifier); err != nil {
+						return nil, err
+					}
+				}
+
 				return parseEntry(ix, entry)
 			}
 		}

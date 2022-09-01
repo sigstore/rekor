@@ -37,18 +37,24 @@ import (
 )
 
 type verifyCmdOutput struct {
-	RootHash  string
-	EntryUUID string
-	Index     int64
-	Size      int64
-	Hashes    []string
+	RootHash   string
+	EntryUUID  string
+	Index      int64
+	Size       int64
+	Hashes     []string
+	Checkpoint string
 }
 
 func (v *verifyCmdOutput) String() string {
 	s := fmt.Sprintf("Current Root Hash: %v\n", v.RootHash)
 	s += fmt.Sprintf("Entry Hash: %v\n", v.EntryUUID)
 	s += fmt.Sprintf("Entry Index: %v\n", v.Index)
-	s += fmt.Sprintf("Current Tree Size: %v\n\n", v.Size)
+	s += fmt.Sprintf("Current Tree Size: %v\n", v.Size)
+	if len(v.Checkpoint) > 0 {
+		s += fmt.Sprintf("Checkpoint:\n%v\n\n", v.Checkpoint)
+	} else {
+		s += "\n"
+	}
 
 	s += "Inclusion Proof:\n"
 	hasher := rfc6962.DefaultHasher
@@ -147,6 +153,9 @@ var verifyCmd = &cobra.Command{
 				Size:      *v.Verification.InclusionProof.TreeSize,
 				Hashes:    v.Verification.InclusionProof.Hashes,
 			}
+			if v.Verification.InclusionProof.Checkpoint != nil {
+				o.Checkpoint = *v.Verification.InclusionProof.Checkpoint
+			}
 			entry = v
 		}
 
@@ -167,6 +176,7 @@ var verifyCmd = &cobra.Command{
 			return nil, err
 		}
 
+		// verify inclusion proof, checkpoint, and SET
 		if err := verify.VerifyLogEntry(ctx, &entry, verifier); err != nil {
 			return nil, fmt.Errorf("validating entry: %w", err)
 		}
