@@ -107,6 +107,13 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 	}
 
 	uuid := hex.EncodeToString(leaf.MerkleLeafHash)
+	treeID := fmt.Sprintf("%x", tid)
+	entryIDstruct, err := sharding.CreateEntryIDFromParts(treeID, uuid)
+	if err != nil {
+		return nil, fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", treeID, uuid, err)
+	}
+	entryID := entryIDstruct.ReturnEntryIDString()
+
 	if viper.GetBool("enable_attestation_storage") {
 		pe, err := models.UnmarshalProposedEntry(bytes.NewReader(leaf.LeafValue), runtime.JSONConsumer())
 		if err != nil {
@@ -130,11 +137,6 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 			}
 			// if looking up by key failed or we weren't able to generate a key, try looking up by uuid
 			if attKey == "" || fetchErr != nil {
-				activeTree := fmt.Sprintf("%x", tc.logID)
-				entryIDstruct, err := sharding.CreateEntryIDFromParts(activeTree, uuid)
-				if err != nil {
-					return nil, fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, uuid, err)
-				}
 				att, fetchErr = storageClient.FetchAttestation(ctx, entryIDstruct.UUID)
 				if fetchErr != nil {
 					log.ContextLogger(ctx).Errorf("error fetching attestation by uuid: %s %v", entryIDstruct.UUID, fetchErr)
@@ -154,7 +156,7 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 	}
 
 	return models.LogEntry{
-		uuid: logEntryAnon}, nil
+		entryID: logEntryAnon}, nil
 }
 
 // GetLogEntryAndProofByIndexHandler returns the entry and inclusion proof for a specified log index
@@ -296,7 +298,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	}
 
 	logEntry := models.LogEntry{
-		uuid: logEntryAnon,
+		entryID: logEntryAnon,
 	}
 	return logEntry, nil
 }
