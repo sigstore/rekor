@@ -29,20 +29,6 @@ produces:
   - application/json
 
 paths:
-  /api/v1/version:
-    get:
-      summary: Get the current version of the rekor server
-      operationId: getRekorVersion
-      tags:
-        - server
-      responses:
-        200:
-          description: A JSON object with the running rekor version
-          schema:
-            $ref: '#/definitions/RekorVersion'
-        default:
-          $ref: '#/responses/InternalServerError'
-
   /api/v1/index/retrieve:
     post:
       summary: Searches index by entry metadata

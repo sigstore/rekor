@@ -39,7 +39,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/pubkey"
-	serverops "github.com/sigstore/rekor/pkg/generated/restapi/operations/server"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 )
 
@@ -85,9 +84,6 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 		}),
 		PubkeyGetPublicKeyHandler: pubkey.GetPublicKeyHandlerFunc(func(params pubkey.GetPublicKeyParams) middleware.Responder {
 			return middleware.NotImplemented("operation pubkey.GetPublicKey has not yet been implemented")
-		}),
-		ServerGetRekorVersionHandler: serverops.GetRekorVersionHandlerFunc(func(params serverops.GetRekorVersionParams) middleware.Responder {
-			return middleware.NotImplemented("operation server.GetRekorVersion has not yet been implemented")
 		}),
 		IndexSearchIndexHandler: index.SearchIndexHandlerFunc(func(params index.SearchIndexParams) middleware.Responder {
 			return middleware.NotImplemented("operation index.SearchIndex has not yet been implemented")
@@ -146,8 +142,6 @@ type RekorServerAPI struct {
 	TlogGetLogProofHandler tlog.GetLogProofHandler
 	// PubkeyGetPublicKeyHandler sets the operation handler for the get public key operation
 	PubkeyGetPublicKeyHandler pubkey.GetPublicKeyHandler
-	// ServerGetRekorVersionHandler sets the operation handler for the get rekor version operation
-	ServerGetRekorVersionHandler serverops.GetRekorVersionHandler
 	// IndexSearchIndexHandler sets the operation handler for the search index operation
 	IndexSearchIndexHandler index.SearchIndexHandler
 	// EntriesSearchLogQueryHandler sets the operation handler for the search log query operation
@@ -249,9 +243,6 @@ func (o *RekorServerAPI) Validate() error {
 	}
 	if o.PubkeyGetPublicKeyHandler == nil {
 		unregistered = append(unregistered, "pubkey.GetPublicKeyHandler")
-	}
-	if o.ServerGetRekorVersionHandler == nil {
-		unregistered = append(unregistered, "server.GetRekorVersionHandler")
 	}
 	if o.IndexSearchIndexHandler == nil {
 		unregistered = append(unregistered, "index.SearchIndexHandler")
@@ -373,10 +364,6 @@ func (o *RekorServerAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/api/v1/log/publicKey"] = pubkey.NewGetPublicKey(o.context, o.PubkeyGetPublicKeyHandler)
-	if o.handlers["GET"] == nil {
-		o.handlers["GET"] = make(map[string]http.Handler)
-	}
-	o.handlers["GET"]["/api/v1/version"] = serverops.NewGetRekorVersion(o.context, o.ServerGetRekorVersionHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
