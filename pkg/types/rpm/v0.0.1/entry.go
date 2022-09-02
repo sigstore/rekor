@@ -24,7 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -203,7 +202,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pgp.PublicKey, 
 			return closePipesOnError(types.ValidationError(err))
 		}
 		// ReadPackageFile does not drain the entire reader so we need to discard the rest
-		if _, err = io.Copy(ioutil.Discard, rpmR); err != nil {
+		if _, err = io.Copy(io.Discard, rpmR); err != nil {
 			return closePipesOnError(err)
 		}
 
@@ -333,7 +332,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 				return nil, fmt.Errorf("error opening RPM file: %w", err)
 			}
 		}
-		artifactBytes, err = ioutil.ReadAll(artifactReader)
+		artifactBytes, err = io.ReadAll(artifactReader)
 		if err != nil {
 			return nil, fmt.Errorf("error reading RPM file: %w", err)
 		}
@@ -346,7 +345,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		if len(props.PublicKeyPaths) != 1 {
 			return nil, errors.New("only one public key must be provided to verify RPM signature")
 		}
-		keyBytes, err := ioutil.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
+		keyBytes, err := os.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
 		if err != nil {
 			return nil, fmt.Errorf("error reading public key file: %w", err)
 		}

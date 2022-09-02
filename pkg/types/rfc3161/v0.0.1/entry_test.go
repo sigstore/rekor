@@ -20,9 +20,9 @@ import (
 	"context"
 	"encoding/asn1"
 	"errors"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -58,7 +58,7 @@ func TestCrossFieldValidation(t *testing.T) {
 		expectValidationErrorMessage string
 	}
 
-	tsrBytes, _ := ioutil.ReadFile("../../../../tests/test.tsr")
+	tsrBytes, _ := os.ReadFile("../../../../tests/test.tsr")
 
 	testServer := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {

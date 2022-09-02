@@ -24,7 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -357,7 +356,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 				return nil, fmt.Errorf("error opening artifact file: %w", err)
 			}
 		}
-		artifactBytes, err = ioutil.ReadAll(artifactReader)
+		artifactBytes, err = io.ReadAll(artifactReader)
 		if err != nil {
 			return nil, fmt.Errorf("error reading artifact file: %w", err)
 		}
@@ -380,7 +379,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		if props.SignaturePath == nil {
 			return nil, errors.New("a detached signature must be provided")
 		}
-		sigBytes, err = ioutil.ReadFile(filepath.Clean(props.SignaturePath.Path))
+		sigBytes, err = os.ReadFile(filepath.Clean(props.SignaturePath.Path))
 		if err != nil {
 			return nil, fmt.Errorf("error reading signature file: %w", err)
 		}
@@ -395,7 +394,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		if len(props.PublicKeyPaths) != 1 {
 			return nil, errors.New("only one public key must be provided to verify detached signature")
 		}
-		keyBytes, err := ioutil.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
+		keyBytes, err := os.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
 		if err != nil {
 			return nil, fmt.Errorf("error reading public key file: %w", err)
 		}

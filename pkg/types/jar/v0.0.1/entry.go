@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -258,7 +257,7 @@ func extractPKCS7SignatureFromJAR(inz *zip.Reader) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			contents, err := ioutil.ReadAll(fileReader)
+			contents, err := io.ReadAll(fileReader)
 			if err != nil {
 				return nil, err
 			}
@@ -297,7 +296,7 @@ func (v *V001Entry) CreateFromArtifactProperties(ctx context.Context, props type
 				return nil, fmt.Errorf("error opening JAR file: %w", err)
 			}
 		}
-		artifactBytes, err = ioutil.ReadAll(artifactReader)
+		artifactBytes, err = io.ReadAll(artifactReader)
 		if err != nil {
 			return nil, fmt.Errorf("error reading JAR file: %w", err)
 		}

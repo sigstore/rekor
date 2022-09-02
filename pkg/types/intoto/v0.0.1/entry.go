@@ -25,7 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -286,7 +286,7 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		if props.ArtifactPath.IsAbs() {
 			return nil, errors.New("intoto envelopes cannot be fetched over HTTP(S)")
 		}
-		artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+		artifactBytes, err = os.ReadFile(filepath.Clean(props.ArtifactPath.Path))
 		if err != nil {
 			return nil, err
 		}
@@ -296,7 +296,7 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		if len(props.PublicKeyPaths) != 1 {
 			return nil, errors.New("only one public key must be provided to verify signature")
 		}
-		keyBytes, err := ioutil.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
+		keyBytes, err := os.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
 		if err != nil {
 			return nil, fmt.Errorf("error reading public key file: %w", err)
 		}

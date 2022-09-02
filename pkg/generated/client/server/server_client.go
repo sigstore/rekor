@@ -50,7 +50,7 @@ type ClientService interface {
 }
 
 /*
-  GetRekorVersion gets the current version of the rekor server
+GetRekorVersion gets the current version of the rekor server
 */
 func (a *Client) GetRekorVersion(params *GetRekorVersionParams, opts ...ClientOption) (*GetRekorVersionOK, error) {
 	// TODO: Validate the params before sending

@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -136,7 +135,7 @@ var searchCmd = &cobra.Command{
 
 				tee = io.TeeReader(file, hasher)
 			}
-			if _, err := ioutil.ReadAll(tee); err != nil {
+			if _, err := io.ReadAll(tee); err != nil {
 				return nil, fmt.Errorf("error processing '%v': %w", artifactStr, err)
 			}
 
@@ -170,7 +169,7 @@ var searchCmd = &cobra.Command{
 				if isURL(splitPubKeyString[0]) {
 					params.Query.PublicKey.URL = strfmt.URI(splitPubKeyString[0])
 				} else {
-					keyBytes, err := ioutil.ReadFile(filepath.Clean(splitPubKeyString[0]))
+					keyBytes, err := os.ReadFile(filepath.Clean(splitPubKeyString[0]))
 					if err != nil {
 						return nil, fmt.Errorf("error reading public key file: %w", err)
 					}

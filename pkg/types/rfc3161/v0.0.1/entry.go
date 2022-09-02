@@ -24,7 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/sigstore/rekor/pkg/types/rfc3161"
@@ -185,7 +185,7 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		if props.ArtifactPath.IsAbs() {
 			return nil, errors.New("RFC3161 timestamps cannot be fetched over HTTP(S)")
 		}
-		artifactBytes, err = ioutil.ReadFile(filepath.Clean(props.ArtifactPath.Path))
+		artifactBytes, err = os.ReadFile(filepath.Clean(props.ArtifactPath.Path))
 		if err != nil {
 			return nil, fmt.Errorf("error reading artifact file: %w", err)
 		}

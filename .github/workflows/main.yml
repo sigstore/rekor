@@ -35,6 +35,7 @@ jobs:
       - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
+
       - name: Build
         run: make -C $GITHUB_WORKSPACE all
       - name: Fuzz-Build
@@ -55,9 +56,10 @@ jobs:
       - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
+
       - uses: imjasonh/setup-ko@78eea08f10db87a7a23a666a4a6fe2734f2eeb8d # v0.4
         with:
-          version: v0.11.2
+          version: v0.12.0
       - name: container
         run: |
           make ko-local 2>&1 | tee output.txt
@@ -78,6 +80,7 @@ jobs:
       - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
+
       - name: CLI
         run: ./tests/e2e-test.sh
       - name: Upload logs if they exist
@@ -102,6 +105,7 @@ jobs:
       - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
+
       - name: Sharding Test
         run: ./tests/sharding-e2e-test.sh
       - name: Upload logs if they exist
@@ -124,6 +128,7 @@ jobs:
       - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
+
       - name: Test for Attestation begin returned that was previously persisted in tlog
         run: ./tests/issue-872-e2e-test.sh
       - name: Upload logs if they exist
@@ -137,19 +142,20 @@ jobs:
     runs-on: ubuntu-20.04
     needs: build
     steps:
-    - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
-    - name: Create git branch
-      run: git switch -c harness-test-branch
-    - name: Extract version of Go to use
-      run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-    - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3.1.0
-      with:
-        go-version: ${{ env.GOVERSION }}
-    - name: Run test harness
-      run: ./tests/rekor-harness.sh
-    - name: Upload logs if they exist
-      uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # v3
-      if: failure()
-      with:
-        name: E2E Docker Compose logs
-        path: /tmp/docker-compose.log
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+      - name: Create git branch
+        run: git switch -c harness-test-branch
+      - name: Extract version of Go to use
+        run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
+      - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3.1.0
+        with:
+          go-version: ${{ env.GOVERSION }}
+
+      - name: Run test harness
+        run: ./tests/rekor-harness.sh
+      - name: Upload logs if they exist
+        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # v3
+        if: failure()
+        with:
+          name: E2E Docker Compose logs
+          path: /tmp/docker-compose.log

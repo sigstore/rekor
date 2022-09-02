@@ -68,10 +68,12 @@ func NewGetRekorVersionParamsWithHTTPClient(client *http.Client) *GetRekorVersio
 	}
 }
 
-/* GetRekorVersionParams contains all the parameters to send to the API endpoint
-   for the get rekor version operation.
+/*
+GetRekorVersionParams contains all the parameters to send to the API endpoint
 
-   Typically these are written to a http.Request.
+	for the get rekor version operation.
+
+	Typically these are written to a http.Request.
 */
 type GetRekorVersionParams struct {
 	timeout    time.Duration

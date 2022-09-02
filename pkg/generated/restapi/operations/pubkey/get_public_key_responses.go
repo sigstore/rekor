@@ -32,7 +32,8 @@ import (
 // GetPublicKeyOKCode is the HTTP code returned for type GetPublicKeyOK
 const GetPublicKeyOKCode int = 200
 
-/*GetPublicKeyOK The public key
+/*
+GetPublicKeyOK The public key
 
 swagger:response getPublicKeyOK
 */
@@ -71,7 +72,8 @@ func (o *GetPublicKeyOK) WriteResponse(rw http.ResponseWriter, producer runtime.
 	}
 }
 
-/*GetPublicKeyDefault There was an internal error in the server while processing the request
+/*
+GetPublicKeyDefault There was an internal error in the server while processing the request
 
 swagger:response getPublicKeyDefault
 */

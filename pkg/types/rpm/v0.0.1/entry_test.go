@@ -18,7 +18,7 @@ package rpm
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 
@@ -50,8 +50,8 @@ func TestCrossFieldValidation(t *testing.T) {
 		expectCanonicalizeSuccess bool
 	}
 
-	keyBytes, _ := ioutil.ReadFile("../../../../tests/test_rpm_public_key.key")
-	dataBytes, _ := ioutil.ReadFile("../../../../tests/test.rpm")
+	keyBytes, _ := os.ReadFile("../../../../tests/test_rpm_public_key.key")
+	dataBytes, _ := os.ReadFile("../../../../tests/test.rpm")
 
 	testCases := []TestCase{
 		{

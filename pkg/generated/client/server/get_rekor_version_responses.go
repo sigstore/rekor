@@ -62,7 +62,8 @@ func NewGetRekorVersionOK() *GetRekorVersionOK {
 	return &GetRekorVersionOK{}
 }
 
-/* GetRekorVersionOK describes a response with status code 200, with default header values.
+/*
+GetRekorVersionOK describes a response with status code 200, with default header values.
 
 A JSON object with the running rekor version
 */
@@ -96,7 +97,8 @@ func NewGetRekorVersionDefault(code int) *GetRekorVersionDefault {
 	}
 }
 
-/* GetRekorVersionDefault describes a response with status code -1, with default header values.
+/*
+GetRekorVersionDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */

@@ -18,9 +18,9 @@ package app
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -54,27 +54,27 @@ func TestArtifactPFlags(t *testing.T) {
 
 			switch r.URL.Path {
 			case "/artifact":
-				file, err = ioutil.ReadFile("../../../tests/test_file.txt")
+				file, err = os.ReadFile("../../../tests/test_file.txt")
 			case "/signature":
-				file, err = ioutil.ReadFile("../../../tests/test_file.sig")
+				file, err = os.ReadFile("../../../tests/test_file.sig")
 			case "/publicKey":
-				file, err = ioutil.ReadFile("../../../tests/test_public_key.key")
+				file, err = os.ReadFile("../../../tests/test_public_key.key")
 			case "/rekord":
-				file, err = ioutil.ReadFile("../../../tests/rekor.json")
+				file, err = os.ReadFile("../../../tests/rekor.json")
 			case "/rpmEntry":
-				file, err = ioutil.ReadFile("../../../tests/rpm.json")
+				file, err = os.ReadFile("../../../tests/rpm.json")
 			case "/rpm":
-				file, err = ioutil.ReadFile("../../../tests/test.rpm")
+				file, err = os.ReadFile("../../../tests/test.rpm")
 			case "/rpmPublicKey":
-				file, err = ioutil.ReadFile("../../../tests/test_rpm_public_key.key")
+				file, err = os.ReadFile("../../../tests/test_rpm_public_key.key")
 			case "/alpine":
-				file, err = ioutil.ReadFile("../../../tests/test_alpine.apk")
+				file, err = os.ReadFile("../../../tests/test_alpine.apk")
 			case "/alpinePublicKey":
-				file, err = ioutil.ReadFile("../../../tests/test_alpine.pub")
+				file, err = os.ReadFile("../../../tests/test_alpine.pub")
 			case "/alpineEntry":
-				file, err = ioutil.ReadFile("../../../tests/alpine.json")
+				file, err = os.ReadFile("../../../tests/alpine.json")
 			case "/helmEntry":
-				file, err = ioutil.ReadFile("../../../tests/helm.json")
+				file, err = os.ReadFile("../../../tests/helm.json")
 			case "/not_found":
 				err = errors.New("file not found")
 			}
@@ -524,9 +524,9 @@ func TestSearchPFlags(t *testing.T) {
 
 			switch r.URL.Path {
 			case "/artifact":
-				file, err = ioutil.ReadFile("../../../tests/test_file.txt")
+				file, err = os.ReadFile("../../../tests/test_file.txt")
 			case "/publicKey":
-				file, err = ioutil.ReadFile("../../../tests/test_public_key.key")
+				file, err = os.ReadFile("../../../tests/test_public_key.key")
 			case "/not_found":
 				err = errors.New("file not found")
 			}

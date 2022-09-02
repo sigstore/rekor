@@ -17,7 +17,7 @@ package sharding
 
 import (
 	"context"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -34,7 +34,7 @@ func TestNewLogRanges(t *testing.T) {
 - treeID: 0002
   treeLength: 4`
 	file := filepath.Join(t.TempDir(), "sharding-config")
-	if err := ioutil.WriteFile(file, []byte(contents), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(contents), 0644); err != nil {
 		t.Fatal(err)
 	}
 	treeID := uint(45)
@@ -73,7 +73,7 @@ func TestLogRangesFromPath(t *testing.T) {
 - treeID: 0002
   treeLength: 4`
 	file := filepath.Join(t.TempDir(), "sharding-config")
-	if err := ioutil.WriteFile(file, []byte(contents), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(contents), 0644); err != nil {
 		t.Fatal(err)
 	}
 	expected := Ranges{
@@ -99,7 +99,7 @@ func TestLogRangesFromPath(t *testing.T) {
 func TestLogRangesFromPathJSON(t *testing.T) {
 	contents := `[{"treeID": 0001, "treeLength": 3, "encodedPublicKey":"c2hhcmRpbmcK"}, {"treeID": 0002, "treeLength": 4}]`
 	file := filepath.Join(t.TempDir(), "sharding-config")
-	if err := ioutil.WriteFile(file, []byte(contents), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(contents), 0644); err != nil {
 		t.Fatal(err)
 	}
 	expected := Ranges{

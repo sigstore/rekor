@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -126,7 +125,7 @@ func TestFetchPublicKey(t *testing.T) {
 				return
 			}
 
-			file, err := ioutil.ReadFile(r.URL.Path[1:])
+			file, err := os.ReadFile(r.URL.Path[1:])
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
 				return
@@ -166,7 +165,7 @@ func TestFetchSignature(t *testing.T) {
 				return
 			}
 
-			file, err := ioutil.ReadFile(r.URL.Path[1:])
+			file, err := os.ReadFile(r.URL.Path[1:])
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
 				return
