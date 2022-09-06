@@ -199,3 +199,22 @@ func ParseTypeFlag(typeStr string) (string, string, error) {
 	}
 	return "", "", errors.New("malformed type string")
 }
+
+func GetSupportedVersions(typeStr string) ([]string, error) {
+	typeStrings := strings.SplitN(typeStr, ":", 2)
+	tf, ok := types.TypeMap.Load(typeStrings[0])
+	if !ok {
+		return nil, fmt.Errorf("unknown type %v", typeStrings[0])
+	}
+	ti := tf.(func() types.TypeImpl)()
+	if ti == nil {
+		return nil, fmt.Errorf("type %v is not implemented", typeStrings[0])
+	}
+	switch len(typeStrings) {
+	case 1:
+		return ti.SupportedVersions(), nil
+	case 2:
+		return []string{typeStrings[1]}, nil
+	}
+	return nil, errors.New("malformed type string")
+}

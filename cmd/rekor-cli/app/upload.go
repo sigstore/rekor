@@ -72,11 +72,12 @@ var uploadCmd = &cobra.Command{
 		if err != nil {
 			return nil, err
 		}
-		var entry models.ProposedEntry
 		params := entries.NewCreateLogEntryParams()
 		params.SetTimeout(viper.GetDuration("timeout"))
 
 		entryStr := viper.GetString("entry")
+		var resp *entries.CreateLogEntryCreated
+
 		if entryStr != "" {
 			var entryReader io.Reader
 			entryURL, err := url.Parse(entryStr)
@@ -94,36 +95,62 @@ var uploadCmd = &cobra.Command{
 					return nil, fmt.Errorf("error processing entry file: %w", err)
 				}
 			}
-			entry, err = models.UnmarshalProposedEntry(entryReader, runtime.JSONConsumer())
+			entry, err := models.UnmarshalProposedEntry(entryReader, runtime.JSONConsumer())
 			if err != nil {
 				return nil, fmt.Errorf("error parsing entry file: %w", err)
 			}
+			params.SetProposedEntry(entry)
+			r, err := rekorClient.Entries.CreateLogEntry(params)
+			if err != nil {
+				switch e := err.(type) {
+				case *entries.CreateLogEntryConflict:
+					return &uploadCmdOutput{
+						Location:      e.Location.String(),
+						AlreadyExists: true,
+					}, nil
+				default:
+					return nil, err
+				}
+			}
+			resp = r
 		} else {
-			typeStr, versionStr, err := ParseTypeFlag(viper.GetString("type"))
+			// Start with the default entry and work your way down
+			typeStr, _, err := ParseTypeFlag(viper.GetString("type"))
 			if err != nil {
 				return nil, err
 			}
-
+			supportedVersions, err := GetSupportedVersions(viper.GetString("type"))
+			if err != nil {
+				return nil, err
+			}
 			props := CreatePropsFromPflags()
 
-			entry, err = types.NewProposedEntry(context.Background(), typeStr, versionStr, *props)
-			if err != nil {
-				return nil, fmt.Errorf("error: %w", err)
+			for _, sv := range supportedVersions {
+				log.CliLogger.Infof("Trying to upload entry of type %s at version %s", typeStr, sv)
+				entry, err := types.NewProposedEntry(context.Background(), typeStr, sv, *props)
+				if err != nil {
+					return nil, fmt.Errorf("error: %w", err)
+				}
+				params.SetProposedEntry(entry)
+				r, err := rekorClient.Entries.CreateLogEntry(params)
+				if err == nil {
+					resp = r
+					break
+				}
+				switch e := err.(type) {
+				case *entries.CreateLogEntryConflict:
+					return &uploadCmdOutput{
+						Location:      e.Location.String(),
+						AlreadyExists: true,
+					}, nil
+				default:
+					log.CliLogger.Warnf("Failed to upload entry, will try with another supported version if one exists: %v", err)
+				}
 			}
 		}
-		params.SetProposedEntry(entry)
 
-		resp, err := rekorClient.Entries.CreateLogEntry(params)
-		if err != nil {
-			switch e := err.(type) {
-			case *entries.CreateLogEntryConflict:
-				return &uploadCmdOutput{
-					Location:      e.Location.String(),
-					AlreadyExists: true,
-				}, nil
-			default:
-				return nil, err
-			}
+		if resp == nil {
+			return nil, fmt.Errorf("no valid entry was created")
 		}
 
 		var newIndex int64

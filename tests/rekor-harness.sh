@@ -87,10 +87,17 @@ function run_tests () {
     fi
 }
 
-# Get last 3 server versions
+# Get last 2 server versions
 git fetch origin
-NUM_VERSIONS_TO_TEST=3
+NUM_VERSIONS_TO_TEST=2
 VERSIONS=$(git tag --sort=-version:refname | head -n $NUM_VERSIONS_TO_TEST | tac)
+
+# Also add the commit @ HEAD
+HEAD=$(git log --pretty="%H" -n 1 )
+echo "Also testing at HEAD at commit $HEAD"
+
+VERSIONS="$VERSIONS $HEAD"
+
 echo $VERSIONS
 
 export REKOR_HARNESS_TMPDIR="$(mktemp -d -t rekor_test_harness.XXXXXX)"
