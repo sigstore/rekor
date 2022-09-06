@@ -71,7 +71,6 @@ func TestHarnessAddEntry(t *testing.T) {
 	// Verify should fail initially
 	runCliErr(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 
-	// It should upload successfully.
 	out := runCli(t, "upload", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromUploadOutput(t, out)
@@ -149,8 +148,16 @@ func TestHarnessAddIntoto(t *testing.T) {
 	write(t, string(eb), attestationPath)
 	write(t, ecdsaPub, pubKeyPath)
 
+	flags := []string{"upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath}
+	intotoType := "intoto"
+	if strings.Contains(rekorCLIVersion(t), "v0.12.0") {
+		intotoType = "intoto:0.0.1"
+	}
+
+	flags = append(flags, []string{"--type", intotoType}...)
+
 	// If we do it twice, it should already exist
-	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
+	out := runCli(t, flags...)
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromUploadOutput(t, out)
 	logIndex := getLogIndexFromUploadOutput(t, out)
@@ -189,7 +196,7 @@ func TestHarnessAddIntoto(t *testing.T) {
 			*intotoModel.Content.PayloadHash.Value))
 	}
 
-	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
+	out = runCli(t, "upload", "--artifact", attestationPath, "--type", intotoType, "--public-key", pubKeyPath)
 	outputContains(t, out, "Entry already exists")
 	saveEntry(t, logIndex, StoredEntry{Attestation: g.Attestation, UUID: uuid})
 }
@@ -316,4 +323,16 @@ func activeTreeSize(t *testing.T) int {
 		t.Fatal(err)
 	}
 	return s.ActiveTreeSize
+}
+
+func rekorCLIVersion(t *testing.T) string {
+	out := runCli(t, "version", "--json")
+	type Version struct {
+		GitVersion string
+	}
+	var v Version
+	if err := json.Unmarshal([]byte(out), &v); err != nil {
+		t.Fatal(err)
+	}
+	return v.GitVersion
 }

@@ -78,7 +78,7 @@ func (it BaseIntotoType) DefaultVersion() string {
 // it deliberately omits 0.0.1 from the list of supported versions as that
 // version did not persist signatures inside the log entry
 func (it BaseIntotoType) SupportedVersions() []string {
-	return []string{"0.0.2"}
+	return []string{"0.0.1", "0.0.2"}
 }
 
 // IsSupportedVersion returns true if the version can be inserted into the log, and false if not
