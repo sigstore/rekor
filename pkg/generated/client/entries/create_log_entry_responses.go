@@ -95,9 +95,39 @@ type CreateLogEntryCreated struct {
 	Payload models.LogEntry
 }
 
+// IsSuccess returns true when this create log entry created response has a 2xx status code
+func (o *CreateLogEntryCreated) IsSuccess() bool {
+	return true
+}
+
+// IsRedirect returns true when this create log entry created response has a 3xx status code
+func (o *CreateLogEntryCreated) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this create log entry created response has a 4xx status code
+func (o *CreateLogEntryCreated) IsClientError() bool {
+	return false
+}
+
+// IsServerError returns true when this create log entry created response has a 5xx status code
+func (o *CreateLogEntryCreated) IsServerError() bool {
+	return false
+}
+
+// IsCode returns true when this create log entry created response a status code equal to that given
+func (o *CreateLogEntryCreated) IsCode(code int) bool {
+	return code == 201
+}
+
 func (o *CreateLogEntryCreated) Error() string {
 	return fmt.Sprintf("[POST /api/v1/log/entries][%d] createLogEntryCreated  %+v", 201, o.Payload)
 }
+
+func (o *CreateLogEntryCreated) String() string {
+	return fmt.Sprintf("[POST /api/v1/log/entries][%d] createLogEntryCreated  %+v", 201, o.Payload)
+}
+
 func (o *CreateLogEntryCreated) GetPayload() models.LogEntry {
 	return o.Payload
 }
@@ -144,9 +174,39 @@ type CreateLogEntryBadRequest struct {
 	Payload *models.Error
 }
 
+// IsSuccess returns true when this create log entry bad request response has a 2xx status code
+func (o *CreateLogEntryBadRequest) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this create log entry bad request response has a 3xx status code
+func (o *CreateLogEntryBadRequest) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this create log entry bad request response has a 4xx status code
+func (o *CreateLogEntryBadRequest) IsClientError() bool {
+	return true
+}
+
+// IsServerError returns true when this create log entry bad request response has a 5xx status code
+func (o *CreateLogEntryBadRequest) IsServerError() bool {
+	return false
+}
+
+// IsCode returns true when this create log entry bad request response a status code equal to that given
+func (o *CreateLogEntryBadRequest) IsCode(code int) bool {
+	return code == 400
+}
+
 func (o *CreateLogEntryBadRequest) Error() string {
 	return fmt.Sprintf("[POST /api/v1/log/entries][%d] createLogEntryBadRequest  %+v", 400, o.Payload)
 }
+
+func (o *CreateLogEntryBadRequest) String() string {
+	return fmt.Sprintf("[POST /api/v1/log/entries][%d] createLogEntryBadRequest  %+v", 400, o.Payload)
+}
+
 func (o *CreateLogEntryBadRequest) GetPayload() *models.Error {
 	return o.Payload
 }
@@ -179,9 +239,39 @@ type CreateLogEntryConflict struct {
 	Payload *models.Error
 }
 
+// IsSuccess returns true when this create log entry conflict response has a 2xx status code
+func (o *CreateLogEntryConflict) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this create log entry conflict response has a 3xx status code
+func (o *CreateLogEntryConflict) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this create log entry conflict response has a 4xx status code
+func (o *CreateLogEntryConflict) IsClientError() bool {
+	return true
+}
+
+// IsServerError returns true when this create log entry conflict response has a 5xx status code
+func (o *CreateLogEntryConflict) IsServerError() bool {
+	return false
+}
+
+// IsCode returns true when this create log entry conflict response a status code equal to that given
+func (o *CreateLogEntryConflict) IsCode(code int) bool {
+	return code == 409
+}
+
 func (o *CreateLogEntryConflict) Error() string {
 	return fmt.Sprintf("[POST /api/v1/log/entries][%d] createLogEntryConflict  %+v", 409, o.Payload)
 }
+
+func (o *CreateLogEntryConflict) String() string {
+	return fmt.Sprintf("[POST /api/v1/log/entries][%d] createLogEntryConflict  %+v", 409, o.Payload)
+}
+
 func (o *CreateLogEntryConflict) GetPayload() *models.Error {
 	return o.Payload
 }
@@ -232,9 +322,39 @@ func (o *CreateLogEntryDefault) Code() int {
 	return o._statusCode
 }
 
+// IsSuccess returns true when this create log entry default response has a 2xx status code
+func (o *CreateLogEntryDefault) IsSuccess() bool {
+	return o._statusCode/100 == 2
+}
+
+// IsRedirect returns true when this create log entry default response has a 3xx status code
+func (o *CreateLogEntryDefault) IsRedirect() bool {
+	return o._statusCode/100 == 3
+}
+
+// IsClientError returns true when this create log entry default response has a 4xx status code
+func (o *CreateLogEntryDefault) IsClientError() bool {
+	return o._statusCode/100 == 4
+}
+
+// IsServerError returns true when this create log entry default response has a 5xx status code
+func (o *CreateLogEntryDefault) IsServerError() bool {
+	return o._statusCode/100 == 5
+}
+
+// IsCode returns true when this create log entry default response a status code equal to that given
+func (o *CreateLogEntryDefault) IsCode(code int) bool {
+	return o._statusCode == code
+}
+
 func (o *CreateLogEntryDefault) Error() string {
 	return fmt.Sprintf("[POST /api/v1/log/entries][%d] createLogEntry default  %+v", o._statusCode, o.Payload)
 }
+
+func (o *CreateLogEntryDefault) String() string {
+	return fmt.Sprintf("[POST /api/v1/log/entries][%d] createLogEntry default  %+v", o._statusCode, o.Payload)
+}
+
 func (o *CreateLogEntryDefault) GetPayload() *models.Error {
 	return o.Payload
 }
