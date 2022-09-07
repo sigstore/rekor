@@ -524,11 +524,6 @@ func TestIntoto(t *testing.T) {
 	write(t, string(eb), attestationPath)
 	write(t, ecdsaPub, pubKeyPath)
 
-	// ensure that we can't upload a intoto v0.0.1 entry
-	v001out := runCliErr(t, "upload", "--artifact", attestationPath, "--type", "intoto:0.0.1", "--public-key", pubKeyPath)
-	outputContains(t, v001out, "type intoto does not support version 0.0.1")
-
-	// If we do it twice, it should already exist
 	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromUploadOutput(t, out)
@@ -658,11 +653,6 @@ func TestIntotoMultiSig(t *testing.T) {
 	write(t, ecdsaPub, ecdsapubKeyPath)
 	write(t, pubKey, rsapubKeyPath)
 
-	// ensure that we can't upload a intoto v0.0.1 entry
-	v001out := runCliErr(t, "upload", "--artifact", attestationPath, "--type", "intoto:0.0.1", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
-	outputContains(t, v001out, "type intoto does not support version 0.0.1")
-
-	// If we do it twice, it should already exist
 	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromUploadOutput(t, out)
@@ -795,11 +785,8 @@ func TestIntotoBlockV001(t *testing.T) {
 	params.SetProposedEntry(entry)
 
 	_, err = rekorClient.Entries.CreateLogEntry(params)
-	if err == nil {
-		t.Fatal("insertion of v0.0.1 entry should fail")
-	}
-	if !strings.Contains(err.Error(), "entry kind 'intoto' does not support inserting entries of version '0.0.1'") {
-		t.Errorf("Expected error as intoto v0.0.1 should not be allowed to be entered into rekor")
+	if err != nil {
+		t.Fatalf("failed inserting v0.0.1 entry: %v", err)
 	}
 }
 
