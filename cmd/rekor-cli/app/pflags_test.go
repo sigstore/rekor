@@ -23,7 +23,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -841,34 +840,5 @@ func TestParseTypeFlag(t *testing.T) {
 		if _, _, err := ParseTypeFlag(tc.typeStr); (err == nil) != tc.expectSuccess {
 			t.Fatalf("unexpected error parsing type flag in '%v': %v", tc.caseDesc, err)
 		}
-	}
-}
-
-func TestGetSupportedVersions(t *testing.T) {
-	tests := []struct {
-		description      string
-		typeStr          string
-		expectedVersions []string
-	}{
-		{
-			description:      "intoto specified with version",
-			typeStr:          "intoto:0.0.1",
-			expectedVersions: []string{"0.0.1"},
-		}, {
-			description:      "intoto no version specified",
-			typeStr:          "intoto",
-			expectedVersions: []string{"0.0.2", "0.0.1"},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.description, func(t *testing.T) {
-			got, err := GetSupportedVersions(test.typeStr)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if d := cmp.Diff(test.expectedVersions, got); d != "" {
-				t.Fatalf("got unexpected versions: %s", d)
-			}
-		})
 	}
 }

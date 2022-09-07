@@ -31,6 +31,7 @@ import (
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
 	"github.com/sigstore/rekor/pkg/client"
+	gen_client "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -72,12 +73,9 @@ var uploadCmd = &cobra.Command{
 		if err != nil {
 			return nil, err
 		}
-		params := entries.NewCreateLogEntryParams()
-		params.SetTimeout(viper.GetDuration("timeout"))
+		var entry models.ProposedEntry
 
 		entryStr := viper.GetString("entry")
-		var resp *entries.CreateLogEntryCreated
-
 		if entryStr != "" {
 			var entryReader io.Reader
 			entryURL, err := url.Parse(entryStr)
@@ -95,62 +93,34 @@ var uploadCmd = &cobra.Command{
 					return nil, fmt.Errorf("error processing entry file: %w", err)
 				}
 			}
-			entry, err := models.UnmarshalProposedEntry(entryReader, runtime.JSONConsumer())
+			entry, err = models.UnmarshalProposedEntry(entryReader, runtime.JSONConsumer())
 			if err != nil {
 				return nil, fmt.Errorf("error parsing entry file: %w", err)
 			}
-			params.SetProposedEntry(entry)
-			r, err := rekorClient.Entries.CreateLogEntry(params)
-			if err != nil {
-				switch e := err.(type) {
-				case *entries.CreateLogEntryConflict:
-					return &uploadCmdOutput{
-						Location:      e.Location.String(),
-						AlreadyExists: true,
-					}, nil
-				default:
-					return nil, err
-				}
-			}
-			resp = r
 		} else {
-			// Start with the default entry and work your way down
-			typeStr, _, err := ParseTypeFlag(viper.GetString("type"))
+			typeStr, versionStr, err := ParseTypeFlag(viper.GetString("type"))
 			if err != nil {
 				return nil, err
 			}
-			supportedVersions, err := GetSupportedVersions(viper.GetString("type"))
-			if err != nil {
-				return nil, err
-			}
+
 			props := CreatePropsFromPflags()
 
-			for _, sv := range supportedVersions {
-				log.CliLogger.Infof("Trying to upload entry of type %s at version %s", typeStr, sv)
-				entry, err := types.NewProposedEntry(context.Background(), typeStr, sv, *props)
-				if err != nil {
-					return nil, fmt.Errorf("error: %w", err)
-				}
-				params.SetProposedEntry(entry)
-				r, err := rekorClient.Entries.CreateLogEntry(params)
-				if err == nil {
-					resp = r
-					break
-				}
-				switch e := err.(type) {
-				case *entries.CreateLogEntryConflict:
-					return &uploadCmdOutput{
-						Location:      e.Location.String(),
-						AlreadyExists: true,
-					}, nil
-				default:
-					log.CliLogger.Warnf("Failed to upload entry, will try with another supported version if one exists: %v", err)
-				}
+			entry, err = types.NewProposedEntry(context.Background(), typeStr, versionStr, *props)
+			if err != nil {
+				return nil, fmt.Errorf("error: %w", err)
 			}
 		}
-
-		if resp == nil {
-			return nil, fmt.Errorf("no valid entry was created")
+		resp, err := tryUpload(rekorClient, entry)
+		if err != nil {
+			switch e := err.(type) {
+			case *entries.CreateLogEntryConflict:
+				return &uploadCmdOutput{
+					Location:      e.Location.String(),
+					AlreadyExists: true,
+				}, nil
+			default:
+				return nil, err
+			}
 		}
 
 		var newIndex int64
@@ -185,6 +155,29 @@ var uploadCmd = &cobra.Command{
 			Index:    newIndex,
 		}, nil
 	}),
+}
+
+func tryUpload(rekorClient *gen_client.Rekor, entry models.ProposedEntry) (*entries.CreateLogEntryCreated, error) {
+	params := entries.NewCreateLogEntryParams()
+	params.SetTimeout(viper.GetDuration("timeout"))
+	if pei, ok := entry.(types.ProposedEntryIterator); ok {
+		params.SetProposedEntry(pei.Get())
+	} else {
+		params.SetProposedEntry(entry)
+	}
+	resp, err := rekorClient.Entries.CreateLogEntry(params)
+	if err != nil {
+		if e, ok := err.(*entries.CreateLogEntryBadRequest); ok {
+			if pei, ok := entry.(types.ProposedEntryIterator); ok {
+				if pei.HasNext() {
+					log.CliLogger.Errorf("failed to upload entry: %v", e)
+					return tryUpload(rekorClient, pei.GetNext())
+				}
+			}
+		}
+		return nil, err
+	}
+	return resp, nil
 }
 
 func init() {

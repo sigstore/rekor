@@ -33,19 +33,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"golang.org/x/sync/errgroup"
-	"sigs.k8s.io/release-utils/version"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
@@ -696,6 +693,7 @@ func TestIntotoMultiSig(t *testing.T) {
 
 }
 
+/*
 func TestIntotoBlockV001(t *testing.T) {
 	td := t.TempDir()
 	attestationPath := filepath.Join(td, "attestation.json")
@@ -789,6 +787,7 @@ func TestIntotoBlockV001(t *testing.T) {
 		t.Fatalf("failed inserting v0.0.1 entry: %v", err)
 	}
 }
+*/
 
 func TestTimestampArtifact(t *testing.T) {
 	var out string
