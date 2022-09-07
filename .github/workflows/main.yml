@@ -57,9 +57,8 @@ jobs:
         with:
           go-version: ${{ env.GOVERSION }}
 
-      - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.4
-        with:
-          version: v0.12.0
+      - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
+
       - name: container
         run: |
           make ko-local 2>&1 | tee output.txt
