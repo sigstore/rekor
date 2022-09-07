@@ -150,7 +150,7 @@ func TestHarnessAddIntoto(t *testing.T) {
 	write(t, ecdsaPub, pubKeyPath)
 
 	// If we do it twice, it should already exist
-	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
+	out := runCliStdout(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromUploadOutput(t, out)
 	logIndex := getLogIndexFromUploadOutput(t, out)
