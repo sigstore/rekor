@@ -77,9 +77,39 @@ type GetLogEntryByUUIDOK struct {
 	Payload models.LogEntry
 }
 
+// IsSuccess returns true when this get log entry by Uuid o k response has a 2xx status code
+func (o *GetLogEntryByUUIDOK) IsSuccess() bool {
+	return true
+}
+
+// IsRedirect returns true when this get log entry by Uuid o k response has a 3xx status code
+func (o *GetLogEntryByUUIDOK) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this get log entry by Uuid o k response has a 4xx status code
+func (o *GetLogEntryByUUIDOK) IsClientError() bool {
+	return false
+}
+
+// IsServerError returns true when this get log entry by Uuid o k response has a 5xx status code
+func (o *GetLogEntryByUUIDOK) IsServerError() bool {
+	return false
+}
+
+// IsCode returns true when this get log entry by Uuid o k response a status code equal to that given
+func (o *GetLogEntryByUUIDOK) IsCode(code int) bool {
+	return code == 200
+}
+
 func (o *GetLogEntryByUUIDOK) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log/entries/{entryUUID}][%d] getLogEntryByUuidOK  %+v", 200, o.Payload)
 }
+
+func (o *GetLogEntryByUUIDOK) String() string {
+	return fmt.Sprintf("[GET /api/v1/log/entries/{entryUUID}][%d] getLogEntryByUuidOK  %+v", 200, o.Payload)
+}
+
 func (o *GetLogEntryByUUIDOK) GetPayload() models.LogEntry {
 	return o.Payload
 }
@@ -107,7 +137,36 @@ The content requested could not be found
 type GetLogEntryByUUIDNotFound struct {
 }
 
+// IsSuccess returns true when this get log entry by Uuid not found response has a 2xx status code
+func (o *GetLogEntryByUUIDNotFound) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this get log entry by Uuid not found response has a 3xx status code
+func (o *GetLogEntryByUUIDNotFound) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this get log entry by Uuid not found response has a 4xx status code
+func (o *GetLogEntryByUUIDNotFound) IsClientError() bool {
+	return true
+}
+
+// IsServerError returns true when this get log entry by Uuid not found response has a 5xx status code
+func (o *GetLogEntryByUUIDNotFound) IsServerError() bool {
+	return false
+}
+
+// IsCode returns true when this get log entry by Uuid not found response a status code equal to that given
+func (o *GetLogEntryByUUIDNotFound) IsCode(code int) bool {
+	return code == 404
+}
+
 func (o *GetLogEntryByUUIDNotFound) Error() string {
+	return fmt.Sprintf("[GET /api/v1/log/entries/{entryUUID}][%d] getLogEntryByUuidNotFound ", 404)
+}
+
+func (o *GetLogEntryByUUIDNotFound) String() string {
 	return fmt.Sprintf("[GET /api/v1/log/entries/{entryUUID}][%d] getLogEntryByUuidNotFound ", 404)
 }
 
@@ -139,9 +198,39 @@ func (o *GetLogEntryByUUIDDefault) Code() int {
 	return o._statusCode
 }
 
+// IsSuccess returns true when this get log entry by UUID default response has a 2xx status code
+func (o *GetLogEntryByUUIDDefault) IsSuccess() bool {
+	return o._statusCode/100 == 2
+}
+
+// IsRedirect returns true when this get log entry by UUID default response has a 3xx status code
+func (o *GetLogEntryByUUIDDefault) IsRedirect() bool {
+	return o._statusCode/100 == 3
+}
+
+// IsClientError returns true when this get log entry by UUID default response has a 4xx status code
+func (o *GetLogEntryByUUIDDefault) IsClientError() bool {
+	return o._statusCode/100 == 4
+}
+
+// IsServerError returns true when this get log entry by UUID default response has a 5xx status code
+func (o *GetLogEntryByUUIDDefault) IsServerError() bool {
+	return o._statusCode/100 == 5
+}
+
+// IsCode returns true when this get log entry by UUID default response a status code equal to that given
+func (o *GetLogEntryByUUIDDefault) IsCode(code int) bool {
+	return o._statusCode == code
+}
+
 func (o *GetLogEntryByUUIDDefault) Error() string {
 	return fmt.Sprintf("[GET /api/v1/log/entries/{entryUUID}][%d] getLogEntryByUUID default  %+v", o._statusCode, o.Payload)
 }
+
+func (o *GetLogEntryByUUIDDefault) String() string {
+	return fmt.Sprintf("[GET /api/v1/log/entries/{entryUUID}][%d] getLogEntryByUUID default  %+v", o._statusCode, o.Payload)
+}
+
 func (o *GetLogEntryByUUIDDefault) GetPayload() *models.Error {
 	return o.Payload
 }
