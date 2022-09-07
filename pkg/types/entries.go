@@ -45,6 +45,14 @@ type EntryWithAttestationImpl interface {
 	AttestationKeyValue() (string, []byte) // returns the key to be used when storing the attestation as well as the attestation itself
 }
 
+// ProposedEntryIterator is an iterator over a list of proposed entries
+type ProposedEntryIterator interface {
+	models.ProposedEntry
+	HasNext() bool
+	Get() models.ProposedEntry
+	GetNext() models.ProposedEntry
+}
+
 // EntryFactory describes a factory function that can generate structs for a specific versioned type
 type EntryFactory func() EntryImpl
 

@@ -762,7 +762,7 @@ func TestParseTypeFlag(t *testing.T) {
 		{
 			caseDesc:      "explicit intoto v0.0.1",
 			typeStr:       "intoto:0.0.1",
-			expectSuccess: false,
+			expectSuccess: true,
 		},
 		{
 			caseDesc:      "explicit intoto v0.0.2",

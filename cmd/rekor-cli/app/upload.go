@@ -31,6 +31,7 @@ import (
 
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
 	"github.com/sigstore/rekor/pkg/client"
+	gen_client "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -73,8 +74,6 @@ var uploadCmd = &cobra.Command{
 			return nil, err
 		}
 		var entry models.ProposedEntry
-		params := entries.NewCreateLogEntryParams()
-		params.SetTimeout(viper.GetDuration("timeout"))
 
 		entryStr := viper.GetString("entry")
 		if entryStr != "" {
@@ -111,9 +110,7 @@ var uploadCmd = &cobra.Command{
 				return nil, fmt.Errorf("error: %w", err)
 			}
 		}
-		params.SetProposedEntry(entry)
-
-		resp, err := rekorClient.Entries.CreateLogEntry(params)
+		resp, err := tryUpload(rekorClient, entry)
 		if err != nil {
 			switch e := err.(type) {
 			case *entries.CreateLogEntryConflict:
@@ -158,6 +155,29 @@ var uploadCmd = &cobra.Command{
 			Index:    newIndex,
 		}, nil
 	}),
+}
+
+func tryUpload(rekorClient *gen_client.Rekor, entry models.ProposedEntry) (*entries.CreateLogEntryCreated, error) {
+	params := entries.NewCreateLogEntryParams()
+	params.SetTimeout(viper.GetDuration("timeout"))
+	if pei, ok := entry.(types.ProposedEntryIterator); ok {
+		params.SetProposedEntry(pei.Get())
+	} else {
+		params.SetProposedEntry(entry)
+	}
+	resp, err := rekorClient.Entries.CreateLogEntry(params)
+	if err != nil {
+		if e, ok := err.(*entries.CreateLogEntryBadRequest); ok {
+			if pei, ok := entry.(types.ProposedEntryIterator); ok {
+				if pei.HasNext() {
+					log.CliLogger.Errorf("failed to upload entry: %v", e)
+					return tryUpload(rekorClient, pei.GetNext())
+				}
+			}
+		}
+		return nil, err
+	}
+	return resp, nil
 }
 
 func init() {
