@@ -75,7 +75,7 @@ function run_tests () {
     trap "rm -rf $REKORTMPDIR" EXIT
 
     go clean -testcache
-    if ! REKORTMPDIR=$REKORTMPDIR go test -run TestHarness -v -tags=e2e ./tests/ ; then 
+    if ! REKORTMPDIR=$REKORTMPDIR SERVER_VERSION=$1 CLI_VERSION=$2 go test -run TestHarness -v -tags=e2e ./tests/ ; then 
         docker-compose logs --no-color > /tmp/docker-compose.log
         exit 1
     fi
@@ -112,17 +112,17 @@ do
         echo "Running tests with server version $server_version and CLI version $cli_version"
 
         build_cli $cli_version
-        run_tests
+        run_tests $server_version $cli_version
 
         echo "Tests passed successfully."
         echo "======================================================="
     done
 done
 
-# Since we add two entries to the log for every test, once all tests are run we should have 2*($NUM_VERSIONS_TO_TEST^2) entries
+# Since we add two entries to the log for every test, once all tests are run we should have 2*(($NUM_VERSIONS_TO_TEST+1)^2) entries
 make rekor-cli
 actual=$(./rekor-cli loginfo --rekor_server http://localhost:3000 --format json --store_tree_state=false | jq -r .ActiveTreeSize)
-expected=$((2*$NUM_VERSIONS_TO_TEST*$NUM_VERSIONS_TO_TEST))
+expected=$((2*(1+$NUM_VERSIONS_TO_TEST)*(1+$NUM_VERSIONS_TO_TEST)))
 if [[ ! "$expected" == "$actual" ]]; then
     echo "ERROR: Log had $actual entries instead of expected $expected"
     exit 1

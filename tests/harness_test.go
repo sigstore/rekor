@@ -77,9 +77,12 @@ func TestHarnessAddEntry(t *testing.T) {
 	uuid := getUUIDFromUploadOutput(t, out)
 	logIndex := getLogIndexFromUploadOutput(t, out)
 
-	// Now we should be able to verify it.
-	out = runCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
-	outputContains(t, out, "Inclusion Proof:")
+	if !rekorCLIIncompatible() {
+		// Now we should be able to verify it.
+		out = runCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+		outputContains(t, out, "Inclusion Proof:")
+	}
+
 	saveEntry(t, logIndex, StoredEntry{UUID: uuid})
 }
 
@@ -155,7 +158,7 @@ func TestHarnessAddIntoto(t *testing.T) {
 	uuid := getUUIDFromUploadOutput(t, out)
 	logIndex := getLogIndexFromUploadOutput(t, out)
 
-	out = runCli(t, "get", "--uuid", uuid, "--format=json")
+	out = runCli(t, "get", "--log-index", fmt.Sprintf("%d", logIndex), "--format=json")
 	g := getOut{}
 	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Fatal(err)
@@ -265,11 +268,16 @@ func TestHarnessGetAllEntriesLogIndex(t *testing.T) {
 }
 
 func TestHarnessGetAllEntriesUUID(t *testing.T) {
+	if rekorCLIIncompatible() {
+		t.Skipf("Skipping getting entries by UUID, old rekor-cli version %s is incompatible with server version %s", os.Getenv("CLI_VERSION"), os.Getenv("SERVER_VERSION"))
+	}
+
 	treeSize := activeTreeSize(t)
 	if treeSize == 0 {
 		t.Fatal("There are 0 entries in the log, there should be at least 2")
 	}
 	_, entries := getEntries(t)
+
 	for _, e := range entries {
 		outUUID := runCli(t, "get", "--uuid", e.UUID, "--format", "json")
 		outEntryID := runCli(t, "get", "--uuid", entryID(t, e.UUID), "--format", "json")
@@ -294,6 +302,9 @@ func TestHarnessGetAllEntriesUUID(t *testing.T) {
 }
 
 func entryID(t *testing.T, uuid string) string {
+	if sharding.ValidateEntryID(uuid) == nil {
+		return uuid
+	}
 	treeID, err := strconv.Atoi(os.Getenv("TREE_ID"))
 	if err != nil {
 		t.Fatal(err)
@@ -316,4 +327,15 @@ func activeTreeSize(t *testing.T) int {
 		t.Fatal(err)
 	}
 	return s.ActiveTreeSize
+}
+
+// Check if we have a new server version and an old CLI version
+// since the new server returns an EntryID but the old CLI version expects a UUID
+func rekorCLIIncompatible() bool {
+	if sv := os.Getenv("SERVER_VERSION"); sv != "v0.10.0" && sv != "v0.11.0" {
+		if cv := os.Getenv("CLI_VERSION"); cv == "v0.10.0" || cv == "v0.11.0" {
+			return true
+		}
+	}
+	return false
 }
