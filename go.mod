@@ -35,7 +35,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.13.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
-	github.com/theupdateframework/go-tuf v0.4.0
+	github.com/theupdateframework/go-tuf v0.5.0
 	github.com/transparency-dev/merkle v0.0.1
 	github.com/urfave/negroni v1.0.0
 	github.com/veraison/go-cose v1.0.0-rc.1
