@@ -82,12 +82,12 @@ func (it *BaseIntotoType) CreateProposedEntry(ctx context.Context, version strin
 			}
 			ei, err := it.VersionedUnmarshal(nil, v)
 			if err != nil {
-				log.Logger.Errorf("fetching Intoto version (%v) implementation: %w", v, err)
+				log.ContextLogger(ctx).Errorf("fetching Intoto version (%v) implementation: %w", v, err)
 				continue
 			}
 			versionedPE, err := ei.CreateFromArtifactProperties(ctx, props)
 			if err != nil {
-				log.Logger.Errorf("error creating Intoto entry of version (%v): %w", v, err)
+				log.ContextLogger(ctx).Errorf("error creating Intoto entry of version (%v): %w", v, err)
 				continue
 			}
 			next.next = &ProposedIntotoEntryIterator{versionedPE, nil}
