@@ -88,7 +88,7 @@ function run_tests () {
 }
 
 # Get last 2 server versions
-git fetch origin
+git fetch --all
 NUM_VERSIONS_TO_TEST=2
 VERSIONS=$(git tag --sort=-version:refname | head -n $NUM_VERSIONS_TO_TEST | tac)
 
