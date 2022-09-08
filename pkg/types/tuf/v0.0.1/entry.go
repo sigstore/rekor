@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/theupdateframework/go-tuf/data"
+	_ "github.com/theupdateframework/go-tuf/pkg/deprecated/set_ecdsa"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/log"
