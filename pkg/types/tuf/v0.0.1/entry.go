@@ -31,6 +31,9 @@ import (
 	"time"
 
 	"github.com/theupdateframework/go-tuf/data"
+	// This will support deprecated ECDSA hex-encoded keys in TUF metadata.
+	// Will be removed when sigstore migrates entirely off hex-encoded.
+	_ "github.com/theupdateframework/go-tuf/pkg/deprecated/set_ecdsa"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/log"

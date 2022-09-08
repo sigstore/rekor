@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/theupdateframework/go-tuf/pkg/deprecated/set_ecdsa"
 	"github.com/theupdateframework/go-tuf/verify"
 )
 
