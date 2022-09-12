@@ -84,6 +84,8 @@ jobs:
 
       - name: CLI
         run: ./tests/e2e-test.sh
+      - name: PKG-CLI # this will a WIP to move all the CLI tests to the pkg repo
+        run: ./pkg/e2e-test.sh
       - name: Upload logs if they exist
         uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # v3
         if: failure()
