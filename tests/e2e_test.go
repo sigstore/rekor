@@ -142,10 +142,11 @@ func TestUploadVerifyRekord(t *testing.T) {
 	}
 
 	// Verify should fail initially
-	runCliErr(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out := runCliErr(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	outputContains(t, out, "404")
 
 	// It should upload successfully.
-	out := runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
 
 	// Now we should be able to verify it.
@@ -996,10 +997,43 @@ func TestGetNonExistantIndex(t *testing.T) {
 	outputContains(t, out, "404")
 }
 
+func TestVerifyNonExistantIndex(t *testing.T) {
+	// this index is extremely likely to not exist
+	out := runCliErr(t, "verify", "--log-index", "100000000")
+	outputContains(t, out, "404")
+}
+
 func TestGetNonExistantUUID(t *testing.T) {
 	// this uuid is extremely likely to not exist
 	out := runCliErr(t, "get", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 	outputContains(t, out, "404")
+}
+
+func TestVerifyNonExistantUUID(t *testing.T) {
+	// this uuid is extremely likely to not exist
+	out := runCliErr(t, "verify", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+	outputContains(t, out, "404")
+
+	// Check response code
+	tid := getTreeID(t)
+	h := sha256.Sum256([]byte("123"))
+	entryID, err := sharding.CreateEntryIDFromParts(fmt.Sprintf("%x", tid),
+		hex.EncodeToString(h[:]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := fmt.Sprintf("{\"entryUUIDs\":[\"%s\"]}", entryID.ReturnEntryIDString())
+	resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve",
+		"application/json",
+		bytes.NewReader([]byte(body)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, _ := ioutil.ReadAll(resp.Body)
+	t.Log(string(c))
+	if resp.StatusCode != 404 {
+		t.Fatal("expected 404 status")
+	}
 }
 
 func TestEntryUpload(t *testing.T) {
@@ -1193,6 +1227,54 @@ func TestSearchQueryLimit(t *testing.T) {
 	}
 }
 
+func TestSearchQueryMalformedEntry(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := ioutil.ReadFile(filepath.Join(wd, "rekor.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := fmt.Sprintf("{\"entries\":[\"%s\"]}", b)
+	resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve",
+		"application/json",
+		bytes.NewBuffer([]byte(body)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, _ := ioutil.ReadAll(resp.Body)
+	t.Log(string(c))
+	if resp.StatusCode != 400 {
+		t.Fatal("expected status 400")
+	}
+}
+
+func TestSearchQueryNonExistentEntry(t *testing.T) {
+	// Nonexistent but well-formed entry results in 404 not found.
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := ioutil.ReadFile(filepath.Join(wd, "canonical_rekor.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := fmt.Sprintf("{\"entries\":[%s]}", b)
+	t.Log(string(body))
+	resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve",
+		"application/json",
+		bytes.NewBuffer([]byte(body)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, _ := ioutil.ReadAll(resp.Body)
+	t.Log(string(c))
+	if resp.StatusCode != 404 {
+		t.Fatal("expected 404 status")
+	}
+}
+
 func getBody(t *testing.T, limit int) []byte {
 	t.Helper()
 	s := fmt.Sprintf("{\"logIndexes\": [%d", limit)
@@ -1260,7 +1342,8 @@ func TestSearchValidateTreeID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.StatusCode != 400 {
-		t.Fatalf("expected 400 status code but got %d", resp.StatusCode)
+	// Not Found because currently we don't detect that an unused random tree ID is invalid.
+	if resp.StatusCode != 404 {
+		t.Fatalf("expected 404 status code but got %d", resp.StatusCode)
 	}
 }

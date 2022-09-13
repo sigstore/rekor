@@ -361,11 +361,15 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		g, _ := errgroup.WithContext(httpReqCtx)
 
 		var searchHashes [][]byte
+		code := http.StatusBadRequest
 		for _, entryID := range params.Entry.EntryUUIDs {
 			if sharding.ValidateEntryID(entryID) == nil {
 				logEntry, err := retrieveLogEntry(httpReqCtx, entryID)
+				if errors.Is(err, ErrNotFound) {
+					code = http.StatusNotFound
+				}
 				if err != nil {
-					return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("error getting log entry for %s", entryID))
+					return handleRekorAPIError(params, code, err, fmt.Sprintf("error getting log entry for %s", entryID))
 				}
 				resultPayload = append(resultPayload, logEntry)
 				continue
@@ -373,16 +377,15 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 			// At this point, check if we got a uuid instead of an EntryID, so search for the hash later
 			uuid := entryID
 			if err := sharding.ValidateUUID(uuid); err != nil {
-				return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("validating uuid %s", uuid))
+				return handleRekorAPIError(params, code, err, fmt.Sprintf("validating uuid %s", uuid))
 			}
 			hash, err := hex.DecodeString(uuid)
 			if err != nil {
-				return handleRekorAPIError(params, http.StatusBadRequest, err, malformedUUID)
+				return handleRekorAPIError(params, code, err, malformedUUID)
 			}
 			searchHashes = append(searchHashes, hash)
 		}
 
-		code := http.StatusBadRequest
 		entries := params.Entry.Entries()
 		searchHashesChan := make(chan []byte, len(entries))
 		for _, e := range entries {
@@ -390,13 +393,12 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 			g.Go(func() error {
 				entry, err := types.UnmarshalEntry(e)
 				if err != nil {
-					return err
+					return fmt.Errorf("unmarshalling entry: %w", err)
 				}
 
 				leaf, err := types.CanonicalizeEntry(httpReqCtx, entry)
 				if err != nil {
-					code = http.StatusInternalServerError
-					return err
+					return fmt.Errorf("canonicalizing entry: %w", err)
 				}
 				hasher := rfc6962.DefaultHasher
 				leafHash := hasher.HashLeaf(leaf)
@@ -420,9 +422,11 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 			g.Go(func() error {
 				resp := tc.getLeafAndProofByHash(hash)
 				switch resp.status {
-				case codes.OK, codes.NotFound:
-				default:
+				case codes.OK:
+				case codes.NotFound:
+					code = http.StatusNotFound
 					return resp.err
+				default:
 				}
 				leafResult := resp.getLeafAndProofResult
 				if leafResult != nil && leafResult.Leaf != nil {
@@ -440,6 +444,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 			if leafResp != nil {
 				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tc, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof, api.logRanges.ActiveTreeID(), api.logRanges)
 				if err != nil {
+					code = http.StatusInternalServerError
 					return handleRekorAPIError(params, code, err, err.Error())
 				}
 
@@ -451,11 +456,18 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	if len(params.Entry.LogIndexes) > 0 {
 		g, _ := errgroup.WithContext(httpReqCtx)
 		resultPayloadChan := make(chan models.LogEntry, len(params.Entry.LogIndexes))
+
+		code := http.StatusInternalServerError
 		for _, logIndex := range params.Entry.LogIndexes {
 			logIndex := logIndex // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
 				logEntry, err := retrieveLogEntryByIndex(httpReqCtx, int(swag.Int64Value(logIndex)))
 				if err != nil {
+					switch {
+					case errors.Is(err, ErrNotFound):
+						code = http.StatusNotFound
+					default:
+					}
 					return err
 				}
 				resultPayloadChan <- logEntry
@@ -464,7 +476,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		}
 
 		if err := g.Wait(); err != nil {
-			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", err), trillianUnexpectedResult)
+			return handleRekorAPIError(params, code, err, err.Error())
 		}
 		close(resultPayloadChan)
 		for result := range resultPayloadChan {
