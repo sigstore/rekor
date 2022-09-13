@@ -24,7 +24,7 @@ import (
 func TestMemory(t *testing.T) {
 	ctx := context.Background()
 
-	m, err := New(ctx, "memory")
+	m, err := New(ctx, "memory", "")
 	if err != nil {
 		t.Fatalf("new memory: %v", err)
 	}

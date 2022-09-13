@@ -17,20 +17,27 @@ limitations under the License.
 package signer
 
 import (
-	"context"
-	"strings"
+	"crypto"
+	"fmt"
 
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
+	"go.step.sm/crypto/pemutil"
 )
 
-func New(ctx context.Context, signer string, pass string) (signature.Signer, error) {
-	switch {
-	case strings.HasPrefix(signer, gcp.ReferenceScheme):
-		return gcp.LoadSignerVerifier(ctx, signer)
-	case signer == MemoryScheme:
-		return NewMemory()
-	default:
-		return NewFile(signer, pass)
+// returns an file based signer and verify, used for spinning up local instances
+type File struct {
+	signature.SignerVerifier
+}
+
+func NewFile(keyPath, keyPass string) (*File, error) {
+	opaqueKey, err := pemutil.Read(keyPath, pemutil.WithPassword([]byte(keyPass)))
+	if err != nil {
+		return nil, fmt.Errorf("file: provide a valid signer, %s is not valid: %w", keyPath, err)
 	}
+
+	signer, err := signature.LoadSignerVerifier(opaqueKey, crypto.SHA256)
+	if err != nil {
+		return nil, fmt.Errorf(`file: loaded private key from %s can't be used to sign: %w`, keyPath, err)
+	}
+	return &File{signer}, nil
 }
