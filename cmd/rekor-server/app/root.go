@@ -74,7 +74,9 @@ func init() {
 	rootCmd.PersistentFlags().String("rekor_server.hostname", hostname, "public hostname of instance")
 	rootCmd.PersistentFlags().String("rekor_server.address", "127.0.0.1", "Address to bind to")
 
-	rootCmd.PersistentFlags().String("rekor_server.signer", "memory", "Rekor signer to use. Current valid options include: [gcpkms, file, memory]")
+	rootCmd.PersistentFlags().String("rekor_server.signer", "memory",
+		`Rekor signer to use. Valid options are: [gcpkms, memory, filename containing PEM encoded private key].
+		Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().String("rekor_server.signer-passwd", "", "Password to decrypt signer private key")
 
 	rootCmd.PersistentFlags().Uint16("port", 3000, "Port to bind to")
