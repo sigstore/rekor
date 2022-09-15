@@ -90,7 +90,8 @@ func NewAPI(treeID uint) (*API, error) {
 	log.Logger.Infof("Starting Rekor server with active tree %v", tid)
 	ranges.SetActive(tid)
 
-	rekorSigner, err := signer.New(ctx, viper.GetString("rekor_server.signer"))
+	rekorSigner, err := signer.New(ctx, viper.GetString("rekor_server.signer"),
+		viper.GetString("rekor_server.signer-passwd"))
 	if err != nil {
 		return nil, fmt.Errorf("getting new signer: %w", err)
 	}
