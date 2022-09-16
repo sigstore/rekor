@@ -16,6 +16,8 @@
 package api
 
 import (
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
@@ -35,4 +37,18 @@ var (
 		Name: "rekor_api_latency_summary",
 		Help: "Api Latency on calls",
 	}, []string{"path", "code"})
+
+	MetricRequestLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "rekor_latency_by_api",
+		Help: "Api Latency (in ns) by path and method",
+		Buckets: prometheus.ExponentialBucketsRange(
+			float64(time.Millisecond),
+			float64(4*time.Second),
+			10),
+	}, []string{"path", "method"})
+
+	MetricRequestCount = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "rekor_qps_by_api",
+		Help: "Api QPS by path, method, and response code",
+	}, []string{"path", "method", "code"})
 )
