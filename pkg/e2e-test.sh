@@ -20,11 +20,12 @@ echo "starting services"
 docker-compose up -d
 
 echo "building CLI and server"
+dir=$(dirname "$0")
 go build -o rekor-cli ./cmd/rekor-cli
 go build -o rekor-server ./cmd/rekor-server
 
 count=0
-
+docker kill $(docker ps -q) || true
 echo -n "waiting up to 60 sec for system to start"
 until [ $(docker-compose ps | grep -c "(healthy)") == 3 ];
 do
@@ -41,9 +42,10 @@ done
 echo
 echo "running tests"
 REKORTMPDIR="$(mktemp -d -t rekor_test.XXXXXX)"
+cp $dir/rekor-cli $REKORTMPDIR/rekor-cli
 touch $REKORTMPDIR.rekor.yaml
 trap "rm -rf $REKORTMPDIR" EXIT
-if ! REKORTMPDIR=$REKORTMPDIR go test -tags=e2e ./...; then
+if ! REKORTMPDIR=$REKORTMPDIR go test -tags=e2e ./pkg/...; then
    docker-compose logs --no-color > /tmp/docker-compose.log
    exit 1
 fi

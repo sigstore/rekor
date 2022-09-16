@@ -25,6 +25,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"testing"
 	"time"
@@ -32,11 +33,20 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
-const (
-	cli         = "../../rekor-cli"
-	server      = "./rekor-server"
+var (
+	cli         = "rekor-cli"
+	server      = "rekor-server"
 	nodeDataDir = "node"
 )
+
+func init() {
+
+	p := os.Getenv("REKORTMPDIR")
+	if p != "" {
+		cli = path.Join(p, cli)
+		server = path.Join(p, server)
+	}
+}
 
 func OutputContains(t *testing.T, output, sub string) {
 	t.Helper()
