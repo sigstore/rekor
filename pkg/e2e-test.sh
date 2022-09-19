@@ -16,20 +16,21 @@
 
 set -e
 
+docker kill $(docker ps -q) || true
 echo "starting services"
 docker-compose up -d
 
 echo "building CLI and server"
-dir=$(dirname "$0")
+# set the path to the root of the repo
+dir=$(git rev-parse --show-toplevel)
 go build -o rekor-cli ./cmd/rekor-cli
 go build -o rekor-server ./cmd/rekor-server
 
 count=0
-docker kill $(docker ps -q) || true
-echo -n "waiting up to 60 sec for system to start"
+echo -n "waiting up to 120 sec for system to start"
 until [ $(docker-compose ps | grep -c "(healthy)") == 3 ];
 do
-    if [ $count -eq 6 ]; then
+    if [ $count -eq 12 ]; then
        echo "! timeout reached"
        exit 1
     else
