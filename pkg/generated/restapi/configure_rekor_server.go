@@ -18,6 +18,7 @@ limitations under the License.
 package restapi
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 	"strconv"
@@ -46,6 +47,18 @@ import (
 )
 
 //go:generate swagger generate server --target ../../generated --name RekorServer --spec ../../../openapi.yaml --principal interface{} --exclude-main
+
+type contextKey string
+
+var (
+	ctxKeyAPIToRecord = contextKey("apiToRecord")
+)
+
+// Context payload for recording metrics.
+type apiToRecord struct {
+	method *string // Method to record in metrics, if any.
+	path   *string // Path to record in metrics, if any.
+}
 
 func configureFlags(api *operations.RekorServerAPI) {
 	// api.CommandLineOptionsGroups = []swag.CommandLineOptionsGroup{ ... }
@@ -104,6 +117,16 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.AddMiddlewareFor("GET", "/api/v1/log/publicKey", cacheForever)
 	api.AddMiddlewareFor("GET", "/api/v1/log/timestamp/certchain", cacheForever)
 
+	// add metrics for explicitly handled endpoints
+	recordMetricsForAPI(api, "POST", "/api/v1/index/retrieve")
+	recordMetricsForAPI(api, "GET", "/api/v1/log")
+	recordMetricsForAPI(api, "GET", "/api/v1/publicKey")
+	recordMetricsForAPI(api, "GET", "/api/v1/log/proof")
+	recordMetricsForAPI(api, "GET", "/api/v1/log/entries")
+	recordMetricsForAPI(api, "POST", "/api/v1/log/entries")
+	recordMetricsForAPI(api, "GET", "/api/v1/log/entries/{entryUUID}")
+	recordMetricsForAPI(api, "GET", "/api/v1/log/entries/retrieve")
+
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
 }
 
@@ -159,18 +182,59 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 	}))
 }
 
+// Populates the the apiToRecord for this method/path so metrics are emitted.
+func recordMetricsForAPI(api *operations.RekorServerAPI, method string, path string) {
+	metricsHandler := func(handler http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			if apiInfo, ok := ctx.Value(ctxKeyAPIToRecord).(*apiToRecord); ok {
+				apiInfo.method = &method
+				apiInfo.path = &path
+			} else {
+				log.ContextLogger(ctx).Warn("Could not attach api info - endpoint may not be monitored.")
+			}
+			handler.ServeHTTP(w, r)
+		})
+	}
+
+	api.AddMiddlewareFor(method, path, metricsHandler)
+}
+
 func wrapMetrics(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		apiInfo := apiToRecord{}
+		ctx = context.WithValue(ctx, ctxKeyAPIToRecord, &apiInfo)
+		r = r.WithContext(ctx)
+
 		start := time.Now()
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		defer func() {
-			labels := map[string]string{
-				"path": r.URL.Path,
-				"code": strconv.Itoa(ww.Status()),
+			// Only record metrics for APIs that need instrumentation.
+			if apiInfo.path != nil && apiInfo.method != nil {
+				code := strconv.Itoa(ww.Status())
+				labels := map[string]string{
+					"path": *apiInfo.path,
+					"code": code,
+				}
+				// This logs latency broken down by URL path and response code
+				// TODO(var-sdk): delete these metrics once the new metrics are safely rolled out.
+				pkgapi.MetricLatency.With(labels).Observe(float64(time.Since(start)))
+				pkgapi.MetricLatencySummary.With(labels).Observe(float64(time.Since(start)))
+
+				pkgapi.MetricRequestLatency.With(
+					map[string]string{
+						"path":   *apiInfo.path,
+						"method": *apiInfo.method,
+					}).Observe(float64(time.Since(start)))
+
+				pkgapi.MetricRequestCount.With(
+					map[string]string{
+						"path":   *apiInfo.path,
+						"method": *apiInfo.method,
+						"code":   code,
+					}).Inc()
 			}
-			// This logs latency broken down by URL path and response code
-			pkgapi.MetricLatency.With(labels).Observe(float64(time.Since(start)))
-			pkgapi.MetricLatencySummary.With(labels).Observe(float64(time.Since(start)))
 		}()
 
 		handler.ServeHTTP(ww, r)
