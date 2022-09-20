@@ -18,6 +18,13 @@ name: CI-Container-Build
 on:
   workflow_dispatch:
   push:
+    paths:
+      - '**'
+      - '!**.md'
+      - '!**.txt'
+      - '!images/**'
+      - '!LICENSE'
+      - 'tests/**'
     branches:
       - main
       - release-*

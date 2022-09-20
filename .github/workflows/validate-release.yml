@@ -17,6 +17,13 @@ name: CI-Validate-Release-Job
 
 on:
   push:
+    paths:
+      - '**'
+      - '!**.md'
+      - '!**.txt'
+      - '!images/**'
+      - '!LICENSE'
+      - 'tests/**'
     branches:
       - main
       - release-*

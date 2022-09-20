@@ -17,6 +17,13 @@ name: CI
 
 on:
   push:
+    paths:
+      - '**'
+      - '!**.md'
+      - '!**.txt'
+      - '!images/**'
+      - '!LICENSE'
+      - 'tests/**'
     branches: [ main ]
   pull_request:
     branches: [ main ]
