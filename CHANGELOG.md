@@ -1,3 +1,60 @@
+# v0.12.1
+
+> ** Rekor `v0.12.1` comes with a breaking change to `rekor-cli v0.12.1`. Users of rekor-cli MUST upgrade to the latest version **
+> The addition of the intotov2 created a breaking change for the `rekor-cli`
+
+## Enhancements
+
+* Adds new rekor metrics for latency and QPS. (https://github.com/sigstore/rekor/pull/1059)
+* feat: add file based signer and password (https://github.com/sigstore/rekor/pull/1049)
+
+## Bug Fixes
+
+* fix: fix harness tests with intoto v0.0.2 (https://github.com/sigstore/rekor/pull/1052)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Simon Kent (@var-sdk)
+
+# v0.12.0
+
+## Enhancements
+
+* remove /api/v1/version endpoint (https://github.com/sigstore/rekor/pull/1022)
+* Include checkpoint (STH) in entry upload and retrieve responses (https://github.com/sigstore/rekor/pull/1015)
+* Validate tree ID on calls to /api/v1/log/entries/retrieve (https://github.com/sigstore/rekor/pull/1017)
+* feat: add verification functions (https://github.com/sigstore/rekor/pull/986)
+* Change Checkpoint origin to be "Hostname - Tree ID" (https://github.com/sigstore/rekor/pull/1013)
+* Add bounds on number of elements in api/v1/log/entries/retrieve (https://github.com/sigstore/rekor/pull/1011)
+* Intoto v0.0.2 (https://github.com/sigstore/rekor/pull/973)
+* api.SearchLogQueryHandler thread safety (https://github.com/sigstore/rekor/pull/1006)
+* enable blocking specific pluggable type versions from being inserted into the log (https://github.com/sigstore/rekor/pull/1004)
+* check supportedVersions list rather than directly reading from version map (https://github.com/sigstore/rekor/pull/1003)
+
+## Bug Fixes
+
+* fix retrieve endpoint response code and add testing (https://github.com/sigstore/rekor/pull/1043)
+* Fix harness tests @ main (https://github.com/sigstore/rekor/pull/1038)
+* Fix rekor-cli backwards incompatibility & run harness tests against HEAD  (https://github.com/sigstore/rekor/pull/1030)
+* fix: use entry uuid uniformly (https://github.com/sigstore/rekor/pull/1012)
+
+## Others
+
+* Fetch all tags in harness tests (https://github.com/sigstore/rekor/pull/1039)
+
+## Contributors
+
+* Asra Ali (@asraa)
+* Bob Callaway (@bobcallaway)
+* Carlos Tadeu Panato Junior (@cpanato)
+* Ceridwen Driskill (@cdris)
+* Hayden Blauzvern (@haydentherapper)
+* Kenny Leung (@k4leung4)
+* Mikhail Swift (@mikhailswift)
+* Parth Patel (@pxp928)
+* Priya Wadhwa (@priyawadhwa)
+
 # v0.11.0
 
 ## Enhancements
