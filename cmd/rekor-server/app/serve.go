@@ -114,6 +114,12 @@ var serveCmd = &cobra.Command{
 		server.ConfigureAPI()
 
 		http.Handle("/metrics", promhttp.Handler())
+		if viper.GetBool("enable_killswitch") {
+			http.Handle("/kill", http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+				server.Shutdown()
+				w.WriteHeader(http.StatusOK)
+			}))
+		}
 		go func() {
 			srv := &http.Server{
 				Addr:         ":2112",
