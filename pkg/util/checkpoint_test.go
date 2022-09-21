@@ -25,7 +25,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
-	"fmt"
 	"testing"
 	"time"
 
@@ -449,6 +448,7 @@ func TestUnmarshalSignedCheckpoint(t *testing.T) {
 }
 
 func TestSignCheckpoint(t *testing.T) {
+	origin := "Rekor"
 	hostname := "rekor.localhost"
 	treeID := int64(123)
 	rootHash := sha256.Sum256([]byte{1, 2, 3})
@@ -458,7 +458,7 @@ func TestSignCheckpoint(t *testing.T) {
 		t.Fatalf("error generating signer: %v", err)
 	}
 	ctx := context.Background()
-	scBytes, err := CreateAndSignCheckpoint(ctx, hostname, treeID, &types.LogRootV1{TreeSize: treeSize, RootHash: rootHash[:]}, signer)
+	scBytes, err := CreateAndSignCheckpoint(ctx, origin, hostname, treeID, &types.LogRootV1{TreeSize: treeSize, RootHash: rootHash[:]}, signer)
 	if err != nil {
 		t.Fatalf("error creating signed checkpoint: %v", err)
 	}
@@ -470,9 +470,8 @@ func TestSignCheckpoint(t *testing.T) {
 	if !sth.Verify(signer) {
 		t.Fatalf("checkpoint signature invalid")
 	}
-	expectedOrigin := fmt.Sprintf("%s - %d", hostname, treeID)
-	if sth.Origin != fmt.Sprintf("%s - %d", hostname, treeID) {
-		t.Fatalf("unexpected origin: got %s, expected %s", expectedOrigin, sth.Origin)
+	if sth.Origin != origin {
+		t.Fatalf("unexpected origin: got %s, expected %s", origin, sth.Origin)
 	}
 	if !bytes.Equal(sth.Hash, rootHash[:]) {
 		t.Fatalf("unexpected mismatch of root hash")

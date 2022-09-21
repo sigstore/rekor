@@ -93,7 +93,8 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 		return nil, fmt.Errorf("signing entry error: %w", err)
 	}
 
-	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tc.logID, root, api.signer)
+	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.checkpoint_origin"),
+		viper.GetString("rekor_server.hostname"), tc.logID, root, api.signer)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +280,8 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		hashes = append(hashes, hex.EncodeToString(hash))
 	}
 
-	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tc.logID, root, api.signer)
+	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.checkpoint_origin"),
+		viper.GetString("rekor_server.hostname"), tc.logID, root, api.signer)
 	if err != nil {
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, sthGenerateError)
 	}
