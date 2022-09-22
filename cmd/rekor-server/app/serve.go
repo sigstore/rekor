@@ -115,8 +115,10 @@ var serveCmd = &cobra.Command{
 
 		http.Handle("/metrics", promhttp.Handler())
 		if viper.GetBool("enable_killswitch") {
-			http.Handle("/kill", http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
-				server.Shutdown()
+			http.Handle("/kill", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if err := server.Shutdown(); err != nil {
+					log.Logger.Error(err)
+				}
 				w.WriteHeader(http.StatusOK)
 			}))
 		}
