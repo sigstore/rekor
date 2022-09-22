@@ -30,12 +30,12 @@ require (
 	github.com/rs/cors v1.8.2
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0
-	github.com/sigstore/sigstore v1.4.1
+	github.com/sigstore/sigstore v1.4.2
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.13.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
-	github.com/theupdateframework/go-tuf v0.5.0
+	github.com/theupdateframework/go-tuf v0.5.1-0.20220920170306-f237d7ca5b42
 	github.com/transparency-dev/merkle v0.0.1
 	github.com/urfave/negroni v1.0.0
 	github.com/veraison/go-cose v1.0.0-rc.1
@@ -43,9 +43,9 @@ require (
 	go.uber.org/goleak v1.2.0
 	go.uber.org/zap v1.23.0
 	gocloud.dev v0.24.1-0.20211119014450-028788aaaa4c
-	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90
+	golang.org/x/crypto v0.0.0-20220919173607-35f4265a4bc0
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
-	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b
+	golang.org/x/net v0.0.0-20220909164309-bea034e7d591
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	google.golang.org/genproto v0.0.0-20220720214146-176da50484ac
 	google.golang.org/grpc v1.49.0
@@ -122,11 +122,11 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220822191816-0ebed06d0094 // indirect
-	golang.org/x/sys v0.0.0-20220907062415-87db552b00fd // indirect
+	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467 // indirect
 	golang.org/x/text v0.3.8-0.20211004125949-5bd84dd9b33b // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
-	google.golang.org/api v0.95.0 // indirect
+	google.golang.org/api v0.96.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
