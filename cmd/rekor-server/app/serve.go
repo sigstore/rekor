@@ -114,14 +114,6 @@ var serveCmd = &cobra.Command{
 		server.ConfigureAPI()
 
 		http.Handle("/metrics", promhttp.Handler())
-		if viper.GetBool("enable_killswitch") {
-			http.Handle("/kill", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if err := server.Shutdown(); err != nil {
-					log.Logger.Error(err)
-				}
-				w.WriteHeader(http.StatusOK)
-			}))
-		}
 		go func() {
 			srv := &http.Server{
 				Addr:         ":2112",
@@ -130,6 +122,27 @@ var serveCmd = &cobra.Command{
 			}
 			_ = srv.ListenAndServe()
 		}()
+
+		if viper.GetBool("enable_killswitch") {
+			go func() {
+				mux := http.NewServeMux()
+				mux.Handle("/kill", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if err := server.Shutdown(); err != nil {
+						log.Logger.Error(err)
+					}
+					w.WriteHeader(http.StatusOK)
+				}))
+
+				srv := &http.Server{
+					Addr:         ":2345",
+					ReadTimeout:  10 * time.Second,
+					WriteTimeout: 10 * time.Second,
+					Handler:      mux,
+				}
+
+				_ = srv.ListenAndServe()
+			}()
+		}
 
 		if err := server.Serve(); err != nil {
 			log.Logger.Fatal(err)

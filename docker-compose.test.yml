@@ -33,3 +33,7 @@ services:
       "--attestation_storage_bucket=file:///var/run/attestations",
       "--enable_killswitch",
       ]
+    ports:
+      - "3000:3000"
+      - "2112:2112"
+      - "2345:2345"
