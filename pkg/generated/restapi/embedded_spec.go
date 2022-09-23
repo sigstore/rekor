@@ -53,11 +53,13 @@ func init() {
   "paths": {
     "/api/v1/index/retrieve": {
       "post": {
+        "description": "EXPERIMENTAL - this endpoint is offered as best effort only and may be changed or removed in future releases.\nThe results returned from this endpoint may be incomplete.\n",
         "tags": [
           "index"
         ],
         "summary": "Searches index by entry metadata",
         "operationId": "searchIndex",
+        "deprecated": true,
         "parameters": [
           {
             "name": "query",
@@ -955,11 +957,13 @@ func init() {
   "paths": {
     "/api/v1/index/retrieve": {
       "post": {
+        "description": "EXPERIMENTAL - this endpoint is offered as best effort only and may be changed or removed in future releases.\nThe results returned from this endpoint may be incomplete.\n",
         "tags": [
           "index"
         ],
         "summary": "Searches index by entry metadata",
         "operationId": "searchIndex",
+        "deprecated": true,
         "parameters": [
           {
             "name": "query",
