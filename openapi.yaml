@@ -32,6 +32,11 @@ paths:
   /api/v1/index/retrieve:
     post:
       summary: Searches index by entry metadata
+      description: >
+        EXPERIMENTAL - this endpoint is offered as best effort only and may be changed or removed in future releases.
+
+        The results returned from this endpoint may be incomplete.
+      deprecated: true
       operationId: searchIndex
       tags:
         - index
