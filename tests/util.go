@@ -63,9 +63,7 @@ func run(t *testing.T, stdin, cmd string, arg ...string) string {
 		t.Log(string(b))
 		t.Fatal(err)
 	}
-
-	// Remove test coverage output
-	return strings.Split(strings.Split(string(b), "PASS")[0], "FAIL")[0]
+	return stripCoverageOutput(string(b))
 }
 
 func runCli(t *testing.T, arg ...string) string {
@@ -95,8 +93,7 @@ func runCliStdout(t *testing.T, arg ...string) string {
 		t.Log(string(b))
 		t.Fatal(err)
 	}
-	// Remove test coverage output
-	return strings.Split(strings.Split(string(b), "PASS")[0], "FAIL")[0]
+	return stripCoverageOutput(string(b))
 }
 
 func runCliErr(t *testing.T, arg ...string) string {
@@ -115,8 +112,7 @@ func runCliErr(t *testing.T, arg ...string) string {
 		t.Log(string(b))
 		t.Fatalf("expected error, got %s", string(b))
 	}
-	// Remove test coverage output
-	return strings.Split(strings.Split(string(b), "PASS")[0], "FAIL")[0]
+	return stripCoverageOutput(string(b))
 }
 
 func rekorServerFlag() string {
@@ -132,6 +128,10 @@ func rekorServer() string {
 
 func coverageFlag() string {
 	return "-test.coverprofile=/tmp/rekor-cli."+randomSuffix(8)+".cov"
+}
+
+func stripCoverageOutput(out string) string {
+	return strings.Split(strings.Split(out, "PASS")[0], "FAIL")[0]
 }
 
 func readFile(t *testing.T, p string) string {
