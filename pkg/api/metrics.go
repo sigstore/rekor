@@ -20,6 +20,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"sigs.k8s.io/release-utils/version"
 )
 
 var (
@@ -51,4 +52,19 @@ var (
 		Name: "rekor_qps_by_api",
 		Help: "Api QPS by path, method, and response code",
 	}, []string{"path", "method", "code"})
+
+	_ = promauto.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Namespace: "rekor",
+			Name:      "build_info",
+			Help:      "A metric with a constant '1' value labeled by version, revision, branch, and goversion from which rekor was built.",
+			ConstLabels: prometheus.Labels{
+				"version":    version.GetVersionInfo().GitVersion,
+				"revision":   version.GetVersionInfo().GitCommit,
+				"build_date": version.GetVersionInfo().BuildDate,
+				"goversion":  version.GetVersionInfo().GoVersion,
+			},
+		},
+		func() float64 { return 1 },
+	)
 )
