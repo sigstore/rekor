@@ -47,6 +47,9 @@ func outputContains(t *testing.T, output, sub string) {
 
 func run(t *testing.T, stdin, cmd string, arg ...string) string {
 	t.Helper()
+	// Coverage flag must be the first arg passed to coverage binary
+	// No impact when running with regular binary
+	arg = append([]string{coverageFlag()}, arg...)
 	c := exec.Command(cmd, arg...)
 	if stdin != "" {
 		c.Stdin = strings.NewReader(stdin)
@@ -60,8 +63,7 @@ func run(t *testing.T, stdin, cmd string, arg ...string) string {
 		t.Log(string(b))
 		t.Fatal(err)
 	}
-
-	return string(b)
+	return stripCoverageOutput(string(b))
 }
 
 func runCli(t *testing.T, arg ...string) string {
@@ -76,6 +78,9 @@ func runCli(t *testing.T, arg ...string) string {
 
 func runCliStdout(t *testing.T, arg ...string) string {
 	t.Helper()
+	// Coverage flag must be the first arg passed to coverage binary
+	// No impact when running with regular binary
+	arg = append([]string{coverageFlag()}, arg...)
 	arg = append(arg, rekorServerFlag())
 	c := exec.Command(cli, arg...)
 
@@ -88,11 +93,14 @@ func runCliStdout(t *testing.T, arg ...string) string {
 		t.Log(string(b))
 		t.Fatal(err)
 	}
-	return string(b)
+	return stripCoverageOutput(string(b))
 }
 
 func runCliErr(t *testing.T, arg ...string) string {
 	t.Helper()
+	// Coverage flag must be the first arg passed to coverage binary
+	// No impact when running with regular binary
+	arg = append([]string{coverageFlag()}, arg...)
 	arg = append(arg, rekorServerFlag())
 	// use a blank config file to ensure no collision
 	if os.Getenv("REKORTMPDIR") != "" {
@@ -104,7 +112,7 @@ func runCliErr(t *testing.T, arg ...string) string {
 		t.Log(string(b))
 		t.Fatalf("expected error, got %s", string(b))
 	}
-	return string(b)
+	return stripCoverageOutput(string(b))
 }
 
 func rekorServerFlag() string {
@@ -118,12 +126,30 @@ func rekorServer() string {
 	return "http://localhost:3000"
 }
 
+func coverageFlag() string {
+	return "-test.coverprofile=/tmp/rekor-cli."+randomSuffix(8)+".cov"
+}
+
+func stripCoverageOutput(out string) string {
+	return strings.Split(strings.Split(out, "PASS")[0], "FAIL")[0]
+}
+
 func readFile(t *testing.T, p string) string {
 	b, err := ioutil.ReadFile(p)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return strings.TrimSpace(string(b))
+}
+
+func randomSuffix(n int) string {
+	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
 }
 
 func randomData(t *testing.T, n int) []byte {

@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build e2e
 // +build e2e
 
 package e2e
@@ -60,7 +61,7 @@ func createSignedJar(t *testing.T, artifactPath string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	randManifest := strings.Replace(manifest, "REPLACE", randomRpmSuffix(), 1)
+	randManifest := strings.Replace(manifest, "REPLACE", randomSuffix(16), 1)
 	mf.Write([]byte(randManifest))
 	if err := zw.Close(); err != nil {
 		t.Fatal(err)

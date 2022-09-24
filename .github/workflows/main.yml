@@ -44,6 +44,8 @@ jobs:
         run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
       - name: Upload Coverage Report
         uses: codecov/codecov-action@d9f34f8cd5cb3b3eb79b3e4b5dae3a16df499a70 # v3.1.0
+        with:
+          flags: unittests
       - name: Ensure no files were modified as a result of the build
         run: git update-index --refresh && git diff-index --quiet HEAD -- || git diff --exit-code
 
@@ -72,13 +74,13 @@ jobs:
       - name: download minisign
         run: sudo add-apt-repository ppa:dysfunctionalprogramming/minisign && sudo apt-get update && sudo apt-get install minisign
       - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
-      - name: Docker Build
-        run: docker-compose build
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
       - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3.1.0
         with:
           go-version: ${{ env.GOVERSION }}
+      - name: install gocovmerge
+        run: go install github.com/wadey/gocovmerge@b5bfa59ec0adc420475f97f89b58045c721d761c
 
       - name: CLI
         run: ./tests/e2e-test.sh
@@ -88,6 +90,11 @@ jobs:
         with:
           name: E2E Docker Compose logs
           path: /tmp/docker-compose.log
+      - name: Upload Coverage Report
+        uses: codecov/codecov-action@81cd2dc8148241f03f5839d295e000b8f761e378 # v3.1.0
+        with:
+          files: /tmp/rekor-merged.cov
+          flags: e2etests
 
   sharding-e2e:
     runs-on: ubuntu-20.04

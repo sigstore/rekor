@@ -1,0 +1,39 @@
+#
+# Copyright 2022 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: '3.4'
+services:
+  rekor-server:
+    build:
+      context: .
+      target: "test"
+    command: [
+      "rekor-server",
+      "-test.coverprofile=rekor-server.cov",
+      "serve",
+      "--trillian_log_server.address=trillian-log-server",
+      "--trillian_log_server.port=8090",
+      "--redis_server.address=redis-server",
+      "--redis_server.port=6379",
+      "--rekor_server.address=0.0.0.0",
+      "--rekor_server.signer=memory",
+      "--enable_attestation_storage",
+      "--attestation_storage_bucket=file:///var/run/attestations",
+      "--enable_killswitch",
+      ]
+    ports:
+      - "3000:3000"
+      - "2112:2112"
+      - "2345:2345"

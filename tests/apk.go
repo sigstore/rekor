@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 //
@@ -51,7 +52,7 @@ func createSignedApk(t *testing.T, artifactPath string) {
 	datahash := sha256.Sum256(dataTGZBuf.Bytes())
 
 	ctlData := strings.Builder{}
-	ctlData.WriteString("name = " + randomRpmSuffix())
+	ctlData.WriteString("name = " + randomSuffix(16))
 	ctlData.WriteRune('\n')
 	ctlData.WriteString("datahash = " + hex.EncodeToString(datahash[:]))
 	ctlData.WriteRune('\n')

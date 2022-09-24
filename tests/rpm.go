@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 //
@@ -20,28 +21,17 @@ package e2e
 import (
 	"bytes"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"testing"
 
 	"github.com/google/rpmpack"
 )
 
-func randomRpmSuffix() string {
-	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-	b := make([]byte, 16)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
-}
-
 func createSignedRpm(t *testing.T, artifactPath string) {
 	t.Helper()
 
 	rpmMetadata := rpmpack.RPMMetaData{
-		Name:    "test-rpm-" + randomRpmSuffix(),
+		Name:    "test-rpm-" + randomSuffix(16),
 		Epoch:   0,
 		Version: "1",
 		Release: "2",
@@ -57,7 +47,7 @@ func createSignedRpm(t *testing.T, artifactPath string) {
 	data := randomData(t, 100)
 
 	rpm.AddFile(rpmpack.RPMFile{
-		Name:  randomRpmSuffix(),
+		Name:  randomSuffix(16),
 		Body:  data,
 		Type:  rpmpack.GenericFile,
 		Owner: "testOwner",
