@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20220708163326-82d177caec6e
 	github.com/dvyukov/go-fuzz v0.0.0-20220220162807-a217d9bdbece
-	github.com/go-swagger/go-swagger v0.30.2
+	github.com/go-swagger/go-swagger v0.30.3
 	github.com/google/trillian v1.5.0
 )
 
