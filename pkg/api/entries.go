@@ -232,7 +232,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		IntegratedTime: swag.Int64(queuedLeaf.IntegrateTimestamp.AsTime().Unix()),
 	}
 
-	if viper.GetBool("enable_retrieve_api") {
+	if redisClient != nil {
 		go func() {
 			keys, err := entry.IndexKeys()
 			if err != nil {
@@ -575,4 +575,42 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 		log.ContextLogger(ctx).Errorf("Unexpected response code while attempting to retrieve UUID %v from TreeID %v: %v", uuid, tid, resp.status)
 		return models.LogEntry{}, errors.New("unexpected error")
 	}
+}
+
+// handlers for APIs that may be disabled in a given instance
+
+func CreateLogEntryNotImplementedHandler(params entries.CreateLogEntryParams) middleware.Responder {
+	err := &models.Error{
+		Code:    http.StatusNotImplemented,
+		Message: "Create Entry API not enabled in this Rekor instance",
+	}
+
+	return entries.NewCreateLogEntryDefault(http.StatusNotImplemented).WithPayload(err)
+}
+
+func GetLogEntryByIndexNotImplementedHandler(params entries.GetLogEntryByIndexParams) middleware.Responder {
+	err := &models.Error{
+		Code:    http.StatusNotImplemented,
+		Message: "Get Log Entry by Index API not enabled in this Rekor instance",
+	}
+
+	return entries.NewGetLogEntryByIndexDefault(http.StatusNotImplemented).WithPayload(err)
+}
+
+func GetLogEntryByUUIDNotImplementedHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
+	err := &models.Error{
+		Code:    http.StatusNotImplemented,
+		Message: "Get Log Entry by UUID API not enabled in this Rekor instance",
+	}
+
+	return entries.NewGetLogEntryByUUIDDefault(http.StatusNotImplemented).WithPayload(err)
+}
+
+func SearchLogQueryNotImplementedHandler(params entries.SearchLogQueryParams) middleware.Responder {
+	err := &models.Error{
+		Code:    http.StatusNotImplemented,
+		Message: "Search Log Query API not enabled in this Rekor instance",
+	}
+
+	return entries.NewSearchLogQueryDefault(http.StatusNotImplemented).WithPayload(err)
 }

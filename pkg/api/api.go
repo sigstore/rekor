@@ -26,6 +26,7 @@ import (
 	"github.com/google/trillian"
 	radix "github.com/mediocregopher/radix/v4"
 	"github.com/spf13/viper"
+	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -133,7 +134,7 @@ func ConfigureAPI(treeID uint) {
 	if err != nil {
 		log.Logger.Panic(err)
 	}
-	if viper.GetBool("enable_retrieve_api") {
+	if viper.GetBool("enable_retrieve_api") || slices.Contains(viper.GetStringSlice("enabled_api_endpoints"), "searchIndex") {
 		redisClient, err = cfg.New(context.Background(), "tcp", fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")))
 		if err != nil {
 			log.Logger.Panic("failure connecting to redis instance: ", err)
