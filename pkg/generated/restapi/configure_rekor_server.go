@@ -93,14 +93,14 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.PubkeyGetPublicKeyHandler = pubkey.GetPublicKeyHandlerFunc(pkgapi.GetPublicKeyNotImplementedHandler)
 	api.TlogGetLogProofHandler = tlog.GetLogProofHandlerFunc(pkgapi.GetLogProofNotImplementedHandler)
 
-	enabled_api_endpoints := viper.GetStringSlice("enabled_api_endpoints")
-	if !slices.Contains(enabled_api_endpoints, "searchIndex") && viper.GetBool("enable_retrieve_api") {
-		enabled_api_endpoints = append(enabled_api_endpoints, "searchIndex")
+	enabledAPIEndpoints := viper.GetStringSlice("enabled_api_endpoints")
+	if !slices.Contains(enabledAPIEndpoints, "searchIndex") && viper.GetBool("enable_retrieve_api") {
+		enabledAPIEndpoints = append(enabledAPIEndpoints, "searchIndex")
 	}
 
-	for _, enabled_api := range enabled_api_endpoints {
-		log.Logger.Infof("Enabling API endpoint: %s", enabled_api)
-		switch enabled_api {
+	for _, enabledAPI := range enabledAPIEndpoints {
+		log.Logger.Infof("Enabling API endpoint: %s", enabledAPI)
+		switch enabledAPI {
 		case "searchIndex":
 			api.IndexSearchIndexHandler = index.SearchIndexHandlerFunc(pkgapi.SearchIndexHandler)
 		case "getLogInfo":
@@ -118,13 +118,13 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 		case "searchLogQuery":
 			api.EntriesSearchLogQueryHandler = entries.SearchLogQueryHandlerFunc(pkgapi.SearchLogQueryHandler)
 		default:
-			log.Logger.Panicf("Unknown API endpoint requested: %s", enabled_api)
+			log.Logger.Panicf("Unknown API endpoint requested: %s", enabledAPI)
 		}
 	}
 
 	// all handlers need to be set before a call to api.AddMiddlewareFor
-	for _, enabled_api := range enabled_api_endpoints {
-		switch enabled_api {
+	for _, enabledAPI := range enabledAPIEndpoints {
+		switch enabledAPI {
 		case "searchIndex":
 			recordMetricsForAPI(api, "POST", "/api/v1/index/retrieve") // add metrics
 		case "getLogInfo":

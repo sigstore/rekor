@@ -37,7 +37,6 @@ require (
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
 	github.com/theupdateframework/go-tuf v0.5.1-0.20220920170306-f237d7ca5b42
 	github.com/transparency-dev/merkle v0.0.1
-	github.com/urfave/negroni v1.0.0
 	github.com/veraison/go-cose v1.0.0-rc.1
 	github.com/zalando/go-keyring v0.1.1 // indirect
 	go.uber.org/goleak v1.2.0
