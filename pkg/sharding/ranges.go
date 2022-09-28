@@ -138,6 +138,15 @@ func (l *LogRanges) NoInactive() bool {
 	return l.inactive == nil
 }
 
+// AllShards returns all shards, starting with the active shard and then the inactive shards
+func (l *LogRanges) AllShards() []int64 {
+	shards := []int64{l.ActiveTreeID()}
+	for _, in := range l.GetInactive() {
+		shards = append(shards, in.TreeID)
+	}
+	return shards
+}
+
 // TotalInactiveLength returns the total length across all inactive shards;
 // we don't know the length of the active shard.
 func (l *LogRanges) TotalInactiveLength() int64 {

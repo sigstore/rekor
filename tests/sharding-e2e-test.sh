@@ -24,7 +24,6 @@ set -ex
 echo "Installing createtree..."
 go install github.com/google/trillian/cmd/createtree@latest
 
-
 echo "starting services"
 docker-compose up -d
 rm ~/.rekor/state.json || true
@@ -33,6 +32,7 @@ echo "building CLI and server"
 go build -o rekor-cli ./cmd/rekor-cli
 REKOR_CLI=$(pwd)/rekor-cli
 go build -o rekor-server ./cmd/rekor-server
+
 
 function check_log_index () {
   logIndex=$1
@@ -250,6 +250,11 @@ ENTRY_ID_2=$($REKOR_CLI get --log-index 3 --rekor_server http://localhost:3000 -
 # Make sure retrieve by UUID in the inactive shard works
 NUM_ELEMENTS=$(curl -f http://localhost:3000/api/v1/log/entries/retrieve -H "Content-Type: application/json" -H "Accept: application/json" -d "{ \"entryUUIDs\": [\"$ENTRY_ID_1\"]}" | jq '. | length')
 stringsMatch $NUM_ELEMENTS "1"
+
+# Make sure we can verify the entry we entered into the now-inactive shard
+pushd tests
+$REKOR_CLI verify --artifact test_file.txt --signature test_file.sig --public-key test_public_key.key --rekor_server http://localhost:3000
+popd
 
 # -f makes sure we exit on failure
 NUM_ELEMENTS=$(curl -f http://localhost:3000/api/v1/log/entries/retrieve -H "Content-Type: application/json" -H "Accept: application/json" -d "{ \"entryUUIDs\": [\"$ENTRY_ID_1\", \"$ENTRY_ID_2\"]}" | jq '. | length')

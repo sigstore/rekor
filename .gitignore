@@ -17,3 +17,6 @@ rekorServerImagerefs
 rekorCliImagerefs
 trillianServerImagerefs
 trillianSignerImagerefs
+cosign.*
+signature
+rekor.pub
