@@ -17,3 +17,5 @@ rekorServerImagerefs
 rekorCliImagerefs
 trillianServerImagerefs
 trillianSignerImagerefs
+cosign.*
+signature

@@ -415,23 +415,27 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 			searchHashes = append(searchHashes, hash)
 		}
 
-		searchByHashResults := make([]*trillian.GetEntryAndProofResponse, len(searchHashes))
+		searchByHashResults := make([][]*trillian.GetEntryAndProofResponse, len(searchHashes))
 		g, _ = errgroup.WithContext(httpReqCtx)
 		for i, hash := range searchHashes {
 			i, hash := i, hash // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
-				resp := tc.getLeafAndProofByHash(hash)
-				switch resp.status {
-				case codes.OK:
-				case codes.NotFound:
-					code = http.StatusNotFound
-					return resp.err
-				default:
+				var results []*trillian.GetEntryAndProofResponse
+				for _, shard := range api.logRanges.AllShards() {
+					tcs := NewTrillianClientFromTreeID(httpReqCtx, shard)
+					resp := tcs.getLeafAndProofByHash(hash)
+					if resp.status != codes.OK {
+						continue
+					}
+					leafResult := resp.getLeafAndProofResult
+					if leafResult != nil && leafResult.Leaf != nil {
+						results = append(results, resp.getLeafAndProofResult)
+					}
 				}
-				leafResult := resp.getLeafAndProofResult
-				if leafResult != nil && leafResult.Leaf != nil {
-					searchByHashResults[i] = leafResult
+				if results == nil {
+					return fmt.Errorf("no responses found")
 				}
+				searchByHashResults[i] = results
 				return nil
 			})
 		}
@@ -440,7 +444,12 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 			return handleRekorAPIError(params, code, err, err.Error())
 		}
 
-		for _, leafResp := range searchByHashResults {
+		var flattenedHashResults []*trillian.GetEntryAndProofResponse
+		for _, s := range searchByHashResults {
+			flattenedHashResults = append(flattenedHashResults, s...)
+		}
+
+		for _, leafResp := range flattenedHashResults {
 			if leafResp == nil {
 				continue
 			}

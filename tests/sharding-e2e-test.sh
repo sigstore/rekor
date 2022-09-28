@@ -36,6 +36,7 @@ go build -o rekor-cli ./cmd/rekor-cli
 REKOR_CLI=$(pwd)/rekor-cli
 go build -o rekor-server ./cmd/rekor-server
 
+
 function check_log_index () {
   logIndex=$1
   # make sure we can get this log index from rekor
@@ -102,6 +103,7 @@ echo "Waiting for rekor server to come up..."
 waitForRekorServer
 
 # Sign a blob and push to the log with cosign
+rm cosign.*
 COSIGN_PASSWORD=pw cosign generate-key-pair
 COSIGN_PASSWORD=pw COSIGN_EXPERIMENTAL=1 cosign sign-blob README.md --key cosign.key --rekor-url http://localhost:3000 --output-signature ./signature
 
@@ -252,6 +254,9 @@ ENTRY_ID_2=$($REKOR_CLI get --log-index 3 --rekor_server http://localhost:3000 -
 NUM_ELEMENTS=$(curl -f http://localhost:3000/api/v1/log/entries/retrieve -H "Content-Type: application/json" -H "Accept: application/json" -d "{ \"entryUUIDs\": [\"$ENTRY_ID_1\"]}" | jq '. | length')
 stringsMatch $NUM_ELEMENTS "1"
 
+# Make sure we can verify the blob we entered into the now-inactive shard
+COSIGN_EXPERIMENTAL=1 cosign verify-blob README.md --key cosign.pub --rekor-url http://localhost:3000  --signature ./signature
+
 # -f makes sure we exit on failure
 NUM_ELEMENTS=$(curl -f http://localhost:3000/api/v1/log/entries/retrieve -H "Content-Type: application/json" -H "Accept: application/json" -d "{ \"entryUUIDs\": [\"$ENTRY_ID_1\", \"$ENTRY_ID_2\"]}" | jq '. | length')
 stringsMatch $NUM_ELEMENTS "2"
@@ -273,8 +278,5 @@ $REKOR_CLI verify --uuid $UUID1 --rekor_server http://localhost:3000
 echo
 echo "Testing rekor-cli verification via Entry ID..."
 DEBUG=1 $REKOR_CLI verify --uuid $ENTRY_ID_1 --rekor_server http://localhost:3000
-
-# Make sure we can verify the blob we entered into the now-inactive shard
-COSIGN_PASSWORD=pw COSIGN_EXPERIMENTAL=1 cosign verify-blob README.md --key cosign.pub --rekor-url http://localhost:3000  --signature ./signature
 
 echo "Test passed successfully :)"
