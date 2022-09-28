@@ -24,9 +24,6 @@ set -ex
 echo "Installing createtree..."
 go install github.com/google/trillian/cmd/createtree@latest
 
-echo "Installing cosign..."
-go install github.com/sigstore/cosign/cmd/cosign@latest
-
 echo "starting services"
 docker-compose up -d
 rm ~/.rekor/state.json || true
@@ -102,10 +99,10 @@ trap "collectLogsOnFailure $?" EXIT
 echo "Waiting for rekor server to come up..."
 waitForRekorServer
 
-# Sign a blob and push to the log with cosign
-rm cosign.*
-COSIGN_PASSWORD=pw cosign generate-key-pair
-COSIGN_PASSWORD=pw COSIGN_EXPERIMENTAL=1 cosign sign-blob README.md --key cosign.key --rekor-url http://localhost:3000 --output-signature ./signature
+# Add some things to the tlog :)
+pushd tests
+$REKOR_CLI upload --artifact test_file.txt --signature test_file.sig --public-key test_public_key.key --rekor_server http://localhost:3000
+popd
 
 # Make sure we can prove consistency
 $REKOR_CLI loginfo --rekor_server http://localhost:3000 
@@ -254,9 +251,10 @@ ENTRY_ID_2=$($REKOR_CLI get --log-index 3 --rekor_server http://localhost:3000 -
 NUM_ELEMENTS=$(curl -f http://localhost:3000/api/v1/log/entries/retrieve -H "Content-Type: application/json" -H "Accept: application/json" -d "{ \"entryUUIDs\": [\"$ENTRY_ID_1\"]}" | jq '. | length')
 stringsMatch $NUM_ELEMENTS "1"
 
-# Make sure we can verify the blob we entered into the now-inactive shard
-echo $NEW_PUB_KEY > rekor.pub
-COSIGN_EXPERIMENTAL=1 SIGSTORE_REKOR_PUBLIC_KEY=./rekor.pub cosign verify-blob README.md --key cosign.pub --rekor-url http://localhost:3000  --signature ./signature
+# Make sure we can verify the entry we entered into the now-inactive shard
+pushd tests
+$REKOR_CLI verify --artifact test_file.txt --signature test_file.sig --public-key test_public_key.key --rekor_server http://localhost:3000
+popd
 
 # -f makes sure we exit on failure
 NUM_ELEMENTS=$(curl -f http://localhost:3000/api/v1/log/entries/retrieve -H "Content-Type: application/json" -H "Accept: application/json" -d "{ \"entryUUIDs\": [\"$ENTRY_ID_1\", \"$ENTRY_ID_2\"]}" | jq '. | length')
