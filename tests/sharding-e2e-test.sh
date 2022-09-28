@@ -24,6 +24,8 @@ set -ex
 echo "Installing createtree..."
 go install github.com/google/trillian/cmd/createtree@latest
 
+echo "Installing cosign..."
+go install github.com/sigstore/cosign/cmd/cosign@latest
 
 echo "starting services"
 docker-compose up -d
@@ -99,10 +101,9 @@ trap "collectLogsOnFailure $?" EXIT
 echo "Waiting for rekor server to come up..."
 waitForRekorServer
 
-# Add some things to the tlog :)
-pushd tests
-$REKOR_CLI upload --artifact test_file.txt --signature test_file.sig --public-key test_public_key.key --rekor_server http://localhost:3000
-popd
+# Sign a blob and push to the log with cosign
+COSIGN_PASSWORD=pw cosign generate-key-pair
+COSIGN_PASSWORD=pw COSIGN_EXPERIMENTAL=1 cosign sign-blob README.md --key cosign.key --rekor-url http://localhost:3000 --output-signature ./signature
 
 # Make sure we can prove consistency
 $REKOR_CLI loginfo --rekor_server http://localhost:3000 
@@ -272,5 +273,8 @@ $REKOR_CLI verify --uuid $UUID1 --rekor_server http://localhost:3000
 echo
 echo "Testing rekor-cli verification via Entry ID..."
 DEBUG=1 $REKOR_CLI verify --uuid $ENTRY_ID_1 --rekor_server http://localhost:3000
+
+# Make sure we can verify the blob we entered into the now-inactive shard
+COSIGN_PASSWORD=pw COSIGN_EXPERIMENTAL=1 cosign verify-blob README.md --key cosign.pub --rekor-url http://localhost:3000  --signature ./signature
 
 echo "Test passed successfully :)"
