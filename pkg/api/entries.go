@@ -441,13 +441,14 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		}
 
 		for _, leafResp := range searchByHashResults {
-			if leafResp != nil {
-				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tc, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof, api.logRanges.ActiveTreeID(), api.logRanges)
+			if leafResp == nil {
+				continue
+			}
+			for _, shard := range api.logRanges.AllShards() {
+				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tc, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof, shard, api.logRanges)
 				if err != nil {
-					code = http.StatusInternalServerError
-					return handleRekorAPIError(params, code, err, err.Error())
+					continue
 				}
-
 				resultPayload = append(resultPayload, logEntry)
 			}
 		}
