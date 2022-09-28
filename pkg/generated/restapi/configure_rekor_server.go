@@ -125,7 +125,7 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	recordMetricsForAPI(api, "GET", "/api/v1/log/entries")
 	recordMetricsForAPI(api, "POST", "/api/v1/log/entries")
 	recordMetricsForAPI(api, "GET", "/api/v1/log/entries/{entryUUID}")
-	recordMetricsForAPI(api, "GET", "/api/v1/log/entries/retrieve")
+	recordMetricsForAPI(api, "POST", "/api/v1/log/entries/retrieve")
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
 }
