@@ -350,7 +350,6 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Responder {
 	httpReqCtx := params.HTTPRequest.Context()
 	resultPayload := []models.LogEntry{}
-	tc := NewTrillianClient(httpReqCtx)
 
 	totalQueries := len(params.Entry.EntryUUIDs) + len(params.Entry.Entries()) + len(params.Entry.LogIndexes)
 	if totalQueries > maxSearchQueries {
@@ -415,24 +414,31 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 			searchHashes = append(searchHashes, hash)
 		}
 
-		searchByHashResults := make([][]*trillian.GetEntryAndProofResponse, len(searchHashes))
+		searchByHashResults := make([]map[int64]*trillian.GetEntryAndProofResponse, len(searchHashes))
 		g, _ = errgroup.WithContext(httpReqCtx)
 		for i, hash := range searchHashes {
 			i, hash := i, hash // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
-				var results []*trillian.GetEntryAndProofResponse
+				var results map[int64]*trillian.GetEntryAndProofResponse
 				for _, shard := range api.logRanges.AllShards() {
 					tcs := NewTrillianClientFromTreeID(httpReqCtx, shard)
 					resp := tcs.getLeafAndProofByHash(hash)
 					if resp.status != codes.OK {
 						continue
 					}
+					if resp.err != nil {
+						continue
+					}
 					leafResult := resp.getLeafAndProofResult
 					if leafResult != nil && leafResult.Leaf != nil {
-						results = append(results, resp.getLeafAndProofResult)
+						if results == nil {
+							results = map[int64]*trillian.GetEntryAndProofResponse{}
+						}
+						results[shard] = resp.getLeafAndProofResult
 					}
 				}
 				if results == nil {
+					code = http.StatusNotFound
 					return fmt.Errorf("no responses found")
 				}
 				searchByHashResults[i] = results
@@ -444,19 +450,16 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 			return handleRekorAPIError(params, code, err, err.Error())
 		}
 
-		var flattenedHashResults []*trillian.GetEntryAndProofResponse
-		for _, s := range searchByHashResults {
-			flattenedHashResults = append(flattenedHashResults, s...)
-		}
-
-		for _, leafResp := range flattenedHashResults {
-			if leafResp == nil {
-				continue
-			}
-			for _, shard := range api.logRanges.AllShards() {
-				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tc, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof, shard, api.logRanges)
-				if err != nil {
+		for _, hashMap := range searchByHashResults {
+			for shard, leafResp := range hashMap {
+				if leafResp == nil {
 					continue
+				}
+				tcs := NewTrillianClientFromTreeID(httpReqCtx, shard)
+				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tcs, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof, shard, api.logRanges)
+				if err != nil {
+					code = http.StatusInternalServerError
+					return handleRekorAPIError(params, code, err, err.Error())
 				}
 				resultPayload = append(resultPayload, logEntry)
 			}

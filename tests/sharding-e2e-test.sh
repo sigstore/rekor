@@ -255,7 +255,8 @@ NUM_ELEMENTS=$(curl -f http://localhost:3000/api/v1/log/entries/retrieve -H "Con
 stringsMatch $NUM_ELEMENTS "1"
 
 # Make sure we can verify the blob we entered into the now-inactive shard
-COSIGN_EXPERIMENTAL=1 cosign verify-blob README.md --key cosign.pub --rekor-url http://localhost:3000  --signature ./signature
+echo $NEW_PUB_KEY > rekor.pub
+COSIGN_EXPERIMENTAL=1 SIGSTORE_REKOR_PUBLIC_KEY=./rekor.pub cosign verify-blob README.md --key cosign.pub --rekor-url http://localhost:3000  --signature ./signature
 
 # -f makes sure we exit on failure
 NUM_ELEMENTS=$(curl -f http://localhost:3000/api/v1/log/entries/retrieve -H "Content-Type: application/json" -H "Accept: application/json" -d "{ \"entryUUIDs\": [\"$ENTRY_ID_1\", \"$ENTRY_ID_2\"]}" | jq '. | length')
