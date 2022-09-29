@@ -1,3 +1,22 @@
+# v0.12.2
+
+## Enhancements
+* add changelog for 0.12.0 and 0.12.1 (#1064)
+* add description on /api/v1/index/retrieve endpoint (#1073)
+* Adding e2e test coverage (#1071)
+* export rekor build/version information (#1074)
+
+## Bug Fixes
+* Search through all shards when searching by hash (#1082)
+* Use POST instead of GET for /api/log/entries/retrieve metrics (#1083)
+  
+## Contributors
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Ceridwen Driskill
+* Simon Kent
+* Priya Wadhwa
+
 # v0.12.1
 
 > ** Rekor `v0.12.1` comes with a breaking change to `rekor-cli v0.12.1`. Users of rekor-cli MUST upgrade to the latest version **
