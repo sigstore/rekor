@@ -121,12 +121,13 @@ func VerifyCheckpointSignature(e *models.LogEntryAnon, verifier signature.Verifi
 	}
 	rootHash, err := hex.DecodeString(*e.Verification.InclusionProof.RootHash)
 	if err != nil {
-		return err
+		return errors.New("decoding inclusion proof root has")
 	}
-	if bytes.EqualFold(rootHash, sth.Hash) {
+
+	if !bytes.EqualFold(rootHash, sth.Hash) {
 		return fmt.Errorf("proof root hash does not match signed tree head, expected %s got %s",
 			*e.Verification.InclusionProof.RootHash,
-			sth.Hash)
+			hex.EncodeToString(sth.Hash))
 	}
 	return nil
 }

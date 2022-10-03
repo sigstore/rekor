@@ -261,7 +261,7 @@ func TestCheckpoint(t *testing.T) {
 				Verification: &models.LogEntryAnonVerification{
 					InclusionProof: &models.InclusionProof{
 						TreeSize: swag.Int64(int64(2)),
-						RootHash: swag.String("5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"),
+						RootHash: swag.String(rootHashString),
 						LogIndex: swag.Int64(1),
 						Hashes: []string{
 							"59a575f157274702c38de3ab1e1784226f391fb79500ebf9f02b4439fb77574c",
@@ -283,7 +283,7 @@ func TestCheckpoint(t *testing.T) {
 				Verification: &models.LogEntryAnonVerification{
 					InclusionProof: &models.InclusionProof{
 						TreeSize: swag.Int64(int64(2)),
-						RootHash: swag.String(rootHashString),
+						RootHash: swag.String("5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"),
 						LogIndex: swag.Int64(1),
 						Hashes: []string{
 							"59a575f157274702c38de3ab1e1784226f391fb79500ebf9f02b4439fb77574c",
