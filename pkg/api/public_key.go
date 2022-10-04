@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/swag"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/pubkey"
 )
 
@@ -33,4 +34,15 @@ func GetPublicKeyHandler(params pubkey.GetPublicKeyParams) middleware.Responder 
 		return handleRekorAPIError(params, http.StatusBadRequest, err, "")
 	}
 	return pubkey.NewGetPublicKeyOK().WithPayload(pk)
+}
+
+// handlers for APIs that may be disabled in a given instance
+
+func GetPublicKeyNotImplementedHandler(params pubkey.GetPublicKeyParams) middleware.Responder {
+	err := &models.Error{
+		Code:    http.StatusNotImplemented,
+		Message: "Get Public Key API not enabled in this Rekor instance",
+	}
+
+	return pubkey.NewGetPublicKeyDefault(http.StatusNotImplemented).WithPayload(err)
 }

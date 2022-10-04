@@ -164,3 +164,23 @@ func inactiveShardLogInfo(ctx context.Context, tid int64) (*models.InactiveShard
 	}
 	return &m, nil
 }
+
+// handlers for APIs that may be disabled in a given instance
+
+func GetLogInfoNotImplementedHandler(params tlog.GetLogInfoParams) middleware.Responder {
+	err := &models.Error{
+		Code:    http.StatusNotImplemented,
+		Message: "Get Log Info API not enabled in this Rekor instance",
+	}
+
+	return tlog.NewGetLogInfoDefault(http.StatusNotImplemented).WithPayload(err)
+}
+
+func GetLogProofNotImplementedHandler(params tlog.GetLogProofParams) middleware.Responder {
+	err := &models.Error{
+		Code:    http.StatusNotImplemented,
+		Message: "Get Log Proof API not enabled in this Rekor instance",
+	}
+
+	return tlog.NewGetLogProofDefault(http.StatusNotImplemented).WithPayload(err)
+}

@@ -32,6 +32,17 @@ var (
 	cfgFile     string
 	logType     string
 	enablePprof bool
+	// these map to the operationId as defined in openapi.yaml file
+	operationIds = []string{
+		"searchIndex",
+		"getLogInfo",
+		"getPublicKey",
+		"getLogProof",
+		"createLogEntry",
+		"getLogEntryByIndex",
+		"getLogEntryByUUID",
+		"searchLogQuery",
+	}
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -84,12 +95,15 @@ Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().Uint16("port", 3000, "Port to bind to")
 
 	rootCmd.PersistentFlags().Bool("enable_retrieve_api", true, "enables Redis-based index API endpoint")
+	_ = rootCmd.PersistentFlags().MarkDeprecated("enable_retrieve_api", "this flag is deprecated in favor of enabled_api_endpoints (searchIndex)")
 	rootCmd.PersistentFlags().String("redis_server.address", "127.0.0.1", "Redis server address")
 	rootCmd.PersistentFlags().Uint16("redis_server.port", 6379, "Redis server port")
 
 	rootCmd.PersistentFlags().Bool("enable_attestation_storage", false, "enables rich attestation storage")
 	rootCmd.PersistentFlags().String("attestation_storage_bucket", "", "url for attestation storage bucket")
 	rootCmd.PersistentFlags().Int("max_attestation_size", 100*1024, "max size for attestation storage, in bytes")
+
+	rootCmd.PersistentFlags().StringSlice("enabled_api_endpoints", operationIds, "list of API endpoints to enable using operationId from openapi.yaml")
 
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)

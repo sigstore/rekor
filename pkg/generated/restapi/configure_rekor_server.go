@@ -43,7 +43,7 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
 
-	"github.com/urfave/negroni"
+	"golang.org/x/exp/slices"
 )
 
 //go:generate swagger generate server --target ../../generated --name RekorServer --spec ../../../openapi.yaml --principal interface{} --exclude-main
@@ -84,48 +84,74 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 
 	api.ApplicationXPemFileProducer = runtime.TextProducer()
 
-	api.EntriesCreateLogEntryHandler = entries.CreateLogEntryHandlerFunc(pkgapi.CreateLogEntryHandler)
-	api.EntriesGetLogEntryByIndexHandler = entries.GetLogEntryByIndexHandlerFunc(pkgapi.GetLogEntryByIndexHandler)
-	api.EntriesGetLogEntryByUUIDHandler = entries.GetLogEntryByUUIDHandlerFunc(pkgapi.GetLogEntryByUUIDHandler)
-	api.EntriesSearchLogQueryHandler = entries.SearchLogQueryHandlerFunc(pkgapi.SearchLogQueryHandler)
+	// disable all endpoints to start
+	api.IndexSearchIndexHandler = index.SearchIndexHandlerFunc(pkgapi.SearchIndexNotImplementedHandler)
+	api.EntriesCreateLogEntryHandler = entries.CreateLogEntryHandlerFunc(pkgapi.CreateLogEntryNotImplementedHandler)
+	api.EntriesGetLogEntryByIndexHandler = entries.GetLogEntryByIndexHandlerFunc(pkgapi.GetLogEntryByIndexNotImplementedHandler)
+	api.EntriesGetLogEntryByUUIDHandler = entries.GetLogEntryByUUIDHandlerFunc(pkgapi.GetLogEntryByUUIDNotImplementedHandler)
+	api.EntriesSearchLogQueryHandler = entries.SearchLogQueryHandlerFunc(pkgapi.SearchLogQueryNotImplementedHandler)
+	api.PubkeyGetPublicKeyHandler = pubkey.GetPublicKeyHandlerFunc(pkgapi.GetPublicKeyNotImplementedHandler)
+	api.TlogGetLogProofHandler = tlog.GetLogProofHandlerFunc(pkgapi.GetLogProofNotImplementedHandler)
 
-	api.PubkeyGetPublicKeyHandler = pubkey.GetPublicKeyHandlerFunc(pkgapi.GetPublicKeyHandler)
-
-	api.TlogGetLogInfoHandler = tlog.GetLogInfoHandlerFunc(pkgapi.GetLogInfoHandler)
-	api.TlogGetLogProofHandler = tlog.GetLogProofHandlerFunc(pkgapi.GetLogProofHandler)
-
-	if viper.GetBool("enable_retrieve_api") {
-		api.IndexSearchIndexHandler = index.SearchIndexHandlerFunc(pkgapi.SearchIndexHandler)
-	} else {
-		api.IndexSearchIndexHandler = index.SearchIndexHandlerFunc(pkgapi.SearchIndexNotImplementedHandler)
+	enabledAPIEndpoints := viper.GetStringSlice("enabled_api_endpoints")
+	if !slices.Contains(enabledAPIEndpoints, "searchIndex") && viper.GetBool("enable_retrieve_api") {
+		enabledAPIEndpoints = append(enabledAPIEndpoints, "searchIndex")
 	}
 
+	for _, enabledAPI := range enabledAPIEndpoints {
+		log.Logger.Infof("Enabling API endpoint: %s", enabledAPI)
+		switch enabledAPI {
+		case "searchIndex":
+			api.IndexSearchIndexHandler = index.SearchIndexHandlerFunc(pkgapi.SearchIndexHandler)
+		case "getLogInfo":
+			api.TlogGetLogInfoHandler = tlog.GetLogInfoHandlerFunc(pkgapi.GetLogInfoHandler)
+		case "getPublicKey":
+			api.PubkeyGetPublicKeyHandler = pubkey.GetPublicKeyHandlerFunc(pkgapi.GetPublicKeyHandler)
+		case "getLogProof":
+			api.TlogGetLogProofHandler = tlog.GetLogProofHandlerFunc(pkgapi.GetLogProofHandler)
+		case "createLogEntry":
+			api.EntriesCreateLogEntryHandler = entries.CreateLogEntryHandlerFunc(pkgapi.CreateLogEntryHandler)
+		case "getLogEntryByIndex":
+			api.EntriesGetLogEntryByIndexHandler = entries.GetLogEntryByIndexHandlerFunc(pkgapi.GetLogEntryByIndexHandler)
+		case "getLogEntryByUUID":
+			api.EntriesGetLogEntryByUUIDHandler = entries.GetLogEntryByUUIDHandlerFunc(pkgapi.GetLogEntryByUUIDHandler)
+		case "searchLogQuery":
+			api.EntriesSearchLogQueryHandler = entries.SearchLogQueryHandlerFunc(pkgapi.SearchLogQueryHandler)
+		default:
+			log.Logger.Panicf("Unknown API endpoint requested: %s", enabledAPI)
+		}
+	}
+
+	// all handlers need to be set before a call to api.AddMiddlewareFor
+	for _, enabledAPI := range enabledAPIEndpoints {
+		switch enabledAPI {
+		case "searchIndex":
+			recordMetricsForAPI(api, "POST", "/api/v1/index/retrieve") // add metrics
+		case "getLogInfo":
+			api.AddMiddlewareFor("GET", "/api/v1/log", middleware.NoCache) // not cacheable
+			recordMetricsForAPI(api, "GET", "/api/v1/log")                 // add metrics
+		case "getPublicKey":
+			api.AddMiddlewareFor("GET", "/api/v1/log/publicKey", middleware.NoCache) // not cacheable
+			recordMetricsForAPI(api, "GET", "/api/v1/log/publicKey")                 // add metrics
+		case "getLogProof":
+			api.AddMiddlewareFor("GET", "/api/v1/log/proof", middleware.NoCache) // not cacheable
+			recordMetricsForAPI(api, "GET", "/api/v1/log/proof")                 // add metrics
+		case "createLogEntry":
+			recordMetricsForAPI(api, "POST", "/api/v1/log/entries") // add metrics
+		case "getLogEntryByIndex":
+			api.AddMiddlewareFor("GET", "/api/v1/log/entries", middleware.NoCache) // not cacheable
+			recordMetricsForAPI(api, "GET", "/api/v1/log/entries")                 // add metrics
+		case "getLogEntryByUUID":
+			api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}", middleware.NoCache) // not cacheable
+			recordMetricsForAPI(api, "GET", "/api/v1/log/entries/{entryUUID}")                 // add metrics
+		case "searchLogQuery":
+			recordMetricsForAPI(api, "POST", "/api/v1/log/entries/retrieve") // add metrics
+		}
+	}
 	api.RegisterFormat("signedCheckpoint", &util.SignedNote{}, util.SignedCheckpointValidator)
 
 	api.PreServerShutdown = func() {}
-
 	api.ServerShutdown = func() {}
-
-	// not cacheable
-	api.AddMiddlewareFor("GET", "/api/v1/log", middleware.NoCache)
-	api.AddMiddlewareFor("GET", "/api/v1/log/proof", middleware.NoCache)
-	api.AddMiddlewareFor("GET", "/api/v1/log/entries", middleware.NoCache)
-	api.AddMiddlewareFor("GET", "/api/v1/log/entries/{entryUUID}", middleware.NoCache)
-	api.AddMiddlewareFor("GET", "/api/v1/timestamp", middleware.NoCache)
-
-	// cache forever
-	api.AddMiddlewareFor("GET", "/api/v1/log/publicKey", cacheForever)
-	api.AddMiddlewareFor("GET", "/api/v1/log/timestamp/certchain", cacheForever)
-
-	// add metrics for explicitly handled endpoints
-	recordMetricsForAPI(api, "POST", "/api/v1/index/retrieve")
-	recordMetricsForAPI(api, "GET", "/api/v1/log")
-	recordMetricsForAPI(api, "GET", "/api/v1/publicKey")
-	recordMetricsForAPI(api, "GET", "/api/v1/log/proof")
-	recordMetricsForAPI(api, "GET", "/api/v1/log/entries")
-	recordMetricsForAPI(api, "POST", "/api/v1/log/entries")
-	recordMetricsForAPI(api, "GET", "/api/v1/log/entries/{entryUUID}")
-	recordMetricsForAPI(api, "POST", "/api/v1/log/entries/retrieve")
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
 }
@@ -239,18 +265,6 @@ func wrapMetrics(handler http.Handler) http.Handler {
 
 		handler.ServeHTTP(ww, r)
 
-	})
-}
-
-func cacheForever(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ww := negroni.NewResponseWriter(w)
-		ww.Before(func(w negroni.ResponseWriter) {
-			if w.Status() >= 200 && w.Status() <= 299 {
-				w.Header().Set("Cache-Control", "s-maxage=31536000, max-age=31536000, immutable")
-			}
-		})
-		handler.ServeHTTP(ww, r)
 	})
 }
 
