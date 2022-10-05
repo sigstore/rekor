@@ -37,7 +37,10 @@ func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error
 	retryableClient.RetryMax = int(o.RetryCount)
 	retryableClient.Logger = o.Logger
 
-	rt := httptransport.NewWithClient(url.Host, client.DefaultBasePath, []string{url.Scheme}, retryableClient.StandardClient())
+	httpClient := retryableClient.StandardClient()
+	httpClient.Transport = createRoundTripper(httpClient.Transport, o)
+
+	rt := httptransport.NewWithClient(url.Host, client.DefaultBasePath, []string{url.Scheme}, httpClient)
 	rt.Consumers["application/json"] = runtime.JSONConsumer()
 	rt.Consumers["application/x-pem-file"] = runtime.TextConsumer()
 	rt.Consumers["application/pem-certificate-chain"] = runtime.TextConsumer()
@@ -48,8 +51,6 @@ func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error
 	if viper.GetString("api-key") != "" {
 		rt.DefaultAuthentication = httptransport.APIKeyAuth("apiKey", "query", viper.GetString("api-key"))
 	}
-
-	rt.Transport = createRoundTripper(rt.Transport, o)
 
 	registry := strfmt.Default
 	registry.Add("signedCheckpoint", &util.SignedNote{}, util.SignedCheckpointValidator)

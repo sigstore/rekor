@@ -15,9 +15,7 @@
 package client
 
 import (
-	"log"
 	"net/http"
-	"os"
 
 	"github.com/hashicorp/go-retryablehttp"
 )
@@ -28,7 +26,7 @@ type Option func(*options)
 type options struct {
 	UserAgent  string
 	RetryCount uint
-	Logger     retryablehttp.Logger
+	Logger     interface{}
 }
 
 const (
@@ -36,17 +34,10 @@ const (
 	DefaultRetryCount = 3
 )
 
-var DefaultLogger retryablehttp.Logger
-
-func init() {
-	DefaultLogger = log.New(os.Stderr, "", log.LstdFlags)
-}
-
 func makeOptions(opts ...Option) *options {
 	o := &options{
 		UserAgent:  "",
 		RetryCount: DefaultRetryCount,
-		Logger:     DefaultLogger,
 	}
 
 	for _, opt := range opts {
@@ -70,10 +61,13 @@ func WithRetryCount(retryCount uint) Option {
 	}
 }
 
-// WithLogger sets the logger.
-func WithLogger(logger retryablehttp.Logger) Option {
+// WithLogger sets the logger; it must implement either retryablehttp.Logger or retryablehttp.LeveledLogger; if not, this will not take effect.
+func WithLogger(logger interface{}) Option {
 	return func(o *options) {
-		o.Logger = logger
+		switch logger.(type) {
+		case retryablehttp.Logger, retryablehttp.LeveledLogger:
+			o.Logger = logger
+		}
 	}
 }
 

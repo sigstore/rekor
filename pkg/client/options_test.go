@@ -33,19 +33,23 @@ func TestMakeOptions(t *testing.T) {
 		want *options
 	}{{
 		desc: "no opts",
-		want: &options{RetryCount: DefaultRetryCount, Logger: DefaultLogger},
+		want: &options{RetryCount: DefaultRetryCount},
 	}, {
 		desc: "WithUserAgent",
 		opts: []Option{WithUserAgent("test user agent")},
-		want: &options{UserAgent: "test user agent", RetryCount: DefaultRetryCount, Logger: DefaultLogger},
+		want: &options{UserAgent: "test user agent", RetryCount: DefaultRetryCount},
 	}, {
 		desc: "WithRetryCount",
 		opts: []Option{WithRetryCount(2)},
-		want: &options{UserAgent: "", RetryCount: 2, Logger: DefaultLogger},
+		want: &options{UserAgent: "", RetryCount: 2},
 	}, {
 		desc: "WithLogger",
 		opts: []Option{WithLogger(customLogger)},
 		want: &options{UserAgent: "", RetryCount: DefaultRetryCount, Logger: customLogger},
+	}, {
+		desc: "WithLoggerNil",
+		opts: []Option{WithLogger(nil)},
+		want: &options{UserAgent: "", RetryCount: DefaultRetryCount},
 	}}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
