@@ -53,9 +53,15 @@ require (
 	sigs.k8s.io/release-utils v0.7.3
 )
 
-require golang.org/x/exp v0.0.0-20220823124025-807a23277127
+require (
+	github.com/hashicorp/go-retryablehttp v0.7.1
+	golang.org/x/exp v0.0.0-20220823124025-807a23277127
+)
 
-require filippo.io/edwards25519 v1.0.0-rc.1 // indirect
+require (
+	filippo.io/edwards25519 v1.0.0-rc.1 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
+)
 
 require (
 	cloud.google.com/go v0.103.0 // indirect

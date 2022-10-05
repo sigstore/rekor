@@ -14,18 +14,30 @@
 
 package client
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/hashicorp/go-retryablehttp"
+)
 
 // Option is a functional option for customizing static signatures.
 type Option func(*options)
 
 type options struct {
-	UserAgent string
+	UserAgent  string
+	RetryCount uint
+	Logger     retryablehttp.Logger
 }
+
+const (
+	// DefaultRetryCount is the default number of retries.
+	DefaultRetryCount = 3
+)
 
 func makeOptions(opts ...Option) *options {
 	o := &options{
-		UserAgent: "",
+		UserAgent:  "",
+		RetryCount: DefaultRetryCount,
 	}
 
 	for _, opt := range opts {
@@ -39,6 +51,20 @@ func makeOptions(opts ...Option) *options {
 func WithUserAgent(userAgent string) Option {
 	return func(o *options) {
 		o.UserAgent = userAgent
+	}
+}
+
+// WithRetryCount sets the number of retries.
+func WithRetryCount(retryCount uint) Option {
+	return func(o *options) {
+		o.RetryCount = retryCount
+	}
+}
+
+// WithLogger sets the logger.
+func WithLogger(logger retryablehttp.Logger) Option {
+	return func(o *options) {
+		o.Logger = logger
 	}
 }
 

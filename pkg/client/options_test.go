@@ -29,17 +29,21 @@ func TestMakeOptions(t *testing.T) {
 		want *options
 	}{{
 		desc: "no opts",
-		want: &options{},
+		want: &options{RetryCount: DefaultRetryCount},
 	}, {
 		desc: "WithUserAgent",
 		opts: []Option{WithUserAgent("test user agent")},
-		want: &options{UserAgent: "test user agent"},
+		want: &options{UserAgent: "test user agent", RetryCount: DefaultRetryCount},
+	}, {
+		desc: "WithRetryCount",
+		opts: []Option{WithRetryCount(2)},
+		want: &options{UserAgent: "", RetryCount: 2},
 	}}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := makeOptions(tc.opts...)
 			if d := cmp.Diff(tc.want, got); d != "" {
-				t.Errorf("makeOptions() returned unexpected result (-want +got): %s", d)
+				t.Errorf("makeOptions(%v) returned unexpected result (-want +got): %s", tc.desc, d)
 			}
 		})
 	}
