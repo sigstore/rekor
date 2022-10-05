@@ -15,7 +15,9 @@
 package client
 
 import (
+	"log"
 	"net/http"
+	"os"
 
 	"github.com/hashicorp/go-retryablehttp"
 )
@@ -34,10 +36,17 @@ const (
 	DefaultRetryCount = 3
 )
 
+var DefaultLogger retryablehttp.Logger
+
+func init() {
+	DefaultLogger = log.New(os.Stderr, "", log.LstdFlags)
+}
+
 func makeOptions(opts ...Option) *options {
 	o := &options{
 		UserAgent:  "",
 		RetryCount: DefaultRetryCount,
+		Logger:     DefaultLogger,
 	}
 
 	for _, opt := range opts {

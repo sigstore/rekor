@@ -35,9 +35,7 @@ func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error
 
 	retryableClient := retryablehttp.NewClient()
 	retryableClient.RetryMax = int(o.RetryCount)
-	if o.Logger != nil {
-		retryableClient.Logger = o.Logger
-	}
+	retryableClient.Logger = o.Logger
 
 	rt := httptransport.NewWithClient(url.Host, client.DefaultBasePath, []string{url.Scheme}, retryableClient.StandardClient())
 	rt.Consumers["application/json"] = runtime.JSONConsumer()
