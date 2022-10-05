@@ -15,13 +15,17 @@
 package client
 
 import (
+	"log"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
 
 func TestMakeOptions(t *testing.T) {
+	customLogger := log.New(os.Stdout, "", log.LstdFlags)
+
 	tests := []struct {
 		desc string
 
@@ -29,17 +33,29 @@ func TestMakeOptions(t *testing.T) {
 		want *options
 	}{{
 		desc: "no opts",
-		want: &options{},
+		want: &options{RetryCount: DefaultRetryCount},
 	}, {
 		desc: "WithUserAgent",
 		opts: []Option{WithUserAgent("test user agent")},
-		want: &options{UserAgent: "test user agent"},
+		want: &options{UserAgent: "test user agent", RetryCount: DefaultRetryCount},
+	}, {
+		desc: "WithRetryCount",
+		opts: []Option{WithRetryCount(2)},
+		want: &options{UserAgent: "", RetryCount: 2},
+	}, {
+		desc: "WithLogger",
+		opts: []Option{WithLogger(customLogger)},
+		want: &options{UserAgent: "", RetryCount: DefaultRetryCount, Logger: customLogger},
+	}, {
+		desc: "WithLoggerNil",
+		opts: []Option{WithLogger(nil)},
+		want: &options{UserAgent: "", RetryCount: DefaultRetryCount},
 	}}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := makeOptions(tc.opts...)
-			if d := cmp.Diff(tc.want, got); d != "" {
-				t.Errorf("makeOptions() returned unexpected result (-want +got): %s", d)
+			if d := cmp.Diff(tc.want, got, cmp.Comparer(func(a, b *log.Logger) bool { return a == b })); d != "" {
+				t.Errorf("makeOptions(%v) returned unexpected result (-want +got): %s", tc.desc, d)
 			}
 		})
 	}

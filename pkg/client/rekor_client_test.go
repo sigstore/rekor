@@ -78,7 +78,7 @@ func TestAPIKey(t *testing.T) {
 
 }
 
-func TestGetRekorClientWithOptions(t *testing.T) {
+func TestGetRekorClientWithUserAgent(t *testing.T) {
 	t.Parallel()
 	expectedUserAgent := "test User-Agent"
 	requestReceived := false
@@ -103,5 +103,33 @@ func TestGetRekorClientWithOptions(t *testing.T) {
 	_, _ = client.Tlog.GetLogInfo(nil)
 	if !requestReceived {
 		t.Fatal("no requests were received")
+	}
+}
+
+func TestGetRekorClientWithRetryCount(t *testing.T) {
+	t.Parallel()
+	expectedCount := 2
+	actualCount := 0
+	testServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			actualCount++
+			file := []byte{}
+
+			if actualCount < expectedCount {
+				w.WriteHeader(http.StatusInternalServerError)
+			} else {
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write(file)
+			}
+		}))
+	defer testServer.Close()
+
+	client, err := GetRekorClient(testServer.URL, WithRetryCount(2))
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = client.Tlog.GetLogInfo(nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
