@@ -81,7 +81,7 @@ var getCmd = &cobra.Command{
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		ctx := context.Background()
-		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()))
+		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {
 			return nil, err
 		}

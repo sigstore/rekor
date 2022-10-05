@@ -26,6 +26,7 @@ import (
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
 	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client/tlog"
+	"github.com/sigstore/rekor/pkg/log"
 )
 
 type logProofOutput struct {
@@ -72,7 +73,7 @@ var logProofCmd = &cobra.Command{
 		return nil
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
-		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()))
+		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {
 			return nil, err
 		}

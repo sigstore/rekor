@@ -505,6 +505,48 @@ func TestValidateRekorServerURL(t *testing.T) {
 	}
 }
 
+// TestValidateRetryCount tests the validation of the retry count flag
+func TestValidateRetryCount(t *testing.T) {
+	type test struct {
+		caseDesc      string
+		retryCount    string
+		expectSuccess bool
+	}
+
+	tests := []test{
+		{
+			caseDesc:      "value not specified",
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "valid retry_count value: 0",
+			retryCount:    "0",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "valid retry_count value: 1",
+			retryCount:    "1",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "invalid retry_count value: asdf",
+			retryCount:    "asdf",
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "invalid retry_count value: -1",
+			retryCount:    "-1",
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range tests {
+		if err := rootCmd.PersistentFlags().Set("retry", tc.retryCount); (err == nil) != tc.expectSuccess {
+			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
+		}
+	}
+}
+
 func TestSearchPFlags(t *testing.T) {
 	type test struct {
 		caseDesc              string

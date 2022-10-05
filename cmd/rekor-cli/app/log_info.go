@@ -70,7 +70,7 @@ var logInfoCmd = &cobra.Command{
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		serverURL := viper.GetString("rekor_server")
 		ctx := context.Background()
-		rekorClient, err := client.GetRekorClient(serverURL, client.WithUserAgent(UserAgent()))
+		rekorClient, err := client.GetRekorClient(serverURL, client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {
 			return nil, err
 		}
