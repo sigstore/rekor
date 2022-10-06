@@ -548,29 +548,6 @@ func init() {
       },
       "discriminator": "kind"
     },
-    "RekorVersion": {
-      "type": "object",
-      "required": [
-        "version",
-        "commit",
-        "treestate",
-        "builddate"
-      ],
-      "properties": {
-        "builddate": {
-          "type": "string"
-        },
-        "commit": {
-          "type": "string"
-        },
-        "treestate": {
-          "type": "string"
-        },
-        "version": {
-          "type": "string"
-        }
-      }
-    },
     "SearchIndex": {
       "type": "object",
       "properties": {
@@ -2338,29 +2315,6 @@ func init() {
         }
       },
       "discriminator": "kind"
-    },
-    "RekorVersion": {
-      "type": "object",
-      "required": [
-        "version",
-        "commit",
-        "treestate",
-        "builddate"
-      ],
-      "properties": {
-        "builddate": {
-          "type": "string"
-        },
-        "commit": {
-          "type": "string"
-        },
-        "treestate": {
-          "type": "string"
-        },
-        "version": {
-          "type": "string"
-        }
-      }
     },
     "RekordV001SchemaData": {
       "description": "Information about the content associated with the entry",

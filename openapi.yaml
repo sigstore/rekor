@@ -461,23 +461,6 @@ definitions:
         - "body"
         - "integratedTime"
 
-  RekorVersion:
-    type: object
-    properties:
-      version:
-        type: string
-      commit:
-        type: string
-      treestate:
-        type: string
-      builddate:
-        type: string
-    required:
-      - version
-      - commit
-      - treestate
-      - builddate
-
   SearchIndex:
     type: object
     properties:
