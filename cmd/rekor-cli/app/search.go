@@ -98,7 +98,7 @@ var searchCmd = &cobra.Command{
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		log := log.CliLogger
-		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()))
+		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log))
 		if err != nil {
 			return nil, err
 		}

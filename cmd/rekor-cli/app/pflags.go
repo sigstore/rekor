@@ -50,6 +50,7 @@ const (
 	formatFlag         FlagType = "format"
 	timeoutFlag        FlagType = "timeout"
 	base64Flag         FlagType = "base64"
+	uintFlag           FlagType = "uint"
 )
 
 type newPFlagValueFunc func() pflag.Value
@@ -120,6 +121,10 @@ func initializePFlagMap() {
 		base64Flag: func() pflag.Value {
 			// This validates the string is in base64 format
 			return valueFactory(base64Flag, validateBase64, "")
+		},
+		uintFlag: func() pflag.Value {
+			// This validates the string is in base64 format
+			return valueFactory(uintFlag, validateUint, "")
 		},
 	}
 }
@@ -319,4 +324,20 @@ func useValidator(flagType FlagType, s interface{}) error {
 	}
 
 	return nil
+}
+
+// validateUint ensures that the supplied string is a valid unsigned integer >= 0
+func validateUint(v string) error {
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return err
+	}
+	if i < 0 {
+		return fmt.Errorf("invalid unsigned int: %v", v)
+	}
+	u := struct {
+		Uint uint `validate:"gte=0"`
+	}{uint(i)}
+
+	return useValidator(uintFlag, u)
 }
