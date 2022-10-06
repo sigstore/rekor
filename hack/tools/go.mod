@@ -92,6 +92,7 @@ require (
 	github.com/subosito/gotenv v1.3.0 // indirect
 	github.com/toqueteos/webbrowser v1.2.0 // indirect
 	github.com/transparency-dev/merkle v0.0.1 // indirect
+	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad // indirect
 	go.etcd.io/etcd/api/v3 v3.5.4 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.4 // indirect
 	go.etcd.io/etcd/client/v3 v3.5.4 // indirect

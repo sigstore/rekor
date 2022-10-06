@@ -19,6 +19,9 @@ testdir=$(dirname "$0")
 
 rm -f /tmp/rekor-*.cov
 
+echo "installing gocovmerge"
+make gocovmerge
+
 echo "starting services"
 docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d --force-recreate --build
 
@@ -69,5 +72,5 @@ if ! docker cp $(docker ps -aqf "name=rekor_rekor-server"):go/rekor-server.cov /
 fi
 
 # merging coverage reports and filtering out /pkg/generated from final report
-gocovmerge /tmp/rekor-*.cov | grep -v "/pkg/generated/" > /tmp/rekor-merged.cov
+hack/tools/bin/gocovmerge /tmp/rekor-*.cov | grep -v "/pkg/generated/" > /tmp/rekor-merged.cov
 echo "code coverage $(go tool cover -func=/tmp/rekor-merged.cov | grep -E '^total\:' | sed -E 's/\s+/ /g')"

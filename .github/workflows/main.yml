@@ -80,7 +80,7 @@ jobs:
         with:
           go-version: ${{ env.GOVERSION }}
       - name: install gocovmerge
-        run: go install github.com/wadey/gocovmerge@b5bfa59ec0adc420475f97f89b58045c721d761c
+        run: make gocovmerge
 
       - name: CLI
         run: ./tests/e2e-test.sh
