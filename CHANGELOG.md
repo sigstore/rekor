@@ -1,3 +1,19 @@
+# v1.0-rc
+
+## Enhancements
+* update swagger API version to 1.0.0 (#1102)
+* verify: verify checkpoint's STH against the inclusion proof root hash (#1092)
+* add ability to enable/disable specific rekor API endpoints (#1080)
+* enable configurable client retries with backoff in RekorClient (#1096)
+
+## Bug Fixes
+* remove unused RekorVersion API definition (#1101)
+* remove unused api-key and timestamp references (#1098)
+
+## Contributors
+* Bob Callaway
+* asraa
+
 # v0.12.2
 
 ## Enhancements
