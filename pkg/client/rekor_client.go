@@ -23,7 +23,6 @@ import (
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/util"
-	"github.com/spf13/viper"
 )
 
 func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error) {
@@ -45,12 +44,6 @@ func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error
 	rt.Consumers["application/x-pem-file"] = runtime.TextConsumer()
 	rt.Consumers["application/pem-certificate-chain"] = runtime.TextConsumer()
 	rt.Producers["application/json"] = runtime.JSONProducer()
-	rt.Producers["application/timestamp-query"] = runtime.ByteStreamProducer()
-	rt.Consumers["application/timestamp-reply"] = runtime.ByteStreamConsumer()
-
-	if viper.GetString("api-key") != "" {
-		rt.DefaultAuthentication = httptransport.APIKeyAuth("apiKey", "query", viper.GetString("api-key"))
-	}
 
 	registry := strfmt.Default
 	registry.Add("signedCheckpoint", &util.SignedNote{}, util.SignedCheckpointValidator)
