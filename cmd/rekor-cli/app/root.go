@@ -65,8 +65,6 @@ func init() {
 	rootCmd.PersistentFlags().Var(NewFlagValue(formatFlag, "default"), "format", "Command output format")
 	rootCmd.PersistentFlags().Var(NewFlagValue(timeoutFlag, "30s"), "timeout", "HTTP timeout")
 
-	rootCmd.PersistentFlags().String("api-key", "", "API key for rekor.sigstore.dev")
-
 	// these are bound here and not in PreRun so that all child commands can use them
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.CliLogger.Fatal(err)
