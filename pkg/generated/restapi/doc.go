@@ -22,7 +22,7 @@
 //	  http
 //	Host: rekor.sigstore.dev
 //	BasePath: /
-//	Version: 0.0.1
+//	Version: 1.0.0
 //
 //	Consumes:
 //	  - application/json

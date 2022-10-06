@@ -47,7 +47,7 @@ func init() {
   "info": {
     "description": "Rekor is a cryptographically secure, immutable transparency log for signed software releases.",
     "title": "Rekor",
-    "version": "0.0.1"
+    "version": "1.0.0"
   },
   "host": "rekor.sigstore.dev",
   "paths": {
@@ -951,7 +951,7 @@ func init() {
   "info": {
     "description": "Rekor is a cryptographically secure, immutable transparency log for signed software releases.",
     "title": "Rekor",
-    "version": "0.0.1"
+    "version": "1.0.0"
   },
   "host": "rekor.sigstore.dev",
   "paths": {
