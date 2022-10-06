@@ -17,7 +17,7 @@ swagger: "2.0"
 info:
   title: Rekor
   description: Rekor is a cryptographically secure, immutable transparency log for signed software releases.
-  version: 0.0.1
+  version: 1.0.0
 
 host: rekor.sigstore.dev
 schemes:
