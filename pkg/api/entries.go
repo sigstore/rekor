@@ -71,6 +71,7 @@ func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEnt
 func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianClient, leaf *trillian.LogLeaf,
 	signedLogRoot *trillian.SignedLogRoot, proof *trillian.Proof, tid int64, ranges sharding.LogRanges) (models.LogEntry, error) {
 
+	log.ContextLogger(ctx).Debugf("log entry from leaf %d", leaf.GetLeafIndex())
 	root := &ttypes.LogRootV1{}
 	if err := root.UnmarshalBinary(signedLogRoot.LogRoot); err != nil {
 		return nil, err
@@ -503,6 +504,8 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 var ErrNotFound = errors.New("grpc returned 0 leaves with success code")
 
 func retrieveLogEntryByIndex(ctx context.Context, logIndex int) (models.LogEntry, error) {
+	log.ContextLogger(ctx).Infof("Retrieving log entry by index %d", logIndex)
+
 	tid, resolvedIndex := api.logRanges.ResolveVirtualIndex(logIndex)
 	tc := NewTrillianClientFromTreeID(ctx, tid)
 	log.ContextLogger(ctx).Debugf("Retrieving resolved index %v from TreeID %v", resolvedIndex, tid)
@@ -529,6 +532,8 @@ func retrieveLogEntryByIndex(ctx context.Context, logIndex int) (models.LogEntry
 // If a tree ID is specified, look in that tree
 // Otherwise, look through all inactive and active shards
 func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, error) {
+	log.ContextLogger(ctx).Debugf("Retrieving log entry %v", entryUUID)
+
 	uuid, err := sharding.GetUUIDFromIDString(entryUUID)
 	if err != nil {
 		return nil, sharding.ErrPlainUUID
@@ -559,6 +564,8 @@ func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, e
 }
 
 func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.LogEntry, error) {
+	log.ContextLogger(ctx).Debugf("Retrieving log entry %v from tree %d", uuid, tid)
+
 	hashValue, err := hex.DecodeString(uuid)
 	if err != nil {
 		return models.LogEntry{}, types.ValidationError(err)
