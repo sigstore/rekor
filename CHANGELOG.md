@@ -1,3 +1,14 @@
+# v1.0.0-rc.1
+
+## Enhancements
+* add retry command line flag on rekor-cli (#1097)
+* Add some info and debug logging to commonly used funcs (#1106)
+
+## Contributors
+* Bob Callaway
+* Priya Wadhwa
+
+
 # v1.0-rc
 
 ## Enhancements
