@@ -30,7 +30,7 @@ require (
 	github.com/rs/cors v1.8.2
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0
-	github.com/sigstore/sigstore v1.4.3
+	github.com/sigstore/sigstore v1.4.4
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.13.0
