@@ -15,16 +15,20 @@
 # limitations under the License.
 
 set -e
+testdir=$(dirname "$0")
 
+rm -f /tmp/rekor-*.cov
+echo "installing gocovmerge"
+make gocovmerge
 docker kill $(docker ps -q) || true
 echo "starting services"
-docker-compose up -d
+docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d --force-recreate --build
 
 echo "building CLI and server"
 # set the path to the root of the repo
 dir=$(git rev-parse --show-toplevel)
-go build -o rekor-cli ./cmd/rekor-cli
-go build -o rekor-server ./cmd/rekor-server
+go test -c ./cmd/rekor-cli -o rekor-cli -cover -covermode=count -coverpkg=./...
+go test -c ./cmd/rekor-server -o rekor-server -covermode=count -coverpkg=./...
 
 count=0
 echo -n "waiting up to 120 sec for system to start"
@@ -56,3 +60,18 @@ if docker-compose logs --no-color | grep -q "panic: runtime error:" ; then
    docker-compose logs --no-color > /tmp/docker-compose.log
    exit 1
 fi
+
+echo "generating code coverage"
+curl -X GET 0.0.0.0:2345/kill
+sleep 5
+
+if ! docker cp $(docker ps -aqf "name=rekor_rekor-server"):go/rekor-server.cov /tmp/rekor-server.cov ; then
+   # failed to copy code coverage report from server
+   echo "Failed to retrieve server code coverage report"
+   docker-compose logs --no-color > /tmp/docker-compose.log
+   exit 1
+fi
+
+# merging coverage reports and filtering out /pkg/generated from final report
+hack/tools/bin/gocovmerge /tmp/rekor-*.cov | grep -v "/pkg/generated/" > /tmp/rekor-merged.cov
+echo "code coverage $(go tool cover -func=/tmp/rekor-merged.cov | grep -E '^total\:' | sed -E 's/\s+/ /g')"

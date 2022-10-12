@@ -95,7 +95,7 @@ jobs:
       - name: Upload Coverage Report
         uses: codecov/codecov-action@81cd2dc8148241f03f5839d295e000b8f761e378 # v3.1.0
         with:
-          files: /tmp/rekor-merged.cov
+          files: /tmp/rekor-merged.cov,/tmp/pkg-rekor-merged.cov
           flags: e2etests
 
   sharding-e2e:

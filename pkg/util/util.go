@@ -70,8 +70,7 @@ func Run(t *testing.T, stdin, cmd string, arg ...string) string {
 		t.Log(string(b))
 		t.Fatal(err)
 	}
-
-	return string(b)
+	return stripCoverageOutput(string(b))
 }
 
 func RunCli(t *testing.T, arg ...string) string {
@@ -98,7 +97,7 @@ func RunCliStdout(t *testing.T, arg ...string) string {
 		t.Log(string(b))
 		t.Fatal(err)
 	}
-	return string(b)
+	return stripCoverageOutput(string(b))
 }
 
 func RunCliErr(t *testing.T, arg ...string) string {
@@ -128,12 +127,30 @@ func rekorServer() string {
 	return "http://localhost:3000"
 }
 
+func coverageFlag() string {
+	return "-test.coverprofile=/tmp/rekor-cli." + randomSuffix(8) + ".cov"
+}
+
+func stripCoverageOutput(out string) string {
+	return strings.Split(strings.Split(out, "PASS")[0], "FAIL")[0]
+}
+
 func readFile(t *testing.T, p string) string {
 	b, err := ioutil.ReadFile(p)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return strings.TrimSpace(string(b))
+}
+
+func randomSuffix(n int) string {
+	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
 }
 
 func randomData(t *testing.T, n int) []byte {
