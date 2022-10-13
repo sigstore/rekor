@@ -1,3 +1,62 @@
+# v1.0.0
+
+Rekor is 1.0!
+No changes, as this is tagged at the same commit as v1.0.0-rc.1.
+
+Thank you to all of the contributors to Rekor in the past couple years who helped make Rekor 1.0 possible!
+
+## Contributors
+* Aastha Bist
+* Aditya Sirish
+* Ahmet Alp Balkan
+* Andrew Block
+* Appu
+* Asra Ali
+* axel simon
+* Azeem Shaikh
+* Batuhan Apaydın
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Ceridwen Driskill
+* Christian Rebischke
+* Dan Lorenc
+* Dan Luhring
+* Eddie Zaneski
+* Efe Barlas
+* Fredrik Skogman
+* Harry Fallows
+* Hayden B
+* Hector Fernandez
+* Jake Sanders
+* Jason Hall
+* Jehan Shah
+* John Speed Meyers
+* Kenny Leung
+* Koichi Shiraishi
+* Lily Sturmann
+* Luke Hinds
+* Mikhail Swift
+* Morten Linderud
+* Nathan Smith
+* Naveen
+* Olivier Cedric Barbier
+* Parth Patel
+* Priya Wadhwa
+* Robert James Hernandez
+* Romain Aviolat
+* Samsondeen
+* Sascha Grunert
+* Scott Nichols
+* Shiwei Zhang
+* Simon Kent
+* Sylvestre Ledru
+* Tiziano Santoro
+* Trishank Karthik Kuppusamy
+* Ville Aikas
+* dhaus67
+* endorama
+* kpcyrd
+
 # v1.0.0-rc.1
 
 ## Enhancements
