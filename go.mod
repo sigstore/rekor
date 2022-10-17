@@ -47,7 +47,7 @@ require (
 	golang.org/x/net v0.0.0-20220927171203-f486391704dc
 	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0
 	google.golang.org/genproto v0.0.0-20220929141241-1ce7b20da813
-	google.golang.org/grpc v1.50.0
+	google.golang.org/grpc v1.50.1
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/ini.v1 v1.67.0
 	sigs.k8s.io/release-utils v0.7.3
