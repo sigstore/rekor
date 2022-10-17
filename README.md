@@ -10,7 +10,7 @@ Rekór - Greek for “Record”
 
 Rekor's goals are to provide an immutable tamper resistant ledger of metadata generated within a software projects supply chain.
 Rekor will enable software maintainers and build systems to record signed metadata to an immutable record.
-Other parties can then query said metadata to enable them to make informed decisions on trust and non-repudiation of an object's lifecycle. For more details visit the [sigstore website](https://sigstore.dev)
+Other parties can then query said metadata to enable them to make informed decisions on trust and non-repudiation of an object's lifecycle. For more details visit the [sigstore website](https://sigstore.dev).
 
 The Rekor project provides a restful API based server for validation and a transparency log for storage.
 A CLI application is available to make and verify entries, query the transparency log for inclusion proof,
@@ -24,10 +24,15 @@ extensible to working with different manifest schemas and PKI tooling.
 
 ## Public Instance
 
-We're currently working hard on cutting a 1.0 release and productionizing the public instance.
-We don't have a date yet, but follow along on the [GitHub project](https://github.com/orgs/sigstore/projects/5).
+Rekor is officially Generally Available with a 1.0.0 release, and follows [semver rules](https://semver.org/) for API stability.
+This means production workloads can rely on the Rekor public instance, which has a 24/7 oncall rotation supporting it and offers a 99.5% availability SLO for the following API endpoints:
+* `/api/v1/log`
+* `/api/v1/log/publicKey`
+* `/api/v1/log/proof`
+* `/api/v1/log/entries`
+* `/api/v1/log/entries/retrieve`
 
-We will improve the stability and publish SLOs soon!
+For uptime data on the Rekor public instance, see [https://status.sigstore.dev](https://status.sigstore.dev).
 
 More details on the public instance can be found at [docs.sigstore.dev](https://docs.sigstore.dev/rekor/public-instance).
 
