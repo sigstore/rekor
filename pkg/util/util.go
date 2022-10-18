@@ -40,7 +40,6 @@ var (
 )
 
 func init() {
-
 	p := os.Getenv("REKORTMPDIR")
 	if p != "" {
 		cli = path.Join(p, cli)
@@ -57,6 +56,7 @@ func OutputContains(t *testing.T, output, sub string) {
 
 func Run(t *testing.T, stdin, cmd string, arg ...string) string {
 	t.Helper()
+	arg = append([]string{coverageFlag()}, arg...)
 	c := exec.Command(cmd, arg...)
 	if stdin != "" {
 		c.Stdin = strings.NewReader(stdin)
@@ -75,6 +75,7 @@ func Run(t *testing.T, stdin, cmd string, arg ...string) string {
 
 func RunCli(t *testing.T, arg ...string) string {
 	t.Helper()
+	arg = append([]string{coverageFlag()}, arg...)
 	arg = append(arg, rekorServerFlag())
 	// use a blank config file to ensure no collision
 	if os.Getenv("REKORTMPDIR") != "" {
@@ -85,6 +86,7 @@ func RunCli(t *testing.T, arg ...string) string {
 
 func RunCliStdout(t *testing.T, arg ...string) string {
 	t.Helper()
+	arg = append([]string{coverageFlag()}, arg...)
 	arg = append(arg, rekorServerFlag())
 	c := exec.Command(cli, arg...)
 
@@ -102,6 +104,7 @@ func RunCliStdout(t *testing.T, arg ...string) string {
 
 func RunCliErr(t *testing.T, arg ...string) string {
 	t.Helper()
+	arg = append([]string{coverageFlag()}, arg...)
 	arg = append(arg, rekorServerFlag())
 	// use a blank config file to ensure no collision
 	if os.Getenv("REKORTMPDIR") != "" {
@@ -128,7 +131,7 @@ func rekorServer() string {
 }
 
 func coverageFlag() string {
-	return "-test.coverprofile=/tmp/rekor-cli." + randomSuffix(8) + ".cov"
+	return "-test.coverprofile=/tmp/pkg-rekor-cli." + randomSuffix(8) + ".cov"
 }
 
 func stripCoverageOutput(out string) string {

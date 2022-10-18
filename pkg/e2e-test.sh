@@ -17,7 +17,7 @@
 set -e
 testdir=$(dirname "$0")
 
-rm -f /tmp/rekor-*.cov
+rm -f /tmp/pkg-rekor-*.cov
 echo "installing gocovmerge"
 make gocovmerge
 docker kill $(docker ps -q) || true
@@ -65,7 +65,7 @@ echo "generating code coverage"
 curl -X GET 0.0.0.0:2345/kill
 sleep 5
 
-if ! docker cp $(docker ps -aqf "name=rekor_rekor-server"):go/rekor-server.cov /tmp/rekor-server.cov ; then
+if ! docker cp $(docker ps -aqf "name=rekor_rekor-server"):go/rekor-server.cov /tmp/pkg-rekor-server.cov ; then
    # failed to copy code coverage report from server
    echo "Failed to retrieve server code coverage report"
    docker-compose logs --no-color > /tmp/docker-compose.log
@@ -73,5 +73,5 @@ if ! docker cp $(docker ps -aqf "name=rekor_rekor-server"):go/rekor-server.cov /
 fi
 
 # merging coverage reports and filtering out /pkg/generated from final report
-hack/tools/bin/gocovmerge /tmp/rekor-*.cov | grep -v "/pkg/generated/" > /tmp/rekor-merged.cov
-echo "code coverage $(go tool cover -func=/tmp/rekor-merged.cov | grep -E '^total\:' | sed -E 's/\s+/ /g')"
+hack/tools/bin/gocovmerge /tmp/pkg-rekor-*.cov | grep -v "/pkg/generated/" > /tmp/pkg-rekor-merged.cov
+echo "code coverage $(go tool cover -func=/tmp/pkg-rekor-merged.cov | grep -E '^total\:' | sed -E 's/\s+/ /g')"
