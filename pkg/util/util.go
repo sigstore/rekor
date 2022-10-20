@@ -75,7 +75,6 @@ func Run(t *testing.T, stdin, cmd string, arg ...string) string {
 
 func RunCli(t *testing.T, arg ...string) string {
 	t.Helper()
-	arg = append([]string{coverageFlag()}, arg...)
 	arg = append(arg, rekorServerFlag())
 	// use a blank config file to ensure no collision
 	if os.Getenv("REKORTMPDIR") != "" {
@@ -116,7 +115,7 @@ func RunCliErr(t *testing.T, arg ...string) string {
 		t.Log(string(b))
 		t.Fatalf("expected error, got %s", string(b))
 	}
-	return string(b)
+	return stripCoverageOutput(string(b))
 }
 
 func rekorServerFlag() string {
