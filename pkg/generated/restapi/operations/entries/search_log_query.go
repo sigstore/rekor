@@ -45,10 +45,10 @@ func NewSearchLogQuery(ctx *middleware.Context, handler SearchLogQueryHandler) *
 	return &SearchLogQuery{Context: ctx, Handler: handler}
 }
 
-/*
-	SearchLogQuery swagger:route POST /api/v1/log/entries/retrieve entries searchLogQuery
+/* SearchLogQuery swagger:route POST /api/v1/log/entries/retrieve entries searchLogQuery
 
 Searches transparency log for one or more log entries
+
 */
 type SearchLogQuery struct {
 	Context *middleware.Context

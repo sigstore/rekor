@@ -68,8 +68,7 @@ func NewSearchLogQueryOK() *SearchLogQueryOK {
 	return &SearchLogQueryOK{}
 }
 
-/*
-SearchLogQueryOK describes a response with status code 200, with default header values.
+/* SearchLogQueryOK describes a response with status code 200, with default header values.
 
 Returns zero or more entries from the transparency log, according to how many were included in request query
 */
@@ -129,8 +128,7 @@ func NewSearchLogQueryBadRequest() *SearchLogQueryBadRequest {
 	return &SearchLogQueryBadRequest{}
 }
 
-/*
-SearchLogQueryBadRequest describes a response with status code 400, with default header values.
+/* SearchLogQueryBadRequest describes a response with status code 400, with default header values.
 
 The content supplied to the server was invalid
 */
@@ -194,8 +192,7 @@ func NewSearchLogQueryDefault(code int) *SearchLogQueryDefault {
 	}
 }
 
-/*
-SearchLogQueryDefault describes a response with status code -1, with default header values.
+/* SearchLogQueryDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */

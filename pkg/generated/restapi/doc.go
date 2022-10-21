@@ -17,19 +17,19 @@
 
 // Package restapi Rekor
 //
-//	Rekor is a cryptographically secure, immutable transparency log for signed software releases.
-//	Schemes:
-//	  http
-//	Host: rekor.sigstore.dev
-//	BasePath: /
-//	Version: 1.0.0
+//  Rekor is a cryptographically secure, immutable transparency log for signed software releases.
+//  Schemes:
+//    http
+//  Host: rekor.sigstore.dev
+//  BasePath: /
+//  Version: 1.0.0
 //
-//	Consumes:
-//	  - application/json
+//  Consumes:
+//    - application/json
 //
-//	Produces:
-//	  - application/x-pem-file
-//	  - application/json
+//  Produces:
+//    - application/x-pem-file
+//    - application/json
 //
 // swagger:meta
 package restapi

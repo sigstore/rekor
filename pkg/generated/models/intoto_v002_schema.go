@@ -34,7 +34,7 @@ import (
 
 // IntotoV002Schema intoto v0.0.2 Schema
 //
-// # Schema for intoto object
+// Schema for intoto object
 //
 // swagger:model intotoV002Schema
 type IntotoV002Schema struct {

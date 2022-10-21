@@ -45,10 +45,10 @@ func NewGetLogEntryByIndex(ctx *middleware.Context, handler GetLogEntryByIndexHa
 	return &GetLogEntryByIndex{Context: ctx, Handler: handler}
 }
 
-/*
-	GetLogEntryByIndex swagger:route GET /api/v1/log/entries entries getLogEntryByIndex
+/* GetLogEntryByIndex swagger:route GET /api/v1/log/entries entries getLogEntryByIndex
 
 Retrieves an entry and inclusion proof from the transparency log (if it exists) by index
+
 */
 type GetLogEntryByIndex struct {
 	Context *middleware.Context

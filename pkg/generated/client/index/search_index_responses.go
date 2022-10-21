@@ -68,8 +68,7 @@ func NewSearchIndexOK() *SearchIndexOK {
 	return &SearchIndexOK{}
 }
 
-/*
-SearchIndexOK describes a response with status code 200, with default header values.
+/* SearchIndexOK describes a response with status code 200, with default header values.
 
 Returns zero or more entry UUIDs from the transparency log based on search query
 */
@@ -129,8 +128,7 @@ func NewSearchIndexBadRequest() *SearchIndexBadRequest {
 	return &SearchIndexBadRequest{}
 }
 
-/*
-SearchIndexBadRequest describes a response with status code 400, with default header values.
+/* SearchIndexBadRequest describes a response with status code 400, with default header values.
 
 The content supplied to the server was invalid
 */
@@ -194,8 +192,7 @@ func NewSearchIndexDefault(code int) *SearchIndexDefault {
 	}
 }
 
-/*
-SearchIndexDefault describes a response with status code -1, with default header values.
+/* SearchIndexDefault describes a response with status code -1, with default header values.
 
 There was an internal error in the server while processing the request
 */

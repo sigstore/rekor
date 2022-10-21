@@ -68,12 +68,10 @@ func NewGetLogInfoParamsWithHTTPClient(client *http.Client) *GetLogInfoParams {
 	}
 }
 
-/*
-GetLogInfoParams contains all the parameters to send to the API endpoint
+/* GetLogInfoParams contains all the parameters to send to the API endpoint
+   for the get log info operation.
 
-	for the get log info operation.
-
-	Typically these are written to a http.Request.
+   Typically these are written to a http.Request.
 */
 type GetLogInfoParams struct {
 	timeout    time.Duration
