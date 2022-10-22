@@ -32,7 +32,8 @@ import (
 // GetLogInfoOKCode is the HTTP code returned for type GetLogInfoOK
 const GetLogInfoOKCode int = 200
 
-/*GetLogInfoOK A JSON object with the root hash and tree size as properties
+/*
+GetLogInfoOK A JSON object with the root hash and tree size as properties
 
 swagger:response getLogInfoOK
 */
@@ -73,7 +74,8 @@ func (o *GetLogInfoOK) WriteResponse(rw http.ResponseWriter, producer runtime.Pr
 	}
 }
 
-/*GetLogInfoDefault There was an internal error in the server while processing the request
+/*
+GetLogInfoDefault There was an internal error in the server while processing the request
 
 swagger:response getLogInfoDefault
 */

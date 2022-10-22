@@ -45,14 +45,13 @@ func NewSearchIndex(ctx *middleware.Context, handler SearchIndexHandler) *Search
 	return &SearchIndex{Context: ctx, Handler: handler}
 }
 
-/* SearchIndex swagger:route POST /api/v1/index/retrieve index searchIndex
+/*
+	SearchIndex swagger:route POST /api/v1/index/retrieve index searchIndex
 
-Searches index by entry metadata
+# Searches index by entry metadata
 
 EXPERIMENTAL - this endpoint is offered as best effort only and may be changed or removed in future releases.
 The results returned from this endpoint may be incomplete.
-
-
 */
 type SearchIndex struct {
 	Context *middleware.Context

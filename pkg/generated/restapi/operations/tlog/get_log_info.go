@@ -45,12 +45,12 @@ func NewGetLogInfo(ctx *middleware.Context, handler GetLogInfoHandler) *GetLogIn
 	return &GetLogInfo{Context: ctx, Handler: handler}
 }
 
-/* GetLogInfo swagger:route GET /api/v1/log tlog getLogInfo
+/*
+	GetLogInfo swagger:route GET /api/v1/log tlog getLogInfo
 
-Get information about the current state of the transparency log
+# Get information about the current state of the transparency log
 
 Returns the current root hash and size of the merkle tree used to store the log entries.
-
 */
 type GetLogInfo struct {
 	Context *middleware.Context

@@ -32,7 +32,8 @@ import (
 // GetLogEntryByUUIDOKCode is the HTTP code returned for type GetLogEntryByUUIDOK
 const GetLogEntryByUUIDOKCode int = 200
 
-/*GetLogEntryByUUIDOK Information needed for a client to compute the inclusion proof
+/*
+GetLogEntryByUUIDOK Information needed for a client to compute the inclusion proof
 
 swagger:response getLogEntryByUuidOK
 */
@@ -79,7 +80,8 @@ func (o *GetLogEntryByUUIDOK) WriteResponse(rw http.ResponseWriter, producer run
 // GetLogEntryByUUIDNotFoundCode is the HTTP code returned for type GetLogEntryByUUIDNotFound
 const GetLogEntryByUUIDNotFoundCode int = 404
 
-/*GetLogEntryByUUIDNotFound The content requested could not be found
+/*
+GetLogEntryByUUIDNotFound The content requested could not be found
 
 swagger:response getLogEntryByUuidNotFound
 */
@@ -100,7 +102,8 @@ func (o *GetLogEntryByUUIDNotFound) WriteResponse(rw http.ResponseWriter, produc
 	rw.WriteHeader(404)
 }
 
-/*GetLogEntryByUUIDDefault There was an internal error in the server while processing the request
+/*
+GetLogEntryByUUIDDefault There was an internal error in the server while processing the request
 
 swagger:response getLogEntryByUuidDefault
 */
