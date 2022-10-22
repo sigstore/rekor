@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2021 The Sigstore Authors.
+# Copyright 2022 The Sigstore Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ echo "installing gocovmerge"
 make gocovmerge
 docker kill $(docker ps -q) || true
 echo "starting services"
-docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d --force-recreate --build
+docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d --build
 
 echo "building CLI and server"
 # set the path to the root of the repo
