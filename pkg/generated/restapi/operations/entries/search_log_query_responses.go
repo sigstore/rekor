@@ -122,6 +122,51 @@ func (o *SearchLogQueryBadRequest) WriteResponse(rw http.ResponseWriter, produce
 	}
 }
 
+// SearchLogQueryUnprocessableEntityCode is the HTTP code returned for type SearchLogQueryUnprocessableEntity
+const SearchLogQueryUnprocessableEntityCode int = 422
+
+/*
+SearchLogQueryUnprocessableEntity The server understood the request but is unable to process the contained instructions
+
+swagger:response searchLogQueryUnprocessableEntity
+*/
+type SearchLogQueryUnprocessableEntity struct {
+
+	/*
+	  In: Body
+	*/
+	Payload *models.Error `json:"body,omitempty"`
+}
+
+// NewSearchLogQueryUnprocessableEntity creates SearchLogQueryUnprocessableEntity with default headers values
+func NewSearchLogQueryUnprocessableEntity() *SearchLogQueryUnprocessableEntity {
+
+	return &SearchLogQueryUnprocessableEntity{}
+}
+
+// WithPayload adds the payload to the search log query unprocessable entity response
+func (o *SearchLogQueryUnprocessableEntity) WithPayload(payload *models.Error) *SearchLogQueryUnprocessableEntity {
+	o.Payload = payload
+	return o
+}
+
+// SetPayload sets the payload to the search log query unprocessable entity response
+func (o *SearchLogQueryUnprocessableEntity) SetPayload(payload *models.Error) {
+	o.Payload = payload
+}
+
+// WriteResponse to the client
+func (o *SearchLogQueryUnprocessableEntity) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+
+	rw.WriteHeader(422)
+	if o.Payload != nil {
+		payload := o.Payload
+		if err := producer.Produce(rw, payload); err != nil {
+			panic(err) // let the recovery middleware deal with this
+		}
+	}
+}
+
 /*
 SearchLogQueryDefault There was an internal error in the server while processing the request
 

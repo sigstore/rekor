@@ -50,6 +50,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
@@ -145,7 +146,7 @@ func TestUploadVerifyRekord(t *testing.T) {
 
 	// Verify should fail initially
 	out := runCliErr(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
-	outputContains(t, out, "404")
+	outputContains(t, out, "entry in log cannot be located")
 
 	// It should upload successfully.
 	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
@@ -981,7 +982,7 @@ func TestGetNonExistantIndex(t *testing.T) {
 func TestVerifyNonExistantIndex(t *testing.T) {
 	// this index is extremely likely to not exist
 	out := runCliErr(t, "verify", "--log-index", "100000000")
-	outputContains(t, out, "404")
+	outputContains(t, out, "entry in log cannot be located")
 }
 
 func TestGetNonExistantUUID(t *testing.T) {
@@ -993,7 +994,7 @@ func TestGetNonExistantUUID(t *testing.T) {
 func TestVerifyNonExistantUUID(t *testing.T) {
 	// this uuid is extremely likely to not exist
 	out := runCliErr(t, "verify", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-	outputContains(t, out, "404")
+	outputContains(t, out, "entry in log cannot be located")
 
 	// Check response code
 	tid := getTreeID(t)
@@ -1011,9 +1012,11 @@ func TestVerifyNonExistantUUID(t *testing.T) {
 		t.Fatal(err)
 	}
 	c, _ := ioutil.ReadAll(resp.Body)
-	t.Log(string(c))
-	if resp.StatusCode != 404 {
-		t.Fatal("expected 404 status")
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected status 200, got %d instead", resp.StatusCode)
+	}
+	if strings.TrimSpace(string(c)) != "[]" {
+		t.Fatalf("expected empty JSON array as response, got %s instead", string(c))
 	}
 }
 
@@ -1224,10 +1227,8 @@ func TestSearchQueryMalformedEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, _ := ioutil.ReadAll(resp.Body)
-	t.Log(string(c))
 	if resp.StatusCode != 400 {
-		t.Fatal("expected status 400")
+		t.Fatalf("expected status 400, got %d instead", resp.StatusCode)
 	}
 }
 
@@ -1250,9 +1251,11 @@ func TestSearchQueryNonExistentEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 	c, _ := ioutil.ReadAll(resp.Body)
-	t.Log(string(c))
-	if resp.StatusCode != 404 {
-		t.Fatal("expected 404 status")
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected status 200, got %d instead", resp.StatusCode)
+	}
+	if strings.TrimSpace(string(c)) != "[]" {
+		t.Fatalf("expected empty JSON array as response, got %s instead", string(c))
 	}
 }
 
@@ -1324,8 +1327,12 @@ func TestSearchValidateTreeID(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Not Found because currently we don't detect that an unused random tree ID is invalid.
-	if resp.StatusCode != 404 {
-		t.Fatalf("expected 404 status code but got %d", resp.StatusCode)
+	c, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected status 200, got %d instead", resp.StatusCode)
+	}
+	if strings.TrimSpace(string(c)) != "[]" {
+		t.Fatalf("expected empty JSON array as response, got %s instead", string(c))
 	}
 }
 
@@ -1398,5 +1405,472 @@ func TestMetricsCounts(t *testing.T) {
 
 	if qpsCount2-qpsCount != 1 {
 		t.Error("rekor_qps_by_api did not increment")
+	}
+}
+
+// TestSearchLogQuerySingleShard provides coverage testing on the searchLogQuery endpoint within a single shard
+func TestSearchLogQuerySingleShard(t *testing.T) {
+
+	// Write the shared public key to a file
+	pubPath := filepath.Join(t.TempDir(), "logQuery_pubKey.asc")
+	pubKeyBytes := []byte(publicKey)
+	if err := ioutil.WriteFile(pubPath, pubKeyBytes, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create two valid log entries to use for the test cases
+	firstArtifactPath := filepath.Join(t.TempDir(), "artifact1")
+	firstSigPath := filepath.Join(t.TempDir(), "signature1.asc")
+	createdPGPSignedArtifact(t, firstArtifactPath, firstSigPath)
+	firstArtifactBytes, _ := ioutil.ReadFile(firstArtifactPath)
+	firstSigBytes, _ := ioutil.ReadFile(firstSigPath)
+
+	firstRekord := rekord.V001Entry{
+		RekordObj: models.RekordV001Schema{
+			Data: &models.RekordV001SchemaData{
+				Content: strfmt.Base64(firstArtifactBytes),
+			},
+			Signature: &models.RekordV001SchemaSignature{
+				Content: (*strfmt.Base64)(&firstSigBytes),
+				Format:  swag.String(models.RekordV001SchemaSignatureFormatPgp),
+				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+					Content: (*strfmt.Base64)(&pubKeyBytes),
+				},
+			},
+		},
+	}
+	firstEntry := &models.Rekord{
+		APIVersion: swag.String(firstRekord.APIVersion()),
+		Spec:       firstRekord.RekordObj,
+	}
+
+	secondArtifactPath := filepath.Join(t.TempDir(), "artifact2")
+	secondSigPath := filepath.Join(t.TempDir(), "signature2.asc")
+	createdPGPSignedArtifact(t, secondArtifactPath, secondSigPath)
+	secondArtifactBytes, _ := ioutil.ReadFile(secondArtifactPath)
+	secondSigBytes, _ := ioutil.ReadFile(secondSigPath)
+
+	secondRekord := rekord.V001Entry{
+		RekordObj: models.RekordV001Schema{
+			Data: &models.RekordV001SchemaData{
+				Content: strfmt.Base64(secondArtifactBytes),
+			},
+			Signature: &models.RekordV001SchemaSignature{
+				Content: (*strfmt.Base64)(&secondSigBytes),
+				Format:  swag.String(models.RekordV001SchemaSignatureFormatPgp),
+				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+					Content: (*strfmt.Base64)(&pubKeyBytes),
+				},
+			},
+		},
+	}
+	secondEntry := &models.Rekord{
+		APIVersion: swag.String(secondRekord.APIVersion()),
+		Spec:       secondRekord.RekordObj,
+	}
+
+	// Now upload them to rekor!
+	firstOut := runCli(t, "upload", "--artifact", firstArtifactPath, "--signature", firstSigPath, "--public-key", pubPath)
+	secondOut := runCli(t, "upload", "--artifact", secondArtifactPath, "--signature", secondSigPath, "--public-key", pubPath)
+
+	firstEntryID := getUUIDFromUploadOutput(t, firstOut)
+	firstUUID, _ := sharding.GetUUIDFromIDString(firstEntryID)
+	firstIndex := int64(getLogIndexFromUploadOutput(t, firstOut))
+	secondEntryID := getUUIDFromUploadOutput(t, secondOut)
+	secondUUID, _ := sharding.GetUUIDFromIDString(secondEntryID)
+	secondIndex := int64(getLogIndexFromUploadOutput(t, secondOut))
+
+	// this is invalid because treeID is > int64
+	invalidEntryID := "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeeefff"
+	invalidIndex := int64(-1)
+	invalidEntry := &models.Rekord{
+		APIVersion: swag.String(secondRekord.APIVersion()),
+	}
+
+	nonexistentArtifactPath := filepath.Join(t.TempDir(), "artifact3")
+	nonexistentSigPath := filepath.Join(t.TempDir(), "signature3.asc")
+	createdPGPSignedArtifact(t, nonexistentArtifactPath, nonexistentSigPath)
+	nonexistentArtifactBytes, _ := ioutil.ReadFile(nonexistentArtifactPath)
+	nonexistentSigBytes, _ := ioutil.ReadFile(nonexistentSigPath)
+
+	nonexistentEntryID := "0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeeefff"
+	nonexistentUUID := "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeeefff"
+	nonexistentIndex := int64(999999999) // assuming we don't put that many entries in the log
+	nonexistentRekord := rekord.V001Entry{
+		RekordObj: models.RekordV001Schema{
+			Data: &models.RekordV001SchemaData{
+				Content: strfmt.Base64(nonexistentArtifactBytes),
+			},
+			Signature: &models.RekordV001SchemaSignature{
+				Content: (*strfmt.Base64)(&nonexistentSigBytes),
+				Format:  swag.String(models.RekordV001SchemaSignatureFormatPgp),
+				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+					Content: (*strfmt.Base64)(&pubKeyBytes),
+				},
+			},
+		},
+	}
+	nonexistentEntry := &models.Rekord{
+		APIVersion: swag.String("0.0.1"),
+		Spec:       nonexistentRekord.RekordObj,
+	}
+
+	type testCase struct {
+		name                      string
+		expectSuccess             bool
+		expectedErrorResponseCode int64
+		expectedEntryIDs          []string
+		entryUUIDs                []string
+		logIndexes                []*int64
+		entries                   []models.ProposedEntry
+	}
+
+	testCases := []testCase{
+		{
+			name:             "empty entryUUIDs",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{},
+			entryUUIDs:       []string{},
+		},
+		{
+			name:             "first in log (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID},
+			entryUUIDs:       []string{firstEntryID},
+		},
+		{
+			name:             "first in log (using UUID in entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID},
+			entryUUIDs:       []string{firstUUID},
+		},
+		{
+			name:             "second in log (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{secondEntryID},
+			entryUUIDs:       []string{secondEntryID},
+		},
+		{
+			name:                      "invalid entryID (using entryUUIDs)",
+			expectSuccess:             false,
+			expectedErrorResponseCode: http.StatusBadRequest,
+			entryUUIDs:                []string{invalidEntryID},
+		},
+		{
+			name:             "valid entryID not in log (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{},
+			entryUUIDs:       []string{nonexistentEntryID},
+		},
+		{
+			name:             "valid UUID not in log (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{},
+			entryUUIDs:       []string{nonexistentUUID},
+		},
+		{
+			name:             "both valid entries in log (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			entryUUIDs:       []string{firstEntryID, secondEntryID},
+		},
+		{
+			name:             "both valid entries in log (one with UUID, other with entryID) (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			entryUUIDs:       []string{firstEntryID, secondUUID},
+		},
+		{
+			name:                      "one valid entry in log, one malformed (using entryUUIDs)",
+			expectSuccess:             false,
+			expectedErrorResponseCode: http.StatusBadRequest,
+			entryUUIDs:                []string{firstEntryID, invalidEntryID},
+		},
+		{
+			name:             "one existing, one valid entryID but not in log (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID},
+			entryUUIDs:       []string{firstEntryID, nonexistentEntryID},
+		},
+		{
+			name:             "two existing, one valid entryID but not in log (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			entryUUIDs:       []string{firstEntryID, secondEntryID, nonexistentEntryID},
+		},
+		{
+			name:             "two existing, one valid entryID but not in log (different ordering 1) (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			entryUUIDs:       []string{firstEntryID, nonexistentEntryID, secondEntryID},
+		},
+		{
+			name:             "two existing, one valid entryID but not in log (different ordering 2) (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			entryUUIDs:       []string{nonexistentEntryID, firstEntryID, secondEntryID},
+		},
+		{
+			name:             "two existing, one valid entryID but not in log (different ordering 3) (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			entryUUIDs:       []string{nonexistentUUID, firstEntryID, secondEntryID},
+		},
+		{
+			name:             "two existing, one valid entryID but not in log (different ordering 4) (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			entryUUIDs:       []string{nonexistentEntryID, firstUUID, secondEntryID},
+		},
+		{
+			name:             "two existing, one valid entryID but not in log (different ordering 5) (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			entryUUIDs:       []string{nonexistentEntryID, firstEntryID, secondUUID},
+		},
+		{
+			name:             "two existing, one valid entryID but not in log (different ordering 6) (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			entryUUIDs:       []string{nonexistentUUID, firstEntryID, secondUUID},
+		},
+		{
+			name:             "two existing, one valid entryID but not in log (different ordering 7) (using entryUUIDs)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			entryUUIDs:       []string{nonexistentEntryID, firstUUID, secondUUID},
+		},
+		{
+			name:                      "request more than 10 entries (using entryUUIDs)",
+			expectSuccess:             false,
+			expectedErrorResponseCode: http.StatusUnprocessableEntity,
+			entryUUIDs:                []string{firstEntryID, firstEntryID, firstEntryID, firstEntryID, firstEntryID, firstEntryID, firstEntryID, firstEntryID, firstEntryID, firstEntryID, firstEntryID},
+		},
+		{
+			name:             "empty logIndexes",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{},
+			logIndexes:       []*int64{},
+		},
+		{
+			name:             "first in log (using logIndexes)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID},
+			logIndexes:       []*int64{&firstIndex},
+		},
+		{
+			name:             "second in log (using logIndexes)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{secondEntryID},
+			logIndexes:       []*int64{&secondIndex},
+		},
+		{
+			name:                      "invalid logIndex (using logIndexes)",
+			expectSuccess:             false,
+			expectedErrorResponseCode: http.StatusUnprocessableEntity,
+			logIndexes:                []*int64{&invalidIndex},
+		},
+		{
+			name:             "valid index not in log (using logIndexes)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{},
+			logIndexes:       []*int64{&nonexistentIndex},
+		},
+		{
+			name:             "both valid entries in log (using logIndexes)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			logIndexes:       []*int64{&firstIndex, &secondIndex},
+		},
+		{
+			name:                      "one valid entry in log, one malformed (using logIndexes)",
+			expectSuccess:             false,
+			expectedErrorResponseCode: http.StatusUnprocessableEntity,
+			logIndexes:                []*int64{&firstIndex, &invalidIndex},
+		},
+		{
+			name:             "one existing, one valid Index but not in log (using logIndexes)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID},
+			logIndexes:       []*int64{&firstIndex, &nonexistentIndex},
+		},
+		{
+			name:             "two existing, one valid Index but not in log (using logIndexes)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			logIndexes:       []*int64{&firstIndex, &secondIndex, &nonexistentIndex},
+		},
+		{
+			name:             "two existing, one valid Index but not in log (different ordering 1) (using logIndexes)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			logIndexes:       []*int64{&firstIndex, &nonexistentIndex, &secondIndex},
+		},
+		{
+			name:             "two existing, one valid Index but not in log (different ordering 2) (using logIndexes)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			logIndexes:       []*int64{&nonexistentIndex, &firstIndex, &secondIndex},
+		},
+		{
+			name:                      "request more than 10 entries (using logIndexes)",
+			expectSuccess:             false,
+			expectedErrorResponseCode: http.StatusUnprocessableEntity,
+			logIndexes:                []*int64{&firstIndex, &firstIndex, &firstIndex, &firstIndex, &firstIndex, &firstIndex, &firstIndex, &firstIndex, &firstIndex, &firstIndex, &firstIndex},
+		},
+		{
+			name:             "empty entries",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{},
+			entries:          []models.ProposedEntry{},
+		},
+		{
+			name:             "first in log (using entries)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID},
+			entries:          []models.ProposedEntry{firstEntry},
+		},
+		{
+			name:             "second in log (using entries)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{secondEntryID},
+			entries:          []models.ProposedEntry{secondEntry},
+		},
+		{
+			name:                      "invalid entry (using entries)",
+			expectSuccess:             false,
+			expectedErrorResponseCode: http.StatusUnprocessableEntity,
+			entries:                   []models.ProposedEntry{invalidEntry},
+		},
+		{
+			name:             "valid entry not in log (using entries)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{},
+			entries:          []models.ProposedEntry{nonexistentEntry},
+		},
+		{
+			name:             "both valid entries in log (using entries)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			entries:          []models.ProposedEntry{firstEntry, secondEntry},
+		},
+		{
+			name:                      "one valid entry in log, one malformed (using entries)",
+			expectSuccess:             false,
+			expectedErrorResponseCode: http.StatusUnprocessableEntity,
+			entries:                   []models.ProposedEntry{firstEntry, invalidEntry},
+		},
+		{
+			name:             "one existing, one valid Index but not in log (using entries)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID},
+			entries:          []models.ProposedEntry{firstEntry, nonexistentEntry},
+		},
+		{
+			name:             "two existing, one valid Index but not in log (using entries)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			entries:          []models.ProposedEntry{firstEntry, secondEntry, nonexistentEntry},
+		},
+		{
+			name:             "two existing, one valid Index but not in log (different ordering 1) (using entries)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			entries:          []models.ProposedEntry{firstEntry, nonexistentEntry, secondEntry},
+		},
+		{
+			name:             "two existing, one valid Index but not in log (different ordering 2) (using entries)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID},
+			entries:          []models.ProposedEntry{nonexistentEntry, firstEntry, secondEntry},
+		},
+		{
+			name:                      "request more than 10 entries (using entries)",
+			expectSuccess:             false,
+			expectedErrorResponseCode: http.StatusUnprocessableEntity,
+			entries:                   []models.ProposedEntry{firstEntry, firstEntry, firstEntry, firstEntry, firstEntry, firstEntry, firstEntry, firstEntry, firstEntry, firstEntry, firstEntry},
+		},
+		{
+			name:                      "request more than 10 entries (using mixture)",
+			expectSuccess:             false,
+			expectedErrorResponseCode: http.StatusUnprocessableEntity,
+			entryUUIDs:                []string{firstEntryID, firstEntryID, firstEntryID, firstEntryID},
+			logIndexes:                []*int64{&firstIndex, &firstIndex, &firstIndex},
+			entries:                   []models.ProposedEntry{firstEntry, firstEntry, firstEntry, firstEntry},
+		},
+		{
+			name:                      "request valid and invalid (using mixture)",
+			expectSuccess:             false,
+			expectedErrorResponseCode: http.StatusUnprocessableEntity,
+			entryUUIDs:                []string{firstEntryID, firstEntryID, firstEntryID, firstEntryID},
+			logIndexes:                []*int64{&invalidIndex, &invalidIndex, &invalidIndex},
+			entries:                   []models.ProposedEntry{firstEntry, firstEntry, firstEntry},
+		},
+		{
+			name:             "request valid and nonexistent (using mixture)",
+			expectSuccess:    true,
+			expectedEntryIDs: []string{firstEntryID, secondEntryID, firstEntryID, secondEntryID, firstEntryID, secondEntryID},
+			entryUUIDs:       []string{firstEntryID, secondEntryID, nonexistentEntryID},
+			logIndexes:       []*int64{&firstIndex, &secondIndex, &nonexistentIndex},
+			entries:          []models.ProposedEntry{firstEntry, secondEntry, nonexistentEntry},
+		},
+	}
+
+	for _, test := range testCases {
+		rekorClient, err := client.GetRekorClient("http://localhost:3000", client.WithRetryCount(0))
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Run(test.name, func(t *testing.T) {
+			params := entries.NewSearchLogQueryParams()
+			entry := &models.SearchLogQuery{}
+			if len(test.entryUUIDs) > 0 {
+				t.Log("trying with entryUUIDs: ", test.entryUUIDs)
+				entry.EntryUUIDs = test.entryUUIDs
+			}
+			if len(test.logIndexes) > 0 {
+				entry.LogIndexes = test.logIndexes
+			}
+			if len(test.entries) > 0 {
+				entry.SetEntries(test.entries)
+			}
+			params.SetEntry(entry)
+
+			resp, err := rekorClient.Entries.SearchLogQuery(params)
+			if err != nil {
+				if !test.expectSuccess {
+					if _, ok := err.(*entries.SearchLogQueryBadRequest); ok {
+						if test.expectedErrorResponseCode != http.StatusBadRequest {
+							t.Fatalf("unexpected error code received: expected %d, got %d: %v", test.expectedErrorResponseCode, http.StatusBadRequest, err)
+						}
+					} else if _, ok := err.(*entries.SearchLogQueryUnprocessableEntity); ok {
+						if test.expectedErrorResponseCode != http.StatusUnprocessableEntity {
+							t.Fatalf("unexpected error code received: expected %d, got %d: %v", test.expectedErrorResponseCode, http.StatusUnprocessableEntity, err)
+						}
+					} else if e, ok := err.(*entries.SearchLogQueryDefault); ok {
+						t.Fatalf("unexpected error: %v", e)
+					}
+				} else {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			} else {
+				if len(resp.Payload) != len(test.expectedEntryIDs) {
+					t.Fatalf("unexpected number of responses received: expected %d, got %d", len(test.expectedEntryIDs), len(resp.Payload))
+				}
+				// walk responses, build up list of returned entry IDs
+				returnedEntryIDs := []string{}
+				for _, entry := range resp.Payload {
+					// do this for dynamic keyed entries
+					for entryID, _ := range entry {
+						t.Log("received entry: ", entryID)
+						returnedEntryIDs = append(returnedEntryIDs, entryID)
+					}
+				}
+				// we have the expected number of responses, let's ensure they're the ones we expected
+				if out := cmp.Diff(returnedEntryIDs, test.expectedEntryIDs, cmpopts.SortSlices(func(a, b string) bool { return a < b })); out != "" {
+					t.Fatalf("unexpected responses: %v", out)
+				}
+			}
+		})
 	}
 }
