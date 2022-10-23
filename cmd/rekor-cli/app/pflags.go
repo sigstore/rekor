@@ -219,6 +219,7 @@ func isURL(v string) bool {
 }
 
 // validateSHAValue ensures that the supplied string matches the following formats:
+// [sha512:]<128 hexadecimal characters>
 // [sha256:]<64 hexadecimal characters>
 // [sha1:]<40 hexadecimal characters>
 // where [sha256:] and [sha1:] are optional
@@ -228,11 +229,17 @@ func validateSHAValue(v string) error {
 		return nil
 	}
 
-	if err := util.ValidateSHA256Value(v); err != nil {
-		return fmt.Errorf("error parsing %v flag: %w", shaFlag, err)
+	err = util.ValidateSHA256Value(v)
+	if err == nil {
+		return nil
 	}
 
-	return nil
+	err = util.ValidateSHA512Value(v)
+	if err == nil {
+		return nil
+	}
+
+	return fmt.Errorf("error parsing %v flag: %w", shaFlag, err)
 }
 
 // validateFileOrURL ensures the provided string is either a valid file path that can be opened or a valid URL
