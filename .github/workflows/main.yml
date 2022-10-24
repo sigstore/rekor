@@ -85,7 +85,7 @@ jobs:
       - name: CLI
         run: ./tests/e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # v3
+        uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         if: failure()
         with:
           name: E2E Docker Compose logs
@@ -115,7 +115,7 @@ jobs:
       - name: Sharding Test
         run: ./tests/sharding-e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # v3
+        uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         if: failure()
         with:
           name: Sharding E2E Docker Compose logs
@@ -138,7 +138,7 @@ jobs:
       - name: Test for Attestation begin returned that was previously persisted in tlog
         run: ./tests/issue-872-e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # v3
+        uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         if: failure()
         with:
           name: Docker Compose logs
@@ -160,7 +160,7 @@ jobs:
       - name: Run test harness
         run: ./tests/rekor-harness.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # v3
+        uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3
         if: failure()
         with:
           name: E2E Docker Compose logs
