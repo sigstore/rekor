@@ -24,6 +24,7 @@ SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go"|grep -v pk
 TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
 BIN_DIR := $(abspath $(ROOT_DIR)/bin)
+FUZZ_DURATION ?= 10s
 
 PROJECT_ID ?= projectsigstore
 RUNTIME_IMAGE ?= gcr.io/distroless/static
@@ -85,12 +86,6 @@ test:
 	go test ./...
 
 gocovmerge: $(GOCOVMERGE)
-
-# there is no fuzzing currently
-fuzz: ;
-# Once fuzzing is added, uncomment below
-# This is a hack because of this bug https://github.com/golang/go/issues/44129
-# cd tests/fuzz;GOFLAGS=-mod=mod $(GO-FUZZ-BUILD);cd ../../;go mod tidy
 
 clean:
 	rm -rf dist
@@ -162,6 +157,19 @@ ko-trillian:
 		--image-refs trillianServerImagerefs github.com/google/trillian/cmd/trillian_log_server \
 	&& mv trillianServerImagerefs ../.. \
 	&& cd -
+
+.PHONY: fuzz
+# This runs the fuzz tests for a short period of time to ensure they don't crash.
+fuzz:
+	go test -fuzz FuzzCreateEntryIDFromParts -fuzztime $(FUZZ_DURATION) ./pkg/sharding
+	go test -fuzz FuzzGetUUIDFromIDString -fuzztime $(FUZZ_DURATION) ./pkg/sharding
+	go test -fuzz FuzzGetTreeIDFromIDString -fuzztime $(FUZZ_DURATION) ./pkg/sharding
+	go test -fuzz FuzzPadToTreeIDLen -fuzztime $(FUZZ_DURATION) ./pkg/sharding
+	go test -fuzz FuzzReturnEntryIDString -fuzztime $(FUZZ_DURATION) ./pkg/sharding
+	go test -fuzz FuzzTreeID -fuzztime $(FUZZ_DURATION) ./pkg/sharding
+	go test -fuzz FuzzValidateUUID -fuzztime $(FUZZ_DURATION) ./pkg/sharding
+	go test -fuzz FuzzValidateTreeID -fuzztime $(FUZZ_DURATION) ./pkg/sharding
+	go test -fuzz FuzzValidateEntryID -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 
 ## --------------------------------------
 ## Tooling Binaries
