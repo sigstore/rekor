@@ -42,7 +42,6 @@ func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error
 	rt := httptransport.NewWithClient(url.Host, client.DefaultBasePath, []string{url.Scheme}, httpClient)
 	rt.Consumers["application/json"] = runtime.JSONConsumer()
 	rt.Consumers["application/x-pem-file"] = runtime.TextConsumer()
-	rt.Consumers["application/pem-certificate-chain"] = runtime.TextConsumer()
 	rt.Producers["application/json"] = runtime.JSONProducer()
 
 	registry := strfmt.Default

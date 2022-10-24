@@ -54,7 +54,7 @@ func addSearchPFlags(cmd *cobra.Command) error {
 
 	cmd.Flags().Var(NewFlagValue(fileOrURLFlag, ""), "artifact", "path or URL to artifact file")
 
-	cmd.Flags().Var(NewFlagValue(shaFlag, ""), "sha", "the SHA256 or SHA1 sum of the artifact")
+	cmd.Flags().Var(NewFlagValue(shaFlag, ""), "sha", "the SHA512, SHA256 or SHA1 sum of the artifact")
 
 	cmd.Flags().Var(NewFlagValue(emailFlag, ""), "email", "email associated with the public key's subject")
 
