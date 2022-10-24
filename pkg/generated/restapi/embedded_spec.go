@@ -560,7 +560,7 @@ func init() {
         },
         "hash": {
           "type": "string",
-          "pattern": "^(sha256:)?[0-9a-fA-F]{64}$|^(sha1:)?[0-9a-fA-F]{40}$"
+          "pattern": "^(sha512:)?[0-9a-fA-F]{128}$|^(sha256:)?[0-9a-fA-F]{64}$|^(sha1:)?[0-9a-fA-F]{40}$"
         },
         "operator": {
           "type": "string",
@@ -2564,7 +2564,7 @@ func init() {
         },
         "hash": {
           "type": "string",
-          "pattern": "^(sha256:)?[0-9a-fA-F]{64}$|^(sha1:)?[0-9a-fA-F]{40}$"
+          "pattern": "^(sha512:)?[0-9a-fA-F]{128}$|^(sha256:)?[0-9a-fA-F]{64}$|^(sha1:)?[0-9a-fA-F]{40}$"
         },
         "operator": {
           "type": "string",

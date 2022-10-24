@@ -815,6 +815,19 @@ func TestTimestampArtifact(t *testing.T) {
 	outputContains(t, out, uuid)
 }
 
+func TestSearchSHA512(t *testing.T) {
+	var sha512 = "c7694a1112ea1404a3c5852bdda04c2cc224b3567ef6ceb8204dbf2b382daacfc6837ee2ed9d5b82c90b880a3c7289778dbd5a8c2c08193459bcf7bd44581ed0"
+	var out string
+	out = runCli(t, "upload", "--type", "intoto:0.0.2",
+		"--artifact", "envelope.sha512",
+		"--pki-format", "x509",
+		"--public-key", "test_sha512.pub")
+	outputContains(t, out, "Created entry at")
+	uuid := getUUIDFromTimestampOutput(t, out)
+	out = runCli(t, "search", "--sha", fmt.Sprintf("sha512:%s", sha512))
+	outputContains(t, out, uuid)
+}
+
 func TestX509(t *testing.T) {
 	td := t.TempDir()
 	artifactPath := filepath.Join(td, "artifact")

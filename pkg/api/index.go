@@ -43,7 +43,7 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 	var result = NewCollection(queryOperator)
 
 	if params.Query.Hash != "" {
-		// This must be a valid sha256 hash
+		// This must be a valid hash
 		sha := util.PrefixSHA(params.Query.Hash)
 		var resultUUIDs []string
 		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(sha), "0", "-1")); err != nil {
