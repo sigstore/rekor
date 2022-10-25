@@ -220,6 +220,9 @@ func init() {
           "400": {
             "$ref": "#/responses/BadContent"
           },
+          "422": {
+            "$ref": "#/responses/UnprocessableEntity"
+          },
           "default": {
             "$ref": "#/responses/InternalServerError"
           }
@@ -911,6 +914,12 @@ func init() {
     },
     "NotFound": {
       "description": "The content requested could not be found"
+    },
+    "UnprocessableEntity": {
+      "description": "The server understood the request but is unable to process the contained instructions",
+      "schema": {
+        "$ref": "#/definitions/Error"
+      }
     }
   }
 }`))
@@ -1128,6 +1137,12 @@ func init() {
           },
           "400": {
             "description": "The content supplied to the server was invalid",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          },
+          "422": {
+            "description": "The server understood the request but is unable to process the contained instructions",
             "schema": {
               "$ref": "#/definitions/Error"
             }
@@ -3892,6 +3907,12 @@ func init() {
     },
     "NotFound": {
       "description": "The content requested could not be found"
+    },
+    "UnprocessableEntity": {
+      "description": "The server understood the request but is unable to process the contained instructions",
+      "schema": {
+        "$ref": "#/definitions/Error"
+      }
     }
   }
 }`))
