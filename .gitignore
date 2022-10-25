@@ -21,3 +21,4 @@ cosign.*
 signature
 rekor.pub
 *~
+*.test

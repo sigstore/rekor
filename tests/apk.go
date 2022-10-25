@@ -32,6 +32,8 @@ import (
 	"io/ioutil"
 	"strings"
 	"testing"
+
+	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 )
 
 func createSignedApk(t *testing.T, artifactPath string) {
@@ -69,7 +71,7 @@ func createSignedApk(t *testing.T, artifactPath string) {
 	ctlGZ.Close()
 
 	sha1sum := sha1.Sum(ctlTGZBuf.Bytes())
-	sig, _ := rsa.SignPKCS1v15(crand.Reader, certPrivateKey, crypto.SHA1, sha1sum[:])
+	sig, _ := rsa.SignPKCS1v15(crand.Reader, sigx509.CertPrivateKey, crypto.SHA1, sha1sum[:])
 
 	sigTarBuf := bytes.Buffer{}
 	sigTar := tar.NewWriter(&sigTarBuf)

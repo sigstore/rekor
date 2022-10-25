@@ -57,6 +57,7 @@ import (
 	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/rekor/pkg/types"
@@ -131,7 +132,6 @@ func TestDuplicates(t *testing.T) {
 }
 
 func TestUploadVerifyRekord(t *testing.T) {
-
 	// Create a random artifact and sign it.
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
 	sigPath := filepath.Join(t.TempDir(), "signature.asc")
@@ -158,38 +158,7 @@ func TestUploadVerifyRekord(t *testing.T) {
 	outputContains(t, out, "Checkpoint:")
 }
 
-func TestUploadVerifyHashedRekord(t *testing.T) {
-
-	// Create a random artifact and sign it.
-	artifactPath := filepath.Join(t.TempDir(), "artifact")
-	sigPath := filepath.Join(t.TempDir(), "signature.asc")
-
-	createdX509SignedArtifact(t, artifactPath, sigPath)
-	dataBytes, _ := ioutil.ReadFile(artifactPath)
-	h := sha256.Sum256(dataBytes)
-	dataSHA := hex.EncodeToString(h[:])
-
-	// Write the public key to a file
-	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
-	if err := ioutil.WriteFile(pubPath, []byte(rsaCert), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	// Verify should fail initially
-	runCliErr(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
-
-	// It should upload successfully.
-	out := runCli(t, "upload", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
-	outputContains(t, out, "Created entry at")
-
-	// Now we should be able to verify it.
-	out = runCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
-	outputContains(t, out, "Inclusion Proof:")
-	outputContains(t, out, "Checkpoint:")
-}
-
 func TestUploadVerifyRpm(t *testing.T) {
-
 	// Create a random rpm and sign it.
 	td := t.TempDir()
 	rpmPath := filepath.Join(td, "rpm")
@@ -446,7 +415,7 @@ func TestAPK(t *testing.T) {
 	createSignedApk(t, artifactPath)
 
 	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
-	if err := ioutil.WriteFile(pubPath, []byte(pubKey), 0644); err != nil {
+	if err := ioutil.WriteFile(pubPath, []byte(sigx509.PubKey), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -494,7 +463,7 @@ func TestIntoto(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pb, _ := pem.Decode([]byte(ecdsaPriv))
+	pb, _ := pem.Decode([]byte(sigx509.ECDSAPriv))
 	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
 	if err != nil {
 		t.Fatal(err)
@@ -505,8 +474,8 @@ func TestIntoto(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer, err := dsse.NewEnvelopeSigner(&verifier{
-		s: s,
+	signer, err := dsse.NewEnvelopeSigner(&sigx509.Verifier{
+		S: s,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -523,7 +492,7 @@ func TestIntoto(t *testing.T) {
 	}
 
 	write(t, string(eb), attestationPath)
-	write(t, ecdsaPub, pubKeyPath)
+	write(t, sigx509.ECDSAPub, pubKeyPath)
 
 	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Created entry at")
@@ -565,7 +534,6 @@ func TestIntoto(t *testing.T) {
 
 	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	outputContains(t, out, "Entry already exists")
-
 }
 
 func TestIntotoMultiSig(t *testing.T) {
@@ -603,9 +571,9 @@ func TestIntotoMultiSig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	evps := []*verifier{}
+	evps := []*sigx509.Verifier{}
 
-	pb, _ := pem.Decode([]byte(ecdsaPriv))
+	pb, _ := pem.Decode([]byte(sigx509.ECDSAPriv))
 	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
 	if err != nil {
 		t.Fatal(err)
@@ -616,11 +584,11 @@ func TestIntotoMultiSig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	evps = append(evps, &verifier{
-		s: signECDSA,
+	evps = append(evps, &sigx509.Verifier{
+		S: signECDSA,
 	})
 
-	pbRSA, _ := pem.Decode([]byte(rsaKey))
+	pbRSA, _ := pem.Decode([]byte(sigx509.RSAKey))
 	rsaPriv, err := x509.ParsePKCS8PrivateKey(pbRSA.Bytes)
 	if err != nil {
 		t.Fatal(err)
@@ -631,8 +599,8 @@ func TestIntotoMultiSig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	evps = append(evps, &verifier{
-		s: signRSA,
+	evps = append(evps, &sigx509.Verifier{
+		S: signRSA,
 	})
 
 	signer, err := dsse.NewMultiEnvelopeSigner(2, evps[0], evps[1])
@@ -651,8 +619,8 @@ func TestIntotoMultiSig(t *testing.T) {
 	}
 
 	write(t, string(eb), attestationPath)
-	write(t, ecdsaPub, ecdsapubKeyPath)
-	write(t, pubKey, rsapubKeyPath)
+	write(t, sigx509.ECDSAPub, ecdsapubKeyPath)
+	write(t, sigx509.PubKey, rsapubKeyPath)
 
 	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
 	outputContains(t, out, "Created entry at")
@@ -694,7 +662,6 @@ func TestIntotoMultiSig(t *testing.T) {
 
 	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
 	outputContains(t, out, "Entry already exists")
-
 }
 
 /*
@@ -816,7 +783,7 @@ func TestTimestampArtifact(t *testing.T) {
 }
 
 func TestSearchSHA512(t *testing.T) {
-	var sha512 = "c7694a1112ea1404a3c5852bdda04c2cc224b3567ef6ceb8204dbf2b382daacfc6837ee2ed9d5b82c90b880a3c7289778dbd5a8c2c08193459bcf7bd44581ed0"
+	sha512 := "c7694a1112ea1404a3c5852bdda04c2cc224b3567ef6ceb8204dbf2b382daacfc6837ee2ed9d5b82c90b880a3c7289778dbd5a8c2c08193459bcf7bd44581ed0"
 	var out string
 	out = runCli(t, "upload", "--type", "intoto:0.0.2",
 		"--artifact", "envelope.sha512",
@@ -828,59 +795,7 @@ func TestSearchSHA512(t *testing.T) {
 	outputContains(t, out, uuid)
 }
 
-func TestX509(t *testing.T) {
-	td := t.TempDir()
-	artifactPath := filepath.Join(td, "artifact")
-	sigPath := filepath.Join(td, "signature")
-	certPath := filepath.Join(td, "cert.pem")
-	pubKeyPath := filepath.Join(td, "key.pem")
-
-	createdX509SignedArtifact(t, artifactPath, sigPath)
-
-	// Write the cert and public keys to disk as well
-	if err := ioutil.WriteFile(certPath, []byte(rsaCert), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if err := ioutil.WriteFile(pubKeyPath, []byte(pubKey), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	// If we do it twice, it should already exist
-	out := runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
-		"--public-key", certPath, "--pki-format", "x509")
-	outputContains(t, out, "Created entry at")
-	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
-		"--public-key", certPath, "--pki-format", "x509")
-	outputContains(t, out, "Entry already exists")
-
-	// Now upload with the public key rather than the cert. They should NOT be deduped.
-	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
-		"--public-key", pubKeyPath, "--pki-format", "x509")
-	outputContains(t, out, "Created entry at")
-
-	// Now let's go the other order to be sure. New artifact, key first then cert.
-	createdX509SignedArtifact(t, artifactPath, sigPath)
-
-	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
-		"--public-key", pubKeyPath, "--pki-format", "x509")
-	outputContains(t, out, "Created entry at")
-	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
-		"--public-key", pubKeyPath, "--pki-format", "x509")
-	outputContains(t, out, "Entry already exists")
-	// This should NOT already exist
-	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
-		"--public-key", certPath, "--pki-format", "x509")
-	outputContains(t, out, "Created entry at")
-	uuid := getUUIDFromUploadOutput(t, out)
-
-	// Search via email
-	out = runCli(t, "search", "--email", "test@rekor.dev")
-	outputContains(t, out, uuid)
-
-}
-
 func TestWatch(t *testing.T) {
-
 	td := t.TempDir()
 	cmd := exec.Command(server, "watch", "--interval=1s")
 	cmd.Env = append(os.Environ(), "REKOR_STH_BUCKET=file://"+td)
@@ -1088,14 +1003,14 @@ func TestInclusionProofRace(t *testing.T) {
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
 	sigPath := filepath.Join(t.TempDir(), "signature.asc")
 
-	createdX509SignedArtifact(t, artifactPath, sigPath)
+	sigx509.CreatedX509SignedArtifact(t, artifactPath, sigPath)
 	dataBytes, _ := ioutil.ReadFile(artifactPath)
 	h := sha256.Sum256(dataBytes)
 	dataSHA := hex.EncodeToString(h[:])
 
 	// Write the public key to a file
 	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
-	if err := ioutil.WriteFile(pubPath, []byte(rsaCert), 0644); err != nil {
+	if err := ioutil.WriteFile(pubPath, []byte(sigx509.RSACert), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1103,12 +1018,12 @@ func TestInclusionProofRace(t *testing.T) {
 	runCli(t, "upload", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 
 	// Constantly uploads new signatures on an entry.
-	var uploadRoutine = func(pubPath string) error {
+	uploadRoutine := func(pubPath string) error {
 		// Create a random artifact and sign it.
 		artifactPath := filepath.Join(t.TempDir(), "artifact")
 		sigPath := filepath.Join(t.TempDir(), "signature.asc")
 
-		createdX509SignedArtifact(t, artifactPath, sigPath)
+		sigx509.CreatedX509SignedArtifact(t, artifactPath, sigPath)
 		dataBytes, _ := ioutil.ReadFile(artifactPath)
 		h := sha256.Sum256(dataBytes)
 		dataSHA := hex.EncodeToString(h[:])
@@ -1121,7 +1036,7 @@ func TestInclusionProofRace(t *testing.T) {
 	}
 
 	// Attempts to verify the original entry.
-	var verifyRoutine = func(dataSHA, sigPath, pubPath string) error {
+	verifyRoutine := func(dataSHA, sigPath, pubPath string) error {
 		out := runCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 
 		if strings.Contains(out, "calculated root") || strings.Contains(out, "wrong") {

@@ -30,6 +30,7 @@ import (
 	"github.com/sassoftware/relic/lib/certloader"
 	"github.com/sassoftware/relic/lib/signjar"
 	"github.com/sassoftware/relic/lib/zipslicer"
+	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 )
 
 //note: reuses PKI artifacts from x509 tests
@@ -76,8 +77,8 @@ func createSignedJar(t *testing.T, artifactPath string) {
 	}
 
 	c := certloader.Certificate{
-		PrivateKey: certPrivateKey,
-		Leaf:       cert,
+		PrivateKey: sigx509.CertPrivateKey,
+		Leaf:       sigx509.Certificate,
 	}
 
 	patch, _, err := jd.Sign(context.Background(), &c, "rekor", false, true, false)

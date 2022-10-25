@@ -165,7 +165,7 @@ func randomData(t *testing.T, n int) []byte {
 	return data
 }
 
-func createArtifact(t *testing.T, artifactPath string) string {
+func CreateArtifact(t *testing.T, artifactPath string) string {
 	t.Helper()
 	// First let's generate some random data so we don't have to worry about dupes.
 	data := randomData(t, 100)

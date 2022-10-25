@@ -54,7 +54,7 @@ z/xsp35Opg4+2gDWFgJFO+MZI89AV9jatCE/Q8sViPGl2fAekWLW7D8CAwEAAQ==
 // Generated with:
 // openssl ecparam -genkey -name prime256v1 > ec_private.pem
 // openssl pkcs8 -topk8 -in ec_private.pem  -nocrypt
-const ecdsaPriv = `-----BEGIN PRIVATE KEY-----
+const priv = `-----BEGIN PRIVATE KEY-----
 MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgmrLtCpBdXgXLUr7o
 nSUPfo3oXMjmvuwTOjpTulIBKlKhRANCAATH6KSpTFe6uXFmW1qNEFXaO7fWPfZt
 pPZrHZ1cFykidZoURKoYXfkohJ+U/USYy8Sd8b4DMd5xDRZCnlDM0h37
@@ -62,7 +62,7 @@ pPZrHZ1cFykidZoURKoYXfkohJ+U/USYy8Sd8b4DMd5xDRZCnlDM0h37
 
 // Extracted from above with:
 // openssl ec -in ec_private.pem -pubout
-const ecdsaPub = `-----BEGIN PUBLIC KEY-----
+const pub = `-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEx+ikqUxXurlxZltajRBV2ju31j32
 baT2ax2dXBcpInWaFESqGF35KISflP1EmMvEnfG+AzHecQ0WQp5QzNId+w==
 -----END PUBLIC KEY-----`
@@ -110,8 +110,8 @@ func TestSignature_Verify(t *testing.T) {
 		},
 		{
 			name: "ec",
-			priv: ecdsaPriv,
-			pub:  ecdsaPub,
+			priv: priv,
+			pub:  pub,
 		},
 		{
 			name: "ed25519",
@@ -166,8 +166,8 @@ func TestSignature_VerifyFail(t *testing.T) {
 		},
 		{
 			name: "ec",
-			priv: ecdsaPriv,
-			pub:  ecdsaPub,
+			priv: priv,
+			pub:  pub,
 		},
 		{
 			name: "ed25519",
@@ -206,7 +206,7 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 
 	pemCertChain, err := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, subCert, rootCert})
 	if err != nil {
-		t.Fatalf("unexpected error marshalling cert chain: %v", err)
+		t.Fatalf("unexpected error marshalling certificate chain: %v", err)
 	}
 
 	pub, err := NewPublicKey(bytes.NewReader(pemCertChain))
@@ -267,7 +267,7 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 	s, _ = NewSignature(bytes.NewReader(sigBytes))
 	err = s.Verify(bytes.NewReader(data), pub)
 	if err != nil {
-		t.Fatalf("unexpected error verifying signature with expired cert: %v", err)
+		t.Fatalf("unexpected error verifying signature with expired certificate: %v", err)
 	}
 
 	// Verify error with invalid chain
@@ -301,6 +301,6 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 	pemCertChain, _ = cryptoutils.MarshalCertificatesToPEM(chain)
 	_, err = NewPublicKey(bytes.NewReader(pemCertChain))
 	if err == nil || !strings.Contains(err.Error(), "too many certificates specified in PEM block") {
-		t.Fatalf("expected error with long cert chain, got %v", err)
+		t.Fatalf("expected error with long certificate chain, got %v", err)
 	}
 }
