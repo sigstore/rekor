@@ -33,21 +33,21 @@ import (
 )
 
 const (
-	trillianCommunicationError     = "Unexpected error communicating with transparency log"
-	trillianUnexpectedResult       = "Unexpected result from transparency log"
-	validationError                = "Error processing entry: %v"
-	failedToGenerateCanonicalEntry = "Error generating canonicalized entry"
-	entryAlreadyExists             = "An equivalent entry already exists in the transparency log with UUID %v"
+	trillianCommunicationError     = "unexpected error communicating with transparency log"
+	trillianUnexpectedResult       = "unexpected result from transparency log"
+	validationError                = "error processing entry: %v"
+	failedToGenerateCanonicalEntry = "error generating canonicalized entry"
+	entryAlreadyExists             = "an equivalent entry already exists in the transparency log with UUID %v"
 	firstSizeLessThanLastSize      = "firstSize(%d) must be less than lastSize(%d)"
 	malformedUUID                  = "UUID must be a 64-character hexadecimal string"
-	malformedPublicKey             = "Public key provided could not be parsed"
-	failedToGenerateCanonicalKey   = "Error generating canonicalized public key"
-	redisUnexpectedResult          = "Unexpected result from searching index"
-	lastSizeGreaterThanKnown       = "The tree size requested(%d) was greater than what is currently observable(%d)"
-	signingError                   = "Error signing"
-	sthGenerateError               = "Error generating signed tree head"
-	unsupportedPKIFormat           = "The PKI format requested is not supported by this server"
-	unexpectedInactiveShardError   = "Unexpected error communicating with inactive shard"
+	malformedPublicKey             = "public key provided could not be parsed"
+	failedToGenerateCanonicalKey   = "error generating canonicalized public key"
+	redisUnexpectedResult          = "unexpected result from searching index"
+	lastSizeGreaterThanKnown       = "the tree size requested(%d) was greater than what is currently observable(%d)"
+	signingError                   = "error signing"
+	sthGenerateError               = "error generating signed tree head"
+	unsupportedPKIFormat           = "the PKI format requested is not supported by this server"
+	unexpectedInactiveShardError   = "unexpected error communicating with inactive shard"
 	maxSearchQueryLimit            = "more than max allowed %d entries in request"
 )
 
@@ -122,6 +122,8 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		switch code {
 		case http.StatusBadRequest:
 			return entries.NewSearchLogQueryBadRequest().WithPayload(errorMsg(message, code))
+		case http.StatusUnprocessableEntity:
+			return entries.NewSearchLogQueryUnprocessableEntity().WithPayload(errorMsg(message, code))
 		default:
 			return entries.NewSearchLogQueryDefault(code).WithPayload(errorMsg(message, code))
 		}

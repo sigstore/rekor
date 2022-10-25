@@ -361,27 +361,29 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		g, _ := errgroup.WithContext(httpReqCtx)
 
 		var searchHashes [][]byte
-		code := http.StatusBadRequest
 		for _, entryID := range params.Entry.EntryUUIDs {
-			if sharding.ValidateEntryID(entryID) == nil {
+			// if we got this far, then entryID is either a 64 or 80 character hex string
+			err := sharding.ValidateEntryID(entryID)
+			if err == nil {
 				logEntry, err := retrieveLogEntry(httpReqCtx, entryID)
-				if errors.Is(err, ErrNotFound) {
-					code = http.StatusNotFound
+				if err != nil && !errors.Is(err, ErrNotFound) {
+					return handleRekorAPIError(params, http.StatusInternalServerError, err, fmt.Sprintf("error getting log entry for %s", entryID))
+				} else if err == nil {
+					resultPayload = append(resultPayload, logEntry)
 				}
-				if err != nil {
-					return handleRekorAPIError(params, code, err, fmt.Sprintf("error getting log entry for %s", entryID))
-				}
-				resultPayload = append(resultPayload, logEntry)
 				continue
+			} else if len(entryID) == sharding.EntryIDHexStringLen {
+				// if ValidateEntryID failed and this is a full length entryID, then we can't search for it
+				return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("invalid entryID %s", entryID))
 			}
 			// At this point, check if we got a uuid instead of an EntryID, so search for the hash later
 			uuid := entryID
 			if err := sharding.ValidateUUID(uuid); err != nil {
-				return handleRekorAPIError(params, code, err, fmt.Sprintf("validating uuid %s", uuid))
+				return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("invalid uuid %s", uuid))
 			}
 			hash, err := hex.DecodeString(uuid)
 			if err != nil {
-				return handleRekorAPIError(params, code, err, malformedUUID)
+				return handleRekorAPIError(params, http.StatusBadRequest, err, malformedUUID)
 			}
 			searchHashes = append(searchHashes, hash)
 		}
@@ -408,7 +410,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		}
 
 		if err := g.Wait(); err != nil {
-			return handleRekorAPIError(params, code, err, err.Error())
+			return handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
 		}
 		close(searchHashesChan)
 		for hash := range searchHashesChan {
@@ -424,23 +426,22 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 				for _, shard := range api.logRanges.AllShards() {
 					tcs := NewTrillianClientFromTreeID(httpReqCtx, shard)
 					resp := tcs.getLeafAndProofByHash(hash)
-					if resp.status != codes.OK {
-						continue
-					}
-					if resp.err != nil {
-						continue
-					}
-					leafResult := resp.getLeafAndProofResult
-					if leafResult != nil && leafResult.Leaf != nil {
-						if results == nil {
-							results = map[int64]*trillian.GetEntryAndProofResponse{}
+					switch resp.status {
+					case codes.OK:
+						leafResult := resp.getLeafAndProofResult
+						if leafResult != nil && leafResult.Leaf != nil {
+							if results == nil {
+								results = map[int64]*trillian.GetEntryAndProofResponse{}
+							}
+							results[shard] = resp.getLeafAndProofResult
 						}
-						results[shard] = resp.getLeafAndProofResult
+					case codes.NotFound:
+						// do nothing here, do not throw 404 error
+						continue
+					default:
+						log.ContextLogger(httpReqCtx).Errorf("error getLeafAndProofByHash(%s): code: %v, msg %v", hex.EncodeToString(hash), resp.status, resp.err)
+						return fmt.Errorf(trillianCommunicationError)
 					}
-				}
-				if results == nil {
-					code = http.StatusNotFound
-					return fmt.Errorf("no responses found")
 				}
 				searchByHashResults[i] = results
 				return nil
@@ -448,7 +449,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		}
 
 		if err := g.Wait(); err != nil {
-			return handleRekorAPIError(params, code, err, err.Error())
+			return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
 		}
 
 		for _, hashMap := range searchByHashResults {
@@ -459,8 +460,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 				tcs := NewTrillianClientFromTreeID(httpReqCtx, shard)
 				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tcs, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof, shard, api.logRanges)
 				if err != nil {
-					code = http.StatusInternalServerError
-					return handleRekorAPIError(params, code, err, err.Error())
+					return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
 				}
 				resultPayload = append(resultPayload, logEntry)
 			}
@@ -471,26 +471,21 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		g, _ := errgroup.WithContext(httpReqCtx)
 		resultPayloadChan := make(chan models.LogEntry, len(params.Entry.LogIndexes))
 
-		code := http.StatusInternalServerError
 		for _, logIndex := range params.Entry.LogIndexes {
 			logIndex := logIndex // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
 				logEntry, err := retrieveLogEntryByIndex(httpReqCtx, int(swag.Int64Value(logIndex)))
-				if err != nil {
-					switch {
-					case errors.Is(err, ErrNotFound):
-						code = http.StatusNotFound
-					default:
-					}
+				if err != nil && !errors.Is(err, ErrNotFound) {
 					return err
+				} else if err == nil {
+					resultPayloadChan <- logEntry
 				}
-				resultPayloadChan <- logEntry
 				return nil
 			})
 		}
 
 		if err := g.Wait(); err != nil {
-			return handleRekorAPIError(params, code, err, err.Error())
+			return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
 		}
 		close(resultPayloadChan)
 		for result := range resultPayloadChan {
