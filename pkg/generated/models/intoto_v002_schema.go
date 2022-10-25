@@ -313,9 +313,9 @@ func (m *IntotoV002SchemaContent) UnmarshalBinary(b []byte) error {
 // swagger:model IntotoV002SchemaContentEnvelope
 type IntotoV002SchemaContentEnvelope struct {
 
-	// payload of the envelope
-	// Format: byte
-	Payload strfmt.Base64 `json:"payload,omitempty"`
+	// base64 encoded payload of the envelope
+	// Pattern: ^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{4})$
+	Payload string `json:"payload,omitempty"`
 
 	// type describing the payload
 	// Required: true
@@ -331,6 +331,10 @@ type IntotoV002SchemaContentEnvelope struct {
 func (m *IntotoV002SchemaContentEnvelope) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validatePayload(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validatePayloadType(formats); err != nil {
 		res = append(res, err)
 	}
@@ -342,6 +346,18 @@ func (m *IntotoV002SchemaContentEnvelope) Validate(formats strfmt.Registry) erro
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *IntotoV002SchemaContentEnvelope) validatePayload(formats strfmt.Registry) error {
+	if swag.IsZero(m.Payload) { // not required
+		return nil
+	}
+
+	if err := validate.Pattern("content"+"."+"envelope"+"."+"payload", "body", m.Payload, `^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{4})$`); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -452,13 +468,34 @@ type IntotoV002SchemaContentEnvelopeSignaturesItems0 struct {
 	// Format: byte
 	PublicKey strfmt.Base64 `json:"publicKey,omitempty"`
 
-	// signature of the payload
-	// Format: byte
-	Sig strfmt.Base64 `json:"sig,omitempty"`
+	// base64 encoded signature of the payload
+	// Pattern: ^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{4})$
+	Sig string `json:"sig,omitempty"`
 }
 
 // Validate validates this intoto v002 schema content envelope signatures items0
 func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateSig(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) validateSig(formats strfmt.Registry) error {
+	if swag.IsZero(m.Sig) { // not required
+		return nil
+	}
+
+	if err := validate.Pattern("sig", "body", m.Sig, `^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{4})$`); err != nil {
+		return err
+	}
+
 	return nil
 }
 
