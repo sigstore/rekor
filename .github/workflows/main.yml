@@ -84,6 +84,8 @@ jobs:
 
       - name: CLI
         run: ./tests/e2e-test.sh
+      - name: PKG-CLI # this will a WIP to move all the CLI tests to the pkg repo
+        run: ./pkg/e2e-test.sh
       - name: Upload logs if they exist
         uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3.1.1
         if: failure()
@@ -93,7 +95,7 @@ jobs:
       - name: Upload Coverage Report
         uses: codecov/codecov-action@81cd2dc8148241f03f5839d295e000b8f761e378 # v3.1.0
         with:
-          files: /tmp/rekor-merged.cov
+          files: /tmp/rekor-merged.cov,/tmp/pkg-rekor-merged.cov
           flags: e2etests
 
   sharding-e2e:

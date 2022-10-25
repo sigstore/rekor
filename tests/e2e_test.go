@@ -1076,25 +1076,6 @@ func TestEntryUpload(t *testing.T) {
 	outputContains(t, out, "Created entry at")
 }
 
-func TestTufVerifyUpload(t *testing.T) {
-	artifactPath := filepath.Join(t.TempDir(), "timestamp.json")
-	rootPath := filepath.Join(t.TempDir(), "root.json")
-
-	createTufSignedArtifact(t, artifactPath, rootPath)
-
-	// Now upload to rekor!
-	out := runCli(t, "upload", "--artifact", artifactPath, "--public-key", rootPath, "--type", "tuf")
-	outputContains(t, out, "Created entry at")
-
-	uuid := getUUIDFromUploadOutput(t, out)
-
-	out = runCli(t, "verify", "--artifact", artifactPath, "--public-key", rootPath, "--type", "tuf")
-	outputContains(t, out, "Inclusion Proof")
-
-	out = runCli(t, "search", "--public-key", rootPath, "--pki-format", "tuf")
-	outputContains(t, out, uuid)
-}
-
 // Regression test for https://github.com/sigstore/rekor/pull/956
 // Requesting an inclusion proof concurrently with an entry write triggers
 // a race where the inclusion proof returned does not verify because the
