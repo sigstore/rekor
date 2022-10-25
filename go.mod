@@ -31,7 +31,7 @@ require (
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0
 	github.com/sigstore/sigstore v1.4.5
-	github.com/spf13/cobra v1.6.0
+	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.13.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
