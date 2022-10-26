@@ -44,7 +44,7 @@ type EntryID struct {
 	UUID   string
 }
 
-// This function can take a TreeID of equal or lesser length than TreeIDHexStringLen. In
+// CreateEntryIDFromParts This function can take a TreeID of equal or lesser length than TreeIDHexStringLen. In
 // case the TreeID length is less than TreeIDHexStringLen, it will be padded to the correct
 // length.
 func CreateEntryIDFromParts(treeid string, uuid string) (EntryID, error) {
@@ -93,7 +93,7 @@ func PadToTreeIDLen(t string) (string, error) {
 	}
 }
 
-// Returns UUID (with no prepended TreeID) from a UUID or EntryID string.
+// GetUUIDFromIDString Returns UUID (with no prepended TreeID) from a UUID or EntryID string.
 // Validates UUID and also TreeID if present.
 func GetUUIDFromIDString(id string) (string, error) {
 	switch len(id) {
@@ -117,7 +117,7 @@ func GetUUIDFromIDString(id string) (string, error) {
 	}
 }
 
-// This is permissive in that if passed an EntryID, it will find the UUID and validate it.
+// ValidateUUID This is permissive in that if passed an EntryID, it will find the UUID and validate it.
 func ValidateUUID(u string) error {
 	switch len(u) {
 	// If u is an EntryID, call validate on just the UUID
@@ -137,7 +137,7 @@ func ValidateUUID(u string) error {
 	}
 }
 
-// This is permissive in that if passed an EntryID, it will find the TreeID and validate it.
+// ValidateTreeID This is permissive in that if passed an EntryID, it will find the TreeID and validate it.
 func ValidateTreeID(t string) error {
 	switch len(t) {
 	// If t is an EntryID, call validate on just the TreeID
@@ -183,7 +183,7 @@ func ValidateEntryID(id string) error {
 
 var ErrPlainUUID = errors.New("cannot get treeID from plain UUID")
 
-// Returns TreeID (with no appended UUID) from a TreeID or EntryID string.
+// GetTreeIDFromIDString Returns TreeID (with no appended UUID) from a TreeID or EntryID string.
 // Validates TreeID and also UUID if present.
 func GetTreeIDFromIDString(id string) (string, error) {
 	switch len(id) {
