@@ -25,8 +25,7 @@ func FuzzCreateEntryIDFromParts(f *testing.F) {
 
 func FuzzGetUUIDFromIDString(f *testing.F) {
 	f.Fuzz(func(t *testing.T, entryID string) {
-		_, err := GetUUIDFromIDString(entryID)
-		if err != nil {
+		if _, err := GetUUIDFromIDString(entryID); err != nil {
 			t.Skipf("error getting UUID from %v: %v", entryID, err)
 		}
 	})
@@ -34,8 +33,7 @@ func FuzzGetUUIDFromIDString(f *testing.F) {
 
 func FuzzGetTreeIDFromIDString(f *testing.F) {
 	f.Fuzz(func(t *testing.T, entryID string) {
-		_, err := GetTreeIDFromIDString(entryID)
-		if err != nil {
+		if _, err := GetTreeIDFromIDString(entryID); err != nil {
 			t.Skipf("error getting treeID from %v: %v", entryID, err)
 		}
 	})
@@ -43,8 +41,7 @@ func FuzzGetTreeIDFromIDString(f *testing.F) {
 
 func FuzzPadToTreeIDLen(f *testing.F) {
 	f.Fuzz(func(t *testing.T, treeID string) {
-		_, err := PadToTreeIDLen(treeID)
-		if err != nil {
+		if _, err := PadToTreeIDLen(treeID); err != nil {
 			t.Skipf("error padding %v: %v", treeID, err)
 		}
 	})
@@ -52,8 +49,7 @@ func FuzzPadToTreeIDLen(f *testing.F) {
 
 func FuzzReturnEntryIDString(f *testing.F) {
 	f.Fuzz(func(t *testing.T, treeID, uuid string) {
-		_, err := CreateEntryIDFromParts(treeID, uuid)
-		if err != nil {
+		if _, err := CreateEntryIDFromParts(treeID, uuid); err != nil {
 			t.Skipf("failed to create entryID from %s + %s: %s", treeID, uuid, err)
 		}
 	})
@@ -61,8 +57,7 @@ func FuzzReturnEntryIDString(f *testing.F) {
 
 func FuzzTreeID(f *testing.F) {
 	f.Fuzz(func(t *testing.T, treeID string) {
-		_, err := TreeID(treeID)
-		if err != nil {
+		if _, err := TreeID(treeID); err != nil {
 			t.Skipf("error creating treeID %v: %v", treeID, err)
 		}
 	})
@@ -70,8 +65,7 @@ func FuzzTreeID(f *testing.F) {
 
 func FuzzValidateUUID(f *testing.F) {
 	f.Fuzz(func(t *testing.T, uuid string) {
-		err := ValidateUUID(uuid)
-		if err != nil {
+		if err := ValidateUUID(uuid); err != nil {
 			t.Skipf("error validating UUID %v: %v", uuid, err)
 		}
 	})
@@ -79,8 +73,7 @@ func FuzzValidateUUID(f *testing.F) {
 
 func FuzzValidateTreeID(f *testing.F) {
 	f.Fuzz(func(t *testing.T, treeID string) {
-		err := ValidateTreeID(treeID)
-		if err != nil {
+		if err := ValidateTreeID(treeID); err != nil {
 			t.Skipf("error validating treeID %v: %v", treeID, err)
 		}
 	})
@@ -88,8 +81,7 @@ func FuzzValidateTreeID(f *testing.F) {
 
 func FuzzValidateEntryID(f *testing.F) {
 	f.Fuzz(func(t *testing.T, entryID string) {
-		err := ValidateEntryID(entryID)
-		if err != nil {
+		if err := ValidateEntryID(entryID); err != nil {
 			t.Skipf("error validating entryID %v: %v", entryID, err)
 		}
 	})
