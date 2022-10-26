@@ -17,8 +17,7 @@ import "testing"
 
 func FuzzCreateEntryIDFromParts(f *testing.F) {
 	f.Fuzz(func(t *testing.T, treeID, uuid string) {
-		_, err := CreateEntryIDFromParts(treeID, uuid)
-		if err != nil {
+		if _, err := CreateEntryIDFromParts(treeID, uuid); err != nil {
 			t.Skipf("failed to create entryID from %v + %v: %v", treeID, uuid, err)
 		}
 	})
