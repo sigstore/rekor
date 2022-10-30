@@ -1855,7 +1855,7 @@ func TestSearchLogQuerySingleShard(t *testing.T) {
 				returnedEntryIDs := []string{}
 				for _, entry := range resp.Payload {
 					// do this for dynamic keyed entries
-					for entryID, _ := range entry {
+					for entryID := range entry {
 						t.Log("received entry: ", entryID)
 						returnedEntryIDs = append(returnedEntryIDs, entryID)
 					}
