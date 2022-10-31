@@ -408,27 +408,6 @@ func TestJAR(t *testing.T) {
 	outputContains(t, out, "Entry already exists")
 }
 
-func TestAPK(t *testing.T) {
-	td := t.TempDir()
-	artifactPath := filepath.Join(td, "artifact.apk")
-
-	createSignedApk(t, artifactPath)
-
-	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
-	if err := ioutil.WriteFile(pubPath, []byte(sigx509.PubKey), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	// If we do it twice, it should already exist
-	out := runCli(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", pubPath)
-	outputContains(t, out, "Created entry at")
-	out = runCli(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", pubPath)
-	outputContains(t, out, "Entry already exists")
-	// pass invalid public key, ensure we see an error with helpful message
-	out = runCliErr(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", artifactPath)
-	outputContains(t, out, "invalid public key")
-}
-
 func TestIntoto(t *testing.T) {
 	td := t.TempDir()
 	attestationPath := filepath.Join(td, "attestation.json")

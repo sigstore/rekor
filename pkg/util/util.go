@@ -130,7 +130,7 @@ func rekorServer() string {
 }
 
 func coverageFlag() string {
-	return "-test.coverprofile=/tmp/pkg-rekor-cli." + randomSuffix(8) + ".cov"
+	return "-test.coverprofile=/tmp/pkg-rekor-cli." + RandomSuffix(8) + ".cov"
 }
 
 func stripCoverageOutput(out string) string {
@@ -145,7 +145,8 @@ func readFile(t *testing.T, p string) string {
 	return strings.TrimSpace(string(b))
 }
 
-func randomSuffix(n int) string {
+// RandomSuffix returns a random string of the given length.
+func RandomSuffix(n int) string {
 	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 	b := make([]byte, n)
@@ -155,7 +156,8 @@ func randomSuffix(n int) string {
 	return string(b)
 }
 
-func randomData(t *testing.T, n int) []byte {
+// RandomData returns a random byte slice of the given size.
+func RandomData(t *testing.T, n int) []byte {
 	t.Helper()
 	rand.Seed(time.Now().UnixNano())
 	data := make([]byte, n)
@@ -168,7 +170,7 @@ func randomData(t *testing.T, n int) []byte {
 func CreateArtifact(t *testing.T, artifactPath string) string {
 	t.Helper()
 	// First let's generate some random data so we don't have to worry about dupes.
-	data := randomData(t, 100)
+	data := RandomData(t, 100)
 
 	artifact := base64.StdEncoding.EncodeToString(data[:])
 	// Write this to a file
