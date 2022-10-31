@@ -237,12 +237,12 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		go func() {
 			keys, err := entry.IndexKeys()
 			if err != nil {
-				log.ContextLogger(ctx).Error(fmt.Errorf("error generating index keys: %w", err))
+				log.ContextLogger(ctx).Error(err)
 				return
 			}
 			for _, key := range keys {
 				if err := addToIndex(context.Background(), key, entryID); err != nil {
-					log.ContextLogger(ctx).Error(fmt.Errorf("error inserting key/value pairs into index: %w", err))
+					log.ContextLogger(ctx).Error(err)
 				}
 			}
 		}()
