@@ -158,31 +158,6 @@ func TestUploadVerifyRekord(t *testing.T) {
 	outputContains(t, out, "Checkpoint:")
 }
 
-func TestUploadVerifyRpm(t *testing.T) {
-	// Create a random rpm and sign it.
-	td := t.TempDir()
-	rpmPath := filepath.Join(td, "rpm")
-
-	createSignedRpm(t, rpmPath)
-
-	// Write the public key to a file
-	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
-	if err := ioutil.WriteFile(pubPath, []byte(publicKey), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	// Verify should fail initially
-	runCliErr(t, "verify", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
-
-	// It should upload successfully.
-	out := runCli(t, "upload", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
-	outputContains(t, out, "Created entry at")
-
-	// Now we should be able to verify it.
-	out = runCli(t, "verify", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
-	outputContains(t, out, "Inclusion Proof:")
-}
-
 func TestLogInfo(t *testing.T) {
 	// TODO: figure out some way to check the length, add something, and make sure the length increments!
 	out := runCli(t, "loginfo")

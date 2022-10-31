@@ -1,8 +1,5 @@
-//go:build e2e
-// +build e2e
-
 //
-// Copyright 2021 The Sigstore Authors.
+// Copyright 2022 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,10 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package e2e
+//go:build e2e
+
+package rpm
 
 import (
 	"bytes"
+	"github.com/sigstore/rekor/pkg/util"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -27,11 +27,11 @@ import (
 	"github.com/google/rpmpack"
 )
 
-func createSignedRpm(t *testing.T, artifactPath string) {
+func CreateSignedRpm(t *testing.T, artifactPath string) {
 	t.Helper()
 
 	rpmMetadata := rpmpack.RPMMetaData{
-		Name:    "test-rpm-" + randomSuffix(16),
+		Name:    "test-rpm-" + util.RandomSuffix(16),
 		Epoch:   0,
 		Version: "1",
 		Release: "2",
@@ -42,12 +42,12 @@ func createSignedRpm(t *testing.T, artifactPath string) {
 		t.Error(err)
 	}
 
-	rpm.SetPGPSigner(SignPGP)
+	rpm.SetPGPSigner(util.SignPGP)
 
-	data := randomData(t, 100)
+	data := util.RandomData(t, 100)
 
 	rpm.AddFile(rpmpack.RPMFile{
-		Name:  randomSuffix(16),
+		Name:  util.RandomSuffix(16),
 		Body:  data,
 		Type:  rpmpack.GenericFile,
 		Owner: "testOwner",
