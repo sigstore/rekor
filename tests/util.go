@@ -127,7 +127,7 @@ func rekorServer() string {
 }
 
 func coverageFlag() string {
-	return "-test.coverprofile=/tmp/rekor-cli."+randomSuffix(8)+".cov"
+	return "-test.coverprofile=/tmp/rekor-cli." + randomSuffix(8) + ".cov"
 }
 
 func stripCoverageOutput(out string) string {
