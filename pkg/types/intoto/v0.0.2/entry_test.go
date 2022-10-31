@@ -108,13 +108,14 @@ func multiSignEnvelope(t *testing.T, k []*ecdsa.PrivateKey, payload []byte) *dss
 func createRekorEnvelope(dsseEnv *dsse.Envelope, pub [][]byte) *models.IntotoV002SchemaContentEnvelope {
 
 	env := &models.IntotoV002SchemaContentEnvelope{}
-	env.Payload = dsseEnv.Payload
+	b64 := strfmt.Base64([]byte(dsseEnv.Payload))
+	env.Payload = b64
 	env.PayloadType = &dsseEnv.PayloadType
 
 	for i, sig := range dsseEnv.Signatures {
 		env.Signatures = append(env.Signatures, &models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 			Keyid:     sig.KeyID,
-			Sig:       sig.Sig,
+			Sig:       strfmt.Base64([]byte(sig.Sig)),
 			PublicKey: strfmt.Base64(pub[i]),
 		})
 	}
@@ -171,12 +172,6 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 	}
 
 	validPayload := "hellothispayloadisvalid"
-
-	doubleEncodedEnvelope := createRekorEnvelope(envelope(t, key, []byte(validPayload)), [][]byte{pub})
-	doubleEncodedPayload := base64.StdEncoding.EncodeToString([]byte(doubleEncodedEnvelope.Payload))
-	doubleEncodedEnvelope.Payload = doubleEncodedPayload
-	doubleEncodedSig := base64.StdEncoding.EncodeToString([]byte(doubleEncodedEnvelope.Signatures[0].Sig))
-	doubleEncodedEnvelope.Signatures[0].Sig = doubleEncodedSig
 
 	tests := []struct {
 		env     *dsse.Envelope
@@ -265,20 +260,6 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					Hash: &models.IntotoV002SchemaContentHash{
 						Algorithm: swag.String(models.IntotoV002SchemaContentHashAlgorithmSha256),
 						Value:     swag.String(envelopeHash(t, multiSignEnvelope(t, []*ecdsa.PrivateKey{key, priv}, []byte(validPayload)))),
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			env:  envelope(t, key, []byte(validPayload)),
-			name: "double base64 encoded envelope (testing backwards compat with v0.12.x and v1.0.0",
-			it: &models.IntotoV002Schema{
-				Content: &models.IntotoV002SchemaContent{
-					Envelope: doubleEncodedEnvelope,
-					Hash: &models.IntotoV002SchemaContentHash{
-						Algorithm: swag.String(models.IntotoV002SchemaContentHashAlgorithmSha256),
-						Value:     swag.String(envelopeHash(t, envelope(t, priv, []byte(validPayload)))),
 					},
 				},
 			},
