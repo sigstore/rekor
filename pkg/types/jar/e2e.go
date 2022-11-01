@@ -1,5 +1,5 @@
 //
-// Copyright 2021 The Sigstore Authors.
+// Copyright 2022 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,15 +14,15 @@
 // limitations under the License.
 
 //go:build e2e
-// +build e2e
 
-package e2e
+package jar
 
 import (
 	"archive/zip"
 	"bytes"
 	"context"
 	"crypto"
+	"github.com/sigstore/rekor/pkg/util"
 	"os"
 	"strings"
 	"testing"
@@ -30,6 +30,7 @@ import (
 	"github.com/sassoftware/relic/lib/certloader"
 	"github.com/sassoftware/relic/lib/signjar"
 	"github.com/sassoftware/relic/lib/zipslicer"
+	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 )
 
 //note: reuses PKI artifacts from x509 tests
@@ -42,7 +43,8 @@ SHA-256-Digest: cp40SgHlLIIr397GHijW7aAmWNLn0rgKm5Ap9B4hLd4=
 
 `
 
-func createSignedJar(t *testing.T, artifactPath string) {
+// CreateSignedJar creates a signed JAR file with a single file inside
+func CreateSignedJar(t *testing.T, artifactPath string) {
 	t.Helper()
 
 	//create a ZIP file with a single file inside
@@ -61,7 +63,7 @@ func createSignedJar(t *testing.T, artifactPath string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	randManifest := strings.Replace(manifest, "REPLACE", randomSuffix(16), 1)
+	randManifest := strings.Replace(manifest, "REPLACE", util.RandomSuffix(16), 1)
 	mf.Write([]byte(randManifest))
 	if err := zw.Close(); err != nil {
 		t.Fatal(err)
@@ -76,8 +78,8 @@ func createSignedJar(t *testing.T, artifactPath string) {
 	}
 
 	c := certloader.Certificate{
-		PrivateKey: certPrivateKey,
-		Leaf:       cert,
+		PrivateKey: sigx509.CertPrivateKey,
+		Leaf:       sigx509.Certificate,
 	}
 
 	patch, _, err := jd.Sign(context.Background(), &c, "rekor", false, true, false)

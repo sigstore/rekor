@@ -16,7 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package e2e
+package alpine
 
 import (
 	"archive/tar"
@@ -32,12 +32,16 @@ import (
 	"io/ioutil"
 	"strings"
 	"testing"
+
+	"github.com/sigstore/rekor/pkg/util"
+
+	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 )
 
-func createSignedApk(t *testing.T, artifactPath string) {
+func CreateSignedApk(t *testing.T, artifactPath string) {
 	t.Helper()
 
-	data := randomData(t, 100)
+	data := util.RandomData(t, 100)
 	dataTarBuf := bytes.Buffer{}
 	dataTar := tar.NewWriter(&dataTarBuf)
 	dataTar.WriteHeader(&tar.Header{Name: "random.txt", Size: int64(len(data))})
@@ -52,7 +56,7 @@ func createSignedApk(t *testing.T, artifactPath string) {
 	datahash := sha256.Sum256(dataTGZBuf.Bytes())
 
 	ctlData := strings.Builder{}
-	ctlData.WriteString("name = " + randomSuffix(16))
+	ctlData.WriteString("name = " + util.RandomSuffix(16))
 	ctlData.WriteRune('\n')
 	ctlData.WriteString("datahash = " + hex.EncodeToString(datahash[:]))
 	ctlData.WriteRune('\n')
@@ -69,7 +73,7 @@ func createSignedApk(t *testing.T, artifactPath string) {
 	ctlGZ.Close()
 
 	sha1sum := sha1.Sum(ctlTGZBuf.Bytes())
-	sig, _ := rsa.SignPKCS1v15(crand.Reader, certPrivateKey, crypto.SHA1, sha1sum[:])
+	sig, _ := rsa.SignPKCS1v15(crand.Reader, sigx509.CertPrivateKey, crypto.SHA1, sha1sum[:])
 
 	sigTarBuf := bytes.Buffer{}
 	sigTar := tar.NewWriter(&sigTarBuf)

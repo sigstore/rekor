@@ -120,6 +120,12 @@ ko:
 deploy:
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) ko apply -f config/
 
+e2e:
+	go test -c -tags=e2e ./tests
+	go test -c -tags=e2e ./pkg/pki/x509
+	go test -c -tags=e2e ./pkg/pki/tuf
+	go test -c -tags=e2e ./pkg/types/rekord
+
 sign-container: ko
 	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
 	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-cli:$(GIT_HASH)

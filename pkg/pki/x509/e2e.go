@@ -16,7 +16,7 @@
 //go:build e2e
 // +build e2e
 
-package e2e
+package x509
 
 import (
 	"bytes"
@@ -30,6 +30,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/sigstore/rekor/pkg/util"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
@@ -37,7 +38,7 @@ import (
 // Generated with:
 // openssl ecparam -genkey -name prime256v1 > ec_private.pem
 // openssl pkcs8 -topk8 -in ec_private.pem  -nocrypt
-const ecdsaPriv = `-----BEGIN PRIVATE KEY-----
+const ECDSAPriv = `-----BEGIN PRIVATE KEY-----
 MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgmrLtCpBdXgXLUr7o
 nSUPfo3oXMjmvuwTOjpTulIBKlKhRANCAATH6KSpTFe6uXFmW1qNEFXaO7fWPfZt
 pPZrHZ1cFykidZoURKoYXfkohJ+U/USYy8Sd8b4DMd5xDRZCnlDM0h37
@@ -45,14 +46,14 @@ pPZrHZ1cFykidZoURKoYXfkohJ+U/USYy8Sd8b4DMd5xDRZCnlDM0h37
 
 // Extracted from above with:
 // openssl ec -in ec_private.pem -pubout
-const ecdsaPub = `-----BEGIN PUBLIC KEY-----
+const ECDSAPub = `-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEx+ikqUxXurlxZltajRBV2ju31j32
 baT2ax2dXBcpInWaFESqGF35KISflP1EmMvEnfG+AzHecQ0WQp5QzNId+w==
 -----END PUBLIC KEY-----`
 
 // Generated with:
 // openssl req -newkey rsa:2048 -nodes -keyout test.key -x509 -out test.crt
-const rsaCert = `-----BEGIN CERTIFICATE-----
+const RSACert = `-----BEGIN CERTIFICATE-----
 MIIDOjCCAiKgAwIBAgIUEP925shVBKERFCsymdSqESLZFyMwDQYJKoZIhvcNAQEL
 BQAwHzEdMBsGCSqGSIb3DQEJARYOdGVzdEByZWtvci5kZXYwHhcNMjEwNDIxMjAy
 ODAzWhcNMjEwNTIxMjAyODAzWjAfMR0wGwYJKoZIhvcNAQkBFg50ZXN0QHJla29y
@@ -73,7 +74,7 @@ d9NNfRb0p2oFGG/J0ROg9pEcP1/aZP5k8P2pRdt3y7h1MAtmg2bgEdugZgXwAUmM
 BmU8k2FeTuqV15piPCE=
 -----END CERTIFICATE-----`
 
-const rsaKey = `-----BEGIN PRIVATE KEY-----
+const RSAKey = `-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDfCoj9PKxSIpOB
 jVvP7B0l8Q6KXgwSxEBIobMl11nrH2Fv6ufZRWgma7E3rZcjRMygyfia6SB8KBjq
 OBMHnxX78tp5IDxbPWniA7GGTWZyBsXgfLFH7GVGBh8fiJJtfL4TP/xmMzY47rx8
@@ -104,7 +105,7 @@ j7vR2BMAc9U73Ju9aeTl/L6GqmZyA+Ojhl5gA5DPZYqNiqi93ydgRaI6n4+o3dI7
 
 // Extracted from the certificate using:
 // openssl x509 -pubkey -noout -in test.crt
-const pubKey = `-----BEGIN PUBLIC KEY-----
+const PubKey = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3wqI/TysUiKTgY1bz+wd
 JfEOil4MEsRASKGzJddZ6x9hb+rn2UVoJmuxN62XI0TMoMn4mukgfCgY6jgTB58V
 +/LaeSA8Wz1p4gOxhk1mcgbF4HyxR+xlRgYfH4iSbXy+Ez/8ZjM2OO68fKr4JZEA
@@ -114,11 +115,13 @@ wu2gn2lx6ajWsh806FItiXN+DuizMnx4KMBI0IJynoQpWOFbstGiV0LygZkQ6soz
 vwIDAQAB
 -----END PUBLIC KEY-----`
 
-var certPrivateKey *rsa.PrivateKey
-var cert *x509.Certificate
+var (
+	CertPrivateKey *rsa.PrivateKey
+	Certificate    *x509.Certificate
+)
 
 func init() {
-	p, _ := pem.Decode([]byte(rsaKey))
+	p, _ := pem.Decode([]byte(RSAKey))
 	priv, err := x509.ParsePKCS8PrivateKey(p.Bytes)
 	if err != nil {
 		panic(err)
@@ -127,10 +130,10 @@ func init() {
 	if !ok {
 		panic("unsuccessful conversion")
 	}
-	certPrivateKey = cpk
+	CertPrivateKey = cpk
 
-	p, _ = pem.Decode([]byte(rsaCert))
-	cert, err = x509.ParseCertificate(p.Bytes)
+	p, _ = pem.Decode([]byte(RSACert))
+	Certificate, err = x509.ParseCertificate(p.Bytes)
 	if err != nil {
 		panic(err)
 	}
@@ -138,14 +141,14 @@ func init() {
 
 func SignX509Cert(b []byte) ([]byte, error) {
 	dgst := sha256.Sum256(b)
-	signature, err := certPrivateKey.Sign(rand.Reader, dgst[:], crypto.SHA256)
+	signature, err := CertPrivateKey.Sign(rand.Reader, dgst[:], crypto.SHA256)
 	return signature, err
 }
 
-// createdX509SignedArtifact gets the test dir setup correctly with some random artifacts and keys.
-func createdX509SignedArtifact(t *testing.T, artifactPath, sigPath string) {
+// CreatedX509SignedArtifact gets the test dir setup correctly with some random artifacts and keys.
+func CreatedX509SignedArtifact(t *testing.T, artifactPath, sigPath string) {
 	t.Helper()
-	artifact := createArtifact(t, artifactPath)
+	artifact := util.CreateArtifact(t, artifactPath)
 
 	// Sign it with our key and write that to a file
 	signature, err := SignX509Cert([]byte(artifact))
@@ -157,33 +160,33 @@ func createdX509SignedArtifact(t *testing.T, artifactPath, sigPath string) {
 	}
 }
 
-type verifier struct {
-	s signature.Signer
+type Verifier struct {
+	S signature.Signer
 	v signature.Verifier
 }
 
-func (v *verifier) KeyID() (string, error) {
+func (v *Verifier) KeyID() (string, error) {
 	return "", nil
 }
 
-func (v *verifier) Public() crypto.PublicKey {
+func (v *Verifier) Public() crypto.PublicKey {
 	return v.v.PublicKey
 }
 
-func (v *verifier) Sign(data []byte) (sig []byte, err error) {
-	if v.s == nil {
+func (v *Verifier) Sign(data []byte) (sig []byte, err error) {
+	if v.S == nil {
 		return nil, errors.New("nil signer")
 	}
-	sig, err = v.s.SignMessage(bytes.NewReader(data), options.WithCryptoSignerOpts(crypto.SHA256))
+	sig, err = v.S.SignMessage(bytes.NewReader(data), options.WithCryptoSignerOpts(crypto.SHA256))
 	if err != nil {
 		return nil, err
 	}
 	return sig, nil
 }
 
-func (v *verifier) Verify(data, sig []byte) error {
+func (v *Verifier) Verify(data, sig []byte) error {
 	if v.v == nil {
-		return errors.New("nil verifier")
+		return errors.New("nil Verifier")
 	}
 	return v.v.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data))
 }
