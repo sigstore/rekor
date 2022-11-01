@@ -219,3 +219,172 @@ func TestPublicKey(t *testing.T) {
 		})
 	}
 }
+
+func TestLogRanges_String(t *testing.T) {
+	type fields struct {
+		inactive Ranges
+		active   int64
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name: "empty",
+			fields: fields{
+				inactive: Ranges{},
+				active:   0,
+			},
+			want: "active=0",
+		},
+		{
+			name: "one",
+			fields: fields{
+				inactive: Ranges{
+					{
+						TreeID:     1,
+						TreeLength: 2,
+					},
+				},
+				active: 3,
+			},
+			want: "1=2,active=3",
+		},
+		{
+			name: "two",
+			fields: fields{
+				inactive: Ranges{
+					{
+						TreeID:     1,
+						TreeLength: 2,
+					},
+					{
+						TreeID:     2,
+						TreeLength: 3,
+					},
+				},
+				active: 4,
+			},
+			want: "1=2,2=3,active=4",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &LogRanges{
+				inactive: tt.fields.inactive,
+				active:   tt.fields.active,
+			}
+			if got := l.String(); got != tt.want {
+				t.Errorf("String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLogRanges_TotalInactiveLength(t *testing.T) {
+	type fields struct {
+		inactive Ranges
+		active   int64
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   int64
+	}{
+		{
+			name: "empty",
+			fields: fields{
+				inactive: Ranges{},
+				active:   0,
+			},
+			want: 0,
+		},
+		{
+			name: "one",
+			fields: fields{
+				inactive: Ranges{
+					{
+						TreeID:     1,
+						TreeLength: 2,
+					},
+				},
+				active: 3,
+			},
+			want: 2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &LogRanges{
+				inactive: tt.fields.inactive,
+				active:   tt.fields.active,
+			}
+			if got := l.TotalInactiveLength(); got != tt.want {
+				t.Errorf("TotalInactiveLength() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLogRanges_AllShards(t *testing.T) {
+	type fields struct {
+		inactive Ranges
+		active   int64
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   []int64
+	}{
+		{
+			name: "empty",
+			fields: fields{
+				inactive: Ranges{},
+				active:   0,
+			},
+			want: []int64{0},
+		},
+		{
+			name: "one",
+			fields: fields{
+				inactive: Ranges{
+					{
+						TreeID:     1,
+						TreeLength: 2,
+					},
+				},
+				active: 3,
+			},
+			want: []int64{3, 1},
+		},
+		{
+			name: "two",
+			fields: fields{
+				inactive: Ranges{
+					{
+						TreeID:     1,
+						TreeLength: 2,
+					},
+					{
+						TreeID:     2,
+						TreeLength: 3,
+					},
+				},
+				active: 4,
+			},
+			want: []int64{4, 1, 2},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &LogRanges{
+				inactive: tt.fields.inactive,
+				active:   tt.fields.active,
+			}
+			if got := l.AllShards(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("AllShards() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
