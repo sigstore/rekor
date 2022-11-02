@@ -67,9 +67,9 @@ func TestCrossFieldValidation(t *testing.T) {
 		expectCanonicalizeSuccess bool
 	}
 
-	keyBytes, _ := os.ReadFile("../../../../tests/test_root.json")
-	dataBytes, _ := os.ReadFile("../../../../tests/test_timestamp.json")
-	anyBytes, _ := os.ReadFile("../../../../tests/test_any.json")
+	keyBytes, _ := os.ReadFile("tests/test_root.json")
+	dataBytes, _ := os.ReadFile("tests/test_timestamp.json")
+	anyBytes, _ := os.ReadFile("tests/test_any.json")
 
 	keyContent := &data.Signed{}
 	if err := json.Unmarshal(keyBytes, keyContent); err != nil {

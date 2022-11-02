@@ -25,7 +25,7 @@ import (
 )
 
 func TestProvenance(t *testing.T) {
-	inputProvenance, err := os.Open("../../../tests/test-0.1.0.tgz.prov")
+	inputProvenance, err := os.Open("tests/test-0.1.0.tgz.prov")
 	if err != nil {
 		t.Fatalf("could not open provenance file %v", err)
 	}
@@ -51,7 +51,7 @@ func TestProvenance(t *testing.T) {
 		t.Fatal("Empty checksum")
 	}
 
-	publickeyFile, err := os.Open("../../../tests/test_helm_armor.pub")
+	publickeyFile, err := os.Open("tests/test_helm_armor.pub")
 	if err != nil {
 		t.Fatalf("could not open public key %v", err)
 	}
