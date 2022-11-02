@@ -36,6 +36,7 @@ var (
 	redisPort    = flag.String("port", "", "Port to Redis application")
 	startIndex   = flag.Int("start", -1, "First index to backfill")
 	endIndex     = flag.Int("end", -1, "Last index to backfill")
+	rekorAddress = flag.String("rekor-address", "", "Address for Rekor, e.g. https://rekor.sigstore.dev")
 )
 
 func main() {
@@ -52,6 +53,9 @@ func main() {
 	}
 	if *endIndex == -1 {
 		log.Fatal("end must be set to >=0")
+	}
+	if *rekorAddress == "" {
+		log.Fatal("rekor-address must be set")
 	}
 
 	cfg := radix.PoolConfig{}
@@ -76,17 +80,17 @@ func main() {
 			// uuid is the global UUID - tree ID and entry UUID
 			e, _, _, err := unmarshalEntryImpl(entry.Body.(string))
 			if err != nil {
-				fmt.Printf("error unmarshalling entry for %s\n", uuid)
+				fmt.Printf("error unmarshalling entry for %s: %v\n", uuid, err)
 				continue
 			}
 			keys, err := e.IndexKeys()
 			if err != nil {
-				fmt.Printf("error building index keys for %s\n", uuid)
+				fmt.Printf("error building index keys for %s: %v\n", uuid, err)
 				continue
 			}
 			for _, key := range keys {
 				if err := addToIndex(context.Background(), redisClient, key, uuid); err != nil {
-					fmt.Printf("error inserting UUID %s with key %s\n", uuid, key)
+					fmt.Printf("error inserting UUID %s with key %s: %v\n", uuid, key, err)
 				}
 				fmt.Printf("Uploaded Redis entry %s, index %d, key %s\n", uuid, i, key)
 			}
