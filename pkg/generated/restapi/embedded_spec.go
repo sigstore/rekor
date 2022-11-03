@@ -2159,7 +2159,8 @@ func init() {
           },
           "writeOnly": true
         }
-      }
+      },
+      "writeOnly": true
     },
     "IntotoV003SchemaSignaturesItems0": {
       "description": "a signature of the envelope's payload along with the public key for the signature",
@@ -3531,7 +3532,8 @@ func init() {
               },
               "writeOnly": true
             }
-          }
+          },
+          "writeOnly": true
         },
         "signatures": {
           "description": "extracted collection of all signatures of the envelope's payload",

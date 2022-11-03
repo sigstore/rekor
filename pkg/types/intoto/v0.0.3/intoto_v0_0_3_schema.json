@@ -24,6 +24,7 @@
                     "writeOnly": true
                 }
             },
+            "writeOnly": true,
             "required": [ "envelope", "publicKeys" ]
         },
         "signatures": {
