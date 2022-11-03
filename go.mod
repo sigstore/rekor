@@ -46,7 +46,7 @@ require (
 	golang.org/x/mod v0.6.0
 	golang.org/x/net v0.1.0
 	golang.org/x/sync v0.1.0
-	google.golang.org/genproto v0.0.0-20221014213838-99cd37c6964a
+	google.golang.org/genproto v0.0.0-20221024183307-1bc688fe9f3e
 	google.golang.org/grpc v1.50.1
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/ini.v1 v1.67.0
@@ -67,7 +67,7 @@ require (
 	cloud.google.com/go v0.104.0 // indirect
 	cloud.google.com/go/compute v1.10.0 // indirect
 	cloud.google.com/go/iam v0.5.0 // indirect
-	cloud.google.com/go/kms v1.4.0 // indirect
+	cloud.google.com/go/kms v1.5.0 // indirect
 	cloud.google.com/go/storage v1.23.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cavaliercoder/badio v0.0.0-20160213150051-ce5280129e9e // indirect
@@ -123,7 +123,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.mongodb.org/mongo-driver v1.10.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
-	go.step.sm/crypto v0.22.0
+	go.step.sm/crypto v0.23.0
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/oauth2 v0.1.0 // indirect
@@ -131,7 +131,7 @@ require (
 	golang.org/x/term v0.1.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
-	google.golang.org/api v0.100.0 // indirect
+	google.golang.org/api v0.101.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
