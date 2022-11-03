@@ -32,7 +32,6 @@ import (
 	"math/big"
 	"reflect"
 	"sort"
-	"strings"
 	"testing"
 
 	"github.com/go-openapi/runtime"
@@ -294,8 +293,6 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					t.Errorf("V002Entry.AttestationKey() = %v, want %v", v.AttestationKey(), "sha256:"+hex.EncodeToString(h[:]))
 				}
 
-				hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *tt.it.Content.Hash.Algorithm, *tt.it.Content.Hash.Value))
-				want = append(want, hashkey)
 				got, _ := v.IndexKeys()
 				sort.Strings(got)
 				sort.Strings(want)
@@ -456,8 +453,6 @@ func TestV002Entry_IndexKeys(t *testing.T) {
 
 			want = append(want, "sha256:"+hex.EncodeToString(payloadHash[:]))
 
-			hashkey := strings.ToLower("sha256:" + *v.IntotoObj.Content.Hash.Value)
-			want = append(want, hashkey)
 			want = append(want, tt.want...)
 			got, _ := v.IndexKeys()
 			sort.Strings(got)
