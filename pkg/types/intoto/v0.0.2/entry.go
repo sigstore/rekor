@@ -96,8 +96,10 @@ func (v V002Entry) IndexKeys() ([]string, error) {
 	payloadKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.PayloadHash.Algorithm, *v.IntotoObj.Content.PayloadHash.Value))
 	result = append(result, payloadKey)
 
-	hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.Hash.Algorithm, *v.IntotoObj.Content.Hash.Value))
-	result = append(result, hashkey)
+	// since we can't deterministically calculate this server-side (due to public keys being added inline, and also canonicalization being potentially different),
+	// we'll just skip adding this index key
+	// hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.Hash.Algorithm, *v.IntotoObj.Content.Hash.Value))
+	// result = append(result, hashkey)
 
 	switch *v.IntotoObj.Content.Envelope.PayloadType {
 	case in_toto.PayloadType:
