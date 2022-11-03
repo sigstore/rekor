@@ -100,33 +100,37 @@ func main() {
 		if err != nil {
 			log.Fatalf("retrieving log uuid by index: %v", err)
 		}
-		success := true
+		var insertErrs []error
 		for uuid, entry := range resp.Payload {
 			// uuid is the global UUID - tree ID and entry UUID
 			e, _, _, err := unmarshalEntryImpl(entry.Body.(string))
 			if err != nil {
-				fmt.Printf("error unmarshalling entry for %s: %v\n", uuid, err)
-				success = false
+				insertErrs = append(insertErrs, fmt.Errorf("error unmarshalling entry for %s: %v", uuid, err))
 				continue
 			}
 			keys, err := e.IndexKeys()
 			if err != nil {
-				fmt.Printf("error building index keys for %s: %v\n", uuid, err)
-				success = false
+				insertErrs = append(insertErrs, fmt.Errorf("error building index keys for %s: %v", uuid, err))
 				continue
 			}
 			for _, key := range keys {
+				// remove the key-value pair from the index in case it already exists
+				if err := removeFromIndex(context.Background(), redisClient, key, uuid); err != nil {
+					insertErrs = append(insertErrs, fmt.Errorf("error removing UUID %s with key %s: %v", uuid, key, err))
+				}
 				if err := addToIndex(context.Background(), redisClient, key, uuid); err != nil {
-					success = false
-					fmt.Printf("error inserting UUID %s with key %s: %v\n", uuid, key, err)
+					insertErrs = append(insertErrs, fmt.Errorf("error inserting UUID %s with key %s: %v", uuid, key, err))
 				}
 				fmt.Printf("Uploaded Redis entry %s, index %d, key %s\n", uuid, i, key)
 			}
 		}
-		if success {
-			fmt.Printf("Completed log index %d\n", i)
+		if len(insertErrs) != 0 {
+			fmt.Printf("Errors with log index %d:\n", i)
+			for _, e := range insertErrs {
+				fmt.Println(e)
+			}
 		} else {
-			fmt.Printf("Errors with log index %d\n", i)
+			fmt.Printf("Completed log index %d\n", i)
 		}
 	}
 }
@@ -151,6 +155,13 @@ func unmarshalEntryImpl(e string) (types.EntryImpl, string, string, error) {
 	return entry, pe.Kind(), entry.APIVersion(), nil
 }
 
+// removeFromIndex removes all occurrences of a value from a given key. This guards against
+// multiple invocations of backfilling creating duplicates.
+func removeFromIndex(ctx context.Context, redisClient radix.Client, key, value string) error {
+	return redisClient.Do(ctx, radix.Cmd(nil, "LREM", key, "0", value))
+}
+
+// addToIndex pushes a value onto a key of type list.
 func addToIndex(ctx context.Context, redisClient radix.Client, key, value string) error {
 	return redisClient.Do(ctx, radix.Cmd(nil, "LPUSH", key, value))
 }
