@@ -525,7 +525,7 @@ func TestIntoto(t *testing.T) {
 	write(t, string(eb), attestationPath)
 	write(t, ecdsaPub, pubKeyPath)
 
-	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
+	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto:0.0.2", "--public-key", pubKeyPath)
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromUploadOutput(t, out)
 
@@ -563,7 +563,7 @@ func TestIntoto(t *testing.T) {
 			*intotoModel.Content.PayloadHash.Value))
 	}
 
-	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
+	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto:0.0.2", "--public-key", pubKeyPath)
 	outputContains(t, out, "Entry already exists")
 
 }
@@ -654,7 +654,7 @@ func TestIntotoMultiSig(t *testing.T) {
 	write(t, ecdsaPub, ecdsapubKeyPath)
 	write(t, pubKey, rsapubKeyPath)
 
-	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
+	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto:0.0.2", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromUploadOutput(t, out)
 
@@ -692,7 +692,7 @@ func TestIntotoMultiSig(t *testing.T) {
 			*intotoV002Model.Content.PayloadHash.Value))
 	}
 
-	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
+	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto:0.0.2", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
 	outputContains(t, out, "Entry already exists")
 
 }

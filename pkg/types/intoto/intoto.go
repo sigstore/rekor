@@ -104,12 +104,12 @@ func (it *BaseIntotoType) CreateProposedEntry(ctx context.Context, version strin
 }
 
 func (it BaseIntotoType) DefaultVersion() string {
-	return "0.0.2"
+	return "0.0.3"
 }
 
 // SupportedVersions returns the supported versions for this type in the order of preference
 func (it BaseIntotoType) SupportedVersions() []string {
-	return []string{"0.0.2", "0.0.1"}
+	return []string{"0.0.3", "0.0.2", "0.0.1"}
 }
 
 // IsSupportedVersion returns true if the version can be inserted into the log, and false if not
@@ -119,14 +119,14 @@ func (it *BaseIntotoType) IsSupportedVersion(proposedVersion string) bool {
 
 type ProposedIntotoEntryIterator struct {
 	models.ProposedEntry
-	next models.ProposedEntry
+	next types.ProposedEntryIterator
 }
 
 func (p ProposedIntotoEntryIterator) HasNext() bool {
 	return p.next != nil
 }
 
-func (p ProposedIntotoEntryIterator) GetNext() models.ProposedEntry {
+func (p ProposedIntotoEntryIterator) GetNext() types.ProposedEntryIterator {
 	return p.next
 }
 

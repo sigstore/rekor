@@ -2093,6 +2093,94 @@ func init() {
       },
       "readOnly": true
     },
+    "IntotoV003SchemaEnvelopeHash": {
+      "description": "Specifies the hash algorithm and value encompassing the entire envelope sent to Rekor",
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "The hashing function used to compute the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value": {
+          "description": "The value of the computed digest over the entire envelope",
+          "type": "string"
+        }
+      },
+      "readOnly": true
+    },
+    "IntotoV003SchemaPayloadHash": {
+      "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "The hashing function used to compute the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value": {
+          "description": "The value of the computed digest over the payload within the envelope",
+          "type": "string"
+        }
+      },
+      "readOnly": true
+    },
+    "IntotoV003SchemaProposedContent": {
+      "type": "object",
+      "required": [
+        "envelope",
+        "publicKeys"
+      ],
+      "properties": {
+        "envelope": {
+          "description": "DSSE envelope specified as JSON object; payloadType in the envelope MUST be set to 'application/vnd.in-toto+json'",
+          "type": "string",
+          "writeOnly": true
+        },
+        "publicKeys": {
+          "description": "collection of all public keys used to verify signatures over envelope's payload",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "format": "byte"
+          },
+          "writeOnly": true
+        }
+      }
+    },
+    "IntotoV003SchemaSignaturesItems0": {
+      "description": "a signature of the envelope's payload along with the public key for the signature",
+      "type": "object",
+      "required": [
+        "signature",
+        "publicKey"
+      ],
+      "properties": {
+        "publicKey": {
+          "description": "public key that was used to verify the corresponding signature",
+          "type": "string",
+          "format": "byte"
+        },
+        "signature": {
+          "description": "base64 encoded signature of the payload",
+          "type": "string",
+          "pattern": "^(?:[A-Za-z0-9+\\/]{4})*(?:[A-Za-z0-9+\\/]{2}==|[A-Za-z0-9+\\/]{3}=|[A-Za-z0-9+\\/]{4})$"
+        }
+      }
+    },
     "JarV001SchemaArchive": {
       "description": "Information about the archive associated with the entry",
       "type": "object",
@@ -3189,6 +3277,9 @@ func init() {
         },
         {
           "$ref": "#/definitions/intotoV002Schema"
+        },
+        {
+          "$ref": "#/definitions/intotoV003Schema"
         }
       ],
       "$schema": "http://json-schema.org/draft-07/schema",
@@ -3354,6 +3445,106 @@ func init() {
       },
       "$schema": "http://json-schema.org/draft-07/schema",
       "$id": "http://rekor.sigstore.dev/types/intoto/intoto_v0_0_2_schema.json"
+    },
+    "intotoV003Schema": {
+      "description": "Schema for intoto object",
+      "type": "object",
+      "title": "intoto v0.0.3 Schema",
+      "oneOf": [
+        {
+          "required": [
+            "proposedContent"
+          ]
+        },
+        {
+          "required": [
+            "signatures",
+            "envelopeHash",
+            "payloadHash"
+          ]
+        }
+      ],
+      "properties": {
+        "envelopeHash": {
+          "description": "Specifies the hash algorithm and value encompassing the entire envelope sent to Rekor",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value": {
+              "description": "The value of the computed digest over the entire envelope",
+              "type": "string"
+            }
+          },
+          "readOnly": true
+        },
+        "payloadHash": {
+          "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value": {
+              "description": "The value of the computed digest over the payload within the envelope",
+              "type": "string"
+            }
+          },
+          "readOnly": true
+        },
+        "proposedContent": {
+          "type": "object",
+          "required": [
+            "envelope",
+            "publicKeys"
+          ],
+          "properties": {
+            "envelope": {
+              "description": "DSSE envelope specified as JSON object; payloadType in the envelope MUST be set to 'application/vnd.in-toto+json'",
+              "type": "string",
+              "writeOnly": true
+            },
+            "publicKeys": {
+              "description": "collection of all public keys used to verify signatures over envelope's payload",
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "format": "byte"
+              },
+              "writeOnly": true
+            }
+          }
+        },
+        "signatures": {
+          "description": "extracted collection of all signatures of the envelope's payload",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/IntotoV003SchemaSignaturesItems0"
+          },
+          "readOnly": true
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/intoto/intoto_v0_0_3_schema.json"
     },
     "jar": {
       "description": "Java Archive (JAR)",

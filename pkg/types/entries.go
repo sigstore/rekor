@@ -50,7 +50,7 @@ type ProposedEntryIterator interface {
 	models.ProposedEntry
 	HasNext() bool
 	Get() models.ProposedEntry
-	GetNext() models.ProposedEntry
+	GetNext() ProposedEntryIterator
 }
 
 // EntryFactory describes a factory function that can generate structs for a specific versioned type

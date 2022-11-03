@@ -86,8 +86,8 @@ func TestHarnessAddEntry(t *testing.T) {
 	saveEntry(t, logIndex, StoredEntry{UUID: uuid})
 }
 
-// Make sure we can add an intoto entry
-func TestHarnessAddIntoto(t *testing.T) {
+// Make sure we can add an intoto v0.0.3 entry
+func TestHarnessAddIntotoV003(t *testing.T) {
 	td := t.TempDir()
 	attestationPath := filepath.Join(td, "attestation.json")
 	pubKeyPath := filepath.Join(td, "pub.pem")
@@ -153,7 +153,118 @@ func TestHarnessAddIntoto(t *testing.T) {
 	write(t, ecdsaPub, pubKeyPath)
 
 	// If we do it twice, it should already exist
-	out := runCliStdout(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
+	out := runCliStdout(t, "upload", "--artifact", attestationPath, "--type", "intoto:0.0.3", "--public-key", pubKeyPath)
+	outputContains(t, out, "Created entry at")
+	uuid := getUUIDFromUploadOutput(t, out)
+	logIndex := getLogIndexFromUploadOutput(t, out)
+
+	out = runCli(t, "get", "--log-index", fmt.Sprintf("%d", logIndex), "--format=json")
+	g := getOut{}
+	if err := json.Unmarshal([]byte(out), &g); err != nil {
+		t.Fatal(err)
+	}
+	// The attestation should be stored at /var/run/attestations/sha256:digest
+
+	got := in_toto.ProvenanceStatement{}
+	if err := json.Unmarshal([]byte(g.Attestation), &got); err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(it, got); diff != "" {
+		t.Errorf("diff: %s", diff)
+	}
+
+	attHash := sha256.Sum256(b)
+
+	intotoModel := &models.IntotoV003Schema{}
+	if err := types.DecodeEntry(g.Body.(map[string]interface{})["IntotoObj"], intotoModel); err != nil {
+		t.Errorf("could not convert body into intoto type: %v", err)
+	}
+	if intotoModel.PayloadHash == nil {
+		t.Errorf("could not find hash over attestation %v", intotoModel)
+	}
+	recordedPayloadHash, err := hex.DecodeString(*intotoModel.PayloadHash.Value)
+	if err != nil {
+		t.Errorf("error converting attestation hash to []byte: %v", err)
+	}
+
+	if !bytes.Equal(attHash[:], recordedPayloadHash) {
+		t.Fatal(fmt.Errorf("attestation hash %v doesnt match the payload we sent %v", hex.EncodeToString(attHash[:]),
+			*intotoModel.PayloadHash.Value))
+	}
+
+	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto:0.0.3", "--public-key", pubKeyPath)
+	outputContains(t, out, "Entry already exists")
+	saveEntry(t, logIndex, StoredEntry{Attestation: g.Attestation, UUID: uuid})
+}
+
+// Make sure we can add an intoto v0.0.2 entry
+func TestHarnessAddIntotoV002(t *testing.T) {
+	td := t.TempDir()
+	attestationPath := filepath.Join(td, "attestation.json")
+	pubKeyPath := filepath.Join(td, "pub.pem")
+
+	// Get some random data so it's unique each run
+	d := randomData(t, 10)
+	id := base64.StdEncoding.EncodeToString(d)
+
+	it := in_toto.ProvenanceStatement{
+		StatementHeader: in_toto.StatementHeader{
+			Type:          in_toto.StatementInTotoV01,
+			PredicateType: slsa.PredicateSLSAProvenance,
+			Subject: []in_toto.Subject{
+				{
+					Name: "foobar",
+					Digest: slsa.DigestSet{
+						"foo": "bar",
+					},
+				},
+			},
+		},
+		Predicate: slsa.ProvenancePredicate{
+			Builder: slsa.ProvenanceBuilder{
+				ID: "foo" + id,
+			},
+		},
+	}
+
+	b, err := json.Marshal(it)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pb, _ := pem.Decode([]byte(ecdsaPriv))
+	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := signature.LoadECDSASigner(priv.(*ecdsa.PrivateKey), crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signer, err := dsse.NewEnvelopeSigner(&verifier{
+		s: s,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	env, err := signer.SignPayload("application/vnd.in-toto+json", b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	eb, err := json.Marshal(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	write(t, string(eb), attestationPath)
+	write(t, ecdsaPub, pubKeyPath)
+
+	// If we do it twice, it should already exist
+	out := runCliStdout(t, "upload", "--artifact", attestationPath, "--type", "intoto:0.0.2", "--public-key", pubKeyPath)
 	outputContains(t, out, "Created entry at")
 	uuid := getUUIDFromUploadOutput(t, out)
 	logIndex := getLogIndexFromUploadOutput(t, out)
@@ -192,7 +303,7 @@ func TestHarnessAddIntoto(t *testing.T) {
 			*intotoModel.Content.PayloadHash.Value))
 	}
 
-	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
+	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto:0.0.2", "--public-key", pubKeyPath)
 	outputContains(t, out, "Entry already exists")
 	saveEntry(t, logIndex, StoredEntry{Attestation: g.Attestation, UUID: uuid})
 }
