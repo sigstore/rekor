@@ -12,6 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+	backfill-redis is a script to populate the Redis index with entries
+	from Rekor. This is sometimes necessary because Redis caching is best
+	effort. If Redis returns an error, Rekor will not, and so sometimes
+	we need to backfill missing entries into Redis for the search API.
+
+	To run:
+	go run cmd/backfill-redis/main.go --rekor-address <address> \
+	    --hostname <redis-hostname> --port <redis-port>
+		--start <first index to backfill> --end <last index to backfill>
+*/
+
 package main
 
 import (
@@ -44,17 +56,17 @@ import (
 )
 
 var (
-	redisAddress = flag.String("address", "", "Address for Redis application")
-	redisPort    = flag.String("port", "", "Port to Redis application")
-	startIndex   = flag.Int("start", -1, "First index to backfill")
-	endIndex     = flag.Int("end", -1, "Last index to backfill")
-	rekorAddress = flag.String("rekor-address", "", "Address for Rekor, e.g. https://rekor.sigstore.dev")
+	redisHostname = flag.String("hostname", "", "Hostname for Redis application")
+	redisPort     = flag.String("port", "", "Port to Redis application")
+	startIndex    = flag.Int("start", -1, "First index to backfill")
+	endIndex      = flag.Int("end", -1, "Last index to backfill")
+	rekorAddress  = flag.String("rekor-address", "", "Address for Rekor, e.g. https://rekor.sigstore.dev")
 )
 
 func main() {
 	flag.Parse()
 
-	if *redisAddress == "" {
+	if *redisHostname == "" {
 		log.Fatal("address must be set")
 	}
 	if *redisPort == "" {
@@ -71,7 +83,7 @@ func main() {
 	}
 
 	cfg := radix.PoolConfig{}
-	redisClient, err := cfg.New(context.Background(), "tcp", fmt.Sprintf("%s:%s", *redisAddress, *redisPort))
+	redisClient, err := cfg.New(context.Background(), "tcp", fmt.Sprintf("%s:%s", *redisHostname, *redisPort))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -120,7 +132,7 @@ func main() {
 }
 
 // unmarshalEntryImpl decodes the base64-encoded entry to a specific entry type (types.EntryImpl).
-// from cosign
+// Taken from Cosign
 func unmarshalEntryImpl(e string) (types.EntryImpl, string, string, error) {
 	b, err := base64.StdEncoding.DecodeString(e)
 	if err != nil {
