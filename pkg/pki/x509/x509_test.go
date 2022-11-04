@@ -62,10 +62,11 @@ pPZrHZ1cFykidZoURKoYXfkohJ+U/USYy8Sd8b4DMd5xDRZCnlDM0h37
 
 // Extracted from above with:
 // openssl ec -in ec_private.pem -pubout
-const pub = `-----BEGIN PUBLIC KEY-----
+const pubStr = `-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEx+ikqUxXurlxZltajRBV2ju31j32
 baT2ax2dXBcpInWaFESqGF35KISflP1EmMvEnfG+AzHecQ0WQp5QzNId+w==
------END PUBLIC KEY-----`
+-----END PUBLIC KEY-----
+`
 
 // Generated with:
 // openssl genpkey -algorithm ED25519 -out edprivate.pem
@@ -118,7 +119,7 @@ func TestSignature_Verify(t *testing.T) {
 		{
 			name: "ec",
 			priv: priv,
-			pub:  pub,
+			pub:  pubStr,
 		},
 		{
 			name: "ed25519",
@@ -174,7 +175,7 @@ func TestSignature_VerifyFail(t *testing.T) {
 		{
 			name: "ec",
 			priv: priv,
-			pub:  pub,
+			pub:  pubStr,
 		},
 		{
 			name: "ed25519",
@@ -311,8 +312,17 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 		t.Fatalf("expected error with long certificate chain, got %v", err)
 	}
 
-	// Verify public key with trailing newline is parsed OK
-	if _, err = NewPublicKey(strings.NewReader(pubWithTrailingNewLine)); err != nil {
-		t.Fatalf("unexpected error parsing public key with trailing newline: %v", err)
+	// Verify public key with extra trailing newline is parsed OK
+	key, err := NewPublicKey(strings.NewReader(pubWithTrailingNewLine))
+	if err != nil {
+		t.Fatalf("unexpected error parsing public key with extra trailing newline: %v", err)
+	}
+	canonicalKeyBytes, err := key.CanonicalValue()
+	if err != nil {
+		t.Fatalf("unexpected error canonicalizing public key with extra trailing newline: %v", err)
+	}
+
+	if !bytes.Equal([]byte(pubStr), canonicalKeyBytes) {
+		t.Fatalf("expected canonical value to match original without extra trailing new line")
 	}
 }
