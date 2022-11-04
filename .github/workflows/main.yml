@@ -63,8 +63,10 @@ jobs:
 
       - name: container
         run: |
-          make ko-local 2>&1 | tee output.txt
-          docker run --rm $(tail -1 output.txt) version
+          make ko-local
+          docker run --rm $(cat rekorImagerefs) version
+          docker run --rm $(cat cliImagerefs) version
+          docker run --rm $(cat redisImagerefs) --version
 
   e2e:
     runs-on: ubuntu-20.04
