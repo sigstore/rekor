@@ -79,6 +79,13 @@ const ed25519Pub = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAizWek2gKgMM+bad4rVJ5nc9NsbNOba0A0BNfzOgklRs=
 -----END PUBLIC KEY-----`
 
+const pubWithTrailingNewLine = `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEx+ikqUxXurlxZltajRBV2ju31j32
+baT2ax2dXBcpInWaFESqGF35KISflP1EmMvEnfG+AzHecQ0WQp5QzNId+w==
+-----END PUBLIC KEY-----
+
+`
+
 func signData(t *testing.T, b []byte, pkey string) []byte {
 
 	priv, err := cryptoutils.UnmarshalPEMToPrivateKey([]byte(pkey), cryptoutils.SkipPassword)
@@ -302,5 +309,10 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 	_, err = NewPublicKey(bytes.NewReader(pemCertChain))
 	if err == nil || !strings.Contains(err.Error(), "too many certificates specified in PEM block") {
 		t.Fatalf("expected error with long certificate chain, got %v", err)
+	}
+
+	// Verify public key with trailing newline is parsed OK
+	if _, err = NewPublicKey(strings.NewReader(pubWithTrailingNewLine)); err != nil {
+		t.Fatalf("unexpected error parsing public key with trailing newline: %v", err)
 	}
 }
