@@ -147,17 +147,17 @@ sign-keyless-ci: ko
 ko-local:
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local --image-refs rekorImagerefs \
 		github.com/sigstore/rekor/cmd/rekor-server
 
 	LDFLAGS="$(CLI_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local --image-refs cliImagerefs \
 		github.com/sigstore/rekor/cmd/rekor-cli
 
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local --image-refs redisImagerefs \
 		github.com/sigstore/rekor/cmd/backfill-redis
 
 # This builds the trillian containers we rely on using ko for cross platform support
