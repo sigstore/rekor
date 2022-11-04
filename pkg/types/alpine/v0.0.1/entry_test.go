@@ -50,8 +50,8 @@ func TestCrossFieldValidation(t *testing.T) {
 		expectCanonicalizeSuccess bool
 	}
 
-	keyBytes, _ := os.ReadFile("../../../../tests/test_alpine.pub")
-	dataBytes, _ := os.ReadFile("../../../../tests/test_alpine.apk")
+	keyBytes, _ := os.ReadFile("../tests/test_alpine.pub")
+	dataBytes, _ := os.ReadFile("../tests/test_alpine.apk")
 
 	testCases := []TestCase{
 		{

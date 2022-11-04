@@ -566,9 +566,9 @@ func TestSearchPFlags(t *testing.T) {
 
 			switch r.URL.Path {
 			case "/artifact":
-				file, err = os.ReadFile("../../../tests/test_file.txt")
+				file, err = os.ReadFile("tests/test_file.txt")
 			case "/publicKey":
-				file, err = os.ReadFile("../../../tests/test_public_key.key")
+				file, err = os.ReadFile("tests/test_public_key.key")
 			case "/not_found":
 				err = errors.New("file not found")
 			}
@@ -584,7 +584,7 @@ func TestSearchPFlags(t *testing.T) {
 	tests := []test{
 		{
 			caseDesc:              "valid local artifact",
-			artifact:              "../../../tests/test_file.txt",
+			artifact:              "tests/test_file.txt",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -608,7 +608,7 @@ func TestSearchPFlags(t *testing.T) {
 		},
 		{
 			caseDesc:              "valid local public key",
-			publicKey:             "../../../tests/test_public_key.key",
+			publicKey:             "tests/test_public_key.key",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
