@@ -106,8 +106,9 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
+	trimmedRawPub := bytes.TrimSpace(rawPub)
 
-	block, rest := pem.Decode(rawPub)
+	block, rest := pem.Decode(trimmedRawPub)
 	if block == nil {
 		return nil, errors.New("invalid public key: failure decoding PEM")
 	}
@@ -115,7 +116,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	// Handle certificate chain, concatenated PEM-encoded certificates
 	if len(rest) > 0 {
 		// Support up to 10 certificates in a chain, to avoid parsing extremely long chains
-		certs, err := cryptoutils.UnmarshalCertificatesFromPEMLimited(rawPub, 10)
+		certs, err := cryptoutils.UnmarshalCertificatesFromPEMLimited(trimmedRawPub, 10)
 		if err != nil {
 			return nil, err
 		}
