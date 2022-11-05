@@ -453,7 +453,7 @@ func TestArtifactPFlags(t *testing.T) {
 			if !tc.uuidRequired && !tc.logIndexRequired && tc.entry == "" {
 				typeStr, versionStr, err := ParseTypeFlag(viper.GetString("type"))
 				if err != nil {
-					t.Errorf("error parsing typeStr: %v", err)
+					t.Fatalf("error parsing typeStr: %v", err)
 				}
 				props := CreatePropsFromPflags()
 				if _, err := types.NewProposedEntry(context.Background(), typeStr, versionStr, *props); err != nil {
@@ -596,7 +596,7 @@ func TestSearchPFlags(t *testing.T) {
 		},
 		{
 			caseDesc:              "nonexistent local artifact",
-			artifact:              "../../../tests/not_a_file",
+			artifact:              "tests/not_a_file",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
@@ -627,7 +627,7 @@ func TestSearchPFlags(t *testing.T) {
 		},
 		{
 			caseDesc:              "nonexistent local public key",
-			publicKey:             "../../../tests/not_a_file",
+			publicKey:             "tests/not_a_file",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
