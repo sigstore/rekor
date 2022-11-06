@@ -17,13 +17,19 @@ package sharding
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/google/trillian/testonly"
+
 	"github.com/google/trillian"
 	"google.golang.org/grpc"
+	"gopkg.in/yaml.v2"
 )
 
 func TestNewLogRanges(t *testing.T) {
@@ -34,7 +40,7 @@ func TestNewLogRanges(t *testing.T) {
 - treeID: 0002
   treeLength: 4`
 	file := filepath.Join(t.TempDir(), "sharding-config")
-	if err := os.WriteFile(file, []byte(contents), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(contents), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	treeID := uint(45)
@@ -48,7 +54,8 @@ func TestNewLogRanges(t *testing.T) {
 			}, {
 				TreeID:     2,
 				TreeLength: 4,
-			}},
+			},
+		},
 		active: int64(45),
 	}
 	ctx := context.Background()
@@ -73,7 +80,7 @@ func TestLogRangesFromPath(t *testing.T) {
 - treeID: 0002
   treeLength: 4`
 	file := filepath.Join(t.TempDir(), "sharding-config")
-	if err := os.WriteFile(file, []byte(contents), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(contents), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	expected := Ranges{
@@ -99,7 +106,7 @@ func TestLogRangesFromPath(t *testing.T) {
 func TestLogRangesFromPathJSON(t *testing.T) {
 	contents := `[{"treeID": 0001, "treeLength": 3, "encodedPublicKey":"c2hhcmRpbmcK"}, {"treeID": 0002, "treeLength": 4}]`
 	file := filepath.Join(t.TempDir(), "sharding-config")
-	if err := os.WriteFile(file, []byte(contents), 0644); err != nil {
+	if err := os.WriteFile(file, []byte(contents), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	expected := Ranges{
@@ -127,7 +134,8 @@ func TestLogRanges_ResolveVirtualIndex(t *testing.T) {
 		inactive: []LogRange{
 			{TreeID: 1, TreeLength: 17},
 			{TreeID: 2, TreeLength: 1},
-			{TreeID: 3, TreeLength: 100}},
+			{TreeID: 3, TreeLength: 100},
+		},
 		active: 4,
 	}
 
@@ -384,6 +392,237 @@ func TestLogRanges_AllShards(t *testing.T) {
 			}
 			if got := l.AllShards(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("AllShards() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_logRangesFromPath(t *testing.T) {
+	type args struct {
+		path string
+	}
+	tests := []struct {
+		name            string
+		args            args
+		want            Ranges
+		content         string
+		wantJSON        bool
+		wantYaml        bool
+		wantInvalidJSON bool
+		wantErr         bool
+	}{
+		{
+			name: "empty",
+			args: args{
+				path: "",
+			},
+			want:    Ranges{},
+			wantErr: true,
+		},
+		{
+			name: "empty file",
+			args: args{
+				path: "one",
+			},
+			want:    Ranges{},
+			wantErr: false,
+		},
+		{
+			name: "valid json",
+			args: args{
+				path: "one",
+			},
+			want: Ranges{
+				{
+					TreeID:     1,
+					TreeLength: 2,
+				},
+			},
+			wantJSON: true,
+			wantErr:  false,
+		},
+		{
+			name: "valid yaml",
+			args: args{
+				path: "one",
+			},
+			want: Ranges{
+				{
+					TreeID:     1,
+					TreeLength: 2,
+				},
+			},
+			wantYaml: true,
+			wantErr:  false,
+		},
+		{
+			name: "invalid json",
+			args: args{
+				path: "one",
+			},
+			want:            Ranges{},
+			wantInvalidJSON: true,
+			wantErr:         true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.args.path != "" {
+				f, err := os.CreateTemp("", tt.args.path)
+				if err != nil {
+					t.Fatalf("Failed to create temp file: %v", err)
+				}
+				defer os.Remove(f.Name())
+				switch {
+				case tt.wantJSON:
+					if err := json.NewEncoder(f).Encode(tt.want); err != nil {
+						t.Fatalf("Failed to encode json: %v", err)
+					}
+				case tt.wantYaml:
+					if err := yaml.NewEncoder(f).Encode(tt.want); err != nil {
+						t.Fatalf("Failed to encode yaml: %v", err)
+					}
+				case tt.wantInvalidJSON:
+					if _, err := f.WriteString("invalid json"); err != nil {
+						t.Fatalf("Failed to write invalid json: %v", err)
+					}
+				}
+				if _, err := f.Write([]byte(tt.content)); err != nil {
+					t.Fatalf("Failed to write to temp file: %v", err)
+				}
+				defer f.Close()
+				defer os.Remove(f.Name())
+				tt.args.path = f.Name()
+			}
+			got, err := logRangesFromPath(tt.args.path)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("logRangesFromPath() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("logRangesFromPath() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_updateRange(t *testing.T) {
+	type args struct {
+		ctx context.Context
+		r   LogRange
+	}
+	tests := []struct {
+		name           string
+		args           args
+		want           LogRange
+		wantErr        bool
+		rootResponse   *trillian.GetLatestSignedLogRootResponse
+		signedLogError error
+	}{
+		{
+			name: "empty",
+			args: args{
+				ctx: context.Background(),
+				r:   LogRange{},
+			},
+			want:    LogRange{},
+			wantErr: true,
+			rootResponse: &trillian.GetLatestSignedLogRootResponse{
+				SignedLogRoot: &trillian.SignedLogRoot{},
+			},
+			signedLogError: nil,
+		},
+		{
+			name: "error in GetLatestSignedLogRoot",
+			args: args{
+				ctx: context.Background(),
+				r:   LogRange{},
+			},
+			want:    LogRange{},
+			wantErr: true,
+			rootResponse: &trillian.GetLatestSignedLogRootResponse{
+				SignedLogRoot: &trillian.SignedLogRoot{},
+			},
+			signedLogError: errors.New("error"),
+		},
+	}
+
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, fakeServer, err := testonly.NewMockServer(mockCtl)
+			if err != nil {
+				t.Fatalf("Failed to create mock server: %v", err)
+			}
+			defer fakeServer()
+
+			s.Log.EXPECT().GetLatestSignedLogRoot(
+				gomock.Any(), gomock.Any()).Return(tt.rootResponse, tt.signedLogError).AnyTimes()
+			got, err := updateRange(tt.args.ctx, s.LogClient, tt.args.r)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("updateRange() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("updateRange() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNewLogRanges1(t *testing.T) {
+	type args struct {
+		ctx    context.Context
+		path   string
+		treeID uint
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    LogRanges
+		wantErr bool
+	}{
+		{
+			name: "empty path",
+			args: args{
+				ctx:    context.Background(),
+				path:   "",
+				treeID: 1,
+			},
+			want:    LogRanges{},
+			wantErr: false,
+		},
+		{
+			name: "treeID 0",
+			args: args{
+				ctx:    context.Background(),
+				path:   "x",
+				treeID: 0,
+			},
+			want:    LogRanges{},
+			wantErr: true,
+		},
+	}
+
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			s, fakeServer, err := testonly.NewMockServer(mockCtl)
+			if err != nil {
+				t.Fatalf("Failed to create mock server: %v", err)
+			}
+			defer fakeServer()
+			got, err := NewLogRanges(tt.args.ctx, s.LogClient, tt.args.path, tt.args.treeID)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewLogRanges() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewLogRanges() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
