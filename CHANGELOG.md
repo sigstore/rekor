@@ -1,3 +1,14 @@
+# v1.0.1
+
+## Enhancements
+* stop inserting envelope hash for intoto:0.0.2 types into index (#1171) (#1172)
+  
+## Bug Fixes
+* ensure jobs run on release branches (#1181) (#1182)
+
+## Contributors
+* Bob Callaway
+
 # v1.0.0
 
 Rekor is 1.0!
