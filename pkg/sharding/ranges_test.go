@@ -72,63 +72,6 @@ func TestNewLogRanges(t *testing.T) {
 	}
 }
 
-func TestLogRangesFromPath(t *testing.T) {
-	contents := `
-- treeID: 0001
-  treeLength: 3
-  encodedPublicKey: c2hhcmRpbmcK
-- treeID: 0002
-  treeLength: 4`
-	file := filepath.Join(t.TempDir(), "sharding-config")
-	if err := os.WriteFile(file, []byte(contents), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	expected := Ranges{
-		{
-			TreeID:           1,
-			TreeLength:       3,
-			EncodedPublicKey: "c2hhcmRpbmcK",
-		}, {
-			TreeID:     2,
-			TreeLength: 4,
-		},
-	}
-
-	got, err := logRangesFromPath(file)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(expected, got) {
-		t.Fatalf("expected %v got %v", expected, got)
-	}
-}
-
-func TestLogRangesFromPathJSON(t *testing.T) {
-	contents := `[{"treeID": 0001, "treeLength": 3, "encodedPublicKey":"c2hhcmRpbmcK"}, {"treeID": 0002, "treeLength": 4}]`
-	file := filepath.Join(t.TempDir(), "sharding-config")
-	if err := os.WriteFile(file, []byte(contents), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	expected := Ranges{
-		{
-			TreeID:           1,
-			TreeLength:       3,
-			EncodedPublicKey: "c2hhcmRpbmcK",
-		}, {
-			TreeID:     2,
-			TreeLength: 4,
-		},
-	}
-
-	got, err := logRangesFromPath(file)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(expected, got) {
-		t.Fatalf("expected %v got %v", expected, got)
-	}
-}
-
 func TestLogRanges_ResolveVirtualIndex(t *testing.T) {
 	lrs := LogRanges{
 		inactive: []LogRange{
@@ -397,7 +340,7 @@ func TestLogRanges_AllShards(t *testing.T) {
 	}
 }
 
-func Test_logRangesFromPath(t *testing.T) {
+func TestLogRangesFromPath(t *testing.T) {
 	type args struct {
 		path string
 	}
@@ -472,7 +415,6 @@ func Test_logRangesFromPath(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Failed to create temp file: %v", err)
 				}
-				defer os.Remove(f.Name())
 				switch {
 				case tt.wantJSON:
 					if err := json.NewEncoder(f).Encode(tt.want); err != nil {
@@ -506,7 +448,7 @@ func Test_logRangesFromPath(t *testing.T) {
 	}
 }
 
-func Test_updateRange(t *testing.T) {
+func TestUpdateRange(t *testing.T) {
 	type args struct {
 		ctx context.Context
 		r   LogRange
@@ -572,7 +514,7 @@ func Test_updateRange(t *testing.T) {
 	}
 }
 
-func TestNewLogRanges1(t *testing.T) {
+func TestNewLogRangesWithMock(t *testing.T) {
 	type args struct {
 		ctx    context.Context
 		path   string
