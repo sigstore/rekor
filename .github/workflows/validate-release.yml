@@ -50,7 +50,7 @@ jobs:
         with:
           go-version: ${{ env.GOVERSION }}
 
-      - uses: anchore/sbom-action/download-syft@b7e8507c6a3c89b7099a0198366d862c8f3ad8f1 # v0.13.0
+      - uses: anchore/sbom-action/download-syft@06e109483e6aa305a2b2395eabae554e51530e1d # v0.13.1
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@b508e2e3ef3b19d4e4146d4f8fb3ba9db644a757 # v3.1.0
         with:
