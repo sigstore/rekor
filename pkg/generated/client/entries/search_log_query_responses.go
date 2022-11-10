@@ -51,6 +51,12 @@ func (o *SearchLogQueryReader) ReadResponse(response runtime.ClientResponse, con
 			return nil, err
 		}
 		return nil, result
+	case 422:
+		result := NewSearchLogQueryUnprocessableEntity()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
 	default:
 		result := NewSearchLogQueryDefault(response.Code())
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -176,6 +182,69 @@ func (o *SearchLogQueryBadRequest) GetPayload() *models.Error {
 }
 
 func (o *SearchLogQueryBadRequest) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	o.Payload = new(models.Error)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
+		return err
+	}
+
+	return nil
+}
+
+// NewSearchLogQueryUnprocessableEntity creates a SearchLogQueryUnprocessableEntity with default headers values
+func NewSearchLogQueryUnprocessableEntity() *SearchLogQueryUnprocessableEntity {
+	return &SearchLogQueryUnprocessableEntity{}
+}
+
+/*
+SearchLogQueryUnprocessableEntity describes a response with status code 422, with default header values.
+
+The server understood the request but is unable to process the contained instructions
+*/
+type SearchLogQueryUnprocessableEntity struct {
+	Payload *models.Error
+}
+
+// IsSuccess returns true when this search log query unprocessable entity response has a 2xx status code
+func (o *SearchLogQueryUnprocessableEntity) IsSuccess() bool {
+	return false
+}
+
+// IsRedirect returns true when this search log query unprocessable entity response has a 3xx status code
+func (o *SearchLogQueryUnprocessableEntity) IsRedirect() bool {
+	return false
+}
+
+// IsClientError returns true when this search log query unprocessable entity response has a 4xx status code
+func (o *SearchLogQueryUnprocessableEntity) IsClientError() bool {
+	return true
+}
+
+// IsServerError returns true when this search log query unprocessable entity response has a 5xx status code
+func (o *SearchLogQueryUnprocessableEntity) IsServerError() bool {
+	return false
+}
+
+// IsCode returns true when this search log query unprocessable entity response a status code equal to that given
+func (o *SearchLogQueryUnprocessableEntity) IsCode(code int) bool {
+	return code == 422
+}
+
+func (o *SearchLogQueryUnprocessableEntity) Error() string {
+	return fmt.Sprintf("[POST /api/v1/log/entries/retrieve][%d] searchLogQueryUnprocessableEntity  %+v", 422, o.Payload)
+}
+
+func (o *SearchLogQueryUnprocessableEntity) String() string {
+	return fmt.Sprintf("[POST /api/v1/log/entries/retrieve][%d] searchLogQueryUnprocessableEntity  %+v", 422, o.Payload)
+}
+
+func (o *SearchLogQueryUnprocessableEntity) GetPayload() *models.Error {
+	return o.Payload
+}
+
+func (o *SearchLogQueryUnprocessableEntity) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	o.Payload = new(models.Error)
 
