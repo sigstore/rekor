@@ -33,9 +33,12 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/go-openapi/runtime"
 	radix "github.com/mediocregopher/radix/v4"
+	"sigs.k8s.io/release-utils/version"
+
 	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -63,10 +66,17 @@ var (
 	startIndex    = flag.Int("start", -1, "First index to backfill")
 	endIndex      = flag.Int("end", -1, "Last index to backfill")
 	rekorAddress  = flag.String("rekor-address", "", "Address for Rekor, e.g. https://rekor.sigstore.dev")
+	versionFlag   = flag.Bool("version", false, "Print the current version of Backfill Redis")
 )
 
 func main() {
 	flag.Parse()
+
+	versionInfo := version.GetVersionInfo()
+	if *versionFlag {
+		fmt.Println(versionInfo.String())
+		os.Exit(0)
+	}
 
 	if *redisHostname == "" {
 		log.Fatal("address must be set")
@@ -83,6 +93,8 @@ func main() {
 	if *rekorAddress == "" {
 		log.Fatal("rekor-address must be set")
 	}
+
+	log.Printf("running backfill redis Version: %s GitCommit: %s BuildDate: %s", versionInfo.GitVersion, versionInfo.GitCommit, versionInfo.BuildDate)
 
 	cfg := radix.PoolConfig{}
 	redisClient, err := cfg.New(context.Background(), "tcp", fmt.Sprintf("%s:%s", *redisHostname, *redisPort))
