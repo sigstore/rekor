@@ -36,6 +36,11 @@ if [[ ! -f rekorCliImagerefs ]]; then
     exit 1
 fi
 
+if [[ ! -f bRedisImagerefs ]]; then
+    echo "bRedisImagerefs not found"
+    exit 1
+fi
+
 if [[ ! -f trillianServerImagerefs ]]; then
     echo "trillianServerImagerefs not found"
     exit 1
@@ -49,11 +54,13 @@ fi
 echo "Signing images with GCP KMS Key..."
 cosign sign --force --key "gcpkms://projects/$PROJECT_ID/locations/$KEY_LOCATION/keyRings/$KEY_RING/cryptoKeys/$KEY_NAME/versions/$KEY_VERSION" -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat rekorServerImagerefs)
 cosign sign --force --key "gcpkms://projects/$PROJECT_ID/locations/$KEY_LOCATION/keyRings/$KEY_RING/cryptoKeys/$KEY_NAME/versions/$KEY_VERSION" -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat rekorCliImagerefs)
+cosign sign --force --key "gcpkms://projects/$PROJECT_ID/locations/$KEY_LOCATION/keyRings/$KEY_RING/cryptoKeys/$KEY_NAME/versions/$KEY_VERSION" -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat bRedisImagerefs)
 cosign sign --force --key "gcpkms://projects/$PROJECT_ID/locations/$KEY_LOCATION/keyRings/$KEY_RING/cryptoKeys/$KEY_NAME/versions/$KEY_VERSION" -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat trillianServerImagerefs)
 cosign sign --force --key "gcpkms://projects/$PROJECT_ID/locations/$KEY_LOCATION/keyRings/$KEY_RING/cryptoKeys/$KEY_NAME/versions/$KEY_VERSION" -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat trillianSignerImagerefs)
 
 echo "Signing images with Keyless..."
 cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat rekorServerImagerefs)
 cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat rekorCliImagerefs)
+cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat bRedisImagerefs)
 cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat trillianServerImagerefs)
 cosign sign --force -a GIT_HASH="$GIT_HASH" -a GIT_VERSION="$GIT_VERSION" $(cat trillianSignerImagerefs)

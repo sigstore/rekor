@@ -46,3 +46,18 @@ builds:
   ldflags:
   - -extldflags "-static"
   - "{{ .Env.LDFLAGS }}"
+
+- id: backfill-redis
+  dir: .
+  main: ./cmd/backfill-redis
+  env:
+  - CGO_ENABLED=0
+  flags:
+  - -trimpath
+  - --tags
+  - "{{ .Env.GIT_HASH }}"
+  - --tags
+  - "{{ .Env.GIT_VERSION }}"
+  ldflags:
+  - -extldflags "-static"
+  - "{{ .Env.LDFLAGS }}"
