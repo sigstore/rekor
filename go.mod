@@ -54,6 +54,7 @@ require (
 )
 
 require (
+	github.com/AdaLogics/go-fuzz-headers v0.0.0-20221103172237-443f56ff4ba8
 	github.com/hashicorp/go-retryablehttp v0.7.1
 	golang.org/x/exp v0.0.0-20220823124025-807a23277127
 )
@@ -61,6 +62,7 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.2.1 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
+	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 )
 
