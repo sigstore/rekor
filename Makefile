@@ -82,6 +82,9 @@ rekor-cli: $(SRCS)
 rekor-server: $(SRCS)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o rekor-server ./cmd/rekor-server
 
+backfill-redis: $(SRCS)
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o rekor-server ./cmd/backfill-redis
+
 test:
 	go test ./...
 
@@ -117,8 +120,20 @@ ko:
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		--image-refs rekorCliImagerefs github.com/sigstore/rekor/cmd/rekor-cli
 
+	# backfill-redis
+	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	ko publish --base-import-paths \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+		--image-refs bRedisImagerefs github.com/sigstore/rekor/cmd/backfill-redis
+
 deploy:
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) ko apply -f config/
+
+e2e:
+	go test -c -tags=e2e ./tests
+	go test -c -tags=e2e ./pkg/pki/x509
+	go test -c -tags=e2e ./pkg/pki/tuf
+	go test -c -tags=e2e ./pkg/types/rekord
 
 sign-container: ko
 	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
@@ -133,13 +148,18 @@ sign-keyless-ci: ko
 ko-local:
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local --image-refs rekorImagerefs \
 		github.com/sigstore/rekor/cmd/rekor-server
 
 	LDFLAGS="$(CLI_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local --image-refs cliImagerefs \
 		github.com/sigstore/rekor/cmd/rekor-cli
+
+	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	ko publish --base-import-paths \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local --image-refs redisImagerefs \
+		github.com/sigstore/rekor/cmd/backfill-redis
 
 # This builds the trillian containers we rely on using ko for cross platform support
 .PHONY: ko-trillian

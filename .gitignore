@@ -17,7 +17,11 @@ rekorServerImagerefs
 rekorCliImagerefs
 trillianServerImagerefs
 trillianSignerImagerefs
+rekorImagerefs
+cliImagerefs
+redisImagerefs
 cosign.*
 signature
 rekor.pub
 *~
+*.test

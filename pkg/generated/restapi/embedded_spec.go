@@ -1935,9 +1935,9 @@ func init() {
           ],
           "properties": {
             "payload": {
-              "description": "base64 encoded payload of the envelope",
+              "description": "payload of the envelope",
               "type": "string",
-              "pattern": "^(?:[A-Za-z0-9+\\/]{4})*(?:[A-Za-z0-9+\\/]{2}==|[A-Za-z0-9+\\/]{3}=|[A-Za-z0-9+\\/]{4})$",
+              "format": "byte",
               "writeOnly": true
             },
             "payloadType": {
@@ -2009,9 +2009,9 @@ func init() {
       ],
       "properties": {
         "payload": {
-          "description": "base64 encoded payload of the envelope",
+          "description": "payload of the envelope",
           "type": "string",
-          "pattern": "^(?:[A-Za-z0-9+\\/]{4})*(?:[A-Za-z0-9+\\/]{2}==|[A-Za-z0-9+\\/]{3}=|[A-Za-z0-9+\\/]{4})$",
+          "format": "byte",
           "writeOnly": true
         },
         "payloadType": {
@@ -2043,9 +2043,9 @@ func init() {
           "readOnly": true
         },
         "sig": {
-          "description": "base64 encoded signature of the payload",
+          "description": "signature of the payload",
           "type": "string",
-          "pattern": "^(?:[A-Za-z0-9+\\/]{4})*(?:[A-Za-z0-9+\\/]{2}==|[A-Za-z0-9+\\/]{3}=|[A-Za-z0-9+\\/]{4})$"
+          "format": "byte"
         }
       }
     },
@@ -3378,9 +3378,9 @@ func init() {
               ],
               "properties": {
                 "payload": {
-                  "description": "base64 encoded payload of the envelope",
+                  "description": "payload of the envelope",
                   "type": "string",
-                  "pattern": "^(?:[A-Za-z0-9+\\/]{4})*(?:[A-Za-z0-9+\\/]{2}==|[A-Za-z0-9+\\/]{3}=|[A-Za-z0-9+\\/]{4})$",
+                  "format": "byte",
                   "writeOnly": true
                 },
                 "payloadType": {

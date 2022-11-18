@@ -90,7 +90,8 @@ function run_tests () {
 # Get last 2 server versions
 git fetch --all --tags
 NUM_VERSIONS_TO_TEST=2
-VERSIONS=$(git tag --sort=-version:refname | head -n $NUM_VERSIONS_TO_TEST | tac)
+# don't explicitly fetch RC builds; they'll be included below when we test at HEAD
+VERSIONS=$(git tag --sort=-version:refname | grep -v "rc" | head -n $NUM_VERSIONS_TO_TEST | tac)
 
 # Also add the commit @ HEAD
 HEAD=$(git log --pretty="%H" -n 1 )

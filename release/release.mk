@@ -5,12 +5,12 @@
 # used when releasing together with GCP CloudBuild
 .PHONY: release
 release:
-	CLI_LDFLAGS="$(CLI_LDFLAGS)" SERVER_LDFLAGS="$(SERVER_LDFLAGS)" goreleaser release --rm-dist --timeout 60m
+	CLI_LDFLAGS="$(CLI_LDFLAGS)" SERVER_LDFLAGS="$(SERVER_LDFLAGS)" goreleaser release --rm-dist --timeout 120m
 
 # used when need to validate the goreleaser
 .PHONY: snapshot
 snapshot:
-	CLI_LDFLAGS="$(CLI_LDFLAGS)" SERVER_LDFLAGS="$(SERVER_LDFLAGS)" goreleaser release --skip-sign --skip-publish --snapshot --rm-dist
+	CLI_LDFLAGS="$(CLI_LDFLAGS)" SERVER_LDFLAGS="$(SERVER_LDFLAGS)" goreleaser release --skip-sign --skip-publish --snapshot --rm-dist --timeout 120m
 
 ###########################
 # sign section
@@ -33,6 +33,10 @@ copy-rekor-server-signed-release-to-ghcr:
 copy-rekor-cli-signed-release-to-ghcr:
 	cosign copy $(KO_PREFIX)/rekor-cli:$(GIT_VERSION) $(GHCR_PREFIX)/rekor-cli:$(GIT_VERSION)
 
+.PHONY: copy-backfill-redis-signed-release-to-ghcr
+copy-backfill-redis-signed-release-to-ghcr:
+	cosign copy $(KO_PREFIX)/backfill-redis:$(GIT_VERSION) $(GHCR_PREFIX)/backfill-redis:$(GIT_VERSION)
+
 .PHONY: copy-trillian-log-server-signed-release-to-ghcr
 copy-trillian-log-server-signed-release-to-ghcr:
 	cosign copy $(KO_PREFIX)/trillian_log_server:$(GIT_VERSION) $(GHCR_PREFIX)/trillian_log_server:$(GIT_VERSION)
@@ -42,7 +46,7 @@ copy-trillian-log-signer-signed-release-to-ghcr:
 	cosign copy $(KO_PREFIX)/trillian_log_signer:$(GIT_VERSION) $(GHCR_PREFIX)/trillian_log_signer:$(GIT_VERSION)
 
 .PHONY: copy-signed-release-to-ghcr
-copy-signed-release-to-ghcr: copy-rekor-server-signed-release-to-ghcr copy-rekor-cli-signed-release-to-ghcr copy-trillian-log-signer-signed-release-to-ghcr copy-trillian-log-server-signed-release-to-ghcr
+copy-signed-release-to-ghcr: copy-rekor-server-signed-release-to-ghcr copy-rekor-cli-signed-release-to-ghcr copy-backfill-redis-signed-release-to-ghcr copy-trillian-log-signer-signed-release-to-ghcr copy-trillian-log-server-signed-release-to-ghcr
 
 ## --------------------------------------
 ## Dist / maybe we can deprecate

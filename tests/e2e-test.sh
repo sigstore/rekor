@@ -23,7 +23,7 @@ echo "installing gocovmerge"
 make gocovmerge
 
 echo "starting services"
-docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d --force-recreate --build
+docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d --build
 
 echo "building CLI and server"
 go test -c ./cmd/rekor-cli -o rekor-cli -cover -covermode=count -coverpkg=./...

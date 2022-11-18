@@ -84,7 +84,7 @@ func (v V002Entry) IndexKeys() ([]string, error) {
 
 		canonKey, err := keyObj.CanonicalValue()
 		if err != nil {
-			return result, fmt.Errorf("could not canonicalize key: %w", err)
+			return result, fmt.Errorf("could not canonicize key: %w", err)
 		}
 
 		keyHash := sha256.Sum256(canonKey)
@@ -96,13 +96,15 @@ func (v V002Entry) IndexKeys() ([]string, error) {
 	payloadKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.PayloadHash.Algorithm, *v.IntotoObj.Content.PayloadHash.Value))
 	result = append(result, payloadKey)
 
-	hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.Hash.Algorithm, *v.IntotoObj.Content.Hash.Value))
-	result = append(result, hashkey)
+	// since we can't deterministically calculate this server-side (due to public keys being added inline, and also canonicalization being potentially different),
+	// we'll just skip adding this index key
+	// hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.Hash.Algorithm, *v.IntotoObj.Content.Hash.Value))
+	// result = append(result, hashkey)
 
 	switch *v.IntotoObj.Content.Envelope.PayloadType {
 	case in_toto.PayloadType:
 
-		if v.IntotoObj.Content.Envelope.Payload == "" {
+		if v.IntotoObj.Content.Envelope.Payload == nil {
 			log.Logger.Info("IntotoObj DSSE payload is empty")
 			return result, nil
 		}
@@ -159,6 +161,7 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non Intoto v0.0.2 type")
 	}
 
+	var err error
 	if err := types.DecodeEntry(it.Spec, &v.IntotoObj); err != nil {
 		return err
 	}
@@ -172,44 +175,17 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 		return nil
 	}
 
-	payloadToUse := v.IntotoObj.Content.Envelope.Payload
-	// we need the decoded payload to calculate the correct SHA256 digest
-	decodedPayload, err := base64.StdEncoding.DecodeString(payloadToUse)
-	if err != nil {
-		return fmt.Errorf("envelope payload must be base64 encoded string: %w", err)
-	}
-	// in rekor v0.12 & v1.0.0, rekor-cli would (incorrectly) double encode the payload.
-	// handle that gracefully here
-	doubleDecodedPayload, err := base64.StdEncoding.DecodeString(string(decodedPayload))
-	if err == nil {
-		payloadToUse = string(decodedPayload)
-		v.IntotoObj.Content.Envelope.Payload = payloadToUse
-		decodedPayload = doubleDecodedPayload
-	}
-
 	env := &dsse.Envelope{
-		Payload:     payloadToUse, // must be base64 encoded string
+		Payload:     string(v.IntotoObj.Content.Envelope.Payload),
 		PayloadType: *v.IntotoObj.Content.Envelope.PayloadType,
 	}
 
 	allPubKeyBytes := make([][]byte, 0)
 	for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
-		sigToUse := sig.Sig
-		decodedSig, err := base64.StdEncoding.DecodeString(string(sig.Sig))
-		if err != nil {
-			return fmt.Errorf("envelope signature must be a base64 encoded string: %w", err)
-		}
-		// in rekor v0.12 & v1.0.0, rekor-cli would (incorrectly) double encode the signature.
-		// handle that gracefully here
-		if _, err = base64.StdEncoding.DecodeString(string(decodedSig)); err == nil {
-			sigToUse = string(decodedSig)
-		}
-
 		env.Signatures = append(env.Signatures, dsse.Signature{
 			KeyID: sig.Keyid,
-			Sig:   sigToUse, // must be base64 encoded string
+			Sig:   string(sig.Sig),
 		})
-		sig.Sig = sigToUse // overwrite value in local object to ensure we canonicalize correctly
 
 		allPubKeyBytes = append(allPubKeyBytes, sig.PublicKey)
 	}
@@ -219,6 +195,11 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	v.env = *env
+
+	decodedPayload, err := base64.StdEncoding.DecodeString(string(v.IntotoObj.Content.Envelope.Payload))
+	if err != nil {
+		return fmt.Errorf("could not decode envelope payload: %w", err)
+	}
 
 	h := sha256.Sum256(decodedPayload)
 	v.IntotoObj.Content.PayloadHash = &models.IntotoV002SchemaContentPayloadHash{
@@ -360,7 +341,8 @@ func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		return nil, err
 	}
 
-	re.IntotoObj.Content.Envelope.Payload = env.Payload
+	b64 := strfmt.Base64([]byte(env.Payload))
+	re.IntotoObj.Content.Envelope.Payload = b64
 	re.IntotoObj.Content.Envelope.PayloadType = &env.PayloadType
 
 	for _, sig := range env.Signatures {
@@ -371,13 +353,13 @@ func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 
 		canonKey, err := key.CanonicalValue()
 		if err != nil {
-			return nil, fmt.Errorf("could not canonicalize key: %w", err)
+			return nil, fmt.Errorf("could not canonicize key: %w", err)
 		}
 
 		keyBytes := strfmt.Base64(canonKey)
 		re.IntotoObj.Content.Envelope.Signatures = append(re.IntotoObj.Content.Envelope.Signatures, &models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 			Keyid:     sig.KeyID,
-			Sig:       sig.Sig,
+			Sig:       strfmt.Base64([]byte(sig.Sig)),
 			PublicKey: keyBytes,
 		})
 	}

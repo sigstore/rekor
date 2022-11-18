@@ -20,18 +20,25 @@ import "testing"
 // Create some test data
 // Good data
 const validTreeID1 = "0FFFFFFFFFFFFFFF"
-const validTreeID2 = "3315648d077a9f02"
-const validTreeID3 = "7241b7903737211c"
-const shortTreeID = "12345"
+
+const (
+	validTreeID2 = "3315648d077a9f02"
+	validTreeID3 = "7241b7903737211c"
+	shortTreeID  = "12345"
+)
 
 const validUUID = "f794467401d57241b7903737211c721cb3315648d077a9f02ceefb6e404a05de"
 
-const validEntryID1 = validTreeID1 + validUUID
-const validEntryID2 = validTreeID2 + validUUID
-const validEntryID3 = validTreeID3 + validUUID
+const (
+	validEntryID1 = validTreeID1 + validUUID
+	validEntryID2 = validTreeID2 + validUUID
+	validEntryID3 = validTreeID3 + validUUID
+)
 
-var validTreeIDs = []string{validTreeID1, validTreeID2, validTreeID3, shortTreeID}
-var validEntryIDs = []string{validEntryID1, validEntryID2, validEntryID3}
+var (
+	validTreeIDs  = []string{validTreeID1, validTreeID2, validTreeID3, shortTreeID}
+	validEntryIDs = []string{validEntryID1, validEntryID2, validEntryID3}
+)
 
 // Bad data
 // Unknown TreeID
@@ -49,26 +56,37 @@ const tooLongEntryID = validEntryID1 + "e"
 
 var tooShortEntryID = validEntryID1[:len(validEntryID1)-1]
 
-var wrongLengthTreeIDs = []string{tooLongTreeID, validEntryID3, validUUID}
-var wrongLengthUUIDs = []string{tooShortUUID, tooLongUUID, validEntryID3, validTreeID1}
-var wrongLengthEntryandUUIDs = []string{tooLongEntryID, tooShortEntryID, tooLongUUID, tooShortUUID, validTreeID3}
+var (
+	wrongLengthTreeIDs       = []string{tooLongTreeID, validEntryID3, validUUID}
+	wrongLengthUUIDs         = []string{tooShortUUID, tooLongUUID, validEntryID3, validTreeID1}
+	wrongLengthEntryandUUIDs = []string{tooLongEntryID, tooShortEntryID, tooLongUUID, tooShortUUID, validTreeID3}
+)
 
 // Not valid hex
 const notHexTreeID1 = "ZZZZZZZZZZZZZZZZ"
-const notHexTreeID2 = "FFFFFFF_FFFFFFFF"
-const notHexTreeID3 = "xxFFFFFFFFFFFFFF"
 
-const notHexUUID1 = "94467401d57241b7903737211c721cb3315648d077a9f02ceefb6e404a05dezq"
-const notHexUUID2 = "y794467401d57241b7903737211c721cb3315648d077a9f02ceefb6e404a05de"
-const notHexUUID3 = "f794467401d57241b7903737211c721cbp3315648d077a9f02ceefb6e404a05d"
+const (
+	notHexTreeID2 = "FFFFFFF_FFFFFFFF"
+	notHexTreeID3 = "xxFFFFFFFFFFFFFF"
+)
 
-const notHexEntryID1 = notHexTreeID1 + validUUID
-const notHexEntryID2 = validTreeID2 + notHexUUID1
-const notHexEntryID3 = notHexTreeID2 + notHexUUID3
+const (
+	notHexUUID1 = "94467401d57241b7903737211c721cb3315648d077a9f02ceefb6e404a05dezq"
+	notHexUUID2 = "y794467401d57241b7903737211c721cb3315648d077a9f02ceefb6e404a05de"
+	notHexUUID3 = "f794467401d57241b7903737211c721cbp3315648d077a9f02ceefb6e404a05d"
+)
 
-var notHexTreeIDs = []string{notHexTreeID1, notHexTreeID2, notHexTreeID3}
-var notHexUUIDs = []string{notHexUUID1, notHexUUID2, notHexUUID3}
-var notHexEntryandUUIDs = []string{notHexEntryID1, notHexEntryID2, notHexEntryID3, notHexUUID1, notHexUUID2, notHexUUID3}
+const (
+	notHexEntryID1 = notHexTreeID1 + validUUID
+	notHexEntryID2 = validTreeID2 + notHexUUID1
+	notHexEntryID3 = notHexTreeID2 + notHexUUID3
+)
+
+var (
+	notHexTreeIDs       = []string{notHexTreeID1, notHexTreeID2, notHexTreeID3}
+	notHexUUIDs         = []string{notHexUUID1, notHexUUID2, notHexUUID3}
+	notHexEntryandUUIDs = []string{notHexEntryID1, notHexEntryID2, notHexEntryID3, notHexUUID1, notHexUUID2, notHexUUID3}
+)
 
 // Test functions
 func TestCreateEntryIDFromParts(t *testing.T) {
@@ -110,7 +128,6 @@ func TestCreateEntryIDFromParts(t *testing.T) {
 			t.Errorf("created entryID with incorrect UUID: expected %v, got %v", validUUID, entryID.UUID)
 		}
 	}
-
 }
 
 func TestCreateEmptyEntryID(t *testing.T) {
@@ -218,5 +235,105 @@ func TestGetTreeIDFromIDString(t *testing.T) {
 	_, e := GetTreeIDFromIDString(notHexEntryID2)
 	if e == nil {
 		t.Errorf("expected error for invalid UUID, but got none")
+	}
+	// uuid length error
+	uuidHexStringLen := "qlALqZuNP9Iqpg2WVAOkJUntCXQtOOQpOfqox5JbJK4jw5xBs53Wqu1WQ5vTfvqr"
+	_, e = GetTreeIDFromIDString(uuidHexStringLen)
+	if e == nil {
+		t.Errorf("expected error for invalid TreeID, but got none")
+	}
+	invalidStringLength := "FWQfOtwd7I4BcCZ5OU7Hbmmp"
+	_, e = GetTreeIDFromIDString(invalidStringLength)
+	if e == nil {
+		t.Errorf("expected error for invalid TreeID, but got none")
+	}
+}
+
+func TestTreeID(t *testing.T) {
+	type args struct {
+		entryID string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    int64
+		wantErr bool
+	}{
+		{
+			name: "valid entryID",
+			args: args{
+				entryID: validEntryID1,
+			},
+			want:    1152921504606846975,
+			wantErr: false,
+		},
+		{
+			name: "invalid entryID",
+			args: args{
+				entryID: invalidEntryID,
+			},
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name: "invalid UUID",
+			args: args{
+				entryID: notHexEntryID2,
+			},
+			want:    0,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := TreeID(tt.args.entryID)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("TreeID() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("TreeID() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateTreeID(t *testing.T) {
+	type args struct {
+		t string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "valid treeID",
+			args: args{
+				t: validTreeID1,
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid treeID",
+			args: args{
+				t: invalidTreeID,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid UUID",
+			args: args{
+				t: notHexTreeID2,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := ValidateTreeID(tt.args.t); (err != nil) != tt.wantErr {
+				t.Errorf("ValidateTreeID() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }

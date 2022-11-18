@@ -41,6 +41,7 @@ import (
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -57,14 +58,14 @@ func TestHarnessAddEntry(t *testing.T) {
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
 	sigPath := filepath.Join(t.TempDir(), "signature.asc")
 
-	createdX509SignedArtifact(t, artifactPath, sigPath)
+	sigx509.CreatedX509SignedArtifact(t, artifactPath, sigPath)
 	dataBytes, _ := ioutil.ReadFile(artifactPath)
 	h := sha256.Sum256(dataBytes)
 	dataSHA := hex.EncodeToString(h[:])
 
 	// Write the public key to a file
 	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
-	if err := ioutil.WriteFile(pubPath, []byte(rsaCert), 0644); err != nil {
+	if err := ioutil.WriteFile(pubPath, []byte(sigx509.RSACert), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -121,7 +122,7 @@ func TestHarnessAddIntotoV003(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pb, _ := pem.Decode([]byte(ecdsaPriv))
+	pb, _ := pem.Decode([]byte(sigx509.ECDSAPriv))
 	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
 	if err != nil {
 		t.Fatal(err)
@@ -132,8 +133,8 @@ func TestHarnessAddIntotoV003(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer, err := dsse.NewEnvelopeSigner(&verifier{
-		s: s,
+	signer, err := dsse.NewEnvelopeSigner(&sigx509.Verifier{
+		S: s,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -150,7 +151,7 @@ func TestHarnessAddIntotoV003(t *testing.T) {
 	}
 
 	write(t, string(eb), attestationPath)
-	write(t, ecdsaPub, pubKeyPath)
+	write(t, sigx509.ECDSAPub, pubKeyPath)
 
 	// If we do it twice, it should already exist
 	out := runCliStdout(t, "upload", "--artifact", attestationPath, "--type", "intoto:0.0.3", "--public-key", pubKeyPath)

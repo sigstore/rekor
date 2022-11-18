@@ -19,7 +19,7 @@ on:
   push:
     branches:
       - main
-      - release-*
+      - 'release-**'
   pull_request:
 
 jobs:
@@ -39,8 +39,8 @@ jobs:
       statuses: none
 
     env:
-      CROSS_BUILDER_IMAGE: ghcr.io/gythialy/golang-cross:v1.19.2-1@sha256:d7e32c3e7d89356fb014ded4c1be7baabe3c454ca7753842334226fd3327d280
-      COSIGN_IMAGE: gcr.io/projectsigstore/cosign:v1.13.0@sha256:398f441c46e58906dc6d3aaaad22fe63f018dc30acbe13b326e5a016e711301c
+      CROSS_BUILDER_IMAGE: ghcr.io/gythialy/golang-cross:v1.19.3-0@sha256:1072190e76d68f455f1bedb7430a633916b6629a722c42246037ac518fdb0ff2
+      COSIGN_IMAGE: gcr.io/projectsigstore/cosign:v1.13.1@sha256:fd5b09be23ef1027e1bdd490ce78dcc65d2b15902e1f4ba8e04f3b4019cc1057
 
     steps:
       - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.0.2
@@ -50,7 +50,7 @@ jobs:
         with:
           go-version: ${{ env.GOVERSION }}
 
-      - uses: anchore/sbom-action/download-syft@b5042e9d19d8b32849779bfe17673ff84aec702d # v0.12.0
+      - uses: anchore/sbom-action/download-syft@06e109483e6aa305a2b2395eabae554e51530e1d # v0.13.1
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@b508e2e3ef3b19d4e4146d4f8fb3ba9db644a757 # v3.1.0
         with:
