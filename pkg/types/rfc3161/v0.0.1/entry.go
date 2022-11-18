@@ -17,7 +17,9 @@ package rfc3161
 
 import (
 	"context"
+	"crypto"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
@@ -28,6 +30,7 @@ import (
 	"path/filepath"
 
 	"github.com/sigstore/rekor/pkg/types/rfc3161"
+	"golang.org/x/crypto/openpgp"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -204,4 +207,8 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	returnVal.APIVersion = swag.String(re.APIVersion())
 
 	return &returnVal, nil
+}
+
+func (v V001Entry) Verifier() (*x509.Certificate, crypto.PublicKey, openpgp.EntityList, error) {
+	return nil, nil, nil, errors.New("PublicKey not support type rfc3161 entry type")
 }

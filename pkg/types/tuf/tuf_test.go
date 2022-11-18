@@ -17,12 +17,15 @@ limitations under the License.
 package tuf
 
 import (
+	"crypto"
+	"crypto/x509"
 	"errors"
 	"testing"
 
 	"github.com/go-openapi/swag"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
+	"golang.org/x/crypto/openpgp"
 )
 
 type UnmarshalTester struct {
@@ -36,6 +39,10 @@ type UnmarshalFailsTester struct {
 
 func (u UnmarshalFailsTester) NewEntry() types.EntryImpl {
 	return &UnmarshalFailsTester{}
+}
+
+func (u UnmarshalFailsTester) Verifier() (*x509.Certificate, crypto.PublicKey, openpgp.EntityList, error) {
+	return nil, nil, nil, nil
 }
 
 func (u UnmarshalFailsTester) Unmarshal(pe models.ProposedEntry) error {

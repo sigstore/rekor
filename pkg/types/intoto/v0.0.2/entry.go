@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/sha256"
+	cx509 "crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -32,6 +33,7 @@ import (
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/spf13/viper"
+	"golang.org/x/crypto/openpgp"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -58,6 +60,7 @@ func init() {
 type V002Entry struct {
 	IntotoObj models.IntotoV002Schema
 	env       dsse.Envelope
+	keyObj    *x509.PublicKey
 }
 
 func (v V002Entry) APIVersion() string {
@@ -205,6 +208,15 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 	v.IntotoObj.Content.PayloadHash = &models.IntotoV002SchemaContentPayloadHash{
 		Algorithm: swag.String(models.IntotoV002SchemaContentPayloadHashAlgorithmSha256),
 		Value:     swag.String(hex.EncodeToString(h[:])),
+	}
+
+	sigs := v.IntotoObj.Content.Envelope.Signatures
+	if len(sigs) == 0 {
+		return errors.New("no signatures found on intoto entry")
+	}
+	v.keyObj, err = x509.NewPublicKey(bytes.NewReader(v.IntotoObj.Content.Envelope.Signatures[0].PublicKey))
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -422,4 +434,17 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 	}
 
 	return verifierBySig, nil
+}
+
+func (v V002Entry) Verifier() (*cx509.Certificate, crypto.PublicKey, openpgp.EntityList, error) {
+	if v.keyObj == nil {
+		return nil, nil, nil, errors.New("key is not set")
+	}
+	cert := v.keyObj.Certificate()
+	key := v.keyObj.CryptoPubKey()
+	if cert != nil {
+		return cert, nil, nil, nil
+	} else {
+		return nil, key, nil, nil
+	}
 }

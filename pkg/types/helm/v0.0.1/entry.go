@@ -18,7 +18,9 @@ package helm
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -36,6 +38,7 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/helm"
 	"github.com/sigstore/rekor/pkg/util"
+	"golang.org/x/crypto/openpgp"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -51,6 +54,7 @@ func init() {
 
 type V001Entry struct {
 	HelmObj models.HelmV001Schema
+	keyObj  *pgp.PublicKey
 }
 
 func (v V001Entry) APIVersion() string {
@@ -108,6 +112,12 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 	// field validation
 	if err := v.HelmObj.Validate(strfmt.Default); err != nil {
+		return err
+	}
+
+	var err error
+	v.keyObj, err = pgp.NewPublicKey(bytes.NewReader(*v.HelmObj.PublicKey.Content))
+	if err != nil {
 		return err
 	}
 
@@ -342,4 +352,12 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	returnVal.Spec = re.HelmObj
 
 	return &returnVal, nil
+}
+
+func (v V001Entry) Verifier() (*x509.Certificate, crypto.PublicKey, openpgp.EntityList, error) {
+	if v.keyObj == nil {
+		return nil, nil, nil, errors.New("key is not set")
+	}
+	eList, err := v.keyObj.EntityList()
+	return nil, nil, eList, err
 }

@@ -18,8 +18,10 @@ package hashedrekord
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/ed25519"
 	"crypto/sha256"
+	cx509 "crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -31,6 +33,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"golang.org/x/crypto/openpgp"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -53,6 +56,7 @@ func init() {
 
 type V001Entry struct {
 	HashedRekordObj models.HashedrekordV001Schema
+	keyObj          *x509.PublicKey
 }
 
 func (v V001Entry) APIVersion() string {
@@ -99,8 +103,14 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
+	var err error
+	v.keyObj, err = x509.NewPublicKey(bytes.NewReader(v.HashedRekordObj.Signature.PublicKey.Content))
+	if err != nil {
+		return err
+	}
+
 	// cross field validation
-	_, _, err := v.validate()
+	_, _, err = v.validate()
 	return err
 }
 
@@ -244,4 +254,17 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	returnVal.Spec = re.HashedRekordObj
 
 	return &returnVal, nil
+}
+
+func (v V001Entry) Verifier() (*cx509.Certificate, crypto.PublicKey, openpgp.EntityList, error) {
+	if v.keyObj == nil {
+		return nil, nil, nil, errors.New("key is not set")
+	}
+	cert := v.keyObj.Certificate()
+	key := v.keyObj.CryptoPubKey()
+	if cert != nil {
+		return cert, nil, nil, nil
+	} else {
+		return nil, key, nil, nil
+	}
 }

@@ -171,6 +171,17 @@ func (k PublicKey) CryptoPubKey() crypto.PublicKey {
 	return k.key
 }
 
+// Certificate returns a certificate if present
+func (k PublicKey) Certificate() *x509.Certificate {
+	if k.cert != nil {
+		return k.cert.c
+	}
+	if len(k.certs) > 0 {
+		return k.certs[0]
+	}
+	return nil
+}
+
 // EmailAddresses implements the pki.PublicKey interface
 func (k PublicKey) EmailAddresses() []string {
 	var names []string

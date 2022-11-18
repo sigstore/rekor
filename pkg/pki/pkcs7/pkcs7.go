@@ -213,3 +213,18 @@ func (k PublicKey) EmailAddresses() []string {
 func (k PublicKey) Subjects() []string {
 	return k.EmailAddresses()
 }
+
+func (k PublicKey) CryptoPubKey() crypto.PublicKey {
+	if len(k.certs) > 0 {
+		return k.certs[0].PublicKey
+	}
+	return k.key
+}
+
+// Certificate returns a certificate if present
+func (k PublicKey) Certificate() *x509.Certificate {
+	if len(k.certs) > 0 {
+		return k.certs[0]
+	}
+	return nil
+}

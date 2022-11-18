@@ -16,6 +16,8 @@
 package ssh
 
 import (
+	"crypto"
+	"errors"
 	"fmt"
 	"io"
 
@@ -87,6 +89,15 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	}
 
 	return &PublicKey{key: key}, nil
+}
+
+func (k PublicKey) CryptoPubKey() (crypto.PublicKey, error) {
+	cryptoPubKey, ok := k.key.(ssh.CryptoPublicKey)
+	if !ok {
+		return nil, errors.New("key does not implement ssh.CryptoPublicKey interface")
+	}
+	return cryptoPubKey.CryptoPublicKey(), nil
+
 }
 
 // CanonicalValue implements the pki.PublicKey interface
