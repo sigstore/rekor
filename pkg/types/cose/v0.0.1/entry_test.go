@@ -88,6 +88,10 @@ func (t testPublicKey) Subjects() []string {
 	return nil
 }
 
+func (t testPublicKey) Identities() ([]string, error) {
+	return nil, nil
+}
+
 func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }

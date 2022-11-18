@@ -17,15 +17,13 @@ package cose
 
 import (
 	"context"
-	"crypto"
-	"crypto/x509"
 	"errors"
 	"testing"
 
 	"github.com/go-openapi/swag"
-	"golang.org/x/crypto/openpgp"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/types"
 )
 
@@ -46,8 +44,8 @@ func (u UnmarshalFailsTester) Unmarshal(pe models.ProposedEntry) error {
 	return errors.New("error")
 }
 
-func (u UnmarshalFailsTester) Verifier() (*x509.Certificate, crypto.PublicKey, openpgp.EntityList, error) {
-	return nil, nil, nil, nil
+func (u UnmarshalFailsTester) Verifier() (pki.PublicKey, error) {
+	return nil, nil
 }
 
 func TestCOSEType(t *testing.T) {

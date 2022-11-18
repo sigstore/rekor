@@ -283,14 +283,6 @@ func (k PublicKey) KeyRing() (openpgp.KeyRing, error) {
 	return k.key, nil
 }
 
-func (k PublicKey) EntityList() (openpgp.EntityList, error) {
-	if k.key == nil {
-		return nil, errors.New("PGP public key has not been initialized")
-	}
-
-	return k.key, nil
-}
-
 // EmailAddresses implements the pki.PublicKey interface
 func (k PublicKey) EmailAddresses() []string {
 	var names []string
@@ -310,4 +302,17 @@ func (k PublicKey) EmailAddresses() []string {
 // Subjects implements the pki.PublicKey interface
 func (k PublicKey) Subjects() []string {
 	return k.EmailAddresses()
+}
+
+// Identities implements the pki.PublicKey interface
+func (k PublicKey) Identities() ([]string, error) {
+	// returns the email addresses and armored public key
+	var identities []string
+	identities = append(identities, k.Subjects()...)
+	key, err := k.CanonicalValue()
+	if err != nil {
+		return nil, err
+	}
+	identities = append(identities, string(key))
+	return identities, nil
 }

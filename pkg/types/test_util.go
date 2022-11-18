@@ -18,13 +18,11 @@ package types
 
 import (
 	"context"
-	"crypto"
-	"crypto/x509"
 
 	"github.com/go-openapi/strfmt"
-	"golang.org/x/crypto/openpgp"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/pki"
 )
 
 type BaseUnmarshalTester struct{}
@@ -33,8 +31,8 @@ func (u BaseUnmarshalTester) NewEntry() EntryImpl {
 	return &BaseUnmarshalTester{}
 }
 
-func (u BaseUnmarshalTester) Verifier() (*x509.Certificate, crypto.PublicKey, openpgp.EntityList, error) {
-	return nil, nil, nil, nil
+func (u BaseUnmarshalTester) Verifier() (pki.PublicKey, error) {
+	return nil, nil
 }
 
 func (u BaseUnmarshalTester) APIVersion() string {

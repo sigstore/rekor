@@ -18,9 +18,7 @@ package rekord
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/sha256"
-	cx509 "crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -33,12 +31,12 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"golang.org/x/crypto/openpgp"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
+	"github.com/sigstore/rekor/pkg/pki/minisign"
 	"github.com/sigstore/rekor/pkg/pki/pgp"
 	"github.com/sigstore/rekor/pkg/pki/ssh"
 	"github.com/sigstore/rekor/pkg/pki/x509"
@@ -425,44 +423,17 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifier() (*cx509.Certificate, crypto.PublicKey, openpgp.EntityList, error) {
+func (v V001Entry) Verifier() (pki.PublicKey, error) {
 	switch f := *v.RekordObj.Signature.Format; f {
 	case "x509":
-		key, err := x509.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		cert := key.Certificate()
-		pubkey := key.CryptoPubKey()
-		if cert != nil {
-			return cert, nil, nil, nil
-		} else {
-			return nil, pubkey, nil, nil
-		}
+		return x509.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
 	case "ssh":
-		key, err := ssh.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		pubkey, err := key.CryptoPubKey()
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		return nil, pubkey, nil, nil
+		return ssh.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
 	case "pgp":
-		key, err := pgp.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		pubkeys, err := key.EntityList()
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		return nil, nil, pubkeys, nil
+		return pgp.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
 	case "minisign":
-		// TODO: Implement support for minisign
-		return nil, nil, nil, errors.New("unsupported key type: minisign")
+		return minisign.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
 	default:
-		return nil, nil, nil, fmt.Errorf("unexpected format of public key: %s", f)
+		return nil, fmt.Errorf("unexpected format of public key: %s", f)
 	}
 }

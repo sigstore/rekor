@@ -28,6 +28,8 @@ import (
 	"strings"
 
 	"github.com/sassoftware/relic/lib/pkcs7"
+	px509 "github.com/sigstore/rekor/pkg/pki/x509"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -214,17 +216,26 @@ func (k PublicKey) Subjects() []string {
 	return k.EmailAddresses()
 }
 
-func (k PublicKey) CryptoPubKey() crypto.PublicKey {
-	if len(k.certs) > 0 {
-		return k.certs[0].PublicKey
-	}
-	return k.key
-}
+// Identities implements the pki.PublicKey interface
+func (k PublicKey) Identities() ([]string, error) {
+	// pkcs7 structure may contain both a key and certificate chain
+	var identities []string
+	if k.key != nil {
+		pem, err := cryptoutils.MarshalPublicKeyToPEM(k.key)
+		if err != nil {
+			return nil, err
+		}
+		identities = append(identities, string(pem))
 
-// Certificate returns a certificate if present
-func (k PublicKey) Certificate() *x509.Certificate {
-	if len(k.certs) > 0 {
-		return k.certs[0]
 	}
-	return nil
+	if len(k.certs) > 0 {
+		cert := k.certs[0]
+		pem, err := cryptoutils.MarshalPublicKeyToPEM(cert.PublicKey)
+		if err != nil {
+			return nil, err
+		}
+		identities = append(identities, string(pem))
+		identities = append(identities, px509.GetSubjectAlternateNames(cert)...)
+	}
+	return identities, nil
 }

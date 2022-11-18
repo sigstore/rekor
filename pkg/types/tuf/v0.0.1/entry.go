@@ -18,9 +18,7 @@ package tuf
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -36,7 +34,6 @@ import (
 	// This will support deprecated ECDSA hex-encoded keys in TUF metadata.
 	// Will be removed when sigstore migrates entirely off hex-encoded.
 	_ "github.com/theupdateframework/go-tuf/pkg/deprecated/set_ecdsa"
-	"golang.org/x/crypto/openpgp"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/log"
@@ -372,6 +369,10 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifier() (*x509.Certificate, crypto.PublicKey, openpgp.EntityList, error) {
-	return nil, nil, nil, errors.New("PublicKey not supported for tuf entry type")
+func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	keyBytes, err := json.Marshal(v.TufObj.Root.Content)
+	if err != nil {
+		return nil, err
+	}
+	return ptuf.NewPublicKey(bytes.NewReader(keyBytes))
 }

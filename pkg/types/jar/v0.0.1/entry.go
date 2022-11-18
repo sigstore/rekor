@@ -19,9 +19,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -33,11 +31,11 @@ import (
 	"strings"
 
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pkcs7"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/jar"
 	"github.com/sigstore/rekor/pkg/util"
-	"golang.org/x/crypto/openpgp"
 
 	"github.com/asaskevich/govalidator"
 
@@ -60,7 +58,6 @@ func init() {
 
 type V001Entry struct {
 	JARModel models.JarV001Schema
-	keyObj   *pkcs7.PublicKey
 }
 
 func (v V001Entry) APIVersion() string {
@@ -105,12 +102,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 	// field validation
 	if err := v.JARModel.Validate(strfmt.Default); err != nil {
-		return err
-	}
-
-	var err error
-	v.keyObj, err = pkcs7.NewPublicKey(bytes.NewReader(*v.JARModel.Signature.PublicKey.Content))
-	if err != nil {
 		return err
 	}
 
@@ -327,15 +318,6 @@ func (v *V001Entry) CreateFromArtifactProperties(ctx context.Context, props type
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifier() (*x509.Certificate, crypto.PublicKey, openpgp.EntityList, error) {
-	if v.keyObj == nil {
-		return nil, nil, nil, errors.New("key is not set")
-	}
-	cert := v.keyObj.Certificate()
-	key := v.keyObj.CryptoPubKey()
-	if cert != nil {
-		return cert, nil, nil, nil
-	} else {
-		return nil, key, nil, nil
-	}
+func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	return pkcs7.NewPublicKey(bytes.NewReader(*v.JARModel.Signature.PublicKey.Content))
 }

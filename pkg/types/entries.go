@@ -17,8 +17,6 @@ package types
 
 import (
 	"context"
-	"crypto"
-	"crypto/x509"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -29,7 +27,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sigstore/rekor/pkg/generated/models"
-	"golang.org/x/crypto/openpgp"
+	"github.com/sigstore/rekor/pkg/pki"
 )
 
 // EntryImpl specifies the behavior of a versioned type
@@ -39,7 +37,7 @@ type EntryImpl interface {
 	Canonicalize(ctx context.Context) ([]byte, error) // marshal the canonical entry to be put into the tlog
 	Unmarshal(e models.ProposedEntry) error           // unmarshal the abstract entry into the specific struct for this versioned type
 	CreateFromArtifactProperties(context.Context, ArtifactProperties) (models.ProposedEntry, error)
-	Verifier() (*x509.Certificate, crypto.PublicKey, openpgp.EntityList, error)
+	Verifier() (pki.PublicKey, error)
 }
 
 // EntryWithAttestationImpl specifies the behavior of a versioned type that also stores attestations

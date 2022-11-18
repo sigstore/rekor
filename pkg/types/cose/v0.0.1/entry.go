@@ -22,7 +22,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/sha256"
-	cx509 "crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -36,7 +35,6 @@ import (
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/spf13/viper"
 	gocose "github.com/veraison/go-cose"
-	"golang.org/x/crypto/openpgp"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -350,10 +348,6 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifier() (*cx509.Certificate, crypto.PublicKey, openpgp.EntityList, error) {
-	if v.keyObj == nil {
-		return nil, nil, nil, errors.New("key is not set")
-	}
-	_, pubkey, err := getPublicKey(v.keyObj)
-	return nil, pubkey, nil, err
+func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	return x509.NewPublicKey(bytes.NewReader(*v.CoseObj.PublicKey))
 }

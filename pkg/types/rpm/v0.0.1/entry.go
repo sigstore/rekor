@@ -18,9 +18,7 @@ package rpm
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -35,11 +33,11 @@ import (
 	rpmutils "github.com/cavaliercoder/go-rpm"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"golang.org/x/crypto/openpgp"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pgp"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/rpm"
@@ -58,7 +56,6 @@ func init() {
 
 type V001Entry struct {
 	RPMModel models.RpmV001Schema
-	keyObj   *pgp.PublicKey
 }
 
 func (v V001Entry) APIVersion() string {
@@ -105,12 +102,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 	// field validation
 	if err := v.RPMModel.Validate(strfmt.Default); err != nil {
-		return err
-	}
-
-	var err error
-	v.keyObj, err = pgp.NewPublicKey(bytes.NewReader(*v.RPMModel.PublicKey.Content))
-	if err != nil {
 		return err
 	}
 
@@ -380,10 +371,6 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifier() (*x509.Certificate, crypto.PublicKey, openpgp.EntityList, error) {
-	if v.keyObj == nil {
-		return nil, nil, nil, errors.New("key is not set")
-	}
-	eList, err := v.keyObj.EntityList()
-	return nil, nil, eList, err
+func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	return pgp.NewPublicKey(bytes.NewReader(*v.RPMModel.PublicKey.Content))
 }

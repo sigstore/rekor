@@ -16,8 +16,6 @@
 package ssh
 
 import (
-	"crypto"
-	"errors"
 	"fmt"
 	"io"
 
@@ -73,7 +71,8 @@ func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOptio
 
 // PublicKey contains an ssh PublicKey
 type PublicKey struct {
-	key ssh.PublicKey
+	key     ssh.PublicKey
+	comment string
 }
 
 // NewPublicKey implements the pki.PublicKey interface
@@ -83,21 +82,12 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 		return nil, err
 	}
 
-	key, _, _, _, err := ssh.ParseAuthorizedKey(rawPub)
+	key, comment, _, _, err := ssh.ParseAuthorizedKey(rawPub)
 	if err != nil {
 		return nil, err
 	}
 
-	return &PublicKey{key: key}, nil
-}
-
-func (k PublicKey) CryptoPubKey() (crypto.PublicKey, error) {
-	cryptoPubKey, ok := k.key.(ssh.CryptoPublicKey)
-	if !ok {
-		return nil, errors.New("key does not implement ssh.CryptoPublicKey interface")
-	}
-	return cryptoPubKey.CryptoPublicKey(), nil
-
+	return &PublicKey{key: key, comment: comment}, nil
 }
 
 // CanonicalValue implements the pki.PublicKey interface
@@ -116,4 +106,12 @@ func (k PublicKey) EmailAddresses() []string {
 // Subjects implements the pki.PublicKey interface
 func (k PublicKey) Subjects() []string {
 	return nil
+}
+
+// Identities implements the pki.PublicKey interface
+func (k PublicKey) Identities() ([]string, error) {
+	// an authorized key format with the comment
+	authorizedKey := string(ssh.MarshalAuthorizedKey(k.key)) + k.comment
+	// return the authorized key and comment (assuming it represents an identity)
+	return []string{authorizedKey, k.comment}, nil
 }

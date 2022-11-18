@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto"
 	"crypto/sha256"
-	cx509 "crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -33,13 +32,13 @@ import (
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/spf13/viper"
-	"golang.org/x/crypto/openpgp"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/intoto"
@@ -59,7 +58,7 @@ func init() {
 
 type V001Entry struct {
 	IntotoObj models.IntotoV001Schema
-	keyObj    *x509.PublicKey
+	keyObj    pki.PublicKey
 	env       dsse.Envelope
 }
 
@@ -218,7 +217,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 // validate performs cross-field validation for fields in object
 func (v *V001Entry) validate() error {
 	// TODO handle multiple
-	pk := v.keyObj
+	pk := v.keyObj.(*x509.PublicKey)
 
 	// This also gets called in the CLI, where we won't have this data
 	if v.IntotoObj.Content.Envelope == "" {
@@ -328,15 +327,6 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifier() (*cx509.Certificate, crypto.PublicKey, openpgp.EntityList, error) {
-	if v.keyObj == nil {
-		return nil, nil, nil, errors.New("key is not set")
-	}
-	cert := v.keyObj.Certificate()
-	key := v.keyObj.CryptoPubKey()
-	if cert != nil {
-		return cert, nil, nil, nil
-	} else {
-		return nil, key, nil, nil
-	}
+func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	return x509.NewPublicKey(bytes.NewReader(*v.IntotoObj.PublicKey))
 }

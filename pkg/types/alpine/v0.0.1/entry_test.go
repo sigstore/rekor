@@ -103,7 +103,7 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			expectUnmarshalSuccess:    false,
+			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
 		},
 		{

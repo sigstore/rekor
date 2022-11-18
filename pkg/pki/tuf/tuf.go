@@ -100,6 +100,11 @@ type PublicKey struct {
 	db   *verify.DB
 }
 
+// keyVal holds the public key for each key from the root
+type keyVal struct {
+	Public string `json:"public"`
+}
+
 // NewPublicKey implements the pki.PublicKey interface
 func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	rawRoot, err := io.ReadAll(r)
@@ -169,4 +174,21 @@ func (k PublicKey) EmailAddresses() []string {
 // Subjects implements the pki.PublicKey interface
 func (k PublicKey) Subjects() []string {
 	return nil
+}
+
+// Identities implements the pki.PublicKey interface
+func (k PublicKey) Identities() ([]string, error) {
+	root := &data.Root{}
+	if err := json.Unmarshal(k.root.Signed, root); err != nil {
+		return nil, err
+	}
+	var keys []string
+	for _, k := range root.Keys {
+		key := &keyVal{}
+		if err := json.Unmarshal(k.Value, key); err != nil {
+			return nil, err
+		}
+		keys = append(keys, key.Public)
+	}
+	return keys, nil
 }

@@ -171,17 +171,6 @@ func (k PublicKey) CryptoPubKey() crypto.PublicKey {
 	return k.key
 }
 
-// Certificate returns a certificate if present
-func (k PublicKey) Certificate() *x509.Certificate {
-	if k.cert != nil {
-		return k.cert.c
-	}
-	if len(k.certs) > 0 {
-		return k.certs[0]
-	}
-	return nil
-}
-
 // EmailAddresses implements the pki.PublicKey interface
 func (k PublicKey) EmailAddresses() []string {
 	var names []string
@@ -226,6 +215,31 @@ func (k PublicKey) Subjects() []string {
 		}
 	}
 	return names
+}
+
+// Identities implements the pki.PublicKey interface
+func (k PublicKey) Identities() ([]string, error) {
+	// k contains either a key, a cert, or a list of certs
+	if k.key != nil {
+		pem, err := cryptoutils.MarshalPublicKeyToPEM(k.key)
+		if err != nil {
+			return nil, err
+		}
+		return []string{string(pem)}, nil
+	}
+
+	cert := k.cert.c
+	if len(k.certs) > 0 {
+		cert = k.certs[0]
+	}
+	var identities []string
+	pem, err := cryptoutils.MarshalPublicKeyToPEM(cert.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+	identities = append(identities, string(pem))
+	identities = append(identities, GetSubjectAlternateNames(cert)...)
+	return identities, nil
 }
 
 func verifyCertChain(certChain []*x509.Certificate) error {
