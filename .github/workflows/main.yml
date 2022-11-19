@@ -42,8 +42,6 @@ jobs:
 
       - name: Build
         run: make -C $GITHUB_WORKSPACE all
-      - name: Fuzz-Build
-        run: make -C $GITHUB_WORKSPACE fuzz
       - name: Test
         run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
       - name: Upload Coverage Report
