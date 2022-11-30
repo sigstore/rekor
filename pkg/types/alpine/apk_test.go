@@ -23,7 +23,7 @@ import (
 )
 
 func TestAlpinePackage(t *testing.T) {
-	inputArchive, err := os.Open("../../../tests/test_alpine.apk")
+	inputArchive, err := os.Open("tests/test_alpine.apk")
 	if err != nil {
 		t.Fatalf("could not open archive %v", err)
 	}
@@ -34,7 +34,7 @@ func TestAlpinePackage(t *testing.T) {
 		t.Fatalf("unmarshal error: %v", err)
 	}
 
-	pubKey, err := os.Open("../../../tests/test_alpine.pub")
+	pubKey, err := os.Open("tests/test_alpine.pub")
 	if err != nil {
 		t.Fatalf("could not open archive %v", err)
 	}

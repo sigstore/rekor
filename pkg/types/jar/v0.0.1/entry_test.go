@@ -49,7 +49,7 @@ func TestCrossFieldValidation(t *testing.T) {
 		expectCanonicalizeSuccess bool
 	}
 
-	jarBytes, _ := os.ReadFile("../../../../tests/test.jar")
+	jarBytes, _ := os.ReadFile("tests/test.jar")
 
 	testCases := []TestCase{
 		{

@@ -50,8 +50,8 @@ func TestCrossFieldValidation(t *testing.T) {
 		expectCanonicalizeSuccess bool
 	}
 
-	keyBytes, _ := os.ReadFile("../../../../tests/test_helm_armor.pub")
-	provenanceBytes, _ := os.ReadFile("../../../../tests/test-0.1.0.tgz.prov")
+	keyBytes, _ := os.ReadFile("../tests/test_helm_armor.pub")
+	provenanceBytes, _ := os.ReadFile("../tests/test-0.1.0.tgz.prov")
 
 	testCases := []TestCase{
 		{
