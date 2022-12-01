@@ -48,7 +48,7 @@ type IntotoV003Schema struct {
 	// proposed content
 	ProposedContent *IntotoV003SchemaProposedContent `json:"proposedContent,omitempty"`
 
-	// extracted collection of all signatures of the envelope's payload
+	// extracted collection of all signatures of the envelope's payload; elements will be sorted by lexicographical order of the base64 encoded signature strings
 	// Read Only: true
 	// Min Items: 1
 	Signatures []*IntotoV003SchemaSignaturesItems0 `json:"signatures"`
@@ -510,7 +510,7 @@ func (m *IntotoV003SchemaPayloadHash) UnmarshalBinary(b []byte) error {
 // swagger:model IntotoV003SchemaProposedContent
 type IntotoV003SchemaProposedContent struct {
 
-	// DSSE envelope specified as JSON object; payloadType in the envelope MUST be set to 'application/vnd.in-toto+json'
+	// DSSE envelope specified as a stringified JSON object; payloadType in the envelope MUST be set to 'application/vnd.in-toto+json'
 	// Required: true
 	Envelope *string `json:"envelope"`
 

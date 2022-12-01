@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
@@ -166,35 +167,38 @@ func (v *V003Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non Intoto v0.0.3 type")
 	}
 
-	if err := types.DecodeEntry(it.Spec, &v.IntotoObj); err != nil {
+	intotoObj := &models.IntotoV003Schema{}
+
+	if err := types.DecodeEntry(it.Spec, intotoObj); err != nil {
 		return err
 	}
 
 	// field validation
-	if err := v.IntotoObj.Validate(strfmt.Default); err != nil {
+	if err := intotoObj.Validate(strfmt.Default); err != nil {
 		return err
 	}
 
 	// either we have just proposed content or the canonicalized fields
-	if v.IntotoObj.ProposedContent == nil {
+	if intotoObj.ProposedContent == nil {
 		// then we need canonicalized fields, and all must be present (if present, they would have been validated in the above call to Validate())
-		if v.IntotoObj.EnvelopeHash == nil || v.IntotoObj.PayloadHash == nil || len(v.IntotoObj.Signatures) == 0 {
+		if intotoObj.EnvelopeHash == nil || intotoObj.PayloadHash == nil || len(intotoObj.Signatures) == 0 {
 			return errors.New("either proposed content or envelope hash, payload hash, and signatures must be present")
 		}
+		v.IntotoObj = *intotoObj
 		return nil
 	}
 	// if we're here, then we're trying to propose a new entry so we check to ensure client's aren't setting server-side computed fields
-	if v.IntotoObj.EnvelopeHash != nil || v.IntotoObj.PayloadHash != nil || len(v.IntotoObj.Signatures) != 0 {
+	if intotoObj.EnvelopeHash != nil || intotoObj.PayloadHash != nil || len(intotoObj.Signatures) != 0 {
 		return errors.New("either proposedContent or envelope hash, payload hash, and signatures must be present but not both")
 	}
 
 	env := &dsse.Envelope{}
-	if err := json.Unmarshal([]byte(*v.IntotoObj.ProposedContent.Envelope), env); err != nil {
+	if err := json.Unmarshal([]byte(*intotoObj.ProposedContent.Envelope), env); err != nil {
 		return err
 	}
 
 	allPubKeyBytes := make([][]byte, 0)
-	for _, publicKey := range v.IntotoObj.ProposedContent.PublicKeys {
+	for _, publicKey := range intotoObj.ProposedContent.PublicKeys {
 		allPubKeyBytes = append(allPubKeyBytes, publicKey)
 	}
 
@@ -203,14 +207,22 @@ func (v *V003Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
-	for sig, key := range sigToKeyMap {
+	// we need to ensure we canonicalize the ordering of signatures
+	sortedSigs := make([]string, 0, len(sigToKeyMap))
+	for sig := range sigToKeyMap {
+		sortedSigs = append(sortedSigs, sig)
+	}
+	sort.Strings(sortedSigs)
+
+	for _, sig := range sortedSigs {
+		key := sigToKeyMap[sig]
 		canonicalizedKey, err := key.CanonicalValue()
 		if err != nil {
 			return err
 		}
 		b64CanonicalizedKey := strfmt.Base64(canonicalizedKey)
 
-		v.IntotoObj.Signatures = append(v.IntotoObj.Signatures, &models.IntotoV003SchemaSignaturesItems0{
+		intotoObj.Signatures = append(intotoObj.Signatures, &models.IntotoV003SchemaSignaturesItems0{
 			Signature: &sig,
 			PublicKey: &b64CanonicalizedKey,
 		})
@@ -223,17 +235,19 @@ func (v *V003Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	payloadHash := sha256.Sum256(decodedPayload)
-	v.IntotoObj.PayloadHash = &models.IntotoV003SchemaPayloadHash{
+	intotoObj.PayloadHash = &models.IntotoV003SchemaPayloadHash{
 		Algorithm: swag.String(models.IntotoV003SchemaPayloadHashAlgorithmSha256),
 		Value:     swag.String(hex.EncodeToString(payloadHash[:])),
 	}
 
-	envelopeHash := sha256.Sum256([]byte(*v.IntotoObj.ProposedContent.Envelope))
-	v.IntotoObj.EnvelopeHash = &models.IntotoV003SchemaEnvelopeHash{
+	envelopeHash := sha256.Sum256([]byte(*intotoObj.ProposedContent.Envelope))
+	intotoObj.EnvelopeHash = &models.IntotoV003SchemaEnvelopeHash{
 		Algorithm: swag.String(models.IntotoV003SchemaEnvelopeHashAlgorithmSha256),
 		Value:     swag.String(hex.EncodeToString(envelopeHash[:])),
 	}
 
+	// we've gotten through all processing without error, now update the object we're unmarshalling into
+	v.IntotoObj = *intotoObj
 	v.env = env
 
 	return nil
@@ -250,6 +264,11 @@ func (v *V003Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 		EnvelopeHash: v.IntotoObj.EnvelopeHash,
 		PayloadHash:  v.IntotoObj.PayloadHash,
 	}
+
+	sort.Slice(canonicalEntry.Signatures, func(i, j int) bool {
+		return *canonicalEntry.Signatures[i].Signature < *canonicalEntry.Signatures[j].Signature
+	})
+
 	itObj := models.Intoto{}
 	itObj.APIVersion = swag.String(APIVERSION)
 	itObj.Spec = &canonicalEntry

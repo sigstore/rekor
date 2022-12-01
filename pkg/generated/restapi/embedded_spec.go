@@ -2145,7 +2145,7 @@ func init() {
       ],
       "properties": {
         "envelope": {
-          "description": "DSSE envelope specified as JSON object; payloadType in the envelope MUST be set to 'application/vnd.in-toto+json'",
+          "description": "DSSE envelope specified as a stringified JSON object; payloadType in the envelope MUST be set to 'application/vnd.in-toto+json'",
           "type": "string",
           "writeOnly": true
         },
@@ -3518,7 +3518,7 @@ func init() {
           ],
           "properties": {
             "envelope": {
-              "description": "DSSE envelope specified as JSON object; payloadType in the envelope MUST be set to 'application/vnd.in-toto+json'",
+              "description": "DSSE envelope specified as a stringified JSON object; payloadType in the envelope MUST be set to 'application/vnd.in-toto+json'",
               "type": "string",
               "writeOnly": true
             },
@@ -3536,7 +3536,7 @@ func init() {
           "writeOnly": true
         },
         "signatures": {
-          "description": "extracted collection of all signatures of the envelope's payload",
+          "description": "extracted collection of all signatures of the envelope's payload; elements will be sorted by lexicographical order of the base64 encoded signature strings",
           "type": "array",
           "minItems": 1,
           "items": {
