@@ -14,7 +14,6 @@
 // limitations under the License.
 
 //go:build e2e
-// +build e2e
 
 package e2e
 
@@ -23,14 +22,9 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/rsa"
 	"crypto/sha256"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -50,16 +44,12 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/in-toto/in-toto-golang/in_toto"
-	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
-	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
-	"github.com/sigstore/rekor/pkg/types"
 	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/util"
@@ -128,33 +118,6 @@ func TestDuplicates(t *testing.T) {
 	createdPGPSignedArtifact(t, artifactPath, sigPath)
 	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
-}
-
-func TestUploadVerifyRekord(t *testing.T) {
-	// Create a random artifact and sign it.
-	artifactPath := filepath.Join(t.TempDir(), "artifact")
-	sigPath := filepath.Join(t.TempDir(), "signature.asc")
-
-	createdPGPSignedArtifact(t, artifactPath, sigPath)
-
-	// Write the public key to a file
-	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
-	if err := ioutil.WriteFile(pubPath, []byte(publicKey), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	// Verify should fail initially
-	out := runCliErr(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
-	outputContains(t, out, "entry in log cannot be located")
-
-	// It should upload successfully.
-	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
-	outputContains(t, out, "Created entry at")
-
-	// Now we should be able to verify it.
-	out = runCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
-	outputContains(t, out, "Inclusion Proof:")
-	outputContains(t, out, "Checkpoint:")
 }
 
 func TestLogInfo(t *testing.T) {
@@ -235,263 +198,6 @@ func TestGetCLI(t *testing.T) {
 
 func TestSearchNoEntriesRC1(t *testing.T) {
 	runCliErr(t, "search", "--email", "noone@internetz.com")
-}
-
-func TestIntoto(t *testing.T) {
-	td := t.TempDir()
-	attestationPath := filepath.Join(td, "attestation.json")
-	pubKeyPath := filepath.Join(td, "pub.pem")
-
-	// Get some random data so it's unique each run
-	d := randomData(t, 10)
-	id := base64.StdEncoding.EncodeToString(d)
-
-	it := in_toto.ProvenanceStatement{
-		StatementHeader: in_toto.StatementHeader{
-			Type:          in_toto.StatementInTotoV01,
-			PredicateType: slsa.PredicateSLSAProvenance,
-			Subject: []in_toto.Subject{
-				{
-					Name: "foobar",
-					Digest: slsa.DigestSet{
-						"foo": "bar",
-					},
-				},
-			},
-		},
-		Predicate: slsa.ProvenancePredicate{
-			Builder: slsa.ProvenanceBuilder{
-				ID: "foo" + id,
-			},
-		},
-	}
-
-	b, err := json.Marshal(it)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pb, _ := pem.Decode([]byte(sigx509.ECDSAPriv))
-	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	s, err := signature.LoadECDSASigner(priv.(*ecdsa.PrivateKey), crypto.SHA256)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	signer, err := dsse.NewEnvelopeSigner(&sigx509.Verifier{
-		S: s,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	env, err := signer.SignPayload(in_toto.PayloadType, b)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	eb, err := json.Marshal(env)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	write(t, string(eb), attestationPath)
-	write(t, sigx509.ECDSAPub, pubKeyPath)
-
-	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
-	outputContains(t, out, "Created entry at")
-	uuid := getUUIDFromUploadOutput(t, out)
-
-	out = runCli(t, "get", "--uuid", uuid, "--format=json")
-	g := getOut{}
-	if err := json.Unmarshal([]byte(out), &g); err != nil {
-		t.Fatal(err)
-	}
-	// The attestation should be stored at /var/run/attestations/sha256:digest
-
-	got := in_toto.ProvenanceStatement{}
-	if err := json.Unmarshal([]byte(g.Attestation), &got); err != nil {
-		t.Fatal(err)
-	}
-	if diff := cmp.Diff(it, got); diff != "" {
-		t.Errorf("diff: %s", diff)
-	}
-
-	attHash := sha256.Sum256(b)
-
-	intotoModel := &models.IntotoV002Schema{}
-	if err := types.DecodeEntry(g.Body.(map[string]interface{})["IntotoObj"], intotoModel); err != nil {
-		t.Errorf("could not convert body into intoto type: %v", err)
-	}
-	if intotoModel.Content == nil || intotoModel.Content.PayloadHash == nil {
-		t.Errorf("could not find hash over attestation %v", intotoModel)
-	}
-	recordedPayloadHash, err := hex.DecodeString(*intotoModel.Content.PayloadHash.Value)
-	if err != nil {
-		t.Errorf("error converting attestation hash to []byte: %v", err)
-	}
-
-	if !bytes.Equal(attHash[:], recordedPayloadHash) {
-		t.Fatal(fmt.Errorf("attestation hash %v doesnt match the payload we sent %v", hex.EncodeToString(attHash[:]),
-			*intotoModel.Content.PayloadHash.Value))
-	}
-
-	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
-	outputContains(t, out, "Entry already exists")
-}
-
-func TestIntotoMultiSig(t *testing.T) {
-	td := t.TempDir()
-	attestationPath := filepath.Join(td, "attestation.json")
-	ecdsapubKeyPath := filepath.Join(td, "ecdsapub.pem")
-	rsapubKeyPath := filepath.Join(td, "rsapub.pem")
-
-	// Get some random data so it's unique each run
-	d := randomData(t, 10)
-	id := base64.StdEncoding.EncodeToString(d)
-
-	it := in_toto.ProvenanceStatement{
-		StatementHeader: in_toto.StatementHeader{
-			Type:          in_toto.StatementInTotoV01,
-			PredicateType: slsa.PredicateSLSAProvenance,
-			Subject: []in_toto.Subject{
-				{
-					Name: "foobar",
-					Digest: slsa.DigestSet{
-						"foo": "bar",
-					},
-				},
-			},
-		},
-		Predicate: slsa.ProvenancePredicate{
-			Builder: slsa.ProvenanceBuilder{
-				ID: "foo" + id,
-			},
-		},
-	}
-
-	b, err := json.Marshal(it)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	evps := []*sigx509.Verifier{}
-
-	pb, _ := pem.Decode([]byte(sigx509.ECDSAPriv))
-	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	signECDSA, err := signature.LoadECDSASigner(priv.(*ecdsa.PrivateKey), crypto.SHA256)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	evps = append(evps, &sigx509.Verifier{
-		S: signECDSA,
-	})
-
-	pbRSA, _ := pem.Decode([]byte(sigx509.RSAKey))
-	rsaPriv, err := x509.ParsePKCS8PrivateKey(pbRSA.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	signRSA, err := signature.LoadRSAPKCS1v15Signer(rsaPriv.(*rsa.PrivateKey), crypto.SHA256)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	evps = append(evps, &sigx509.Verifier{
-		S: signRSA,
-	})
-
-	signer, err := dsse.NewMultiEnvelopeSigner(2, evps[0], evps[1])
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	env, err := signer.SignPayload(in_toto.PayloadType, b)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	eb, err := json.Marshal(env)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	write(t, string(eb), attestationPath)
-	write(t, sigx509.ECDSAPub, ecdsapubKeyPath)
-	write(t, sigx509.PubKey, rsapubKeyPath)
-
-	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
-	outputContains(t, out, "Created entry at")
-	uuid := getUUIDFromUploadOutput(t, out)
-
-	out = runCli(t, "get", "--uuid", uuid, "--format=json")
-	g := getOut{}
-	if err := json.Unmarshal([]byte(out), &g); err != nil {
-		t.Fatal(err)
-	}
-	// The attestation should be stored at /var/run/attestations/$uuid
-
-	got := in_toto.ProvenanceStatement{}
-	if err := json.Unmarshal([]byte(g.Attestation), &got); err != nil {
-		t.Fatal(err)
-	}
-	if diff := cmp.Diff(it, got); diff != "" {
-		t.Errorf("diff: %s", diff)
-	}
-
-	attHash := sha256.Sum256([]byte(g.Attestation))
-
-	intotoV002Model := &models.IntotoV002Schema{}
-	if err := types.DecodeEntry(g.Body.(map[string]interface{})["IntotoObj"], intotoV002Model); err != nil {
-		t.Errorf("could not convert body into intoto type: %v", err)
-	}
-	if intotoV002Model.Content.Hash == nil {
-		t.Errorf("could not find hash over attestation %v", intotoV002Model)
-	}
-	recordedPayloadHash, err := hex.DecodeString(*intotoV002Model.Content.PayloadHash.Value)
-	if err != nil {
-		t.Errorf("error converting attestation hash to []byte: %v", err)
-	}
-
-	if !bytes.Equal(attHash[:], recordedPayloadHash) {
-		t.Fatal(fmt.Errorf("attestation hash %v doesnt match the payload we sent %v", hex.EncodeToString(attHash[:]),
-			*intotoV002Model.Content.PayloadHash.Value))
-	}
-
-	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
-	outputContains(t, out, "Entry already exists")
-}
-
-func TestTimestampArtifact(t *testing.T) {
-	var out string
-	out = runCli(t, "upload", "--type", "rfc3161", "--artifact", "test.tsr")
-	outputContains(t, out, "Created entry at")
-	uuid := getUUIDFromTimestampOutput(t, out)
-
-	artifactBytes, err := ioutil.ReadFile("test.tsr")
-	if err != nil {
-		t.Error(err)
-	}
-	sha := sha256.Sum256(artifactBytes)
-
-	out = runCli(t, "upload", "--type", "rfc3161", "--artifact", "test.tsr")
-	outputContains(t, out, "Entry already exists")
-
-	out = runCli(t, "search", "--artifact", "test.tsr")
-	outputContains(t, out, uuid)
-
-	out = runCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
-	outputContains(t, out, uuid)
 }
 
 func TestSearchSHA512(t *testing.T) {
@@ -613,25 +319,25 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	}
 }
 
-func TestGetNonExistantIndex(t *testing.T) {
+func TestGetNonExistentIndex(t *testing.T) {
 	// this index is extremely likely to not exist
 	out := runCliErr(t, "get", "--log-index", "100000000")
 	outputContains(t, out, "404")
 }
 
-func TestVerifyNonExistantIndex(t *testing.T) {
+func TestVerifyNonExistentIndex(t *testing.T) {
 	// this index is extremely likely to not exist
 	out := runCliErr(t, "verify", "--log-index", "100000000")
 	outputContains(t, out, "entry in log cannot be located")
 }
 
-func TestGetNonExistantUUID(t *testing.T) {
+func TestGetNonExistentUUID(t *testing.T) {
 	// this uuid is extremely likely to not exist
 	out := runCliErr(t, "get", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 	outputContains(t, out, "404")
 }
 
-func TestVerifyNonExistantUUID(t *testing.T) {
+func TestVerifyNonExistentUUID(t *testing.T) {
 	// this uuid is extremely likely to not exist
 	out := runCliErr(t, "verify", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 	outputContains(t, out, "entry in log cannot be located")
