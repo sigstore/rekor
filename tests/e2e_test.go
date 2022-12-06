@@ -18,7 +18,6 @@
 package e2e
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto"
@@ -31,7 +30,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -660,78 +658,6 @@ func TestSearchValidateTreeID(t *testing.T) {
 	}
 	if strings.TrimSpace(string(c)) != "[]" {
 		t.Fatalf("expected empty JSON array as response, got %s instead", string(c))
-	}
-}
-
-func getRekorMetricCount(metricLine string, t *testing.T) (int, error) {
-	re, err := regexp.Compile(fmt.Sprintf("^%s.*([0-9]+)$", regexp.QuoteMeta(metricLine)))
-	if err != nil {
-		return 0, err
-	}
-
-	resp, err := http.Get("http://localhost:2112/metrics")
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	scanner := bufio.NewScanner(resp.Body)
-	for scanner.Scan() {
-		match := re.FindStringSubmatch(scanner.Text())
-		if len(match) != 2 {
-			continue
-		}
-
-		result, err := strconv.Atoi(match[1])
-		if err != nil {
-			return 0, nil
-		}
-		t.Log("Matched metric line: " + scanner.Text())
-		return result, nil
-	}
-	return 0, nil
-}
-
-// Smoke test to ensure we're publishing and recording metrics when an API is
-// called.
-// TODO: use a more robust test approach here e.g. prometheus client-based?
-// TODO: cover all endpoints to make sure none are dropped.
-func TestMetricsCounts(t *testing.T) {
-	latencyMetric := "rekor_latency_by_api_count{method=\"GET\",path=\"/api/v1/log\"}"
-	qpsMetric := "rekor_qps_by_api{code=\"200\",method=\"GET\",path=\"/api/v1/log\"}"
-
-	latencyCount, err := getRekorMetricCount(latencyMetric, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	qpsCount, err := getRekorMetricCount(qpsMetric, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	resp, err := http.Get("http://localhost:3000/api/v1/log")
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp.Body.Close()
-
-	latencyCount2, err := getRekorMetricCount(latencyMetric, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	qpsCount2, err := getRekorMetricCount(qpsMetric, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if latencyCount2-latencyCount != 1 {
-		t.Error("rekor_latency_by_api_count did not increment")
-	}
-
-	if qpsCount2-qpsCount != 1 {
-		t.Error("rekor_qps_by_api did not increment")
 	}
 }
 
