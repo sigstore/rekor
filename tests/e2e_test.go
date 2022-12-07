@@ -349,7 +349,7 @@ func TestVerifyNonExistentUUID(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := fmt.Sprintf("{\"entryUUIDs\":[\"%s\"]}", entryID.ReturnEntryIDString())
-	resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve",
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
 		"application/json",
 		bytes.NewReader([]byte(body)))
 	if err != nil {
@@ -476,7 +476,7 @@ func TestInclusionProofRace(t *testing.T) {
 func TestHostnameInSTH(t *testing.T) {
 	// get ID of container
 	rekorContainerID := strings.Trim(run(t, "", "docker", "ps", "-q", "-f", "name=rekor-server"), "\n")
-	resp, err := http.Get("http://localhost:3000/api/v1/log")
+	resp, err := http.Get(fmt.Sprintf("%s/api/v1/log", rekorServer()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -517,7 +517,7 @@ func TestSearchQueryLimit(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
 			b := bytes.NewReader(getBody(t, test.limit))
-			resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve", "application/json", b)
+			resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()), "application/json", b)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -546,7 +546,7 @@ func TestSearchQueryMalformedEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := fmt.Sprintf("{\"entries\":[\"%s\"]}", b)
-	resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve",
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
 		"application/json",
 		bytes.NewBuffer([]byte(body)))
 	if err != nil {
@@ -569,7 +569,7 @@ func TestSearchQueryNonExistentEntry(t *testing.T) {
 	}
 	body := fmt.Sprintf("{\"entries\":[%s]}", b)
 	t.Log(string(body))
-	resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve",
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
 		"application/json",
 		bytes.NewBuffer([]byte(body)))
 	if err != nil {
@@ -633,7 +633,7 @@ func TestSearchValidateTreeID(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := "{\"entryUUIDs\":[\"%s\"]}"
-	resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve", "application/json", bytes.NewBuffer([]byte(fmt.Sprintf(body, entryID.ReturnEntryIDString()))))
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()), "application/json", bytes.NewBuffer([]byte(fmt.Sprintf(body, entryID.ReturnEntryIDString()))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -647,7 +647,8 @@ func TestSearchValidateTreeID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err = http.Post("http://localhost:3000/api/v1/log/entries/retrieve", "application/json", bytes.NewBuffer([]byte(fmt.Sprintf(body, entryID.ReturnEntryIDString()))))
+
+	resp, err = http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()), "application/json", bytes.NewBuffer([]byte(fmt.Sprintf(body, entryID.ReturnEntryIDString()))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1070,7 +1071,7 @@ func TestSearchLogQuerySingleShard(t *testing.T) {
 	}
 
 	for _, test := range testCases {
-		rekorClient, err := client.GetRekorClient("http://localhost:3000", client.WithRetryCount(0))
+		rekorClient, err := client.GetRekorClient(rekorServer(), client.WithRetryCount(0))
 		if err != nil {
 			t.Fatal(err)
 		}
