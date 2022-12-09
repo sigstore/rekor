@@ -14,31 +14,22 @@
 // limitations under the License.
 
 //go:build e2e
-// +build e2e
 
 package e2e
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/rsa"
 	"crypto/sha256"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -51,16 +42,12 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/in-toto/in-toto-golang/in_toto"
-	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
-	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
-	"github.com/sigstore/rekor/pkg/types"
 	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/util"
@@ -129,33 +116,6 @@ func TestDuplicates(t *testing.T) {
 	createdPGPSignedArtifact(t, artifactPath, sigPath)
 	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
-}
-
-func TestUploadVerifyRekord(t *testing.T) {
-	// Create a random artifact and sign it.
-	artifactPath := filepath.Join(t.TempDir(), "artifact")
-	sigPath := filepath.Join(t.TempDir(), "signature.asc")
-
-	createdPGPSignedArtifact(t, artifactPath, sigPath)
-
-	// Write the public key to a file
-	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
-	if err := ioutil.WriteFile(pubPath, []byte(publicKey), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	// Verify should fail initially
-	out := runCliErr(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
-	outputContains(t, out, "entry in log cannot be located")
-
-	// It should upload successfully.
-	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
-	outputContains(t, out, "Created entry at")
-
-	// Now we should be able to verify it.
-	out = runCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
-	outputContains(t, out, "Inclusion Proof:")
-	outputContains(t, out, "Checkpoint:")
 }
 
 func TestLogInfo(t *testing.T) {
@@ -233,400 +193,6 @@ func TestGetCLI(t *testing.T) {
 	}
 	out = runCli(t, "get", "--format=json", "--uuid", entryID.ReturnEntryIDString())
 }
-
-func TestSearchNoEntriesRC1(t *testing.T) {
-	runCliErr(t, "search", "--email", "noone@internetz.com")
-}
-
-func TestMinisign(t *testing.T) {
-	// Create a keypair
-	keyPath := filepath.Join(t.TempDir(), "minisign.key")
-	pubPath := filepath.Join(t.TempDir(), "minisign.pub")
-
-	// Set an empty password, we have to hit enter twice to confirm
-	run(t, "\n\n", "minisign", "-G", "-s", keyPath, "-p", pubPath)
-
-	// Create a random artifact and sign it.
-	artifactPath := filepath.Join(t.TempDir(), "artifact")
-	sigPath := filepath.Join(t.TempDir(), "signature.asc")
-	createArtifact(t, artifactPath)
-
-	// Send in one empty password over stdin
-	out := run(t, "\n", "minisign", "-S", "-s", keyPath, "-m", artifactPath, "-x", sigPath)
-	t.Log(out)
-
-	// Now upload to the log!
-	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
-		"--public-key", pubPath, "--pki-format", "minisign")
-	outputContains(t, out, "Created entry at")
-
-	uuidA := getUUIDFromUploadOutput(t, out)
-
-	out = runCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
-		"--public-key", pubPath, "--pki-format", "minisign")
-	outputContains(t, out, "Inclusion Proof")
-
-	out = runCli(t, "search", "--public-key", pubPath, "--pki-format", "minisign")
-	outputContains(t, out, uuidA)
-
-	// crease a second artifact and sign it
-	artifactPath_B := filepath.Join(t.TempDir(), "artifact2")
-	createArtifact(t, artifactPath_B)
-	out = run(t, "\n", "minisign", "-S", "-s", keyPath, "-m", artifactPath_B, "-x", sigPath)
-	// Now upload to the log!
-	out = runCli(t, "upload", "--artifact", artifactPath_B, "--signature", sigPath,
-		"--public-key", pubPath, "--pki-format", "minisign")
-	outputContains(t, out, "Created entry at")
-	uuidB := getUUIDFromUploadOutput(t, out)
-
-	tests := []struct {
-		name               string
-		expectedUuidACount int
-		expectedUuidBCount int
-		artifact           string
-		operator           string
-	}{
-		{
-			name:               "artifact A AND signature should return artifact A",
-			expectedUuidACount: 1,
-			expectedUuidBCount: 0,
-			artifact:           artifactPath,
-			operator:           "and",
-		},
-		{
-			name:               "artifact A OR signature should return artifact A and B",
-			expectedUuidACount: 1,
-			expectedUuidBCount: 1,
-			artifact:           artifactPath,
-			operator:           "or",
-		},
-		{
-			name:               "artifact B AND signature should return artifact B",
-			expectedUuidACount: 0,
-			expectedUuidBCount: 1,
-			artifact:           artifactPath_B,
-			operator:           "and",
-		},
-		{
-			name:               "artifact B OR signature should return artifact A and B",
-			expectedUuidACount: 1,
-			expectedUuidBCount: 1,
-			artifact:           artifactPath_B,
-			operator:           "or",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			out = runCli(t, "search", "--public-key", pubPath, "--pki-format", "minisign",
-				"--operator", test.operator, "--artifact", test.artifact)
-
-			expected := map[string]int{uuidA: test.expectedUuidACount, uuidB: test.expectedUuidBCount}
-			actual := map[string]int{
-				uuidA: strings.Count(out, uuidA),
-				uuidB: strings.Count(out, uuidB),
-			}
-			if !reflect.DeepEqual(expected, actual) {
-				t.Errorf("expected to find %v, found %v", expected, actual)
-			}
-		})
-	}
-}
-
-func TestSSH(t *testing.T) {
-	td := t.TempDir()
-	// Create a keypair
-	keyPath := filepath.Join(td, "id_rsa")
-	pubPath := filepath.Join(td, "id_rsa.pub")
-
-	if err := ioutil.WriteFile(pubPath, []byte(sshPublicKey), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if err := ioutil.WriteFile(keyPath, []byte(sshPrivateKey), 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	// Create a random artifact and sign it.
-	artifactPath := filepath.Join(td, "artifact")
-	sigPath := filepath.Join(td, "signature.sig")
-	artifact := createArtifact(t, artifactPath)
-
-	sig := SSHSign(t, strings.NewReader(artifact))
-	if err := ioutil.WriteFile(sigPath, []byte(sig), 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	// Now upload to the log!
-	out := runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
-		"--public-key", pubPath, "--pki-format", "ssh")
-	outputContains(t, out, "Created entry at")
-
-	uuid := getUUIDFromUploadOutput(t, out)
-
-	out = runCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
-		"--public-key", pubPath, "--pki-format", "ssh")
-	outputContains(t, out, "Inclusion Proof")
-
-	out = runCli(t, "search", "--public-key", pubPath, "--pki-format", "ssh")
-	outputContains(t, out, uuid)
-}
-
-func TestIntoto(t *testing.T) {
-	td := t.TempDir()
-	attestationPath := filepath.Join(td, "attestation.json")
-	pubKeyPath := filepath.Join(td, "pub.pem")
-
-	// Get some random data so it's unique each run
-	d := randomData(t, 10)
-	id := base64.StdEncoding.EncodeToString(d)
-
-	it := in_toto.ProvenanceStatement{
-		StatementHeader: in_toto.StatementHeader{
-			Type:          in_toto.StatementInTotoV01,
-			PredicateType: slsa.PredicateSLSAProvenance,
-			Subject: []in_toto.Subject{
-				{
-					Name: "foobar",
-					Digest: slsa.DigestSet{
-						"foo": "bar",
-					},
-				},
-			},
-		},
-		Predicate: slsa.ProvenancePredicate{
-			Builder: slsa.ProvenanceBuilder{
-				ID: "foo" + id,
-			},
-		},
-	}
-
-	b, err := json.Marshal(it)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pb, _ := pem.Decode([]byte(sigx509.ECDSAPriv))
-	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	s, err := signature.LoadECDSASigner(priv.(*ecdsa.PrivateKey), crypto.SHA256)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	signer, err := dsse.NewEnvelopeSigner(&sigx509.Verifier{
-		S: s,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	env, err := signer.SignPayload(in_toto.PayloadType, b)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	eb, err := json.Marshal(env)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	write(t, string(eb), attestationPath)
-	write(t, sigx509.ECDSAPub, pubKeyPath)
-
-	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
-	outputContains(t, out, "Created entry at")
-	uuid := getUUIDFromUploadOutput(t, out)
-
-	out = runCli(t, "get", "--uuid", uuid, "--format=json")
-	g := getOut{}
-	if err := json.Unmarshal([]byte(out), &g); err != nil {
-		t.Fatal(err)
-	}
-	// The attestation should be stored at /var/run/attestations/sha256:digest
-
-	got := in_toto.ProvenanceStatement{}
-	if err := json.Unmarshal([]byte(g.Attestation), &got); err != nil {
-		t.Fatal(err)
-	}
-	if diff := cmp.Diff(it, got); diff != "" {
-		t.Errorf("diff: %s", diff)
-	}
-
-	attHash := sha256.Sum256(b)
-
-	intotoModel := &models.IntotoV002Schema{}
-	if err := types.DecodeEntry(g.Body.(map[string]interface{})["IntotoObj"], intotoModel); err != nil {
-		t.Errorf("could not convert body into intoto type: %v", err)
-	}
-	if intotoModel.Content == nil || intotoModel.Content.PayloadHash == nil {
-		t.Errorf("could not find hash over attestation %v", intotoModel)
-	}
-	recordedPayloadHash, err := hex.DecodeString(*intotoModel.Content.PayloadHash.Value)
-	if err != nil {
-		t.Errorf("error converting attestation hash to []byte: %v", err)
-	}
-
-	if !bytes.Equal(attHash[:], recordedPayloadHash) {
-		t.Fatal(fmt.Errorf("attestation hash %v doesnt match the payload we sent %v", hex.EncodeToString(attHash[:]),
-			*intotoModel.Content.PayloadHash.Value))
-	}
-
-	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
-	outputContains(t, out, "Entry already exists")
-}
-
-func TestIntotoMultiSig(t *testing.T) {
-	td := t.TempDir()
-	attestationPath := filepath.Join(td, "attestation.json")
-	ecdsapubKeyPath := filepath.Join(td, "ecdsapub.pem")
-	rsapubKeyPath := filepath.Join(td, "rsapub.pem")
-
-	// Get some random data so it's unique each run
-	d := randomData(t, 10)
-	id := base64.StdEncoding.EncodeToString(d)
-
-	it := in_toto.ProvenanceStatement{
-		StatementHeader: in_toto.StatementHeader{
-			Type:          in_toto.StatementInTotoV01,
-			PredicateType: slsa.PredicateSLSAProvenance,
-			Subject: []in_toto.Subject{
-				{
-					Name: "foobar",
-					Digest: slsa.DigestSet{
-						"foo": "bar",
-					},
-				},
-			},
-		},
-		Predicate: slsa.ProvenancePredicate{
-			Builder: slsa.ProvenanceBuilder{
-				ID: "foo" + id,
-			},
-		},
-	}
-
-	b, err := json.Marshal(it)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	evps := []*sigx509.Verifier{}
-
-	pb, _ := pem.Decode([]byte(sigx509.ECDSAPriv))
-	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	signECDSA, err := signature.LoadECDSASigner(priv.(*ecdsa.PrivateKey), crypto.SHA256)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	evps = append(evps, &sigx509.Verifier{
-		S: signECDSA,
-	})
-
-	pbRSA, _ := pem.Decode([]byte(sigx509.RSAKey))
-	rsaPriv, err := x509.ParsePKCS8PrivateKey(pbRSA.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	signRSA, err := signature.LoadRSAPKCS1v15Signer(rsaPriv.(*rsa.PrivateKey), crypto.SHA256)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	evps = append(evps, &sigx509.Verifier{
-		S: signRSA,
-	})
-
-	signer, err := dsse.NewMultiEnvelopeSigner(2, evps[0], evps[1])
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	env, err := signer.SignPayload(in_toto.PayloadType, b)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	eb, err := json.Marshal(env)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	write(t, string(eb), attestationPath)
-	write(t, sigx509.ECDSAPub, ecdsapubKeyPath)
-	write(t, sigx509.PubKey, rsapubKeyPath)
-
-	out := runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
-	outputContains(t, out, "Created entry at")
-	uuid := getUUIDFromUploadOutput(t, out)
-
-	out = runCli(t, "get", "--uuid", uuid, "--format=json")
-	g := getOut{}
-	if err := json.Unmarshal([]byte(out), &g); err != nil {
-		t.Fatal(err)
-	}
-	// The attestation should be stored at /var/run/attestations/$uuid
-
-	got := in_toto.ProvenanceStatement{}
-	if err := json.Unmarshal([]byte(g.Attestation), &got); err != nil {
-		t.Fatal(err)
-	}
-	if diff := cmp.Diff(it, got); diff != "" {
-		t.Errorf("diff: %s", diff)
-	}
-
-	attHash := sha256.Sum256([]byte(g.Attestation))
-
-	intotoV002Model := &models.IntotoV002Schema{}
-	if err := types.DecodeEntry(g.Body.(map[string]interface{})["IntotoObj"], intotoV002Model); err != nil {
-		t.Errorf("could not convert body into intoto type: %v", err)
-	}
-	if intotoV002Model.Content.Hash == nil {
-		t.Errorf("could not find hash over attestation %v", intotoV002Model)
-	}
-	recordedPayloadHash, err := hex.DecodeString(*intotoV002Model.Content.PayloadHash.Value)
-	if err != nil {
-		t.Errorf("error converting attestation hash to []byte: %v", err)
-	}
-
-	if !bytes.Equal(attHash[:], recordedPayloadHash) {
-		t.Fatal(fmt.Errorf("attestation hash %v doesnt match the payload we sent %v", hex.EncodeToString(attHash[:]),
-			*intotoV002Model.Content.PayloadHash.Value))
-	}
-
-	out = runCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
-	outputContains(t, out, "Entry already exists")
-}
-
-func TestTimestampArtifact(t *testing.T) {
-	var out string
-	out = runCli(t, "upload", "--type", "rfc3161", "--artifact", "test.tsr")
-	outputContains(t, out, "Created entry at")
-	uuid := getUUIDFromTimestampOutput(t, out)
-
-	artifactBytes, err := ioutil.ReadFile("test.tsr")
-	if err != nil {
-		t.Error(err)
-	}
-	sha := sha256.Sum256(artifactBytes)
-
-	out = runCli(t, "upload", "--type", "rfc3161", "--artifact", "test.tsr")
-	outputContains(t, out, "Entry already exists")
-
-	out = runCli(t, "search", "--artifact", "test.tsr")
-	outputContains(t, out, uuid)
-
-	out = runCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
-	outputContains(t, out, uuid)
-}
-
 func TestSearchSHA512(t *testing.T) {
 	sha512 := "c7694a1112ea1404a3c5852bdda04c2cc224b3567ef6ceb8204dbf2b382daacfc6837ee2ed9d5b82c90b880a3c7289778dbd5a8c2c08193459bcf7bd44581ed0"
 	var out string
@@ -746,25 +312,25 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	}
 }
 
-func TestGetNonExistantIndex(t *testing.T) {
+func TestGetNonExistentIndex(t *testing.T) {
 	// this index is extremely likely to not exist
 	out := runCliErr(t, "get", "--log-index", "100000000")
 	outputContains(t, out, "404")
 }
 
-func TestVerifyNonExistantIndex(t *testing.T) {
+func TestVerifyNonExistentIndex(t *testing.T) {
 	// this index is extremely likely to not exist
 	out := runCliErr(t, "verify", "--log-index", "100000000")
 	outputContains(t, out, "entry in log cannot be located")
 }
 
-func TestGetNonExistantUUID(t *testing.T) {
+func TestGetNonExistentUUID(t *testing.T) {
 	// this uuid is extremely likely to not exist
 	out := runCliErr(t, "get", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 	outputContains(t, out, "404")
 }
 
-func TestVerifyNonExistantUUID(t *testing.T) {
+func TestVerifyNonExistentUUID(t *testing.T) {
 	// this uuid is extremely likely to not exist
 	out := runCliErr(t, "verify", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 	outputContains(t, out, "entry in log cannot be located")
@@ -778,7 +344,7 @@ func TestVerifyNonExistantUUID(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := fmt.Sprintf("{\"entryUUIDs\":[\"%s\"]}", entryID.ReturnEntryIDString())
-	resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve",
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
 		"application/json",
 		bytes.NewReader([]byte(body)))
 	if err != nil {
@@ -905,7 +471,7 @@ func TestInclusionProofRace(t *testing.T) {
 func TestHostnameInSTH(t *testing.T) {
 	// get ID of container
 	rekorContainerID := strings.Trim(run(t, "", "docker", "ps", "-q", "-f", "name=rekor-server"), "\n")
-	resp, err := http.Get("http://localhost:3000/api/v1/log")
+	resp, err := http.Get(fmt.Sprintf("%s/api/v1/log", rekorServer()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -946,7 +512,7 @@ func TestSearchQueryLimit(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
 			b := bytes.NewReader(getBody(t, test.limit))
-			resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve", "application/json", b)
+			resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()), "application/json", b)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -975,7 +541,7 @@ func TestSearchQueryMalformedEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := fmt.Sprintf("{\"entries\":[\"%s\"]}", b)
-	resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve",
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
 		"application/json",
 		bytes.NewBuffer([]byte(body)))
 	if err != nil {
@@ -998,7 +564,7 @@ func TestSearchQueryNonExistentEntry(t *testing.T) {
 	}
 	body := fmt.Sprintf("{\"entries\":[%s]}", b)
 	t.Log(string(body))
-	resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve",
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
 		"application/json",
 		bytes.NewBuffer([]byte(body)))
 	if err != nil {
@@ -1062,7 +628,7 @@ func TestSearchValidateTreeID(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := "{\"entryUUIDs\":[\"%s\"]}"
-	resp, err := http.Post("http://localhost:3000/api/v1/log/entries/retrieve", "application/json", bytes.NewBuffer([]byte(fmt.Sprintf(body, entryID.ReturnEntryIDString()))))
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()), "application/json", bytes.NewBuffer([]byte(fmt.Sprintf(body, entryID.ReturnEntryIDString()))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1076,7 +642,8 @@ func TestSearchValidateTreeID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err = http.Post("http://localhost:3000/api/v1/log/entries/retrieve", "application/json", bytes.NewBuffer([]byte(fmt.Sprintf(body, entryID.ReturnEntryIDString()))))
+
+	resp, err = http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()), "application/json", bytes.NewBuffer([]byte(fmt.Sprintf(body, entryID.ReturnEntryIDString()))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1087,78 +654,6 @@ func TestSearchValidateTreeID(t *testing.T) {
 	}
 	if strings.TrimSpace(string(c)) != "[]" {
 		t.Fatalf("expected empty JSON array as response, got %s instead", string(c))
-	}
-}
-
-func getRekorMetricCount(metricLine string, t *testing.T) (int, error) {
-	re, err := regexp.Compile(fmt.Sprintf("^%s.*([0-9]+)$", regexp.QuoteMeta(metricLine)))
-	if err != nil {
-		return 0, err
-	}
-
-	resp, err := http.Get("http://localhost:2112/metrics")
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	scanner := bufio.NewScanner(resp.Body)
-	for scanner.Scan() {
-		match := re.FindStringSubmatch(scanner.Text())
-		if len(match) != 2 {
-			continue
-		}
-
-		result, err := strconv.Atoi(match[1])
-		if err != nil {
-			return 0, nil
-		}
-		t.Log("Matched metric line: " + scanner.Text())
-		return result, nil
-	}
-	return 0, nil
-}
-
-// Smoke test to ensure we're publishing and recording metrics when an API is
-// called.
-// TODO: use a more robust test approach here e.g. prometheus client-based?
-// TODO: cover all endpoints to make sure none are dropped.
-func TestMetricsCounts(t *testing.T) {
-	latencyMetric := "rekor_latency_by_api_count{method=\"GET\",path=\"/api/v1/log\"}"
-	qpsMetric := "rekor_qps_by_api{code=\"200\",method=\"GET\",path=\"/api/v1/log\"}"
-
-	latencyCount, err := getRekorMetricCount(latencyMetric, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	qpsCount, err := getRekorMetricCount(qpsMetric, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	resp, err := http.Get("http://localhost:3000/api/v1/log")
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp.Body.Close()
-
-	latencyCount2, err := getRekorMetricCount(latencyMetric, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	qpsCount2, err := getRekorMetricCount(qpsMetric, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if latencyCount2-latencyCount != 1 {
-		t.Error("rekor_latency_by_api_count did not increment")
-	}
-
-	if qpsCount2-qpsCount != 1 {
-		t.Error("rekor_qps_by_api did not increment")
 	}
 }
 
@@ -1571,7 +1066,7 @@ func TestSearchLogQuerySingleShard(t *testing.T) {
 	}
 
 	for _, test := range testCases {
-		rekorClient, err := client.GetRekorClient("http://localhost:3000", client.WithRetryCount(0))
+		rekorClient, err := client.GetRekorClient(rekorServer(), client.WithRetryCount(0))
 		if err != nil {
 			t.Fatal(err)
 		}
