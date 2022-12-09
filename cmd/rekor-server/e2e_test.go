@@ -19,12 +19,18 @@ package main
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"github.com/sigstore/rekor/pkg/sharding"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/sigstore/rekor/pkg/util"
@@ -99,6 +105,7 @@ func TestMetricsCounts(t *testing.T) {
 	}
 }
 func getRekorMetricCount(metricLine string, t *testing.T) (int, error) {
+	t.Helper()
 	re, err := regexp.Compile(fmt.Sprintf("^%s.*([0-9]+)$", regexp.QuoteMeta(metricLine)))
 	if err != nil {
 		return 0, err
@@ -125,4 +132,92 @@ func getRekorMetricCount(metricLine string, t *testing.T) (int, error) {
 		return result, nil
 	}
 	return 0, nil
+}
+func TestEnvVariableValidation(t *testing.T) {
+	os.Setenv("REKOR_FORMAT", "bogus")
+	defer os.Unsetenv("REKOR_FORMAT")
+
+	util.RunCliErr(t, "loginfo")
+}
+func TestGetCLI(t *testing.T) {
+	// Create something and add it to the log
+	artifactPath := filepath.Join(t.TempDir(), "artifact")
+	sigPath := filepath.Join(t.TempDir(), "signature.asc")
+	t.Cleanup(func() {
+		os.Remove(artifactPath)
+		os.Remove(sigPath)
+	})
+	util.CreatedPGPSignedArtifact(t, artifactPath, sigPath)
+
+	// Write the public key to a file
+	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
+	if err := ioutil.WriteFile(pubPath, []byte(util.PubKey), 0644); err != nil {
+		t.Error(err)
+	}
+	t.Cleanup(func() {
+		os.Remove(pubPath)
+	})
+	out := util.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	util.OutputContains(t, out, "Created entry at")
+
+	uuid, err := sharding.GetUUIDFromIDString(util.GetUUIDFromUploadOutput(t, out))
+	if err != nil {
+		t.Error(err)
+	}
+
+	// since we at least have 1 valid entry, check the log at index 0
+	util.RunCli(t, "get", "--log-index", "0")
+
+	out = util.RunCli(t, "get", "--format=json", "--uuid", uuid)
+
+	// The output here should be in JSON with this structure:
+	g := util.GetOut{}
+	if err := json.Unmarshal([]byte(out), &g); err != nil {
+		t.Error(err)
+	}
+
+	if g.IntegratedTime == 0 {
+		t.Errorf("Expected IntegratedTime to be set. Got %s", out)
+	}
+	// Get it with the logindex as well
+	util.RunCli(t, "get", "--format=json", "--log-index", strconv.Itoa(g.LogIndex))
+
+	// check index via the file and public key to ensure that the index has updated correctly
+	out = util.RunCli(t, "search", "--artifact", artifactPath)
+	util.OutputContains(t, out, uuid)
+
+	out = util.RunCli(t, "search", "--public-key", pubPath)
+	util.OutputContains(t, out, uuid)
+
+	artifactBytes, err := ioutil.ReadFile(artifactPath)
+	if err != nil {
+		t.Error(err)
+	}
+	sha := sha256.Sum256(artifactBytes)
+
+	out = util.RunCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
+	util.OutputContains(t, out, uuid)
+
+	// Exercise GET with the new EntryID (TreeID + UUID)
+	tid := getTreeID(t)
+	entryID, err := sharding.CreateEntryIDFromParts(fmt.Sprintf("%x", tid), uuid)
+	if err != nil {
+		t.Error(err)
+	}
+	out = util.RunCli(t, "get", "--format=json", "--uuid", entryID.ReturnEntryIDString())
+}
+
+func getTreeID(t *testing.T) int64 {
+	t.Helper()
+	out := util.RunCli(t, "loginfo")
+	tidStr := strings.TrimSpace(strings.Split(out, "TreeID: ")[1])
+	tid, err := strconv.ParseInt(tidStr, 10, 64)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	t.Log("Tree ID:", tid)
+	return tid
+}
+func TestSearchNoEntriesRC1(t *testing.T) {
+	util.RunCliErr(t, "search", "--email", "noone@internetz.com")
 }

@@ -193,11 +193,6 @@ func TestGetCLI(t *testing.T) {
 	}
 	out = runCli(t, "get", "--format=json", "--uuid", entryID.ReturnEntryIDString())
 }
-
-func TestSearchNoEntriesRC1(t *testing.T) {
-	runCliErr(t, "search", "--email", "noone@internetz.com")
-}
-
 func TestSearchSHA512(t *testing.T) {
 	sha512 := "c7694a1112ea1404a3c5852bdda04c2cc224b3567ef6ceb8204dbf2b382daacfc6837ee2ed9d5b82c90b880a3c7289778dbd5a8c2c08193459bcf7bd44581ed0"
 	var out string
