@@ -19,6 +19,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -206,7 +207,6 @@ func TestGetCLI(t *testing.T) {
 	}
 	out = util.RunCli(t, "get", "--format=json", "--uuid", entryID.ReturnEntryIDString())
 }
-
 func getTreeID(t *testing.T) int64 {
 	t.Helper()
 	out := util.RunCli(t, "loginfo")
@@ -220,4 +220,159 @@ func getTreeID(t *testing.T) int64 {
 }
 func TestSearchNoEntriesRC1(t *testing.T) {
 	util.RunCliErr(t, "search", "--email", "noone@internetz.com")
+}
+func TestHostnameInSTH(t *testing.T) {
+	// get ID of container
+	rekorContainerID := strings.Trim(util.Run(t, "", "docker", "ps", "-q", "-f", "name=rekor-server"), "\n")
+	resp, err := http.Get(fmt.Sprintf("%s/api/v1/log", rekorServer()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(string(body), fmt.Sprintf(" %s ", rekorContainerID)) {
+		t.Errorf("logInfo does not contain the hostname (%v) of the rekor-server container: %v", rekorContainerID, string(body))
+	}
+	if strings.Contains(string(body), "rekor.sigstore.dev") {
+		t.Errorf("logInfo contains rekor.sigstore.dev which should not be set by default")
+	}
+}
+func rekorServer() string {
+	if s := os.Getenv("REKOR_SERVER"); s != "" {
+		return s
+	}
+	return "http://localhost:3000"
+}
+func TestSearchSHA512(t *testing.T) {
+	sha512 := "c7694a1112ea1404a3c5852bdda04c2cc224b3567ef6ceb8204dbf2b382daacfc6837ee2ed9d5b82c90b880a3c7289778dbd5a8c2c08193459bcf7bd44581ed0"
+	var out string
+	out = util.RunCli(t, "upload", "--type", "intoto:0.0.2",
+		"--artifact", "tests/envelope.sha512",
+		"--pki-format", "x509",
+		"--public-key", "tests/test_sha512.pub")
+	util.OutputContains(t, out, "Created entry at")
+	uuid := getUUIDFromTimestampOutput(t, out)
+	out = util.RunCli(t, "search", "--sha", fmt.Sprintf("sha512:%s", sha512))
+	util.OutputContains(t, out, uuid)
+}
+func getUUIDFromTimestampOutput(t *testing.T, out string) string {
+	t.Helper()
+	// Output looks like "Created entry at index X, available at $URL/UUID", so grab the UUID:
+	urlTokens := strings.Split(strings.TrimSpace(out), "\n")
+	return getUUIDFromUploadOutput(t, urlTokens[len(urlTokens)-1])
+}
+func getUUIDFromUploadOutput(t *testing.T, out string) string {
+	t.Helper()
+	// Output looks like "Artifact timestamped at ...\m Wrote response \n Created entry at index X, available at $URL/UUID", so grab the UUID:
+	urlTokens := strings.Split(strings.TrimSpace(out), " ")
+	url := urlTokens[len(urlTokens)-1]
+	splitUrl := strings.Split(url, "/")
+	return splitUrl[len(splitUrl)-1]
+}
+func TestLogInfo(t *testing.T) {
+	// TODO: figure out some way to check the length, add something, and make sure the length increments!
+	out := util.RunCli(t, "loginfo")
+	util.OutputContains(t, out, "Verification Successful!")
+}
+func TestVerifyNonExistentUUID(t *testing.T) {
+	// this uuid is extremely likely to not exist
+	out := util.RunCliErr(t, "verify", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+	util.OutputContains(t, out, "entry in log cannot be located")
+
+	// Check response code
+	tid := getTreeID(t)
+	h := sha256.Sum256([]byte("123"))
+	entryID, err := sharding.CreateEntryIDFromParts(fmt.Sprintf("%x", tid),
+		hex.EncodeToString(h[:]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := fmt.Sprintf("{\"entryUUIDs\":[\"%s\"]}", entryID.ReturnEntryIDString())
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
+		"application/json",
+		bytes.NewReader([]byte(body)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected status 200, got %d instead", resp.StatusCode)
+	}
+	if strings.TrimSpace(string(c)) != "[]" {
+		t.Fatalf("expected empty JSON array as response, got %s instead", string(c))
+	}
+}
+func TestSearchQueryLimit(t *testing.T) {
+	tests := []struct {
+		description string
+		limit       int
+		shouldErr   bool
+	}{
+		{
+			description: "request 6 entries",
+			limit:       6,
+		}, {
+			description: "request 10 entries",
+			limit:       10,
+		}, {
+			description: "request more than max",
+			limit:       12,
+			shouldErr:   true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			b := bytes.NewReader(getBody(t, test.limit))
+			resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()), "application/json", b)
+			if err != nil {
+				t.Fatal(err)
+			}
+			c, _ := ioutil.ReadAll(resp.Body)
+			t.Log(string(c))
+			if resp.StatusCode != 200 && !test.shouldErr {
+				t.Fatalf("expected test to pass but it failed")
+			}
+			if resp.StatusCode != 422 && test.shouldErr {
+				t.Fatal("expected test to fail but it passed")
+			}
+			if test.shouldErr && !strings.Contains(string(c), "logIndexes in body should have at most 10 items") {
+				t.Fatal("expected max limit error but didn't get it")
+			}
+		})
+	}
+}
+func getBody(t *testing.T, limit int) []byte {
+	t.Helper()
+	s := fmt.Sprintf("{\"logIndexes\": [%d", limit)
+	for i := 1; i < limit; i++ {
+		s = fmt.Sprintf("%s, %d", s, i)
+	}
+	s += "]}"
+	return []byte(s)
+}
+func TestSearchQueryMalformedEntry(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := ioutil.ReadFile(filepath.Join(wd, "tests/rekor.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := fmt.Sprintf("{\"entries\":[\"%s\"]}", b)
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
+		"application/json",
+		bytes.NewBuffer([]byte(body)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != 400 {
+		t.Fatalf("expected status 400, got %d instead", resp.StatusCode)
+	}
 }
