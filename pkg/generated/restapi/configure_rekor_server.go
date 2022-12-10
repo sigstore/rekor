@@ -180,7 +180,7 @@ func setupMiddlewares(handler http.Handler) http.Handler {
 
 type httpRequestFields struct {
 	requestMethod string
-	requestUrl    string
+	requestURL    string
 	requestSize   string
 	status        int
 	responseSize  string
@@ -192,7 +192,7 @@ type httpRequestFields struct {
 
 func (h httpRequestFields) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("requestMethod", h.requestMethod)
-	enc.AddString("requestUrl", h.requestUrl)
+	enc.AddString("requestUrl", h.requestURL)
 	enc.AddString("requestSize", h.requestSize)
 	enc.AddInt("status", h.status)
 	enc.AddString("responseSize", h.responseSize)
@@ -219,7 +219,7 @@ func (z *zapLogEntry) Write(status, bytes int, header http.Header, elapsed time.
 	}
 	httpRequestObj := httpRequestFields{
 		requestMethod: z.r.Method,
-		requestUrl:    fmt.Sprintf("%s://%s%s", scheme, z.r.Host, z.r.RequestURI),
+		requestURL:    fmt.Sprintf("%s://%s%s", scheme, z.r.Host, z.r.RequestURI),
 		requestSize:   fmt.Sprintf("%d", z.r.ContentLength),
 		status:        status,
 		responseSize:  fmt.Sprintf("%d", bytes),
