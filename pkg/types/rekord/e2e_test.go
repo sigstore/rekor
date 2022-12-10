@@ -14,13 +14,13 @@
 // limitations under the License.
 
 //go:build e2e
-// +build e2e
 
 package rekord
 
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -56,6 +56,32 @@ func TestUploadVerifyHashedRekord(t *testing.T) {
 
 	// Now we should be able to verify it.
 	out = util.RunCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+	util.OutputContains(t, out, "Inclusion Proof:")
+	util.OutputContains(t, out, "Checkpoint:")
+}
+func TestUploadVerifyRekord(t *testing.T) {
+	// Create a random artifact and sign it.
+	artifactPath := filepath.Join(t.TempDir(), "artifact")
+	sigPath := filepath.Join(t.TempDir(), "signature.asc")
+
+	util.CreatedPGPSignedArtifact(t, artifactPath, sigPath)
+
+	// Write the public key to a file
+	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
+	if err := ioutil.WriteFile(pubPath, []byte(util.PubKey), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify should fail initially
+	out := util.RunCliErr(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	util.OutputContains(t, out, "entry in log cannot be located")
+
+	// It should upload successfully.
+	out = util.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	util.OutputContains(t, out, "Created entry at")
+
+	// Now we should be able to verify it.
+	out = util.RunCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	util.OutputContains(t, out, "Inclusion Proof:")
 	util.OutputContains(t, out, "Checkpoint:")
 }
