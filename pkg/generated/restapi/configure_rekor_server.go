@@ -20,7 +20,9 @@ package restapi
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"strconv"
 	"time"
 
@@ -33,6 +35,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/cors"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	pkgapi "github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations"
@@ -174,21 +178,81 @@ func setupMiddlewares(handler http.Handler) http.Handler {
 	return handler
 }
 
-// We need this type to act as an adapter between zap and the middleware request logger.
-type logAdapter struct {
+type httpRequestFields struct {
+	requestMethod string
+	requestUrl    string
+	requestSize   string
+	status        int
+	responseSize  string
+	userAgent     string
+	remoteIP      string
+	latency       string
+	protocol      string
 }
 
-func (l *logAdapter) Print(v ...interface{}) {
-	log.Logger.Info(v...)
+func (h httpRequestFields) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("requestMethod", h.requestMethod)
+	enc.AddString("requestUrl", h.requestUrl)
+	enc.AddString("requestSize", h.requestSize)
+	enc.AddInt("status", h.status)
+	enc.AddString("responseSize", h.responseSize)
+	enc.AddString("userAgent", h.userAgent)
+	enc.AddString("remoteIP", h.remoteIP)
+	enc.AddString("latency", h.latency)
+	enc.AddString("protocol", h.protocol)
+	return nil
+}
+
+// We need this type to act as an adapter between zap and the middleware request logger.
+type zapLogEntry struct {
+	r *http.Request
+}
+
+func (z *zapLogEntry) Write(status, bytes int, header http.Header, elapsed time.Duration, extra interface{}) {
+	var fields []interface{}
+
+	// follows https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry as a convention
+	// append HTTP Request / Response Information
+	scheme := "http"
+	if z.r.TLS != nil {
+		scheme = "https"
+	}
+	httpRequestObj := httpRequestFields{
+		requestMethod: z.r.Method,
+		requestUrl:    fmt.Sprintf("%s://%s%s", scheme, z.r.Host, z.r.RequestURI),
+		requestSize:   fmt.Sprintf("%d", z.r.ContentLength),
+		status:        status,
+		responseSize:  fmt.Sprintf("%d", bytes),
+		userAgent:     z.r.Header.Get("User-Agent"),
+		remoteIP:      z.r.RemoteAddr,
+		latency:       fmt.Sprintf("%.9fs", elapsed.Seconds()),
+		protocol:      z.r.Proto,
+	}
+	fields = append(fields, zap.Object("httpRequest", httpRequestObj))
+	if extra != nil {
+		fields = append(fields, zap.Any("extra", extra))
+	}
+
+	log.ContextLogger(z.r.Context()).With(fields...).Info("completed request")
+}
+
+func (z *zapLogEntry) Panic(v interface{}, stack []byte) {
+	fields := []interface{}{zap.String("message", fmt.Sprintf("%v\n%v", v, string(stack)))}
+	log.ContextLogger(z.r.Context()).With(fields...).Errorf("panic detected: %v", v)
+}
+
+type logFormatter struct{}
+
+func (l *logFormatter) NewLogEntry(r *http.Request) middleware.LogEntry {
+	return &zapLogEntry{r}
 }
 
 // The middleware configuration happens before anything, this middleware also applies to serving the swagger.json document.
 // So this is a good place to plug in a panic handling middleware, logging and metrics
 func setupGlobalMiddleware(handler http.Handler) http.Handler {
-	middleware.DefaultLogger = middleware.RequestLogger(
-		&middleware.DefaultLogFormatter{Logger: &logAdapter{}})
-	returnHandler := middleware.Logger(handler)
-	returnHandler = middleware.Recoverer(returnHandler)
+	returnHandler := recoverer(handler)
+	middleware.DefaultLogger = middleware.RequestLogger(&logFormatter{})
+	returnHandler = middleware.Logger(returnHandler)
 	returnHandler = middleware.Heartbeat("/ping")(returnHandler)
 	returnHandler = serveStaticContent(returnHandler)
 
@@ -295,4 +359,30 @@ func serveStaticContent(handler http.Handler) http.Handler {
 		}
 		handler.ServeHTTP(w, r)
 	})
+}
+
+// recoverer
+func recoverer(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rvr := recover(); rvr != nil && rvr != http.ErrAbortHandler {
+				var fields []interface{}
+
+				// get context before dump request in case there is an error
+				ctx := r.Context()
+				request, err := httputil.DumpRequest(r, false)
+				if err == nil {
+					fields = append(fields, zap.ByteString("request_headers", request))
+				}
+
+				log.ContextLogger(ctx).With(fields...).Errorf("panic detected: %v", rvr)
+
+				errors.ServeError(w, r, nil)
+			}
+		}()
+
+		next.ServeHTTP(w, r)
+	}
+
+	return http.HandlerFunc(fn)
 }
