@@ -27,6 +27,7 @@ compile_native_go_fuzzer github.com/sigstore/rekor/pkg/sharding FuzzValidateUUID
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/sharding FuzzValidateTreeID FuzzValidateTreeID
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/sharding FuzzValidateEntryID FuzzValidateEntryID
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/alpine FuzzPackageUnmarshal FuzzPackageUnmarshal
+compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/hashedrekord FuzzHashedRekord FuzzHashedRekord
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/intoto FuzzIntotoCreateProposedEntry FuzzIntotoCreateProposedEntry
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/tuf FuzzTufCreateProposedEntry FuzzTufCreateProposedEntry
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/rfc3161 FuzzRfc3161CreateProposedEntry FuzzRfc3161CreateProposedEntry
