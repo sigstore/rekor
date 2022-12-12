@@ -181,24 +181,24 @@ func setupMiddlewares(handler http.Handler) http.Handler {
 type httpRequestFields struct {
 	requestMethod string
 	requestURL    string
-	requestSize   string
+	requestSize   int64
 	status        int
-	responseSize  string
+	responseSize  int
 	userAgent     string
 	remoteIP      string
-	latency       string
+	latency       time.Duration
 	protocol      string
 }
 
-func (h httpRequestFields) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+func (h *httpRequestFields) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("requestMethod", h.requestMethod)
 	enc.AddString("requestUrl", h.requestURL)
-	enc.AddString("requestSize", h.requestSize)
+	enc.AddString("requestSize", fmt.Sprintf("%d", h.requestSize))
 	enc.AddInt("status", h.status)
-	enc.AddString("responseSize", h.responseSize)
+	enc.AddString("responseSize", fmt.Sprintf("%d", h.responseSize))
 	enc.AddString("userAgent", h.userAgent)
 	enc.AddString("remoteIP", h.remoteIP)
-	enc.AddString("latency", h.latency)
+	enc.AddString("latency", fmt.Sprintf("%.9fs", h.latency.Seconds())) // formatted per GCP expectations
 	enc.AddString("protocol", h.protocol)
 	return nil
 }
@@ -217,15 +217,15 @@ func (z *zapLogEntry) Write(status, bytes int, header http.Header, elapsed time.
 	if z.r.TLS != nil {
 		scheme = "https"
 	}
-	httpRequestObj := httpRequestFields{
+	httpRequestObj := &httpRequestFields{
 		requestMethod: z.r.Method,
 		requestURL:    fmt.Sprintf("%s://%s%s", scheme, z.r.Host, z.r.RequestURI),
-		requestSize:   fmt.Sprintf("%d", z.r.ContentLength),
+		requestSize:   z.r.ContentLength,
 		status:        status,
-		responseSize:  fmt.Sprintf("%d", bytes),
+		responseSize:  bytes,
 		userAgent:     z.r.Header.Get("User-Agent"),
 		remoteIP:      z.r.RemoteAddr,
-		latency:       fmt.Sprintf("%.9fs", elapsed.Seconds()),
+		latency:       elapsed,
 		protocol:      z.r.Proto,
 	}
 	fields = append(fields, zap.Object("httpRequest", httpRequestObj))
