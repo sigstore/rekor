@@ -23,13 +23,8 @@ import (
 	"github.com/sigstore/rekor/pkg/util"
 )
 
-func TestGetNonExistentIndex(t *testing.T) {
+func TestVerifyNonExistentIndex(t *testing.T) {
 	// this index is extremely likely to not exist
-	out := util.RunCliErr(t, "get", "--log-index", "100000000")
-	util.OutputContains(t, out, "404")
-}
-func TestGetNonExistentUUID(t *testing.T) {
-	// this uuid is extremely likely to not exist
-	out := util.RunCliErr(t, "get", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-	util.OutputContains(t, out, "404")
+	out := util.RunCliErr(t, "verify", "--log-index", "100000000")
+	util.OutputContains(t, out, "entry in log cannot be located")
 }
