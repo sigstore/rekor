@@ -133,14 +133,14 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 			if attKey != "" {
 				att, fetchErr = storageClient.FetchAttestation(ctx, attKey)
 				if fetchErr != nil {
-					log.ContextLogger(ctx).Errorf("error fetching attestation by key, trying by UUID: %s %w", attKey, fetchErr)
+					log.ContextLogger(ctx).Debugf("error fetching attestation by key, trying by UUID: %s %v", attKey, fetchErr)
 				}
 			}
 			// if looking up by key failed or we weren't able to generate a key, try looking up by uuid
 			if attKey == "" || fetchErr != nil {
 				att, fetchErr = storageClient.FetchAttestation(ctx, entryIDstruct.UUID)
 				if fetchErr != nil {
-					log.ContextLogger(ctx).Errorf("error fetching attestation by uuid: %s %v", entryIDstruct.UUID, fetchErr)
+					log.ContextLogger(ctx).Debugf("error fetching attestation by uuid: %s %v", entryIDstruct.UUID, fetchErr)
 				}
 			}
 			if fetchErr == nil {
@@ -237,12 +237,12 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		go func() {
 			keys, err := entry.IndexKeys()
 			if err != nil {
-				log.ContextLogger(ctx).Error(err)
+				log.ContextLogger(ctx).Errorf("getting entry index keys: %v", err)
 				return
 			}
 			for _, key := range keys {
 				if err := addToIndex(context.Background(), key, entryID); err != nil {
-					log.ContextLogger(ctx).Error(err)
+					log.ContextLogger(ctx).Errorf("adding keys to index: %v", err)
 				}
 			}
 		}()
