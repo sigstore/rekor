@@ -15,11 +15,14 @@
 package client
 
 import (
+	"crypto/tls"
+	"net/http"
 	"net/url"
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
+	"github.com/hashicorp/go-cleanhttp"
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/util"
@@ -33,6 +36,14 @@ func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error
 	o := makeOptions(opts...)
 
 	retryableClient := retryablehttp.NewClient()
+	defaultTransport := cleanhttp.DefaultTransport()
+	if o.InsecureTLS {
+		/* #nosec G402 */
+		defaultTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+	retryableClient.HTTPClient = &http.Client{
+		Transport: defaultTransport,
+	}
 	retryableClient.RetryMax = int(o.RetryCount)
 	retryableClient.Logger = o.Logger
 
