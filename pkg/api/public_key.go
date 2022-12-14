@@ -23,7 +23,6 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/pubkey"
-	"github.com/sigstore/rekor/pkg/log"
 )
 
 func GetPublicKeyHandler(params pubkey.GetPublicKeyParams) middleware.Responder {
@@ -34,7 +33,6 @@ func GetPublicKeyHandler(params pubkey.GetPublicKeyParams) middleware.Responder 
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusBadRequest, err, "")
 	}
-	log.ContextLogger(ctx).Info("returning public key")
 	return pubkey.NewGetPublicKeyOK().WithPayload(pk)
 }
 

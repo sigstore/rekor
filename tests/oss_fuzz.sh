@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-go install github.com/AdamKorcz/go-118-fuzz-build@latest
 go get github.com/AdamKorcz/go-118-fuzz-build/testing
 
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/sharding FuzzCreateEntryIDFromParts FuzzCreateEntryIDFromParts
@@ -26,7 +25,11 @@ compile_native_go_fuzzer github.com/sigstore/rekor/pkg/sharding FuzzTreeID FuzzT
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/sharding FuzzValidateUUID FuzzValidateUUID
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/sharding FuzzValidateTreeID FuzzValidateTreeID
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/sharding FuzzValidateEntryID FuzzValidateEntryID
+compile_native_go_fuzzer github.com/sigstore/rekor/pkg/signer FuzzNewFile FuzzNewFile
+compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/cose FuzzCreateProposedEntry FuzzCreateProposedEntry
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/alpine FuzzPackageUnmarshal FuzzPackageUnmarshal
+compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/jar FuzzJarUnmarshal FuzzJarUnmarshal
+compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/hashedrekord FuzzHashedRekord FuzzHashedRekord
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/intoto FuzzIntotoCreateProposedEntry FuzzIntotoCreateProposedEntry
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/tuf FuzzTufCreateProposedEntry FuzzTufCreateProposedEntry
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/rfc3161 FuzzRfc3161CreateProposedEntry FuzzRfc3161CreateProposedEntry

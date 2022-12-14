@@ -19,6 +19,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
+
+	"github.com/sigstore/rekor/pkg/generated/client/index"
+	"go.uber.org/goleak"
 )
 
 func TestGetRekorClientWithUserAgent(t *testing.T) {
@@ -75,4 +79,27 @@ func TestGetRekorClientWithRetryCount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+}
+
+func TestRekorLeakedGoroutine_SearchByHash(t *testing.T) {
+	testServer := httptest.NewUnstartedServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			file := []byte("ok")
+
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(file)
+		}))
+	testServer.EnableHTTP2 = true
+	testServer.StartTLS()
+	// sleep to allow go routines to start
+	time.Sleep(1 * time.Second)
+	// store the goroutines launched by the testserver
+	opt := goleak.IgnoreCurrent()
+	defer func() {
+		goleak.VerifyNone(t, opt)
+		// this is done after leak detection so that we can test
+		testServer.Close()
+	}()
+	rekor, _ := GetRekorClient(testServer.URL, WithInsecureTLS(true))
+	rekor.Index.SearchIndex(index.NewSearchIndexParams())
 }

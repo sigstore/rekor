@@ -50,6 +50,14 @@ func TestMakeOptions(t *testing.T) {
 		desc: "WithLoggerNil",
 		opts: []Option{WithLogger(nil)},
 		want: &options{UserAgent: "", RetryCount: DefaultRetryCount},
+	}, {
+		desc: "WithInsecureTLSEnabled",
+		opts: []Option{WithInsecureTLS(true)},
+		want: &options{UserAgent: "", RetryCount: DefaultRetryCount, InsecureTLS: true},
+	}, {
+		desc: "WithInsecureTLSDisabled",
+		opts: []Option{WithInsecureTLS(false)},
+		want: &options{UserAgent: "", RetryCount: DefaultRetryCount, InsecureTLS: false},
 	}}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
