@@ -16,6 +16,7 @@
 package helm
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -38,5 +39,13 @@ func FuzzHelmCreateProposedEntry(f *testing.F) {
 		if err != nil {
 			t.Skip()
 		}
+	})
+}
+
+func FuzzHelmProvenanceUnmarshal(f *testing.F) {
+	f.Fuzz(func(t *testing.T, provenanceData []byte) {
+		p := &Provenance{}
+		r := bytes.NewReader(provenanceData)
+		p.Unmarshal(r)
 	})
 }
