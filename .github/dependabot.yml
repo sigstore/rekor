@@ -21,7 +21,7 @@ updates:
     schedule:
       interval: "daily"
   - package-ecosystem: "gomod"
-    directory: "./hack/tools"
+    directory: "hack/tools"
     schedule:
       interval: "daily"
   - package-ecosystem: "github-actions"
