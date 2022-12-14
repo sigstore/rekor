@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"golang.org/x/crypto/openpgp"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -31,6 +30,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/openpgp"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
@@ -458,4 +459,11 @@ func CreatedPGPSignedArtifact(t *testing.T, artifactPath, sigPath string) {
 	if err := ioutil.WriteFile(sigPath, signature, 0644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func GetUUIDFromTimestampOutput(t *testing.T, out string) string {
+	t.Helper()
+	// Output looks like "Created entry at index X, available at $URL/UUID", so grab the UUID:
+	urlTokens := strings.Split(strings.TrimSpace(out), "\n")
+	return GetUUIDFromUploadOutput(t, urlTokens[len(urlTokens)-1])
 }

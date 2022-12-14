@@ -24,7 +24,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/sigstore/rekor/pkg/sharding"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -33,6 +32,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/sigstore/rekor/pkg/sharding"
 
 	"github.com/sigstore/rekor/pkg/util"
 )
@@ -256,28 +257,9 @@ func TestSearchSHA512(t *testing.T) {
 		"--pki-format", "x509",
 		"--public-key", "tests/test_sha512.pub")
 	util.OutputContains(t, out, "Created entry at")
-	uuid := getUUIDFromTimestampOutput(t, out)
+	uuid := util.GetUUIDFromTimestampOutput(t, out)
 	out = util.RunCli(t, "search", "--sha", fmt.Sprintf("sha512:%s", sha512))
 	util.OutputContains(t, out, uuid)
-}
-func getUUIDFromTimestampOutput(t *testing.T, out string) string {
-	t.Helper()
-	// Output looks like "Created entry at index X, available at $URL/UUID", so grab the UUID:
-	urlTokens := strings.Split(strings.TrimSpace(out), "\n")
-	return getUUIDFromUploadOutput(t, urlTokens[len(urlTokens)-1])
-}
-func getUUIDFromUploadOutput(t *testing.T, out string) string {
-	t.Helper()
-	// Output looks like "Artifact timestamped at ...\m Wrote response \n Created entry at index X, available at $URL/UUID", so grab the UUID:
-	urlTokens := strings.Split(strings.TrimSpace(out), " ")
-	url := urlTokens[len(urlTokens)-1]
-	splitUrl := strings.Split(url, "/")
-	return splitUrl[len(splitUrl)-1]
-}
-func TestLogInfo(t *testing.T) {
-	// TODO: figure out some way to check the length, add something, and make sure the length increments!
-	out := util.RunCli(t, "loginfo")
-	util.OutputContains(t, out, "Verification Successful!")
 }
 func TestVerifyNonExistentUUID(t *testing.T) {
 	// this uuid is extremely likely to not exist
