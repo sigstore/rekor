@@ -14,7 +14,6 @@
 // limitations under the License.
 
 //go:build e2e
-// +build e2e
 
 package util
 
@@ -38,10 +37,9 @@ import (
 )
 
 var (
-	cli         = "rekor-cli"
-	server      = "rekor-server"
-	nodeDataDir = "node"
-	keys        openpgp.EntityList
+	cli    = "rekor-cli"
+	server = "rekor-server"
+	keys   openpgp.EntityList
 )
 
 type GetOut struct {
@@ -310,24 +308,6 @@ func RunCli(t *testing.T, arg ...string) string {
 	return Run(t, "", cli, arg...)
 }
 
-func RunCliStdout(t *testing.T, arg ...string) string {
-	t.Helper()
-	arg = append([]string{coverageFlag()}, arg...)
-	arg = append(arg, rekorServerFlag())
-	c := exec.Command(cli, arg...)
-
-	if os.Getenv("REKORTMPDIR") != "" {
-		// ensure that we use a clean state.json file for each Run
-		c.Env = append(c.Env, "HOME="+os.Getenv("REKORTMPDIR"))
-	}
-	b, err := c.Output()
-	if err != nil {
-		t.Log(string(b))
-		t.Fatal(err)
-	}
-	return stripCoverageOutput(string(b))
-}
-
 func RunCliErr(t *testing.T, arg ...string) string {
 	t.Helper()
 	arg = append([]string{coverageFlag()}, arg...)
@@ -362,14 +342,6 @@ func coverageFlag() string {
 
 func stripCoverageOutput(out string) string {
 	return strings.Split(strings.Split(out, "PASS")[0], "FAIL")[0]
-}
-
-func readFile(t *testing.T, p string) string {
-	b, err := ioutil.ReadFile(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return strings.TrimSpace(string(b))
 }
 
 // RandomSuffix returns a random string of the given length.
