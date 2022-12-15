@@ -19,7 +19,7 @@ require (
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/google/go-cmp v0.5.9
 	github.com/google/rpmpack v0.0.0-20210518075352-dc539ef4f2ea
-	github.com/google/trillian v1.5.0
+	github.com/google/trillian v1.5.1
 	github.com/in-toto/in-toto-golang v0.3.4-0.20211211042327-af1f9fb822bf
 	github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b
 	github.com/mediocregopher/radix/v4 v4.1.1
@@ -68,10 +68,11 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	go.opentelemetry.io/otel v1.11.1 // indirect
 	go.opentelemetry.io/otel/trace v1.11.1 // indirect
+	k8s.io/klog/v2 v2.80.1 // indirect
 )
 
 require (
-	cloud.google.com/go v0.105.0 // indirect
+	cloud.google.com/go v0.107.0 // indirect
 	cloud.google.com/go/compute v1.13.0 // indirect
 	cloud.google.com/go/iam v0.8.0 // indirect
 	cloud.google.com/go/kms v1.7.0 // indirect
@@ -91,7 +92,6 @@ require (
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/godbus/dbus/v5 v5.0.4 // indirect
-	github.com/golang/glog v1.0.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-containerregistry v0.12.1 // indirect
