@@ -27,6 +27,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -466,4 +467,23 @@ func GetUUIDFromTimestampOutput(t *testing.T, out string) string {
 	// Output looks like "Created entry at index X, available at $URL/UUID", so grab the UUID:
 	urlTokens := strings.Split(strings.TrimSpace(out), "\n")
 	return GetUUIDFromUploadOutput(t, urlTokens[len(urlTokens)-1])
+}
+
+// SetupTestData is a helper function to setups the test data
+func SetupTestData(t *testing.T) {
+	// create a temp directory
+	artifactPath := filepath.Join(t.TempDir(), "artifact")
+	// create a temp file
+	sigPath := filepath.Join(t.TempDir(), "signature.asc")
+	CreatedPGPSignedArtifact(t, artifactPath, sigPath)
+
+	// Write the public key to a file
+	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
+	if err := ioutil.WriteFile(pubPath, []byte(PubKey), 0644); err != nil { //nolint:gosec
+		t.Fatal(err)
+	}
+
+	// Now upload to rekor!
+	out := RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	OutputContains(t, out, "Created entry at")
 }

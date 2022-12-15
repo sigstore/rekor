@@ -18,12 +18,20 @@
 package main
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/sigstore/rekor/pkg/util"
 )
 
+var (
+	once sync.Once
+)
+
 func TestLogInfo(t *testing.T) {
+	once.Do(func() {
+		util.SetupTestData(t)
+	})
 	// TODO: figure out some way to check the length, add something, and make sure the length increments!
 	out := util.RunCli(t, "loginfo")
 	util.OutputContains(t, out, "Verification Successful!")
