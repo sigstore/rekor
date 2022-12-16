@@ -100,11 +100,6 @@ type PublicKey struct {
 	db   *verify.DB
 }
 
-// keyVal holds the public key for each key from the root
-type keyVal struct {
-	Public string `json:"public"`
-}
-
 // NewPublicKey implements the pki.PublicKey interface
 func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	rawRoot, err := io.ReadAll(r)
