@@ -23,6 +23,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"math/big"
+	"net"
 	"net/url"
 	"time"
 )
@@ -116,21 +117,22 @@ func GenerateSubordinateCa(rootTemplate *x509.Certificate, rootPriv crypto.Signe
 	return cert, priv, nil
 }
 
-func GenerateLeafCert(subject, oidcIssuer string, uri *url.URL, parentTemplate *x509.Certificate, parentPriv crypto.Signer) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+func GenerateLeafCert(subject, oidcIssuer string, uri *url.URL, parentTemplate *x509.Certificate, parentPriv crypto.Signer, exts ...pkix.Extension) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+	exts = append(exts, pkix.Extension{
+		// OID for OIDC Issuer extension
+		Id:       asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1},
+		Critical: false,
+		Value:    []byte(oidcIssuer),
+	})
 	certTemplate := &x509.Certificate{
-		SerialNumber:   big.NewInt(1),
-		EmailAddresses: []string{subject},
-		NotBefore:      time.Now().Add(-1 * time.Minute),
-		NotAfter:       time.Now().Add(time.Hour),
-		KeyUsage:       x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
-		IsCA:           false,
-		ExtraExtensions: []pkix.Extension{{
-			// OID for OIDC Issuer extension
-			Id:       asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1},
-			Critical: false,
-			Value:    []byte(oidcIssuer),
-		}},
+		SerialNumber:    big.NewInt(1),
+		EmailAddresses:  []string{subject},
+		NotBefore:       time.Now().Add(-1 * time.Minute),
+		NotAfter:        time.Now().Add(time.Hour),
+		KeyUsage:        x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+		IsCA:            false,
+		ExtraExtensions: exts,
 	}
 	if uri != nil {
 		certTemplate.URIs = []*url.URL{uri}
@@ -155,6 +157,39 @@ func GenerateExpiredLeafCert(subject string, oidcIssuer string, parentTemplate *
 		EmailAddresses: []string{subject},
 		NotBefore:      time.Now().Add(-5 * time.Minute),
 		NotAfter:       time.Now().Add(-2 * time.Minute),
+		KeyUsage:       x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+		IsCA:           false,
+		ExtraExtensions: []pkix.Extension{{
+			// OID for OIDC Issuer extension
+			Id:       asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1},
+			Critical: false,
+			Value:    []byte(oidcIssuer),
+		}},
+	}
+
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cert, err := createCertificate(certTemplate, parentTemplate, &priv.PublicKey, parentPriv)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return cert, priv, nil
+}
+
+func GenerateLeafCertWithSubjectAlternateNames(dnsNames []string, emailAddresses []string, ipAddresses []net.IP, uris []*url.URL, oidcIssuer string, parentTemplate *x509.Certificate, parentPriv crypto.Signer) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+	certTemplate := &x509.Certificate{
+		SerialNumber:   big.NewInt(1),
+		EmailAddresses: emailAddresses,
+		DNSNames:       dnsNames,
+		IPAddresses:    ipAddresses,
+		URIs:           uris,
+		NotBefore:      time.Now().Add(-1 * time.Minute),
+		NotAfter:       time.Now().Add(time.Hour),
 		KeyUsage:       x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
 		IsCA:           false,

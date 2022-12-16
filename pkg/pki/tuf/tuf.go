@@ -182,13 +182,9 @@ func (k PublicKey) Identities() ([]string, error) {
 	if err := json.Unmarshal(k.root.Signed, root); err != nil {
 		return nil, err
 	}
-	var keys []string
-	for _, k := range root.Keys {
-		key := &keyVal{}
-		if err := json.Unmarshal(k.Value, key); err != nil {
-			return nil, err
-		}
-		keys = append(keys, key.Public)
+	identity, err := json.Marshal(root.Keys)
+	if err != nil {
+		return nil, err
 	}
-	return keys, nil
+	return []string{string(identity)}, nil
 }

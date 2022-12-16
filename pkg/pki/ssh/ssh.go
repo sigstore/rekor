@@ -16,9 +16,11 @@
 package ssh
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 
+	"github.com/asaskevich/govalidator"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/crypto/ssh"
 )
@@ -110,8 +112,15 @@ func (k PublicKey) Subjects() []string {
 
 // Identities implements the pki.PublicKey interface
 func (k PublicKey) Identities() ([]string, error) {
-	// an authorized key format with the comment
-	authorizedKey := string(ssh.MarshalAuthorizedKey(k.key)) + k.comment
-	// return the authorized key and comment (assuming it represents an identity)
-	return []string{authorizedKey, k.comment}, nil
+	var identities []string
+
+	// an authorized key format
+	authorizedKey := string(bytes.TrimSpace(ssh.MarshalAuthorizedKey(k.key)))
+	identities = append(identities, authorizedKey)
+
+	if !govalidator.IsEmail(k.comment) {
+		identities = append(identities, k.comment)
+	}
+
+	return identities, nil
 }
