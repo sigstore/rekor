@@ -213,12 +213,7 @@ func (k PublicKey) EmailAddresses() []string {
 
 // Subjects implements the pki.PublicKey interface
 func (k PublicKey) Subjects() []string {
-	cert, err := x509.ParseCertificate(k.rawCert)
-	if err != nil {
-		// This should not happen from a valid PublicKey, but fail gracefully.
-		return []string{}
-	}
-	return px509.GetSubjectAlternateNames(cert)
+	return k.EmailAddresses()
 }
 
 // Identities implements the pki.PublicKey interface
