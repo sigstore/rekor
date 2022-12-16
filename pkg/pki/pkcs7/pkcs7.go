@@ -213,7 +213,15 @@ func (k PublicKey) EmailAddresses() []string {
 
 // Subjects implements the pki.PublicKey interface
 func (k PublicKey) Subjects() []string {
-	return k.EmailAddresses()
+	// combine identities in the subject and SANs
+	identities := k.EmailAddresses()
+	cert, err := x509.ParseCertificate(k.rawCert)
+	if err != nil {
+		// This should not happen from a valid PublicKey, but fail gracefully.
+		return identities
+	}
+	identities = append(identities, px509.GetSubjectAlternateNames(cert)...)
+	return identities
 }
 
 // Identities implements the pki.PublicKey interface
@@ -235,8 +243,9 @@ func (k PublicKey) Identities() ([]string, error) {
 			return nil, err
 		}
 		identities = append(identities, string(pem))
-		// SAN could include an email, IP address, DNS name, URI, or any other value in the SAN
-		identities = append(identities, px509.GetSubjectAlternateNames(cert)...)
+		// Subjects come from the certificate Subject and SANs
+		// SANs could include an email, IP address, DNS name, URI, or any other value in the SAN
+		identities = append(identities, k.Subjects()...)
 	}
 	return identities, nil
 }
