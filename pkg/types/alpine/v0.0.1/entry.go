@@ -353,8 +353,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 
 func (v V001Entry) Verifier() (pki.PublicKey, error) {
 	if v.AlpineModel.PublicKey == nil || v.AlpineModel.PublicKey.Content == nil {
-		return nil, errors.New("entry not initialized")
+		return nil, errors.New("alpine v0.0.1 entry not initialized")
 	}
-	fmt.Println(*v.AlpineModel.PublicKey.Content)
 	return x509.NewPublicKey(bytes.NewReader(*v.AlpineModel.PublicKey.Content))
 }

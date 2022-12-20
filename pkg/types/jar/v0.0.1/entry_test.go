@@ -47,15 +47,17 @@ func TestCrossFieldValidation(t *testing.T) {
 		entry                     V001Entry
 		expectUnmarshalSuccess    bool
 		expectCanonicalizeSuccess bool
+		expectedVerifierSuccess   bool
 	}
 
 	jarBytes, _ := os.ReadFile("tests/test.jar")
 
 	testCases := []TestCase{
 		{
-			caseDesc:               "empty obj",
-			entry:                  V001Entry{},
-			expectUnmarshalSuccess: false,
+			caseDesc:                "empty obj",
+			entry:                   V001Entry{},
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "empty archive",
@@ -64,7 +66,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					Archive: &models.JarV001SchemaArchive{},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "archive with inline content",
@@ -77,6 +80,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
+			expectedVerifierSuccess:   true,
 		},
 	}
 
@@ -112,5 +116,23 @@ func TestCrossFieldValidation(t *testing.T) {
 				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
 			}
 		}
+
+		// TODO: Uncomment once test JAR is fixed
+		// verifier, err := v.Verifier()
+		// if tc.expectedVerifierSuccess {
+		// 	if err != nil {
+		// 		t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
+		// 	} else {
+		// 		pub, _ := verifier.CanonicalValue()
+		// 		if !reflect.DeepEqual(pub, []byte{}) {
+		// 			t.Errorf("verifier and public keys do not match: %v, %v", string(pub), string(""))
+		// 		}
+		// 	}
+		// } else {
+		// 	if err == nil {
+		// 		s, _ := verifier.CanonicalValue()
+		// 		t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
+		// 	}
+		// }
 	}
 }

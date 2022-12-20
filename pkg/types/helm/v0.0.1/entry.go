@@ -117,6 +117,10 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 }
 
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*helm.Provenance, *pgp.PublicKey, *pgp.Signature, error) {
+	if err := v.validate(); err != nil {
+		return nil, nil, nil, types.ValidationError(err)
+	}
+
 	g, ctx := errgroup.WithContext(ctx)
 
 	provenanceR, provenanceW := io.Pipe()
@@ -346,5 +350,8 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 }
 
 func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	if v.HelmObj.PublicKey == nil || v.HelmObj.PublicKey.Content == nil {
+		return nil, errors.New("helm v0.0.1 entry not initialized")
+	}
 	return pgp.NewPublicKey(bytes.NewReader(*v.HelmObj.PublicKey.Content))
 }

@@ -173,15 +173,17 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 	validPayload := "hellothispayloadisvalid"
 
 	tests := []struct {
-		env     *dsse.Envelope
-		name    string
-		it      *models.IntotoV002Schema
-		wantErr bool
+		env             *dsse.Envelope
+		name            string
+		it              *models.IntotoV002Schema
+		wantErr         bool
+		wantVerifierErr bool
 	}{
 		{
-			name:    "empty",
-			it:      &models.IntotoV002Schema{},
-			wantErr: true,
+			name:            "empty",
+			it:              &models.IntotoV002Schema{},
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 		{
 			name: "missing envelope",
@@ -192,7 +194,8 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 		{
 			env:  envelope(t, key, []byte(validPayload)),
@@ -206,7 +209,8 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr:         false,
+			wantVerifierErr: false,
 		},
 		{
 			env:  envelope(t, priv, []byte(validPayload)),
@@ -220,7 +224,8 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr:         false,
+			wantVerifierErr: false,
 		},
 		{
 			env:  &invalid,
@@ -234,7 +239,8 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: false,
 		},
 		{
 			env:  envelope(t, key, []byte(validPayload)),
@@ -248,7 +254,8 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 		{
 			env:  multiSignEnvelope(t, []*ecdsa.PrivateKey{key, priv}, []byte(validPayload)),
@@ -262,7 +269,8 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr:         false,
+			wantVerifierErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -327,6 +335,23 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 				canonicalIndexKeys, _ := canonicalV002.IndexKeys()
 				if !cmp.Equal(got, canonicalIndexKeys, cmpopts.SortSlices(func(x, y string) bool { return x < y })) {
 					t.Errorf("index keys from hydrated object do not match those generated from canonicalized (and re-hydrated) object: %v %v", got, canonicalIndexKeys)
+				}
+
+				verifier, err := v.Verifier()
+				if !tt.wantVerifierErr {
+					if err != nil {
+						t.Errorf("%v: unexpected error, got %v", tt.name, err)
+					} else {
+						pubV, _ := verifier.CanonicalValue()
+						if !reflect.DeepEqual(pubV, pub) && !reflect.DeepEqual(pubV, pemBytes) {
+							t.Errorf("verifier and public keys do not match: %v, %v", string(pubV), string(pub))
+						}
+					}
+				} else {
+					if err == nil {
+						s, _ := verifier.CanonicalValue()
+						t.Errorf("%v: expected error for %v, got %v", tt.name, string(s), err)
+					}
 				}
 
 				return nil

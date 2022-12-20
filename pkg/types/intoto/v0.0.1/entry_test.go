@@ -134,25 +134,29 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 		it                  *models.IntotoV001Schema
 		wantErr             bool
 		additionalIndexKeys []string
+		wantVerifierErr     bool
 	}{
 		{
-			name:    "empty",
-			it:      &models.IntotoV001Schema{},
-			wantErr: true,
+			name:            "empty",
+			it:              &models.IntotoV001Schema{},
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 		{
 			name: "missing envelope",
 			it: &models.IntotoV001Schema{
 				PublicKey: p(pub),
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: false,
 		},
 		{
 			name: "missing envelope",
 			it: &models.IntotoV001Schema{
 				PublicKey: p([]byte("hello")),
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 		{
 			name: "valid intoto",
@@ -165,7 +169,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr:         false,
+			wantVerifierErr: false,
 		},
 		{
 			name: "valid dsse but invalid intoto",
@@ -178,7 +183,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr:         false,
+			wantVerifierErr: false,
 		},
 		{
 			name: "cert",
@@ -193,6 +199,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 			},
 			additionalIndexKeys: []string{"joe@schmoe.com"},
 			wantErr:             false,
+			wantVerifierErr:     false,
 		},
 		{
 			name: "invalid",
@@ -205,7 +212,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: false,
 		},
 		{
 			name: "invalid key",
@@ -218,7 +226,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -285,6 +294,23 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				canonicalIndexKeys, _ := canonicalV001.IndexKeys()
 				if !cmp.Equal(got, canonicalIndexKeys, cmpopts.SortSlices(func(x, y string) bool { return x < y })) {
 					t.Errorf("index keys from hydrated object do not match those generated from canonicalized (and re-hydrated) object: %v %v", got, canonicalIndexKeys)
+				}
+
+				verifier, err := v.Verifier()
+				if !tt.wantVerifierErr {
+					if err != nil {
+						t.Errorf("%v: unexpected error, got %v", tt.name, err)
+					} else {
+						pubV, _ := verifier.CanonicalValue()
+						if !reflect.DeepEqual(pubV, pub) && !reflect.DeepEqual(pubV, pemBytes) {
+							t.Errorf("verifier and public keys do not match: %v, %v", string(pubV), string(pub))
+						}
+					}
+				} else {
+					if err == nil {
+						s, _ := verifier.CanonicalValue()
+						t.Errorf("%v: expected error for %v, got %v", tt.name, string(s), err)
+					}
 				}
 
 				return nil

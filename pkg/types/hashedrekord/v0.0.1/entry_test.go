@@ -59,6 +59,7 @@ func TestCrossFieldValidation(t *testing.T) {
 		entry                     V001Entry
 		expectUnmarshalSuccess    bool
 		expectCanonicalizeSuccess bool
+		expectedVerifierSuccess   bool
 	}
 
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -103,9 +104,10 @@ func TestCrossFieldValidation(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			caseDesc:               "empty obj",
-			entry:                  V001Entry{},
-			expectUnmarshalSuccess: false,
+			caseDesc:                "empty obj",
+			entry:                   V001Entry{},
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "signature without url or content",
@@ -114,7 +116,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					Signature: &models.HashedrekordV001SchemaSignature{},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "signature without public key",
@@ -125,7 +128,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "signature with empty public key",
@@ -137,7 +141,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "signature with ed25519 public key",
@@ -152,6 +157,8 @@ func TestCrossFieldValidation(t *testing.T) {
 				},
 			},
 			expectUnmarshalSuccess: false,
+			// successful even if unmarshalling fails, because the ed25519 key is valid
+			expectedVerifierSuccess: true,
 		},
 		{
 			caseDesc: "signature without data",
@@ -165,7 +172,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: true,
 		},
 		{
 			caseDesc: "signature with empty data",
@@ -180,7 +188,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					Data: &models.HashedrekordV001SchemaData{},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: true,
 		},
 		{
 			caseDesc: "signature with hash",
@@ -202,6 +211,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
+			expectedVerifierSuccess:   true,
 		},
 		{
 			caseDesc: "signature with invalid sha length",
@@ -223,6 +233,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    false,
 			expectCanonicalizeSuccess: false,
+			expectedVerifierSuccess:   true,
 		},
 		{
 			caseDesc: "signature with hash & invalid signature",
@@ -244,6 +255,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    false,
 			expectCanonicalizeSuccess: false,
+			expectedVerifierSuccess:   true,
 		},
 	}
 
@@ -287,6 +299,24 @@ func TestCrossFieldValidation(t *testing.T) {
 			}
 			if _, err := types.UnmarshalEntry(pe); err != nil {
 				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+			}
+		}
+
+		verifier, err := v.Verifier()
+		if tc.expectedVerifierSuccess {
+			if err != nil {
+				t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
+			} else {
+				pub, _ := verifier.CanonicalValue()
+				// invalidKeyBytes is a valid ed25519 key
+				if !reflect.DeepEqual(pub, keyBytes) && !reflect.DeepEqual(pub, invalidKeyBytes) {
+					t.Errorf("verifier and public keys do not match: %v, %v", string(pub), string(keyBytes))
+				}
+			}
+		} else {
+			if err == nil {
+				s, _ := verifier.CanonicalValue()
+				t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
 			}
 		}
 	}

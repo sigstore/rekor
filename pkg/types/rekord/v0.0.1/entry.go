@@ -424,6 +424,10 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 }
 
 func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	if v.RekordObj.Signature == nil || v.RekordObj.Signature.PublicKey == nil || v.RekordObj.Signature.PublicKey.Content == nil {
+		return nil, errors.New("rekord v0.0.1 entry not initialized")
+	}
+
 	switch f := *v.RekordObj.Signature.Format; f {
 	case "x509":
 		return x509.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))

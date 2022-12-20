@@ -109,6 +109,10 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 }
 
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pkcs7.PublicKey, *pkcs7.Signature, error) {
+	if err := v.validate(); err != nil {
+		return nil, nil, types.ValidationError(err)
+	}
+
 	oldSHA := ""
 	if v.JARModel.Archive.Hash != nil && v.JARModel.Archive.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.JARModel.Archive.Hash.Value)
@@ -319,5 +323,8 @@ func (v *V001Entry) CreateFromArtifactProperties(ctx context.Context, props type
 }
 
 func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	if v.JARModel.Signature == nil || v.JARModel.Signature.PublicKey == nil || v.JARModel.Signature.PublicKey.Content == nil {
+		return nil, errors.New("jar v0.0.1 entry not initialized")
+	}
 	return pkcs7.NewPublicKey(bytes.NewReader(*v.JARModel.Signature.PublicKey.Content))
 }

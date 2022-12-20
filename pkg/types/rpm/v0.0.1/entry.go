@@ -372,5 +372,8 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 }
 
 func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	if v.RPMModel.PublicKey == nil || v.RPMModel.PublicKey.Content == nil {
+		return nil, errors.New("rpm v0.0.1 entry not initialized")
+	}
 	return pgp.NewPublicKey(bytes.NewReader(*v.RPMModel.PublicKey.Content))
 }

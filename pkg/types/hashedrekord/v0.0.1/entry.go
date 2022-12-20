@@ -247,5 +247,8 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 }
 
 func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	if v.HashedRekordObj.Signature == nil || v.HashedRekordObj.Signature.PublicKey == nil || v.HashedRekordObj.Signature.PublicKey.Content == nil {
+		return nil, errors.New("hashedrekord v0.0.1 entry not initialized")
+	}
 	return x509.NewPublicKey(bytes.NewReader(v.HashedRekordObj.Signature.PublicKey.Content))
 }

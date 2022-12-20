@@ -328,5 +328,8 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 }
 
 func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	if v.IntotoObj.PublicKey == nil {
+		return nil, errors.New("intoto v0.0.1 entry not initialized")
+	}
 	return x509.NewPublicKey(bytes.NewReader(*v.IntotoObj.PublicKey))
 }
