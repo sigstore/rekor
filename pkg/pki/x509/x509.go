@@ -213,6 +213,10 @@ func (k PublicKey) Subjects() []string {
 				names = append(names, strings.ToLower(name.String()))
 			}
 		}
+		otherName, _ := cryptoutils.UnmarshalOtherNameSAN(cert.Extensions)
+		if len(otherName) > 0 {
+			names = append(names, otherName)
+		}
 	}
 	return names
 }
@@ -228,10 +232,13 @@ func (k PublicKey) Identities() ([]string, error) {
 		return []string{string(pem)}, nil
 	}
 
-	cert := k.cert.c
-	if len(k.certs) > 0 {
+	var cert *x509.Certificate
+	if k.cert != nil {
+		cert = k.cert.c
+	} else if len(k.certs) > 0 {
 		cert = k.certs[0]
 	}
+
 	var identities []string
 	pem, err := cryptoutils.MarshalPublicKeyToPEM(cert.PublicKey)
 	if err != nil {

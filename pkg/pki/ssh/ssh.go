@@ -118,7 +118,7 @@ func (k PublicKey) Identities() ([]string, error) {
 	authorizedKey := string(bytes.TrimSpace(ssh.MarshalAuthorizedKey(k.key)))
 	identities = append(identities, authorizedKey)
 
-	if !govalidator.IsEmail(k.comment) {
+	if govalidator.IsEmail(k.comment) {
 		identities = append(identities, k.comment)
 	}
 

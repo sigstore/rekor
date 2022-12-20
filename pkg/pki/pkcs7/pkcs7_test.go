@@ -18,11 +18,18 @@ package pkcs7
 
 import (
 	"bytes"
+	"crypto"
+	"crypto/x509"
 	"encoding/base64"
+	"net/url"
 	"reflect"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/sassoftware/relic/lib/pkcs7"
+	"github.com/sigstore/rekor/pkg/pki/x509/testutils"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
 const pkcsECDSAPEM = `-----BEGIN PKCS7-----
@@ -292,7 +299,7 @@ func TestEmailAddresses(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			emails := pub.Subjects()
+			emails := pub.EmailAddresses()
 
 			if len(emails) == len(tt.emails) {
 				if len(emails) > 0 {
@@ -308,5 +315,157 @@ func TestEmailAddresses(t *testing.T) {
 
 		})
 	}
+}
 
+func TestSubjects(t *testing.T) {
+	// dynamically generate a PKCS7 structure with multiple subjects set
+	url, _ := url.Parse("https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1")
+	rootCert, rootKey, _ := testutils.GenerateRootCa()
+	leafCert, leafKey, _ := testutils.GenerateLeafCert("subject@example.com", "oidc-issuer", url, rootCert, rootKey)
+
+	b := pkcs7.NewBuilder(leafKey, []*x509.Certificate{leafCert}, crypto.SHA256)
+	// set content to random data, only the certificate matters
+	err := b.SetContentData([]byte{1, 2, 3, 4})
+	if err != nil {
+		t.Fatalf("error setting content data in pkcs7: %v", err)
+	}
+	s, err := b.Sign()
+	if err != nil {
+		t.Fatalf("error signing pkcs7: %v", err)
+	}
+	pkcs7bytes, err := s.Marshal()
+	if err != nil {
+		t.Fatalf("error marshalling pkcs7: %v", err)
+	}
+
+	tests := []struct {
+		name  string
+		pkcs7 string
+		subs  []string
+	}{
+		{
+			name:  "ec",
+			pkcs7: pkcsECDSAPEM,
+			subs:  []string{},
+		},
+		{
+			name:  "email in subject",
+			pkcs7: pkcsPEMEmail,
+			subs:  []string{"test@rekor.dev"},
+		},
+		{
+			name:  "email and URI in subject alternative name",
+			pkcs7: string(pkcs7bytes),
+			subs:  []string{"subject@example.com", "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pub, err := NewPublicKey(strings.NewReader(tt.pkcs7))
+			if err != nil {
+				t.Fatal(err)
+			}
+			subs := pub.Subjects()
+
+			if len(subs) == len(tt.subs) {
+				if len(subs) > 0 {
+					sort.Strings(subs)
+					sort.Strings(tt.subs)
+					if !reflect.DeepEqual(subs, tt.subs) {
+						t.Errorf("%v: Error getting subjects from keys, got %v, expected %v", tt.name, subs, tt.subs)
+					}
+				}
+			} else {
+				t.Errorf("%v: Error getting subjects from keys, got %v, expected %v", tt.name, subs, tt.subs)
+			}
+
+		})
+	}
+}
+
+func TestIdentities(t *testing.T) {
+	// dynamically generate a PKCS7 structure with multiple subjects set
+	url, _ := url.Parse("https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1")
+	rootCert, rootKey, _ := testutils.GenerateRootCa()
+	leafCert, leafKey, _ := testutils.GenerateLeafCert("subject@example.com", "oidc-issuer", url, rootCert, rootKey)
+	leafPEM, _ := cryptoutils.MarshalPublicKeyToPEM(leafKey.Public())
+
+	b := pkcs7.NewBuilder(leafKey, []*x509.Certificate{leafCert}, crypto.SHA256)
+	// set content to random data, only the certificate matters
+	err := b.SetContentData([]byte{1, 2, 3, 4})
+	if err != nil {
+		t.Fatalf("error setting content data in pkcs7: %v", err)
+	}
+	s, err := b.Sign()
+	if err != nil {
+		t.Fatalf("error signing pkcs7: %v", err)
+	}
+	pkcs7bytes, err := s.Marshal()
+	if err != nil {
+		t.Fatalf("error marshalling pkcs7: %v", err)
+	}
+
+	pkcsECDSAPEMKey := `-----BEGIN PUBLIC KEY-----
+MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEtLIDsiLmT6k07xkRZjTKV6ZYOjA6Q1re
+Qv4ZkTlnkZZ6Ev38D1tE0DdFuuxnmLQlxqy1pEvtKnl+n+MPl3Gpz9R1NWeW9LXp
+qf7Zh+zB79C4uiVFQKtw4Tb7aIDn63N3
+-----END PUBLIC KEY-----
+`
+
+	pkcsPEMEmailKey := `-----BEGIN PUBLIC KEY-----
+MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQATdJNkml+YiugIcPJvsF20JpeBPBh
+C9KiwJQNBrvLYZYbwHDi3T8zcT5drbDO2wc06w9h+IizOJsr6U+MdjYG48gApb4V
+3yUzmJu6ExXCqtJDX/CxFdn4waX3a8PcoktQ1emFh8As3N01K2SAoRoTGJ32T1bv
+fe8M8nrlQUlDHjuS5qc=
+-----END PUBLIC KEY-----
+`
+
+	tests := []struct {
+		name       string
+		pkcs7      string
+		identities []string
+	}{
+		{
+			name:       "ec",
+			pkcs7:      pkcsECDSAPEM,
+			identities: []string{pkcsECDSAPEMKey},
+		},
+		{
+			name:       "email in subject",
+			pkcs7:      pkcsPEMEmail,
+			identities: []string{pkcsPEMEmailKey, "test@rekor.dev"},
+		},
+		{
+			name:       "email and URI in subject alternative name",
+			pkcs7:      string(pkcs7bytes),
+			identities: []string{string(leafPEM), "subject@example.com", "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pub, err := NewPublicKey(strings.NewReader(tt.pkcs7))
+			if err != nil {
+				t.Fatal(err)
+			}
+			identities, err := pub.Identities()
+			if err != nil {
+				t.Fatalf("unexpected error getting identities: %v", err)
+			}
+
+			if len(identities) == len(tt.identities) {
+				if len(identities) > 0 {
+					sort.Strings(identities)
+					sort.Strings(tt.identities)
+					if !reflect.DeepEqual(identities, tt.identities) {
+						t.Errorf("%v: Error getting identities from keys, got %v, expected %v", tt.name, identities, tt.identities)
+					}
+				}
+			} else {
+				t.Errorf("%v: Error getting identities from keys, got %v, expected %v", tt.name, identities, tt.identities)
+			}
+
+		})
+	}
 }

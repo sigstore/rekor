@@ -228,14 +228,6 @@ func (k PublicKey) Subjects() []string {
 func (k PublicKey) Identities() ([]string, error) {
 	// pkcs7 structure may contain both a key and certificate chain
 	var identities []string
-	if k.key != nil {
-		pem, err := cryptoutils.MarshalPublicKeyToPEM(k.key)
-		if err != nil {
-			return nil, err
-		}
-		identities = append(identities, string(pem))
-
-	}
 	if len(k.certs) > 0 {
 		cert := k.certs[0]
 		pem, err := cryptoutils.MarshalPublicKeyToPEM(cert.PublicKey)
