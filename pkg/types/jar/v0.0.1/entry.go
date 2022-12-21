@@ -33,6 +33,7 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pkcs7"
+	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/jar"
 	"github.com/sigstore/rekor/pkg/util"
@@ -326,5 +327,5 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 	if v.JARModel.Signature == nil || v.JARModel.Signature.PublicKey == nil || v.JARModel.Signature.PublicKey.Content == nil {
 		return nil, errors.New("jar v0.0.1 entry not initialized")
 	}
-	return pkcs7.NewPublicKey(bytes.NewReader(*v.JARModel.Signature.PublicKey.Content))
+	return x509.NewPublicKey(bytes.NewReader(*v.JARModel.Signature.PublicKey.Content))
 }
