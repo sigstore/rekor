@@ -14,6 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+cd $SRC
+git clone --depth=1 https://github.com/AdamKorcz/instrumentation
+cd instrumentation
+go run main.go $SRC/rekor
+
+cd $SRC/rekor
+go mod tidy
 go get github.com/AdamKorcz/go-118-fuzz-build/testing
 
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/sharding FuzzCreateEntryIDFromParts FuzzCreateEntryIDFromParts
