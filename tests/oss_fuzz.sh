@@ -16,6 +16,7 @@
 
 go get github.com/AdamKorcz/go-118-fuzz-build/testing
 
+compile_native_go_fuzzer github.com/sigstore/rekor/pkg/pki FuzzKeys FuzzKeys
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/sharding FuzzCreateEntryIDFromParts FuzzCreateEntryIDFromParts
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/sharding FuzzGetUUIDFromIDString FuzzGetUUIDFromIDString
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/sharding FuzzGetTreeIDFromIDString FuzzGetTreeIDFromIDString
