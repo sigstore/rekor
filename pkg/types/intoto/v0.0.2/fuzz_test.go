@@ -13,23 +13,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rpm
+package intoto
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	fuzz "github.com/AdaLogics/go-fuzz-headers"
 
-	"github.com/sigstore/rekor/pkg/types"
+	fuzzUtils "github.com/sigstore/rekor/pkg/fuzz"
+	"github.com/sigstore/rekor/pkg/types/intoto"
 )
 
-func FuzzRpmCreateProposedEntry(f *testing.F) {
-	f.Fuzz(func(t *testing.T, version string, propsData []byte) {
+var initter sync.Once
+
+func FuzzIntotoCreateProposedEntry(f *testing.F) {
+	f.Fuzz(func(t *testing.T, propsData []byte) {
+		initter.Do(fuzzUtils.SetFuzzLogger)
+
+		version := "0.0.2"
+
 		ff := fuzz.NewConsumer(propsData)
-		props := types.ArtifactProperties{}
-		ff.GenerateStruct(&props)
-		it := New()
+
+		props, cleanup, err := fuzzUtils.CreateProps(ff)
+		if err != nil {
+			t.Skip()
+		}
+		defer cleanup()
+
+		it := intoto.New()
 		entry, err := it.CreateProposedEntry(context.Background(), version, props)
 		if err != nil {
 			t.Skip()
