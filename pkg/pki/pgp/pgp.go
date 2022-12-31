@@ -34,7 +34,7 @@ import (
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
 
-// Signature Signature that follows the PGP standard; supports both armored & binary detached signatures
+// Signature that follows the PGP standard; supports both armored & binary detached signatures
 type Signature struct {
 	isArmored bool
 	signature []byte
