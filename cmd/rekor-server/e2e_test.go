@@ -20,9 +20,15 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto"
+	"crypto/ecdsa"
 	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -32,6 +38,15 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/in-toto/in-toto-golang/in_toto"
+	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
+	"github.com/secure-systems-lab/go-securesystemslib/dsse"
+	"github.com/sigstore/rekor/pkg/generated/models"
+	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
+	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/sigstore/pkg/signature"
 
 	"github.com/sigstore/rekor/pkg/sharding"
 
@@ -356,5 +371,268 @@ func TestSearchQueryMalformedEntry(t *testing.T) {
 	}
 	if resp.StatusCode != 400 {
 		t.Fatalf("expected status 400, got %d instead", resp.StatusCode)
+	}
+}
+func entryID(t *testing.T, uuid string) string {
+	t.Helper()
+	if sharding.ValidateEntryID(uuid) == nil {
+		return uuid
+	}
+	treeID, err := strconv.Atoi(os.Getenv("TREE_ID"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tid := strconv.FormatInt(int64(treeID), 16)
+	ts, err := sharding.PadToTreeIDLen(tid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ts + uuid
+}
+func TestHarnessGetAllEntriesUUID(t *testing.T) {
+	if util.RekorCLIIncompatible() {
+		t.Skipf("Skipping getting entries by UUID, old rekor-cli version %s is incompatible with server version %s", os.Getenv("CLI_VERSION"), os.Getenv("SERVER_VERSION"))
+	}
+
+	treeSize := util.ActiveTreeSize(t)
+	if treeSize == 0 {
+		t.Fatal("There are 0 entries in the log, there should be at least 2")
+	}
+	_, entries := util.GetEntries(t)
+
+	for _, e := range entries {
+		outUUID := util.RunCli(t, "get", "--uuid", e.UUID, "--format", "json")
+		outEntryID := util.RunCli(t, "get", "--uuid", entryID(t, e.UUID), "--format", "json")
+
+		if outUUID != outEntryID {
+			t.Fatalf("Getting by uuid %s and entryID %s gave different outputs:\nuuid: %v\nentryID:%v\n", e.UUID, entryID(t, e.UUID), outUUID, outEntryID)
+		}
+
+		if !strings.Contains(outUUID, "IntotoObj") {
+			continue
+		}
+		var intotoObj struct {
+			Attestation string
+		}
+		if err := json.Unmarshal([]byte(outUUID), &intotoObj); err != nil {
+			t.Fatal(err)
+		}
+		if intotoObj.Attestation != e.Attestation {
+			t.Fatalf("attestations don't match, got %v expected %v", intotoObj.Attestation, e.Attestation)
+		}
+	}
+}
+
+// Make sure we can get and verify all entries
+// For attestations, make sure we can see the attestation
+// Older versions of the CLI may not be able to parse the retrieved entry.
+func TestHarnessGetAllEntriesLogIndex(t *testing.T) {
+	if util.RekorCLIIncompatible() {
+		t.Skipf("Skipping getting entries by UUID, old rekor-cli version %s is incompatible with server version %s", os.Getenv("CLI_VERSION"), os.Getenv("SERVER_VERSION"))
+	}
+
+	treeSize := util.ActiveTreeSize(t)
+	if treeSize == 0 {
+		t.Fatal("There are 0 entries in the log, there should be at least 2")
+	}
+	for i := 0; i < treeSize; i++ {
+		out := util.RunCli(t, "get", "--log-index", fmt.Sprintf("%d", i), "--format", "json")
+		if !strings.Contains(out, "IntotoObj") {
+			continue
+		}
+		var intotoObj struct {
+			Attestation string
+		}
+		if err := json.Unmarshal([]byte(out), &intotoObj); err != nil {
+			t.Fatal(err)
+		}
+		util.CompareAttestation(t, i, intotoObj.Attestation)
+		t.Log("IntotoObj matches stored attestation")
+	}
+}
+
+type StoredEntry struct {
+	Attestation string
+	UUID        string
+}
+
+// Make sure we can add an entry
+func TestHarnessAddEntry(t *testing.T) {
+	// Create a random artifact and sign it.
+	artifactPath := filepath.Join(t.TempDir(), "artifact")
+	sigPath := filepath.Join(t.TempDir(), "signature.asc")
+
+	sigx509.CreatedX509SignedArtifact(t, artifactPath, sigPath)
+	dataBytes, _ := ioutil.ReadFile(artifactPath)
+	h := sha256.Sum256(dataBytes)
+	dataSHA := hex.EncodeToString(h[:])
+
+	// Write the public key to a file
+	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
+	if err := ioutil.WriteFile(pubPath, []byte(sigx509.RSACert), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify should fail initially
+	util.RunCliErr(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+
+	// It should upload successfully.
+	out := util.RunCli(t, "upload", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+	util.OutputContains(t, out, "Created entry at")
+	uuid := util.GetUUIDFromUploadOutput(t, out)
+	logIndex := util.GetLogIndexFromUploadOutput(t, out)
+
+	if !util.RekorCLIIncompatible() {
+		// Now we should be able to verify it.
+		out = util.RunCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+		util.OutputContains(t, out, "Inclusion Proof:")
+	}
+
+	saveEntry(t, logIndex, StoredEntry{UUID: uuid})
+}
+
+// Make sure we can add an intoto entry
+func TestHarnessAddIntoto(t *testing.T) {
+	td := t.TempDir()
+	attestationPath := filepath.Join(td, "attestation.json")
+	pubKeyPath := filepath.Join(td, "pub.pem")
+
+	// Get some random data so it's unique each run
+	d := util.RandomData(t, 10)
+	id := base64.StdEncoding.EncodeToString(d)
+
+	it := in_toto.ProvenanceStatement{
+		StatementHeader: in_toto.StatementHeader{
+			Type:          in_toto.StatementInTotoV01,
+			PredicateType: slsa.PredicateSLSAProvenance,
+			Subject: []in_toto.Subject{
+				{
+					Name: "foobar",
+					Digest: slsa.DigestSet{
+						"foo": "bar",
+					},
+				},
+			},
+		},
+		Predicate: slsa.ProvenancePredicate{
+			Builder: slsa.ProvenanceBuilder{
+				ID: "foo" + id,
+			},
+		},
+	}
+
+	b, err := json.Marshal(it)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pb, _ := pem.Decode([]byte(sigx509.ECDSAPriv))
+	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := signature.LoadECDSASigner(priv.(*ecdsa.PrivateKey), crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signer, err := dsse.NewEnvelopeSigner(&sigx509.Verifier{
+		S: s,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	env, err := signer.SignPayload("application/vnd.in-toto+json", b)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	eb, err := json.Marshal(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	util.Write(t, string(eb), attestationPath)
+	util.Write(t, sigx509.ECDSAPub, pubKeyPath)
+
+	// If we do it twice, it should already exist
+	out := util.RunCliStdout(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
+	util.OutputContains(t, out, "Created entry at")
+	uuid := util.GetUUIDFromUploadOutput(t, out)
+	logIndex := util.GetLogIndexFromUploadOutput(t, out)
+
+	out = util.RunCli(t, "get", "--log-index", fmt.Sprintf("%d", logIndex), "--format=json")
+	g := util.GetOut{}
+	if err := json.Unmarshal([]byte(out), &g); err != nil {
+		t.Fatal(err)
+	}
+	// The attestation should be stored at /var/run/attestations/sha256:digest
+
+	got := in_toto.ProvenanceStatement{}
+	if err := json.Unmarshal([]byte(g.Attestation), &got); err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(it, got); diff != "" {
+		t.Errorf("diff: %s", diff)
+	}
+
+	attHash := sha256.Sum256(b)
+
+	intotoModel := &models.IntotoV002Schema{}
+	if err := types.DecodeEntry(g.Body.(map[string]interface{})["IntotoObj"], intotoModel); err != nil {
+		t.Errorf("could not convert body into intoto type: %v", err)
+	}
+	if intotoModel.Content == nil || intotoModel.Content.PayloadHash == nil {
+		t.Errorf("could not find hash over attestation %v", intotoModel)
+	}
+	recordedPayloadHash, err := hex.DecodeString(*intotoModel.Content.PayloadHash.Value)
+	if err != nil {
+		t.Errorf("error converting attestation hash to []byte: %v", err)
+	}
+
+	if !bytes.Equal(attHash[:], recordedPayloadHash) {
+		t.Fatal(fmt.Errorf("attestation hash %v doesnt match the payload we sent %v", hex.EncodeToString(attHash[:]),
+			*intotoModel.Content.PayloadHash.Value))
+	}
+
+	out = util.RunCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
+	util.OutputContains(t, out, "Entry already exists")
+	saveEntry(t, logIndex, StoredEntry{Attestation: g.Attestation, UUID: uuid})
+}
+
+func getEntries(t *testing.T) (string, map[int]StoredEntry) {
+	tmpDir := os.Getenv("REKOR_HARNESS_TMPDIR")
+	if tmpDir == "" {
+		t.Skip("Skipping test, REKOR_HARNESS_TMPDIR is not set")
+	}
+	file := filepath.Join(tmpDir, "attestations")
+
+	t.Log("Reading", file)
+	attestations := map[int]StoredEntry{}
+	contents, err := os.ReadFile(file)
+	if errors.Is(err, os.ErrNotExist) || contents == nil {
+		return file, attestations
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(contents, &attestations); err != nil {
+		t.Fatal(err)
+	}
+	return file, attestations
+}
+
+func saveEntry(t *testing.T, logIndex int, entry StoredEntry) {
+	file, attestations := getEntries(t)
+	t.Logf("Storing entry for logIndex %d", logIndex)
+	attestations[logIndex] = entry
+	contents, err := json.Marshal(attestations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, contents, 0777); err != nil {
+		t.Fatal(err)
 	}
 }

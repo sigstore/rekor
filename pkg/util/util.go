@@ -20,6 +20,8 @@ package util
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -27,6 +29,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -48,6 +51,10 @@ type GetOut struct {
 	Body            interface{}
 	LogIndex        int
 	IntegratedTime  int64
+}
+type StoredEntry struct {
+	Attestation string
+	UUID        string
 }
 
 // This was generated with gpg --gen-key, and all defaults.
@@ -458,4 +465,117 @@ func SetupTestData(t *testing.T) {
 	// Now upload to rekor!
 	out := RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	OutputContains(t, out, "Created entry at")
+}
+
+func ActiveTreeSize(t *testing.T) int {
+	out := runCliStdout(t, "loginfo", "--format", "json", "--store_tree_state", "false")
+	t.Log(out)
+	var s struct {
+		ActiveTreeSize int
+	}
+	if err := json.Unmarshal([]byte(out), &s); err != nil {
+		t.Fatal(err)
+	}
+	return s.ActiveTreeSize
+}
+
+// RekorCLIIncompatible Check if we have a new server version and an old CLI version
+// since the new server returns an EntryID but the old CLI version expects a UUID
+// Also, new rekor server allows upload of intoto v0.0.2, and old rekor cli versions
+// don't understand how to parse these entries.
+// TODO: use semver comparisons.
+func RekorCLIIncompatible() bool {
+	if sv := os.Getenv("SERVER_VERSION"); sv != "v0.10.0" && sv != "v0.11.0" {
+		if cv := os.Getenv("CLI_VERSION"); cv == "v0.10.0" || cv == "v0.11.0" {
+			return true
+		}
+	}
+
+	return false
+}
+func runCliStdout(t *testing.T, arg ...string) string {
+	t.Helper()
+	// Coverage flag must be the first arg passed to coverage binary
+	// No impact when running with regular binary
+	arg = append([]string{coverageFlag()}, arg...)
+	arg = append(arg, rekorServerFlag())
+	c := exec.Command(cli, arg...)
+
+	if os.Getenv("REKORTMPDIR") != "" {
+		// ensure that we use a clean state.json file for each run
+		c.Env = append(c.Env, "HOME="+os.Getenv("REKORTMPDIR"))
+	}
+	b, err := c.Output()
+	if err != nil {
+		t.Log(string(b))
+		t.Fatal(err)
+	}
+	return stripCoverageOutput(string(b))
+}
+func GetEntries(t *testing.T) (string, map[int]StoredEntry) {
+	t.Helper()
+	tmpDir := os.Getenv("REKOR_HARNESS_TMPDIR")
+	if tmpDir == "" {
+		t.Skip("Skipping test, REKOR_HARNESS_TMPDIR is not set")
+	}
+	file := filepath.Join(tmpDir, "attestations")
+
+	t.Log("Reading", file)
+	attestations := map[int]StoredEntry{}
+	contents, err := os.ReadFile(file)
+	if errors.Is(err, os.ErrNotExist) || contents == nil {
+		return file, attestations
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(contents, &attestations); err != nil {
+		t.Fatal(err)
+	}
+	return file, attestations
+}
+
+func CompareAttestation(t *testing.T, logIndex int, got string) {
+	t.Helper()
+	_, entries := GetEntries(t)
+	expected, ok := entries[logIndex]
+	if !ok {
+		t.Fatalf("expected to find persisted entries with logIndex %d but none existed: %v", logIndex, entries)
+	}
+
+	if got != expected.Attestation {
+		t.Fatalf("attestations don't match, got %v expected %v", got, expected)
+	}
+}
+
+func GetLogIndexFromUploadOutput(t *testing.T, out string) int {
+	t.Helper()
+	t.Log(out)
+	// Output looks like "Created entry at index X, available at $URL/UUID", so grab the index X:
+	split := strings.Split(strings.TrimSpace(out), ",")
+	ss := strings.Split(split[0], " ")
+	i, err := strconv.Atoi(ss[len(ss)-1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return i
+}
+func RunCliStdout(t *testing.T, arg ...string) string {
+	t.Helper()
+	// Coverage flag must be the first arg passed to coverage binary
+	// No impact when running with regular binary
+	arg = append([]string{coverageFlag()}, arg...)
+	arg = append(arg, rekorServerFlag())
+	c := exec.Command(cli, arg...)
+
+	if os.Getenv("REKORTMPDIR") != "" {
+		// ensure that we use a clean state.json file for each run
+		c.Env = append(c.Env, "HOME="+os.Getenv("REKORTMPDIR"))
+	}
+	b, err := c.Output()
+	if err != nil {
+		t.Log(string(b))
+		t.Fatal(err)
+	}
+	return stripCoverageOutput(string(b))
 }
