@@ -44,5 +44,5 @@ compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/tuf/v0.0.1 FuzzTufC
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/rfc3161/v0.0.1 FuzzRfc3161CreateProposedEntry FuzzRfc3161CreateProposedEntry
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/rpm/v0.0.1 FuzzRpmCreateProposedEntry FuzzRpmCreateProposedEntry
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/helm/v0.0.1 FuzzHelmCreateProposedEntry FuzzHelmCreateProposedEntry
-compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/helm FuzzHelmProvenanceUnmarshal FuzzHelmProvenanceUnmarshal
+compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/helm/v0.0.1 FuzzHelmProvenanceUnmarshal FuzzHelmProvenanceUnmarshal
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/rekord/v0.0.1 FuzzRekordCreateProposedEntry FuzzRekordCreateProposedEntry
