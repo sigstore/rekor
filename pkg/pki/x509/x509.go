@@ -240,12 +240,17 @@ func (k PublicKey) Identities() ([]string, error) {
 	}
 
 	var identities []string
-	pem, err := cryptoutils.MarshalPublicKeyToPEM(cert.PublicKey)
+	pemCert, err := cryptoutils.MarshalCertificateToPEM(cert)
 	if err != nil {
 		return nil, err
 	}
-	identities = append(identities, string(pem))
-	identities = append(identities, GetSubjectAlternateNames(cert)...)
+	identities = append(identities, string(pemCert))
+	pemKey, err := cryptoutils.MarshalPublicKeyToPEM(cert.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+	identities = append(identities, string(pemKey))
+	identities = append(identities, cryptoutils.GetSubjectAlternateNames(cert)...)
 	return identities, nil
 }
 

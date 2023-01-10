@@ -227,6 +227,7 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 	url, _ := url.Parse("https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1")
 	leafCert, leafKey, _ := testutils.GenerateLeafCert("subject@example.com", "oidc-issuer", url, subCert, subKey)
 	leafPEM, _ := cryptoutils.MarshalPublicKeyToPEM(leafKey.Public())
+	leafCertPEM, _ := cryptoutils.MarshalCertificateToPEM(leafCert)
 
 	pemCertChain, err := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, subCert, rootCert})
 	if err != nil {
@@ -255,7 +256,7 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 		t.Fatalf("expected matching subjects, expected %v, got %v", expectedSubjects, pub.Subjects())
 	}
 
-	expectedIDs := []string{string(leafPEM), "subject@example.com", url.String()}
+	expectedIDs := []string{string(leafCertPEM), string(leafPEM), "subject@example.com", url.String()}
 	ids, err := pub.Identities()
 	if err != nil {
 		t.Fatal(err)

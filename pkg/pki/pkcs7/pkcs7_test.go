@@ -390,6 +390,7 @@ func TestIdentities(t *testing.T) {
 	rootCert, rootKey, _ := testutils.GenerateRootCa()
 	leafCert, leafKey, _ := testutils.GenerateLeafCert("subject@example.com", "oidc-issuer", url, rootCert, rootKey)
 	leafPEM, _ := cryptoutils.MarshalPublicKeyToPEM(leafKey.Public())
+	leafCertPEM, _ := cryptoutils.MarshalCertificateToPEM(leafCert)
 
 	b := pkcs7.NewBuilder(leafKey, []*x509.Certificate{leafCert}, crypto.SHA256)
 	// set content to random data, only the certificate matters
@@ -413,12 +414,47 @@ qf7Zh+zB79C4uiVFQKtw4Tb7aIDn63N3
 -----END PUBLIC KEY-----
 `
 
+	pkcsKeyCert := `-----BEGIN CERTIFICATE-----
+MIIB+DCCAX6gAwIBAgITNVkDZoCiofPDsy7dfm6geLbuhzAKBggqhkjOPQQDAzAq
+MRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxETAPBgNVBAMTCHNpZ3N0b3JlMB4XDTIx
+MDMwNzAzMjAyOVoXDTMxMDIyMzAzMjAyOVowKjEVMBMGA1UEChMMc2lnc3RvcmUu
+ZGV2MREwDwYDVQQDEwhzaWdzdG9yZTB2MBAGByqGSM49AgEGBSuBBAAiA2IABLSy
+A7Ii5k+pNO8ZEWY0ylemWDowOkNa3kL+GZE5Z5GWehL9/A9bRNA3RbrsZ5i0Jcas
+taRL7Sp5fp/jD5dxqc/UdTVnlvS16an+2Yfswe/QuLolRUCrcOE2+2iA5+tzd6Nm
+MGQwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEwHQYDVR0OBBYE
+FMjFHQBBmiQpMlEk6w2uSu1KBtPsMB8GA1UdIwQYMBaAFMjFHQBBmiQpMlEk6w2u
+Su1KBtPsMAoGCCqGSM49BAMDA2gAMGUCMH8liWJfMui6vXXBhjDgY4MwslmN/TJx
+Ve/83WrFomwmNf056y1X48F9c4m3a3ozXAIxAKjRay5/aj/jsKKGIkmQatjI8uup
+Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
+-----END CERTIFICATE-----
+`
+
 	pkcsPEMEmailKey := `-----BEGIN PUBLIC KEY-----
 MIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQATdJNkml+YiugIcPJvsF20JpeBPBh
 C9KiwJQNBrvLYZYbwHDi3T8zcT5drbDO2wc06w9h+IizOJsr6U+MdjYG48gApb4V
 3yUzmJu6ExXCqtJDX/CxFdn4waX3a8PcoktQ1emFh8As3N01K2SAoRoTGJ32T1bv
 fe8M8nrlQUlDHjuS5qc=
 -----END PUBLIC KEY-----
+`
+
+	pkcsEmailCert := `-----BEGIN CERTIFICATE-----
+MIIC2TCCAjqgAwIBAgIUAL0Gw2SJvPW8PbXw+42XwmW8//owCgYIKoZIzj0EAwIw
+fTELMAkGA1UEBhMCVVMxCzAJBgNVBAgMAk1BMQ8wDQYDVQQHDAZCb3N0b24xITAf
+BgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEOMAwGA1UEAwwFUmVrb3Ix
+HTAbBgkqhkiG9w0BCQEWDnRlc3RAcmVrb3IuZGV2MCAXDTIxMDQxOTE0MTMyMFoY
+DzQ0ODUwNTMxMTQxMzIwWjB9MQswCQYDVQQGEwJVUzELMAkGA1UECAwCTUExDzAN
+BgNVBAcMBkJvc3RvbjEhMB8GA1UECgwYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRk
+MQ4wDAYDVQQDDAVSZWtvcjEdMBsGCSqGSIb3DQEJARYOdGVzdEByZWtvci5kZXYw
+gZswEAYHKoZIzj0CAQYFK4EEACMDgYYABABN0k2SaX5iK6Ahw8m+wXbQml4E8GEL
+0qLAlA0Gu8thlhvAcOLdPzNxPl2tsM7bBzTrD2H4iLM4myvpT4x2NgbjyAClvhXf
+JTOYm7oTFcKq0kNf8LEV2fjBpfdrw9yiS1DV6YWHwCzc3TUrZIChGhMYnfZPVu99
+7wzyeuVBSUMeO5Lmp6NTMFEwHQYDVR0OBBYEFJPLiMMFN5Cm6/rjOTPR2HWbbO5P
+MB8GA1UdIwQYMBaAFJPLiMMFN5Cm6/rjOTPR2HWbbO5PMA8GA1UdEwEB/wQFMAMB
+Af8wCgYIKoZIzj0EAwIDgYwAMIGIAkIBmRqxw8sStWknjeOgdyKkd+vFehNuVaiH
+AKGsz+6KG3jPG5xN5+/Ws+OMTAp7Hv6HH5ChDO3LJ6t/sCun1otdWmICQgCUqg1k
+e+RjnVqVlz1rUR7CTL2SlG9Xg1kAkYH4vMn/otEuAhnKf+GWLNB1l/dTFNEyysvI
+A6ydFG8HXGWcnVVIVQ==
+-----END CERTIFICATE-----
 `
 
 	tests := []struct {
@@ -429,17 +465,17 @@ fe8M8nrlQUlDHjuS5qc=
 		{
 			name:       "ec",
 			pkcs7:      pkcsECDSAPEM,
-			identities: []string{pkcsECDSAPEMKey},
+			identities: []string{pkcsKeyCert, pkcsECDSAPEMKey},
 		},
 		{
 			name:       "email in subject",
 			pkcs7:      pkcsPEMEmail,
-			identities: []string{pkcsPEMEmailKey, "test@rekor.dev"},
+			identities: []string{pkcsEmailCert, pkcsPEMEmailKey, "test@rekor.dev"},
 		},
 		{
 			name:       "email and URI in subject alternative name",
 			pkcs7:      string(pkcs7bytes),
-			identities: []string{string(leafPEM), "subject@example.com", "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1"},
+			identities: []string{string(leafCertPEM), string(leafPEM), "subject@example.com", "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1"},
 		},
 	}
 
