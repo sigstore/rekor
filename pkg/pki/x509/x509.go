@@ -233,10 +233,13 @@ func (k PublicKey) Identities() ([]string, error) {
 	}
 
 	var cert *x509.Certificate
-	if k.cert != nil {
+	switch {
+	case k.cert != nil:
 		cert = k.cert.c
-	} else if len(k.certs) > 0 {
+	case len(k.certs) > 0:
 		cert = k.certs[0]
+	default:
+		return nil, errors.New("no key, certificate or certificate chain provided")
 	}
 
 	var identities []string
