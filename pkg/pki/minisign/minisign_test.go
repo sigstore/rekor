@@ -20,6 +20,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -287,6 +288,15 @@ func TestCanonicalValuePublicKey(t *testing.T) {
 		}
 		if diff := cmp.Diff(rt.key, inputKey.key); diff != "" {
 			t.Error(diff)
+		}
+
+		// Identities should be equal to the canonical value for minisign
+		ids, err := outputKey.Identities()
+		if err != nil {
+			t.Errorf("unexpected error getting identities: %v", err)
+		}
+		if !reflect.DeepEqual([]string{string(cvOutput)}, ids) {
+			t.Errorf("identities and canonical value are not equal")
 		}
 	}
 }

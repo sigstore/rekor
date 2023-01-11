@@ -368,3 +368,14 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 
 	return &returnVal, nil
 }
+
+func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	if v.TufObj.Root == nil {
+		return nil, errors.New("tuf v0.0.1 entry not initialized")
+	}
+	keyBytes, err := json.Marshal(v.TufObj.Root.Content)
+	if err != nil {
+		return nil, err
+	}
+	return ptuf.NewPublicKey(bytes.NewReader(keyBytes))
+}

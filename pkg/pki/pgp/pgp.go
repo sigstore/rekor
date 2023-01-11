@@ -303,3 +303,16 @@ func (k PublicKey) EmailAddresses() []string {
 func (k PublicKey) Subjects() []string {
 	return k.EmailAddresses()
 }
+
+// Identities implements the pki.PublicKey interface
+func (k PublicKey) Identities() ([]string, error) {
+	// returns the email addresses and armored public key
+	var identities []string
+	identities = append(identities, k.Subjects()...)
+	key, err := k.CanonicalValue()
+	if err != nil {
+		return nil, err
+	}
+	identities = append(identities, string(key))
+	return identities, nil
+}

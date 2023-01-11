@@ -48,6 +48,7 @@ func TestCrossFieldValidation(t *testing.T) {
 		entry                     V001Entry
 		expectUnmarshalSuccess    bool
 		expectCanonicalizeSuccess bool
+		expectVerifierSuccess     bool
 	}
 
 	keyBytes, _ := os.ReadFile("../tests/test_rpm_public_key.key")
@@ -58,6 +59,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			caseDesc:               "empty obj",
 			entry:                  V001Entry{},
 			expectUnmarshalSuccess: false,
+			expectVerifierSuccess:  false,
 		},
 		{
 			caseDesc: "public key without content",
@@ -67,6 +69,7 @@ func TestCrossFieldValidation(t *testing.T) {
 				},
 			},
 			expectUnmarshalSuccess: false,
+			expectVerifierSuccess:  false,
 		},
 		{
 			caseDesc: "public key without package",
@@ -78,6 +81,7 @@ func TestCrossFieldValidation(t *testing.T) {
 				},
 			},
 			expectUnmarshalSuccess: false,
+			expectVerifierSuccess:  true,
 		},
 		{
 			caseDesc: "public key with empty package",
@@ -90,6 +94,7 @@ func TestCrossFieldValidation(t *testing.T) {
 				},
 			},
 			expectUnmarshalSuccess: false,
+			expectVerifierSuccess:  true,
 		},
 		{
 			caseDesc: "public key with invalid key content & with data with content",
@@ -105,6 +110,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
+			expectVerifierSuccess:     false,
 		},
 		{
 			caseDesc: "public key with key content & with data with content",
@@ -120,6 +126,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
+			expectVerifierSuccess:     true,
 		},
 		{
 			caseDesc: "public key with key content & with invalid data with content",
@@ -135,6 +142,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
+			expectVerifierSuccess:     true,
 		},
 	}
 
@@ -175,6 +183,24 @@ func TestCrossFieldValidation(t *testing.T) {
 			}
 			if _, err := types.UnmarshalEntry(pe); err != nil {
 				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+			}
+		}
+
+		verifier, err := v.Verifier()
+		if tc.expectVerifierSuccess {
+			if err != nil {
+				t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
+			} else {
+				// TODO: Improve this test once CanonicalValue returns same result as input for PGP keys
+				_, err := verifier.CanonicalValue()
+				if err != nil {
+					t.Errorf("%v: unexpected error getting canonical value, got %v", tc.caseDesc, err)
+				}
+			}
+		} else {
+			if err == nil {
+				s, _ := verifier.CanonicalValue()
+				t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
 			}
 		}
 	}

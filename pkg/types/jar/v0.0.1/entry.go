@@ -31,7 +31,9 @@ import (
 	"strings"
 
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pkcs7"
+	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/jar"
 	"github.com/sigstore/rekor/pkg/util"
@@ -108,6 +110,10 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 }
 
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pkcs7.PublicKey, *pkcs7.Signature, error) {
+	if err := v.validate(); err != nil {
+		return nil, nil, types.ValidationError(err)
+	}
+
 	oldSHA := ""
 	if v.JARModel.Archive.Hash != nil && v.JARModel.Archive.Hash.Value != nil {
 		oldSHA = swag.StringValue(v.JARModel.Archive.Hash.Value)
@@ -315,4 +321,11 @@ func (v *V001Entry) CreateFromArtifactProperties(ctx context.Context, props type
 	returnVal.Spec = re.JARModel
 
 	return &returnVal, nil
+}
+
+func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	if v.JARModel.Signature == nil || v.JARModel.Signature.PublicKey == nil || v.JARModel.Signature.PublicKey.Content == nil {
+		return nil, errors.New("jar v0.0.1 entry not initialized")
+	}
+	return x509.NewPublicKey(bytes.NewReader(*v.JARModel.Signature.PublicKey.Content))
 }

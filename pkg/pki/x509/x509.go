@@ -213,8 +213,48 @@ func (k PublicKey) Subjects() []string {
 				names = append(names, strings.ToLower(name.String()))
 			}
 		}
+		otherName, _ := cryptoutils.UnmarshalOtherNameSAN(cert.Extensions)
+		if len(otherName) > 0 {
+			names = append(names, otherName)
+		}
 	}
 	return names
+}
+
+// Identities implements the pki.PublicKey interface
+func (k PublicKey) Identities() ([]string, error) {
+	// k contains either a key, a cert, or a list of certs
+	if k.key != nil {
+		pem, err := cryptoutils.MarshalPublicKeyToPEM(k.key)
+		if err != nil {
+			return nil, err
+		}
+		return []string{string(pem)}, nil
+	}
+
+	var cert *x509.Certificate
+	switch {
+	case k.cert != nil:
+		cert = k.cert.c
+	case len(k.certs) > 0:
+		cert = k.certs[0]
+	default:
+		return nil, errors.New("no key, certificate or certificate chain provided")
+	}
+
+	var identities []string
+	pemCert, err := cryptoutils.MarshalCertificateToPEM(cert)
+	if err != nil {
+		return nil, err
+	}
+	identities = append(identities, string(pemCert))
+	pemKey, err := cryptoutils.MarshalPublicKeyToPEM(cert.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+	identities = append(identities, string(pemKey))
+	identities = append(identities, cryptoutils.GetSubjectAlternateNames(cert)...)
+	return identities, nil
 }
 
 func verifyCertChain(certChain []*x509.Certificate) error {

@@ -48,6 +48,7 @@ func TestCrossFieldValidation(t *testing.T) {
 		entry                     V001Entry
 		expectUnmarshalSuccess    bool
 		expectCanonicalizeSuccess bool
+		expectedVerifierSuccess   bool
 	}
 
 	keyBytes, _ := os.ReadFile("../tests/test_alpine.pub")
@@ -55,9 +56,10 @@ func TestCrossFieldValidation(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			caseDesc:               "empty obj",
-			entry:                  V001Entry{},
-			expectUnmarshalSuccess: false,
+			caseDesc:                "empty obj",
+			entry:                   V001Entry{},
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "public key without content",
@@ -66,7 +68,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					PublicKey: &models.AlpineV001SchemaPublicKey{},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "public key without package",
@@ -77,7 +80,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: true,
 		},
 		{
 			caseDesc: "public key with empty package",
@@ -89,7 +93,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					Package: &models.AlpineV001SchemaPackage{},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: true,
 		},
 		{
 			caseDesc: "public key with invalid key content & with data with content",
@@ -105,6 +110,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
+			expectedVerifierSuccess:   false,
 		},
 		{
 			caseDesc: "public key with key content & with data with content",
@@ -120,6 +126,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
+			expectedVerifierSuccess:   true,
 		},
 	}
 
@@ -159,6 +166,23 @@ func TestCrossFieldValidation(t *testing.T) {
 			}
 			if _, err := types.UnmarshalEntry(pe); err != nil {
 				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+			}
+		}
+
+		verifier, err := v.Verifier()
+		if tc.expectedVerifierSuccess {
+			if err != nil {
+				t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
+			} else {
+				pub, _ := verifier.CanonicalValue()
+				if !reflect.DeepEqual(pub, keyBytes) {
+					t.Errorf("%v: verifier and public keys do not match: %v, %v", tc.caseDesc, string(pub), string(keyBytes))
+				}
+			}
+		} else {
+			if err == nil {
+				s, _ := verifier.CanonicalValue()
+				t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
 			}
 		}
 	}

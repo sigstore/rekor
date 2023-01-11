@@ -35,6 +35,7 @@ import (
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/alpine"
@@ -348,4 +349,11 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	returnVal.Spec = re.AlpineModel
 
 	return &returnVal, nil
+}
+
+func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	if v.AlpineModel.PublicKey == nil || v.AlpineModel.PublicKey.Content == nil {
+		return nil, errors.New("alpine v0.0.1 entry not initialized")
+	}
+	return x509.NewPublicKey(bytes.NewReader(*v.AlpineModel.PublicKey.Content))
 }
