@@ -69,7 +69,12 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 
 	logMsg := func(r *http.Request) {
 		ctx := r.Context()
-		log.ContextLogger(ctx).Errorw("error processing request", append([]interface{}{"handler", handler, "statusCode", code, "clientMessage", message, "error", err}, fields...)...)
+		fields := append([]interface{}{"handler", handler, "statusCode", code, "clientMessage", message}, fields...)
+		if code >= 500 {
+			log.ContextLogger(ctx).Errorw(err.Error(), fields)
+		} else {
+			log.ContextLogger(ctx).Warnw(err.Error(), fields)
+		}
 		paramsFields := map[string]interface{}{}
 		if err := mapstructure.Decode(params, &paramsFields); err == nil {
 			log.ContextLogger(ctx).Debug(paramsFields)

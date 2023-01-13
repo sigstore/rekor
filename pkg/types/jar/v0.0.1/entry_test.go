@@ -47,15 +47,32 @@ func TestCrossFieldValidation(t *testing.T) {
 		entry                     V001Entry
 		expectUnmarshalSuccess    bool
 		expectCanonicalizeSuccess bool
+		expectedVerifierSuccess   bool
 	}
 
-	jarBytes, _ := os.ReadFile("../../../../tests/test.jar")
+	jarBytes, _ := os.ReadFile("tests/test.jar")
+	// extracted from jar
+	certificate := `-----BEGIN CERTIFICATE-----
+MIIB+DCCAX6gAwIBAgITNVkDZoCiofPDsy7dfm6geLbuhzAKBggqhkjOPQQDAzAq
+MRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxETAPBgNVBAMTCHNpZ3N0b3JlMB4XDTIx
+MDMwNzAzMjAyOVoXDTMxMDIyMzAzMjAyOVowKjEVMBMGA1UEChMMc2lnc3RvcmUu
+ZGV2MREwDwYDVQQDEwhzaWdzdG9yZTB2MBAGByqGSM49AgEGBSuBBAAiA2IABLSy
+A7Ii5k+pNO8ZEWY0ylemWDowOkNa3kL+GZE5Z5GWehL9/A9bRNA3RbrsZ5i0Jcas
+taRL7Sp5fp/jD5dxqc/UdTVnlvS16an+2Yfswe/QuLolRUCrcOE2+2iA5+tzd6Nm
+MGQwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEwHQYDVR0OBBYE
+FMjFHQBBmiQpMlEk6w2uSu1KBtPsMB8GA1UdIwQYMBaAFMjFHQBBmiQpMlEk6w2u
+Su1KBtPsMAoGCCqGSM49BAMDA2gAMGUCMH8liWJfMui6vXXBhjDgY4MwslmN/TJx
+Ve/83WrFomwmNf056y1X48F9c4m3a3ozXAIxAKjRay5/aj/jsKKGIkmQatjI8uup
+Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
+-----END CERTIFICATE-----
+`
 
 	testCases := []TestCase{
 		{
-			caseDesc:               "empty obj",
-			entry:                  V001Entry{},
-			expectUnmarshalSuccess: false,
+			caseDesc:                "empty obj",
+			entry:                   V001Entry{},
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "empty archive",
@@ -64,7 +81,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					Archive: &models.JarV001SchemaArchive{},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "archive with inline content",
@@ -77,6 +95,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
+			expectedVerifierSuccess:   true,
 		},
 	}
 
@@ -110,6 +129,23 @@ func TestCrossFieldValidation(t *testing.T) {
 			}
 			if _, err := types.UnmarshalEntry(pe); err != nil {
 				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+			}
+		}
+
+		verifier, err := v.Verifier()
+		if tc.expectedVerifierSuccess {
+			if err != nil {
+				t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
+			} else {
+				pub, _ := verifier.CanonicalValue()
+				if !reflect.DeepEqual(pub, []byte(certificate)) {
+					t.Errorf("verifier and public keys do not match: %v, %v", string(pub), certificate)
+				}
+			}
+		} else {
+			if err == nil {
+				s, _ := verifier.CanonicalValue()
+				t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
 			}
 		}
 	}

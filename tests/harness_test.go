@@ -233,7 +233,7 @@ func TestHarnessAddIntotoV002(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pb, _ := pem.Decode([]byte(ecdsaPriv))
+	pb, _ := pem.Decode([]byte(sigx509.ECDSAPriv))
 	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
 	if err != nil {
 		t.Fatal(err)
@@ -244,8 +244,8 @@ func TestHarnessAddIntotoV002(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer, err := dsse.NewEnvelopeSigner(&verifier{
-		s: s,
+	signer, err := dsse.NewEnvelopeSigner(&sigx509.Verifier{
+		S: s,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -262,7 +262,7 @@ func TestHarnessAddIntotoV002(t *testing.T) {
 	}
 
 	write(t, string(eb), attestationPath)
-	write(t, ecdsaPub, pubKeyPath)
+	write(t, sigx509.ECDSAPub, pubKeyPath)
 
 	// If we do it twice, it should already exist
 	out := runCliStdout(t, "upload", "--artifact", attestationPath, "--type", "intoto:0.0.2", "--public-key", pubKeyPath)

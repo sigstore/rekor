@@ -54,27 +54,27 @@ func TestArtifactPFlags(t *testing.T) {
 
 			switch r.URL.Path {
 			case "/artifact":
-				file, err = os.ReadFile("../../../tests/test_file.txt")
+				file, err = os.ReadFile("tests/test_file.txt")
 			case "/signature":
-				file, err = os.ReadFile("../../../tests/test_file.sig")
+				file, err = os.ReadFile("tests/test_file.sig")
 			case "/publicKey":
-				file, err = os.ReadFile("../../../tests/test_public_key.key")
+				file, err = os.ReadFile("tests/test_public_key.key")
 			case "/rekord":
-				file, err = os.ReadFile("../../../tests/rekor.json")
+				file, err = os.ReadFile("tests/rekor.json")
 			case "/rpmEntry":
-				file, err = os.ReadFile("../../../tests/rpm.json")
+				file, err = os.ReadFile("tests/rpm.json")
 			case "/rpm":
-				file, err = os.ReadFile("../../../tests/test.rpm")
+				file, err = os.ReadFile("tests/test.rpm")
 			case "/rpmPublicKey":
-				file, err = os.ReadFile("../../../tests/test_rpm_public_key.key")
+				file, err = os.ReadFile("tests/test_rpm_public_key.key")
 			case "/alpine":
-				file, err = os.ReadFile("../../../tests/test_alpine.apk")
+				file, err = os.ReadFile("tests/test_alpine.apk")
 			case "/alpinePublicKey":
-				file, err = os.ReadFile("../../../tests/test_alpine.pub")
+				file, err = os.ReadFile("tests/test_alpine.pub")
 			case "/alpineEntry":
-				file, err = os.ReadFile("../../../tests/alpine.json")
+				file, err = os.ReadFile("tests/alpine.json")
 			case "/helmEntry":
-				file, err = os.ReadFile("../../../tests/helm.json")
+				file, err = os.ReadFile("tests/helm.json")
 			case "/not_found":
 				err = errors.New("file not found")
 			}
@@ -90,7 +90,7 @@ func TestArtifactPFlags(t *testing.T) {
 	tests := []test{
 		{
 			caseDesc:              "valid rekord file",
-			entry:                 "../../../tests/rekor.json",
+			entry:                 "tests/rekor.json",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -103,13 +103,13 @@ func TestArtifactPFlags(t *testing.T) {
 		{
 			caseDesc:              "valid rekord file, wrong type",
 			typeStr:               "rpm",
-			entry:                 "../../../tests/rekor.json",
+			entry:                 "tests/rekor.json",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "valid rpm file",
-			entry:                 "../../../tests/rpm.json",
+			entry:                 "tests/rpm.json",
 			typeStr:               "rpm",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
@@ -139,13 +139,13 @@ func TestArtifactPFlags(t *testing.T) {
 		{
 			caseDesc:              "valid rpm file, wrong type",
 			typeStr:               "rekord",
-			entry:                 "../../../tests/rpm.json",
+			entry:                 "tests/rpm.json",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "non-existent rekord file",
-			entry:                 "../../../tests/not_there.json",
+			entry:                 "tests/not_there.json",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
@@ -157,94 +157,94 @@ func TestArtifactPFlags(t *testing.T) {
 		},
 		{
 			caseDesc:              "valid rekord - local artifact with required flags",
-			artifact:              "../../../tests/test_file.txt",
-			signature:             "../../../tests/test_file.sig",
-			publicKey:             "../../../tests/test_public_key.key",
+			artifact:              "tests/test_file.txt",
+			signature:             "tests/test_file.sig",
+			publicKey:             "tests/test_public_key.key",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
 		{
 			caseDesc:              "valid rpm - local artifact with required flags",
 			typeStr:               "rpm",
-			artifact:              "../../../tests/test.rpm",
-			publicKey:             "../../../tests/test_rpm_public_key.key",
+			artifact:              "tests/test.rpm",
+			publicKey:             "tests/test_rpm_public_key.key",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
 		{
 			caseDesc:              "valid alpine - local artifact with required flags",
 			typeStr:               "alpine",
-			artifact:              "../../../tests/test_alpine.apk",
-			publicKey:             "../../../tests/test_alpine.pub",
+			artifact:              "tests/test_alpine.apk",
+			publicKey:             "tests/test_alpine.pub",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
 		{
 			caseDesc:              "nonexistent local artifact",
-			artifact:              "../../../tests/not_a_file",
-			signature:             "../../../tests/test_file.sig",
-			publicKey:             "../../../tests/test_public_key.key",
+			artifact:              "tests/not_a_file",
+			signature:             "tests/test_file.sig",
+			publicKey:             "tests/test_public_key.key",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "nonexistent remote artifact",
 			artifact:              testServer.URL + "/not_found",
-			signature:             "../../../tests/test_file.sig",
-			publicKey:             "../../../tests/test_public_key.key",
+			signature:             "tests/test_file.sig",
+			publicKey:             "tests/test_public_key.key",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "local artifact without required local signature",
-			artifact:              "../../../tests/test_file.txt",
-			publicKey:             "../../../tests/test_public_key.key",
+			artifact:              "tests/test_file.txt",
+			publicKey:             "tests/test_public_key.key",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "local artifact with missing remote signature",
-			artifact:              "../../../tests/test_file.txt",
-			publicKey:             "../../../tests/test_public_key.key",
+			artifact:              "tests/test_file.txt",
+			publicKey:             "tests/test_public_key.key",
 			signature:             testServer.URL + "/not_found",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "local artifact with invalid local signature",
-			artifact:              "../../../tests/test_file.txt",
-			signature:             "../../../tests/not_a_file",
-			publicKey:             "../../../tests/test_public_key.key",
+			artifact:              "tests/test_file.txt",
+			signature:             "tests/not_a_file",
+			publicKey:             "tests/test_public_key.key",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "local artifact with invalid remote signature",
-			artifact:              "../../../tests/test_file.txt",
+			artifact:              "tests/test_file.txt",
 			signature:             testServer.URL + "/artifact",
-			publicKey:             "../../../tests/test_public_key.key",
+			publicKey:             "tests/test_public_key.key",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "local artifact without required public key",
-			artifact:              "../../../tests/test_file.txt",
-			signature:             "../../../tests/test_file.sig",
+			artifact:              "tests/test_file.txt",
+			signature:             "tests/test_file.sig",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "local artifact with invalid local public key",
-			artifact:              "../../../tests/test_file.txt",
-			signature:             "../../../tests/test_file.sig",
-			publicKey:             "../../../tests/not_a_file",
+			artifact:              "tests/test_file.txt",
+			signature:             "tests/test_file.sig",
+			publicKey:             "tests/not_a_file",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "local artifact with invalid remote public key",
-			artifact:              "../../../tests/test_file.txt",
-			signature:             "../../../tests/test_file.sig",
+			artifact:              "tests/test_file.txt",
+			signature:             "tests/test_file.sig",
 			publicKey:             testServer.URL + "/artifact",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
@@ -252,8 +252,8 @@ func TestArtifactPFlags(t *testing.T) {
 		{
 			caseDesc:              "valid rekord - remote artifact with required flags",
 			artifact:              testServer.URL + "/artifact",
-			signature:             "../../../tests/test_file.sig",
-			publicKey:             "../../../tests/test_public_key.key",
+			signature:             "tests/test_file.sig",
+			publicKey:             "tests/test_public_key.key",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -261,7 +261,7 @@ func TestArtifactPFlags(t *testing.T) {
 			caseDesc:              "valid rpm - remote artifact with required flags",
 			typeStr:               "rpm",
 			artifact:              testServer.URL + "/rpm",
-			publicKey:             "../../../tests/test_rpm_public_key.key",
+			publicKey:             "tests/test_rpm_public_key.key",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -269,15 +269,15 @@ func TestArtifactPFlags(t *testing.T) {
 			caseDesc:              "valid alpine - remote artifact with required flags",
 			typeStr:               "alpine",
 			artifact:              testServer.URL + "/alpine",
-			publicKey:             "../../../tests/test_alpine.pub",
+			publicKey:             "tests/test_alpine.pub",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
 		{
 			caseDesc:              "remote artifact with invalid URL",
 			artifact:              "hteeteep%**/test_file.txt",
-			signature:             "../../../tests/test_file.sig",
-			publicKey:             "../../../tests/test_public_key.key",
+			signature:             "tests/test_file.sig",
+			publicKey:             "tests/test_public_key.key",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
@@ -351,8 +351,8 @@ func TestArtifactPFlags(t *testing.T) {
 		{
 			caseDesc:              "valid cose, with aad",
 			typeStr:               "cose",
-			artifact:              "../../../tests/test_cose.cbor",
-			publicKey:             "../../../tests/test_cose.pub",
+			artifact:              "tests/test_cose.cbor",
+			publicKey:             "tests/test_cose.pub",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 			aad:                   "dGVzdCBhYWQ=",
@@ -360,8 +360,8 @@ func TestArtifactPFlags(t *testing.T) {
 		{
 			caseDesc:              "valid cose, malformed base64 aad",
 			typeStr:               "cose",
-			artifact:              "../../../tests/test_cose.cbor",
-			publicKey:             "../../../tests/test_cose.pub",
+			artifact:              "tests/test_cose.cbor",
+			publicKey:             "tests/test_cose.pub",
 			expectParseSuccess:    false,
 			expectValidateSuccess: true,
 			aad:                   "dGVzdCBhYWQ]",
@@ -369,24 +369,24 @@ func TestArtifactPFlags(t *testing.T) {
 		{
 			caseDesc:              "valid cose, missing aad",
 			typeStr:               "cose",
-			artifact:              "../../../tests/test_cose.cbor",
-			publicKey:             "../../../tests/test_cose.pub",
+			artifact:              "tests/test_cose.cbor",
+			publicKey:             "tests/test_cose.pub",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "valid intoto - one keys",
 			typeStr:               "intoto",
-			artifact:              "../../../tests/intoto_dsse.json",
-			publicKey:             "../../../tests/intoto_dsse.pem",
+			artifact:              "tests/intoto_dsse.json",
+			publicKey:             "tests/intoto_dsse.pem",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
 		{
 			caseDesc:              "valid intoto - multi keys",
 			typeStr:               "intoto",
-			artifact:              "../../../tests/intoto_multi_dsse.json",
-			multiPublicKey:        []string{"../../../tests/intoto_dsse.pem", "../../../tests/intoto_multi_pub2.pem"},
+			artifact:              "tests/intoto_multi_dsse.json",
+			multiPublicKey:        []string{"tests/intoto_dsse.pem", "tests/intoto_multi_pub2.pem"},
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -453,7 +453,7 @@ func TestArtifactPFlags(t *testing.T) {
 			if !tc.uuidRequired && !tc.logIndexRequired && tc.entry == "" {
 				typeStr, versionStr, err := ParseTypeFlag(viper.GetString("type"))
 				if err != nil {
-					t.Errorf("error parsing typeStr: %v", err)
+					t.Fatalf("error parsing typeStr: %v", err)
 				}
 				props := CreatePropsFromPflags()
 				if _, err := types.NewProposedEntry(context.Background(), typeStr, versionStr, *props); err != nil {
@@ -566,9 +566,9 @@ func TestSearchPFlags(t *testing.T) {
 
 			switch r.URL.Path {
 			case "/artifact":
-				file, err = os.ReadFile("../../../tests/test_file.txt")
+				file, err = os.ReadFile("tests/test_file.txt")
 			case "/publicKey":
-				file, err = os.ReadFile("../../../tests/test_public_key.key")
+				file, err = os.ReadFile("tests/test_public_key.key")
 			case "/not_found":
 				err = errors.New("file not found")
 			}
@@ -584,7 +584,7 @@ func TestSearchPFlags(t *testing.T) {
 	tests := []test{
 		{
 			caseDesc:              "valid local artifact",
-			artifact:              "../../../tests/test_file.txt",
+			artifact:              "tests/test_file.txt",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -596,7 +596,7 @@ func TestSearchPFlags(t *testing.T) {
 		},
 		{
 			caseDesc:              "nonexistent local artifact",
-			artifact:              "../../../tests/not_a_file",
+			artifact:              "tests/not_a_file",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
@@ -608,7 +608,7 @@ func TestSearchPFlags(t *testing.T) {
 		},
 		{
 			caseDesc:              "valid local public key",
-			publicKey:             "../../../tests/test_public_key.key",
+			publicKey:             "tests/test_public_key.key",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -627,7 +627,7 @@ func TestSearchPFlags(t *testing.T) {
 		},
 		{
 			caseDesc:              "nonexistent local public key",
-			publicKey:             "../../../tests/not_a_file",
+			publicKey:             "tests/not_a_file",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},

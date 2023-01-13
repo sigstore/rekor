@@ -39,6 +39,7 @@ import (
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/intoto"
@@ -447,4 +448,13 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 	}
 
 	return verifierBySig, nil
+}
+
+func (v V003Entry) Verifier() (pki.PublicKey, error) {
+	if len(v.IntotoObj.Signatures) == 0 {
+		return nil, errors.New("intoto v0.0.3 entry not initialized")
+	}
+
+	//TODO: return multiple pki.PublicKeys
+	return x509.NewPublicKey(bytes.NewReader(*v.IntotoObj.Signatures[0].PublicKey))
 }
