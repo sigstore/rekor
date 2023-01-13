@@ -215,7 +215,7 @@ func (v *V003Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 	sort.Strings(sortedSigs)
 
-	for _, sig := range sortedSigs {
+	for i, sig := range sortedSigs {
 		key := sigToKeyMap[sig]
 		canonicalizedKey, err := key.CanonicalValue()
 		if err != nil {
@@ -224,7 +224,7 @@ func (v *V003Entry) Unmarshal(pe models.ProposedEntry) error {
 		b64CanonicalizedKey := strfmt.Base64(canonicalizedKey)
 
 		intotoObj.Signatures = append(intotoObj.Signatures, &models.IntotoV003SchemaSignaturesItems0{
-			Signature: &sig,
+			Signature: &sortedSigs[i],
 			PublicKey: &b64CanonicalizedKey,
 		})
 	}
