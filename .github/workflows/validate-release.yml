@@ -19,53 +19,21 @@ on:
   push:
     branches:
       - main
-      - 'release-**'
+      - release-*
   pull_request:
 
 jobs:
   validate-release-job:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/gythialy/golang-cross:v1.19.5-0@sha256:76716805e9d07712f0628c36d21223874b1dd9af5e5de2d00325c00b24b238cc
 
-    permissions:
-      actions: none
-      checks: none
-      contents: none
-      deployments: none
-      issues: none
-      packages: none
-      pull-requests: none
-      repository-projects: none
-      security-events: none
-      statuses: none
-
-    env:
-      CROSS_BUILDER_IMAGE: ghcr.io/gythialy/golang-cross:v1.19.4-0@sha256:53ee894818ac14377996a6fe7c8fe6156d018a20f82aaf69f2519fc45d897bec
-      COSIGN_IMAGE: gcr.io/projectsigstore/cosign:v1.13.1@sha256:fd5b09be23ef1027e1bdd490ce78dcc65d2b15902e1f4ba8e04f3b4019cc1057
+    permissions: {}
 
     steps:
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
-      - name: Extract version of Go to use
-        run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
-        with:
-          go-version: ${{ env.GOVERSION }}
 
-      - uses: anchore/sbom-action/download-syft@06e109483e6aa305a2b2395eabae554e51530e1d # v0.13.1
-      - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@8f67e590f2d095516493f017008adc464e63adb1 # v4.1.0
-        with:
-          install-only: true
-
-      - name: Check Signature
-        run: |
-          docker run --rm \
-          -e COSIGN_EXPERIMENTAL=true \
-          -e TUF_ROOT=/tmp \
-          $COSIGN_IMAGE \
-          verify \
-          $CROSS_BUILDER_IMAGE
-
-      - name: snaphot
+      - name: goreleaser snapshot
         run: make snapshot
         env:
           PROJECT_ID: honk-fake-project
