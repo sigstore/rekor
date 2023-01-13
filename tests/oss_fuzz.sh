@@ -46,3 +46,5 @@ compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/rpm/v0.0.1 FuzzRpmC
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/helm/v0.0.1 FuzzHelmCreateProposedEntry FuzzHelmCreateProposedEntry
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/helm/v0.0.1 FuzzHelmProvenanceUnmarshal FuzzHelmProvenanceUnmarshal
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/rekord/v0.0.1 FuzzRekordCreateProposedEntry FuzzRekordCreateProposedEntry
+
+cp $SRC/rekor/tests/fuzz-testdata/*.options $OUT/
