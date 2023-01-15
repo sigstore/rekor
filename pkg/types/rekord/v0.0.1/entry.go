@@ -344,7 +344,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 
 	var err error
 	artifactBytes := props.ArtifactBytes
-	if artifactBytes == nil {
+	if len(artifactBytes) == 0 {
 		var artifactReader io.ReadCloser
 		if props.ArtifactPath == nil {
 			return nil, errors.New("path to artifact file must be specified")
@@ -377,9 +377,11 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		re.RekordObj.Signature.Format = swag.String(models.RekordV001SchemaSignatureFormatX509)
 	case "ssh":
 		re.RekordObj.Signature.Format = swag.String(models.RekordV001SchemaSignatureFormatSSH)
+	default:
+		return nil, fmt.Errorf("unexpected format of public key: %s", props.PKIFormat)
 	}
 	sigBytes := props.SignatureBytes
-	if sigBytes == nil {
+	if len(sigBytes) == 0 {
 		if props.SignaturePath == nil {
 			return nil, errors.New("a detached signature must be provided")
 		}
