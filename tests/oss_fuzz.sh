@@ -14,6 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+apt-get update && apt-get install -y wget
+cd $SRC
+wget https://go.dev/dl/go1.19.5.linux-amd64.tar.gz
+
+mkdir temp-go
+rm -rf /root/.go/*
+tar -C temp-go/ -xzf go1.19.5.linux-amd64.tar.gz
+mv temp-go/go/* /root/.go/
+
+
 cd $SRC
 git clone --depth=1 https://github.com/AdamKorcz/instrumentation
 cd instrumentation
