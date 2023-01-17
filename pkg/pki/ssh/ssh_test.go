@@ -15,6 +15,7 @@
 package ssh
 
 import (
+	"math/rand"
 	"reflect"
 	"sort"
 	"strings"
@@ -42,5 +43,34 @@ func TestIdentities(t *testing.T) {
 	sort.Strings(expectedIDs)
 	if !reflect.DeepEqual(identities, expectedIDs) {
 		t.Errorf("err getting identities from keys, got %v, expected %v", identities, expectedIDs)
+	}
+}
+
+func randomSuffix(n int) string {
+	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
+func TestPubKeyParsingLimit(t *testing.T) {
+	// limit on NewPublicKey should be 65536 bytes, so let's generate a short one first and then extend it to ensure it fails
+	publicKey := "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDXofkiahE7uavjWvxnwkUF27qMgz7pdTwzSv0XzVG6EtirOv3PDWct4YKoXE9c0EqbxnIfYEKwEextdvB7zkgwczdJSHxf/18jQumLn/FuoCmugVSk1H5Qli/qzwBpaTnOk3WuakGuoYUl8ZAokKKgOKLA0aZJ1WRQ2ZCZggA3EkwNZiY17y9Q6HqdgQcH6XN8aAMADNVJdMAJb33hSRJjjsAPTmzBTishP8lYDoGRSsSE7/8XRBCEV5E4I8mI9GElcZwV/1KJx98mpH8QvMzXM1idFcwPRtt1NTAOshwgUU0Fu1x8lU5RQIa6ZKW36qNQLvLxy/BscC7B/mdLptoDs/ot9NimUXZcgCR1a2Q3o7Wi6jIgcgJcyV10Nba81ol4RdN4qPHnVZIzuo+dBkqwG3CMtB4Rj84+Qi+7zyU01hIPreoxQDXaayiGPBUUIiAlW9gsiuRWJzNnu3cvuWDLVfQIkjh7Wug58z+v2NOJ7IMdyERillhzDcvVHaq14+U= "
+	randomLongComment := randomSuffix(32768)
+
+	validKey := publicKey + randomLongComment
+
+	if _, err := NewPublicKey(strings.NewReader(validKey)); err != nil {
+		t.Errorf("unexpected error parsing valid-length key: %v", err)
+	}
+
+	// now we should be exceeding the length
+	validKey += randomLongComment
+
+	if _, err := NewPublicKey(strings.NewReader(validKey)); err == nil {
+		t.Errorf("expected an error parsing invalid-length key")
 	}
 }

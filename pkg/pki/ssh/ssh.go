@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/http"
 
 	"github.com/asaskevich/govalidator"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
@@ -79,7 +80,11 @@ type PublicKey struct {
 
 // NewPublicKey implements the pki.PublicKey interface
 func NewPublicKey(r io.Reader) (*PublicKey, error) {
-	rawPub, err := io.ReadAll(r)
+	// 64K seems generous as a limit for valid SSH keys
+	// we use http.MaxBytesReader and pass nil for ResponseWriter to reuse stdlib
+	// and not reimplement this; There is a proposal for this to be fixed in 1.20
+	// https://github.com/golang/go/issues/51115
+	rawPub, err := io.ReadAll(http.MaxBytesReader(nil, io.NopCloser(r), 65536))
 	if err != nil {
 		return nil, err
 	}
