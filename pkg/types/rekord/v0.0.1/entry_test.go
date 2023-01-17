@@ -29,6 +29,7 @@ import (
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/types/rekord"
 )
 
 func TestMain(m *testing.M) {
@@ -267,5 +268,23 @@ func TestCrossFieldValidation(t *testing.T) {
 				t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
 			}
 		}
+	}
+}
+
+func TestUnspecifiedPKIFormat(t *testing.T) {
+	props := types.ArtifactProperties{
+		ArtifactBytes:  []byte("something"),
+		SignatureBytes: []byte("signature"),
+		PublicKeyBytes: [][]byte{[]byte("public_key")},
+		// PKIFormat is deliberately unspecified
+	}
+	rek := rekord.New()
+	if _, err := rek.CreateProposedEntry(context.Background(), APIVERSION, props); err == nil {
+		t.Errorf("no signature, public key or format should not create a valid entry")
+	}
+
+	props.PKIFormat = "invalid_format"
+	if _, err := rek.CreateProposedEntry(context.Background(), APIVERSION, props); err == nil {
+		t.Errorf("invalid pki format should not create a valid entry")
 	}
 }
