@@ -10,7 +10,7 @@ on:
       - main
       - 'release-**'
 
-# Declare default permissions as read only.
+# Declare default permissions as none.
 permissions: {}
 
 jobs:
