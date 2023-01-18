@@ -30,7 +30,7 @@ require (
 	github.com/rs/cors v1.8.3
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0
-	github.com/sigstore/sigstore v1.5.0
+	github.com/sigstore/sigstore v1.5.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.14.0
@@ -46,7 +46,7 @@ require (
 	golang.org/x/mod v0.7.0
 	golang.org/x/net v0.5.0
 	golang.org/x/sync v0.1.0
-	google.golang.org/genproto v0.0.0-20221206210731-b1a01be3a5f6
+	google.golang.org/genproto v0.0.0-20221227171554-f9683d7f8bef
 	google.golang.org/grpc v1.52.0
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/ini.v1 v1.67.0
@@ -61,7 +61,7 @@ require (
 )
 
 require (
-	cloud.google.com/go/compute/metadata v0.2.2 // indirect
+	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
@@ -73,9 +73,9 @@ require (
 
 require (
 	cloud.google.com/go v0.107.0 // indirect
-	cloud.google.com/go/compute v1.13.0 // indirect
+	cloud.google.com/go/compute v1.14.0 // indirect
 	cloud.google.com/go/iam v0.8.0 // indirect
-	cloud.google.com/go/kms v1.7.0 // indirect
+	cloud.google.com/go/kms v1.8.0 // indirect
 	cloud.google.com/go/storage v1.27.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cavaliercoder/badio v0.0.0-20160213150051-ce5280129e9e // indirect
@@ -97,7 +97,7 @@ require (
 	github.com/google/go-containerregistry v0.12.1 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/google/wire v0.5.0 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.2.0 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.2.1 // indirect
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c // indirect
@@ -132,12 +132,12 @@ require (
 	go.step.sm/crypto v0.23.1
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	golang.org/x/oauth2 v0.3.0 // indirect
+	golang.org/x/oauth2 v0.4.0 // indirect
 	golang.org/x/sys v0.4.0 // indirect
 	golang.org/x/term v0.4.0 // indirect
 	golang.org/x/text v0.6.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
-	google.golang.org/api v0.104.0 // indirect
+	google.golang.org/api v0.107.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
