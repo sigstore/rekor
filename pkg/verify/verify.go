@@ -41,6 +41,8 @@ func ProveConsistency(ctx context.Context, rClient *client.Rekor,
 	oldSTH *util.SignedCheckpoint, newSTH *util.SignedCheckpoint, treeID string) error {
 	oldTreeSize := int64(oldSTH.Size)
 	switch {
+	case oldTreeSize == 0:
+		return errors.New("consistency proofs can not be computed starting from an empty log")
 	case oldTreeSize == int64(newSTH.Size):
 		if !bytes.Equal(oldSTH.Hash, newSTH.Hash) {
 			return errors.New("old root hash does not match STH hash")
