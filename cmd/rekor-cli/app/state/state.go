@@ -17,6 +17,7 @@ package state
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 
@@ -27,6 +28,9 @@ import (
 type persistedState map[string]*util.SignedCheckpoint
 
 func Dump(key string, sth *util.SignedCheckpoint) error {
+	if sth.Size == 0 {
+		return errors.New("do not persist state for empty logs")
+	}
 	rekorDir, err := getRekorDir()
 	if err != nil {
 		return err
