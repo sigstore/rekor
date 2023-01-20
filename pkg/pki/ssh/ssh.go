@@ -84,6 +84,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	// we use http.MaxBytesReader and pass nil for ResponseWriter to reuse stdlib
 	// and not reimplement this; There is a proposal for this to be fixed in 1.20
 	// https://github.com/golang/go/issues/51115
+	// TODO: switch this to stdlib once golang 1.20 comes out
 	rawPub, err := io.ReadAll(http.MaxBytesReader(nil, io.NopCloser(r), 65536))
 	if err != nil {
 		return nil, err
