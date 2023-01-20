@@ -212,6 +212,12 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 }
 
 func (v *V002Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+	// envelope can be nil when providing an entry for /api/v1/log/retrieve
+	// that is not canonicalized or complete
+	// this field is not required by the API since it is set during validation
+	if v.IntotoObj.Content.Envelope == nil {
+		return nil, errors.New("envelope must be set for intoto v0.0.2")
+	}
 
 	canonicalEntry := models.IntotoV002Schema{
 		Content: &models.IntotoV002SchemaContent{
@@ -223,6 +229,7 @@ func (v *V002Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 			PayloadHash: v.IntotoObj.Content.PayloadHash,
 		},
 	}
+
 	itObj := models.Intoto{}
 	itObj.APIVersion = swag.String(APIVERSION)
 	itObj.Spec = &canonicalEntry

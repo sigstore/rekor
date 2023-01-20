@@ -193,6 +193,16 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 	pkb := strfmt.Base64(pk)
 
+	// hash and payloadHash can be nil when providing an entry for /api/v1/log/retrieve
+	// that is not canonicalized or complete
+	// these fields are not required by the API since they are set during validation
+	if v.IntotoObj.Content.Hash == nil {
+		return nil, errors.New("hash must be set for intoto v0.0.1")
+	}
+	if v.IntotoObj.Content.PayloadHash == nil {
+		return nil, errors.New("payloadHash must be set for intoto v0.0.1")
+	}
+
 	canonicalEntry := models.IntotoV001Schema{
 		PublicKey: &pkb,
 		Content: &models.IntotoV001SchemaContent{
