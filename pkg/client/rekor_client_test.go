@@ -18,6 +18,7 @@ package client
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,6 +45,33 @@ func TestGetRekorClientWithUserAgent(t *testing.T) {
 	defer testServer.Close()
 
 	client, err := GetRekorClient(testServer.URL, WithUserAgent(expectedUserAgent))
+	if err != nil {
+		t.Error(err)
+	}
+	_, _ = client.Tlog.GetLogInfo(nil)
+	if !requestReceived {
+		t.Fatal("no requests were received")
+	}
+}
+
+func TestGetRekorClientWithCustomPath(t *testing.T) {
+	t.Parallel()
+	requestReceived := false
+	pathAdd := "/custom"
+
+	testServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			requestReceived = true
+			if !strings.HasPrefix(r.URL.Path, pathAdd) {
+				t.Errorf("Expected request to be sent to /test, got %s", r.URL.Path)
+			}
+			w.WriteHeader(http.StatusOK)
+		}))
+	defer testServer.Close()
+
+	testServer.URL = testServer.URL + pathAdd
+
+	client, err := GetRekorClient(testServer.URL)
 	if err != nil {
 		t.Error(err)
 	}
