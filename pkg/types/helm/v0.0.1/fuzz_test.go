@@ -48,10 +48,11 @@ func FuzzHelmCreateProposedEntry(f *testing.F) {
 		if err != nil {
 			t.Skip()
 		}
-		_, err = it.UnmarshalEntry(entry)
+		c, err := it.UnmarshalEntry(entry)
 		if err != nil {
 			t.Skip()
 		}
+		_, _ = c.IndexKeys()
 	})
 }
 
