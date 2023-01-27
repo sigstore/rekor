@@ -69,7 +69,7 @@ func TestGetRekorClientWithCustomPath(t *testing.T) {
 		}))
 	defer testServer.Close()
 
-	testServer.URL = testServer.URL + pathAdd
+	testServer.URL += pathAdd
 
 	client, err := GetRekorClient(testServer.URL)
 	if err != nil {
