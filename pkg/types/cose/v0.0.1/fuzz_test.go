@@ -20,18 +20,36 @@ import (
 	"sync"
 	"testing"
 
+	fuzz "github.com/AdaLogics/go-fuzz-headers"
+
 	fuzzUtils "github.com/sigstore/rekor/pkg/fuzz"
-	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/types/cose"
 )
 
 var initter sync.Once
 
-func FuzzCreateProposedEntry(f *testing.F) {
-	f.Fuzz(func(t *testing.T, version string) {
+func FuzzCoseCreateProposedEntry(f *testing.F) {
+	f.Fuzz(func(t *testing.T, propsData []byte) {
 		initter.Do(fuzzUtils.SetFuzzLogger)
-		ctx := context.Background()
-		brt := New()
-		props := types.ArtifactProperties{}
-		_, _ = brt.CreateProposedEntry(ctx, version, props)
+
+		version := "0.0.1"
+
+		ff := fuzz.NewConsumer(propsData)
+
+		props, cleanup, err := fuzzUtils.CreateProps(ff)
+		if err != nil {
+			t.Skip()
+		}
+		defer cleanup()
+
+		it := cose.New()
+		entry, err := it.CreateProposedEntry(context.Background(), version, props)
+		if err != nil {
+			t.Skip()
+		}
+		_, err = it.UnmarshalEntry(entry)
+		if err != nil {
+			t.Skip()
+		}
 	})
 }
