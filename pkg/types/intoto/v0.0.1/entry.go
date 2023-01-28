@@ -229,7 +229,7 @@ func (v *V001Entry) validate() error {
 	pk := v.keyObj.(*x509.PublicKey)
 
 	// one of two cases must be true:
-	// - ProposedEntry: client gives an envelope and NOT hash/payloadhash (to be computed server-side) OR
+	// - ProposedEntry: client gives an envelope; (client provided hash/payloadhash are ignored as they are computed server-side) OR
 	// - CommittedEntry: NO envelope and hash/payloadHash must be present
 	if v.IntotoObj.Content.Envelope == "" {
 		if v.IntotoObj.Content.Hash == nil {
