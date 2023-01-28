@@ -46,6 +46,7 @@ compile_native_go_fuzzer github.com/sigstore/rekor/pkg/sharding FuzzValidateEntr
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/signer FuzzNewFile FuzzNewFile
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/cose/v0.0.1 FuzzCoseCreateProposedEntry FuzzCoseCreateProposedEntry
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/alpine FuzzPackageUnmarshal FuzzPackageUnmarshal
+compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/alpine/v0.0.1 FuzzAlpineCreateProposedEntry FuzzAlpineCreateProposedEntry
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/jar FuzzJarUnmarshal FuzzJarUnmarshal
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/hashedrekord FuzzHashedRekord FuzzHashedRekord
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/intoto/v0.0.1 FuzzIntotoCreateProposedEntry FuzzIntotoCreateProposedEntry_v001
