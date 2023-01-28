@@ -396,8 +396,18 @@ func TestInclusionProofRace(t *testing.T) {
 	}
 }
 
+// TestIssue1308 should be run once before any other tests (against an empty log)
+func TestIssue1308(t *testing.T) {
+	// we run this to validate issue 1308 which needs to be tested against an empty log
+	if getTotalTreeSize(t) == 0 {
+		TestSearchQueryNonExistentEntry(t)
+	} else {
+		t.Skip("skipping because log is not empty")
+	}
+}
+
 func TestSearchQueryNonExistentEntry(t *testing.T) {
-	// Nonexistent but well-formed entry results in 404 not found.
+	// Nonexistent but well-formed entry results in 200 with empty array as body
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -407,7 +417,6 @@ func TestSearchQueryNonExistentEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := fmt.Sprintf("{\"entries\":[%s]}", b)
-	t.Log(string(body))
 	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
 		"application/json",
 		bytes.NewBuffer([]byte(body)))
@@ -416,7 +425,7 @@ func TestSearchQueryNonExistentEntry(t *testing.T) {
 	}
 	c, _ := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
-		t.Fatalf("expected status 200, got %d instead", resp.StatusCode)
+		t.Fatalf("expected status 200, got %d instead: %v", resp.StatusCode, string(c))
 	}
 	if strings.TrimSpace(string(c)) != "[]" {
 		t.Fatalf("expected empty JSON array as response, got %s instead", string(c))
@@ -432,6 +441,17 @@ func getTreeID(t *testing.T) int64 {
 	}
 	t.Log("Tree ID:", tid)
 	return tid
+}
+
+func getTotalTreeSize(t *testing.T) int64 {
+	out := runCli(t, "loginfo")
+	sizeStr := strings.Fields(strings.Split(out, "Total Tree Size: ")[1])[0]
+	size, err := strconv.ParseInt(sizeStr, 10, 64)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	t.Log("Total Tree Size:", size)
+	return size
 }
 
 // This test confirms that we validate tree ID when using the /api/v1/log/entries/retrieve endpoint
