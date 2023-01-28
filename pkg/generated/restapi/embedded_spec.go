@@ -1834,7 +1834,7 @@ func init() {
           "writeOnly": true
         },
         "hash": {
-          "description": "Specifies the hash algorithm and value encompassing the entire signed envelope",
+          "description": "Specifies the hash algorithm and value encompassing the entire signed envelope; this is computed by the rekor server, client-provided values are ignored",
           "type": "object",
           "required": [
             "algorithm",
@@ -1856,7 +1856,7 @@ func init() {
           "readOnly": true
         },
         "payloadHash": {
-          "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
+          "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope; this is computed by the rekor server, client-provided values are ignored",
           "type": "object",
           "required": [
             "algorithm",
@@ -1880,7 +1880,7 @@ func init() {
       }
     },
     "IntotoV001SchemaContentHash": {
-      "description": "Specifies the hash algorithm and value encompassing the entire signed envelope",
+      "description": "Specifies the hash algorithm and value encompassing the entire signed envelope; this is computed by the rekor server, client-provided values are ignored",
       "type": "object",
       "required": [
         "algorithm",
@@ -1902,7 +1902,7 @@ func init() {
       "readOnly": true
     },
     "IntotoV001SchemaContentPayloadHash": {
-      "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
+      "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope; this is computed by the rekor server, client-provided values are ignored",
       "type": "object",
       "required": [
         "algorithm",
@@ -3212,7 +3212,7 @@ func init() {
               "writeOnly": true
             },
             "hash": {
-              "description": "Specifies the hash algorithm and value encompassing the entire signed envelope",
+              "description": "Specifies the hash algorithm and value encompassing the entire signed envelope; this is computed by the rekor server, client-provided values are ignored",
               "type": "object",
               "required": [
                 "algorithm",
@@ -3234,7 +3234,7 @@ func init() {
               "readOnly": true
             },
             "payloadHash": {
-              "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
+              "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope; this is computed by the rekor server, client-provided values are ignored",
               "type": "object",
               "required": [
                 "algorithm",

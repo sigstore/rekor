@@ -244,8 +244,6 @@ func (v *V001Entry) validate() error {
 		}
 		// if there is no envelope, and hash/payloadHash are valid, then there's nothing else to do here
 		return nil
-	} else if v.IntotoObj.Content.Hash != nil || v.IntotoObj.Content.PayloadHash != nil {
-		return fmt.Errorf("hash values for payload and envelope are read-only fields")
 	}
 
 	vfr, err := signature.LoadVerifier(pk.CryptoPubKey(), crypto.SHA256)

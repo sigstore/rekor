@@ -170,7 +170,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 			wantVerifierErr: false,
 		},
 		{
-			name: "valid intoto but hash specified by client",
+			name: "valid intoto but hash specified by client (should be ignored)",
 			it: &models.IntotoV001Schema{
 				PublicKey: p(pub),
 				Content: &models.IntotoV001SchemaContent{
@@ -181,11 +181,11 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr:         true,
+			wantErr:         false,
 			wantVerifierErr: false,
 		},
 		{
-			name: "valid intoto but payloadhash specified by client",
+			name: "valid intoto but payloadhash specified by client (should be ignored)",
 			it: &models.IntotoV001Schema{
 				PublicKey: p(pub),
 				Content: &models.IntotoV001SchemaContent{
@@ -196,11 +196,11 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr:         true,
+			wantErr:         false,
 			wantVerifierErr: false,
 		},
 		{
-			name: "valid intoto but envelope and payloadhash specified by client",
+			name: "valid intoto but envelope and payloadhash specified by client (hash values should be ignored)",
 			it: &models.IntotoV001Schema{
 				PublicKey: p(pub),
 				Content: &models.IntotoV001SchemaContent{
@@ -215,7 +215,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr:         true,
+			wantErr:         false,
 			wantVerifierErr: false,
 		},
 		{
