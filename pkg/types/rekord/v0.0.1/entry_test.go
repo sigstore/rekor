@@ -29,6 +29,7 @@ import (
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/types/rekord"
 )
 
 func TestMain(m *testing.M) {
@@ -48,6 +49,7 @@ func TestCrossFieldValidation(t *testing.T) {
 		entry                     V001Entry
 		expectUnmarshalSuccess    bool
 		expectCanonicalizeSuccess bool
+		expectedVerifierSuccess   bool
 	}
 
 	sigBytes, _ := os.ReadFile("../tests/test_file.sig")
@@ -56,9 +58,10 @@ func TestCrossFieldValidation(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			caseDesc:               "empty obj",
-			entry:                  V001Entry{},
-			expectUnmarshalSuccess: false,
+			caseDesc:                "empty obj",
+			entry:                   V001Entry{},
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "signature without url or content",
@@ -69,7 +72,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "signature without public key",
@@ -81,7 +85,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "signature with empty public key",
@@ -94,7 +99,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "signature without data",
@@ -109,7 +115,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: true,
 		},
 		{
 			caseDesc: "signature with empty data",
@@ -125,7 +132,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					Data: &models.RekordV001SchemaData{},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: true,
 		},
 		{
 			caseDesc: "signature with invalid sig content, key content & with data with content",
@@ -145,6 +153,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
+			expectedVerifierSuccess:   true,
 		},
 		{
 			caseDesc: "signature with sig content, invalid key content & with data with content",
@@ -164,6 +173,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
+			expectedVerifierSuccess:   false,
 		},
 		{
 			caseDesc: "signature with sig content, key content & with data with content",
@@ -173,16 +183,17 @@ func TestCrossFieldValidation(t *testing.T) {
 						Format:  swag.String("pgp"),
 						Content: (*strfmt.Base64)(&sigBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
-							Content: (*strfmt.Base64)(&dataBytes),
+							Content: (*strfmt.Base64)(&keyBytes),
 						},
 					},
 					Data: &models.RekordV001SchemaData{
-						Content: strfmt.Base64(dataBytes),
+						Content: strfmt.Base64(keyBytes),
 					},
 				},
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
+			expectedVerifierSuccess:   true,
 		},
 		{
 			caseDesc: "signature with sig content, key content & with data with content",
@@ -202,6 +213,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
+			expectedVerifierSuccess:   true,
 		},
 	}
 
@@ -237,5 +249,42 @@ func TestCrossFieldValidation(t *testing.T) {
 				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
 			}
 		}
+
+		verifier, err := v.Verifier()
+		if tc.expectedVerifierSuccess {
+			if err != nil {
+				t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
+			} else {
+				// TODO: Improve this test once CanonicalValue returns same result as input for PGP keys
+				_, err := verifier.CanonicalValue()
+				if err != nil {
+					t.Errorf("%v: unexpected error getting canonical value, got %v", tc.caseDesc, err)
+				}
+			}
+
+		} else {
+			if err == nil {
+				s, _ := verifier.CanonicalValue()
+				t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
+			}
+		}
+	}
+}
+
+func TestUnspecifiedPKIFormat(t *testing.T) {
+	props := types.ArtifactProperties{
+		ArtifactBytes:  []byte("something"),
+		SignatureBytes: []byte("signature"),
+		PublicKeyBytes: [][]byte{[]byte("public_key")},
+		// PKIFormat is deliberately unspecified
+	}
+	rek := rekord.New()
+	if _, err := rek.CreateProposedEntry(context.Background(), APIVERSION, props); err == nil {
+		t.Errorf("no signature, public key or format should not create a valid entry")
+	}
+
+	props.PKIFormat = "invalid_format"
+	if _, err := rek.CreateProposedEntry(context.Background(), APIVERSION, props); err == nil {
+		t.Errorf("invalid pki format should not create a valid entry")
 	}
 }

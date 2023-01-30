@@ -3,8 +3,8 @@
 .vscode/*
 /cli
 logid
-!rekor-cli/
 rekor-cli
+!rekor-cli/
 rekor-server
 !rekor-server/
 /tests/rekor-server

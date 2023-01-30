@@ -22,6 +22,7 @@ import (
 	"github.com/go-openapi/swag"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/types"
 )
 
@@ -40,6 +41,10 @@ func (u UnmarshalFailsTester) NewEntry() types.EntryImpl {
 
 func (u UnmarshalFailsTester) Unmarshal(pe models.ProposedEntry) error {
 	return errors.New("error")
+}
+
+func (u UnmarshalFailsTester) Verifier() (pki.PublicKey, error) {
+	return nil, nil
 }
 
 func TestRPMType(t *testing.T) {

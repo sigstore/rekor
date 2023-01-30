@@ -13,30 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tuf
+//go:build e2e
+
+package main
 
 import (
-	"context"
+	"sync"
 	"testing"
 
-	fuzz "github.com/AdaLogics/go-fuzz-headers"
-
-	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
-func FuzzTufCreateProposedEntry(f *testing.F) {
-	f.Fuzz(func(t *testing.T, version string, propsData []byte) {
-		ff := fuzz.NewConsumer(propsData)
-		props := types.ArtifactProperties{}
-		ff.GenerateStruct(&props)
-		it := New()
-		entry, err := it.CreateProposedEntry(context.Background(), version, props)
-		if err != nil {
-			t.Skip()
-		}
-		_, err = it.UnmarshalEntry(entry)
-		if err != nil {
-			t.Skip()
-		}
+var (
+	once sync.Once
+)
+
+func TestLogInfo(t *testing.T) {
+	once.Do(func() {
+		util.SetupTestData(t)
 	})
+	// TODO: figure out some way to check the length, add something, and make sure the length increments!
+	out := util.RunCli(t, "loginfo")
+	util.OutputContains(t, out, "Verification Successful!")
 }

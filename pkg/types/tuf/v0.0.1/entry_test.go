@@ -65,6 +65,7 @@ func TestCrossFieldValidation(t *testing.T) {
 		entry                     V001Entry
 		expectUnmarshalSuccess    bool
 		expectCanonicalizeSuccess bool
+		expectVerifierSuccess     bool
 	}
 
 	keyBytes, _ := os.ReadFile("tests/test_root.json")
@@ -94,6 +95,7 @@ func TestCrossFieldValidation(t *testing.T) {
 				},
 			},
 			expectUnmarshalSuccess: false,
+			expectVerifierSuccess:  false,
 		},
 		{
 			caseDesc: "root without manifest",
@@ -106,6 +108,7 @@ func TestCrossFieldValidation(t *testing.T) {
 				},
 			},
 			expectUnmarshalSuccess: false,
+			expectVerifierSuccess:  true,
 		},
 		{
 			caseDesc: "root with invalid manifest & valid metadata",
@@ -121,6 +124,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
+			expectVerifierSuccess:     false,
 		},
 		{
 			caseDesc: "root with manifest & content",
@@ -136,6 +140,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
+			expectVerifierSuccess:     true,
 		},
 		{
 			caseDesc: "root with invalid key content & with manifest with content",
@@ -151,6 +156,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
+			expectVerifierSuccess:     false,
 		},
 		{
 			caseDesc: "public key with key content & with invalid data with content",
@@ -166,6 +172,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
+			expectVerifierSuccess:     true,
 		},
 	}
 
@@ -210,6 +217,27 @@ func TestCrossFieldValidation(t *testing.T) {
 			}
 			if _, err := types.UnmarshalEntry(pe); err != nil {
 				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+			}
+		}
+
+		verifier, err := v.Verifier()
+		if tc.expectVerifierSuccess {
+			if err != nil {
+				t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
+			} else {
+				pub, _ := verifier.CanonicalValue()
+				rootBytes := new(bytes.Buffer)
+				if err := json.Compact(rootBytes, keyBytes); err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(pub, rootBytes.Bytes()) {
+					t.Errorf("%v: verifier and public keys do not match: %v, %v", tc.caseDesc, string(pub), rootBytes)
+				}
+			}
+		} else {
+			if err == nil {
+				s, _ := verifier.CanonicalValue()
+				t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
 			}
 		}
 	}

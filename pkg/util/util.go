@@ -14,7 +14,6 @@
 // limitations under the License.
 
 //go:build e2e
-// +build e2e
 
 package util
 
@@ -22,24 +21,25 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"golang.org/x/crypto/openpgp"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/openpgp"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 var (
-	cli         = "rekor-cli"
-	server      = "rekor-server"
-	nodeDataDir = "node"
-	keys        openpgp.EntityList
+	cli    = "rekor-cli"
+	server = "rekor-server"
+	keys   openpgp.EntityList
 )
 
 type GetOut struct {
@@ -308,24 +308,6 @@ func RunCli(t *testing.T, arg ...string) string {
 	return Run(t, "", cli, arg...)
 }
 
-func RunCliStdout(t *testing.T, arg ...string) string {
-	t.Helper()
-	arg = append([]string{coverageFlag()}, arg...)
-	arg = append(arg, rekorServerFlag())
-	c := exec.Command(cli, arg...)
-
-	if os.Getenv("REKORTMPDIR") != "" {
-		// ensure that we use a clean state.json file for each Run
-		c.Env = append(c.Env, "HOME="+os.Getenv("REKORTMPDIR"))
-	}
-	b, err := c.Output()
-	if err != nil {
-		t.Log(string(b))
-		t.Fatal(err)
-	}
-	return stripCoverageOutput(string(b))
-}
-
 func RunCliErr(t *testing.T, arg ...string) string {
 	t.Helper()
 	arg = append([]string{coverageFlag()}, arg...)
@@ -360,14 +342,6 @@ func coverageFlag() string {
 
 func stripCoverageOutput(out string) string {
 	return strings.Split(strings.Split(out, "PASS")[0], "FAIL")[0]
-}
-
-func readFile(t *testing.T, p string) string {
-	b, err := ioutil.ReadFile(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return strings.TrimSpace(string(b))
 }
 
 // RandomSuffix returns a random string of the given length.
@@ -458,4 +432,30 @@ func CreatedPGPSignedArtifact(t *testing.T, artifactPath, sigPath string) {
 	if err := ioutil.WriteFile(sigPath, signature, 0644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func GetUUIDFromTimestampOutput(t *testing.T, out string) string {
+	t.Helper()
+	// Output looks like "Created entry at index X, available at $URL/UUID", so grab the UUID:
+	urlTokens := strings.Split(strings.TrimSpace(out), "\n")
+	return GetUUIDFromUploadOutput(t, urlTokens[len(urlTokens)-1])
+}
+
+// SetupTestData is a helper function to setups the test data
+func SetupTestData(t *testing.T) {
+	// create a temp directory
+	artifactPath := filepath.Join(t.TempDir(), "artifact")
+	// create a temp file
+	sigPath := filepath.Join(t.TempDir(), "signature.asc")
+	CreatedPGPSignedArtifact(t, artifactPath, sigPath)
+
+	// Write the public key to a file
+	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
+	if err := ioutil.WriteFile(pubPath, []byte(PubKey), 0644); err != nil { //nolint:gosec
+		t.Fatal(err)
+	}
+
+	// Now upload to rekor!
+	out := RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	OutputContains(t, out, "Created entry at")
 }

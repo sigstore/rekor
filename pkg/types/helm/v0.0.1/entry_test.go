@@ -48,6 +48,7 @@ func TestCrossFieldValidation(t *testing.T) {
 		entry                     V001Entry
 		expectUnmarshalSuccess    bool
 		expectCanonicalizeSuccess bool
+		expectedVerifierSuccess   bool
 	}
 
 	keyBytes, _ := os.ReadFile("../tests/test_helm_armor.pub")
@@ -55,9 +56,10 @@ func TestCrossFieldValidation(t *testing.T) {
 
 	testCases := []TestCase{
 		{
-			caseDesc:               "empty obj",
-			entry:                  V001Entry{},
-			expectUnmarshalSuccess: false,
+			caseDesc:                "empty obj",
+			entry:                   V001Entry{},
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 
 		{
@@ -71,7 +73,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "public key without provenance file",
@@ -82,7 +85,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: true,
 		},
 		{
 			caseDesc: "public key with empty provenance file",
@@ -96,7 +100,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: true,
 		},
 		{
 			caseDesc: "public key and invalid provenance content",
@@ -114,6 +119,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
+			expectedVerifierSuccess:   true,
 		},
 		{
 			caseDesc: "provenance content with invalid public key",
@@ -131,6 +137,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
+			expectedVerifierSuccess:   false,
 		},
 		{
 			caseDesc: "provenance content with valid public key",
@@ -148,6 +155,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
+			expectedVerifierSuccess:   true,
 		},
 	}
 
@@ -164,15 +172,14 @@ func TestCrossFieldValidation(t *testing.T) {
 				Spec:       tc.entry.HelmObj,
 			}
 
-			if err := v.Unmarshal(&r); (err == nil) != tc.expectUnmarshalSuccess {
+			unmarshalAndValidate := func() error {
+				if err := v.Unmarshal(&r); err != nil {
+					return err
+				}
+				return v.validate()
+			}
+			if err := unmarshalAndValidate(); (err == nil) != tc.expectUnmarshalSuccess {
 				t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
-			}
-
-			if !tc.expectUnmarshalSuccess {
-				return
-			}
-			if err := v.validate(); err != nil {
-				return
 			}
 
 			b, err := v.Canonicalize(context.TODO())
@@ -190,6 +197,24 @@ func TestCrossFieldValidation(t *testing.T) {
 				}
 				if _, err := types.UnmarshalEntry(pe); err != nil {
 					t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+				}
+			}
+
+			verifier, err := v.Verifier()
+			if tc.expectedVerifierSuccess {
+				if err != nil {
+					t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
+				} else {
+					// TODO: Improve this test once CanonicalValue returns same result as input for PGP keys
+					_, err := verifier.CanonicalValue()
+					if err != nil {
+						t.Errorf("%v: unexpected error getting canonical value, got %v", tc.caseDesc, err)
+					}
+				}
+			} else {
+				if err == nil {
+					s, _ := verifier.CanonicalValue()
+					t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
 				}
 			}
 		})

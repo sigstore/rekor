@@ -50,7 +50,12 @@ func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error
 	httpClient := retryableClient.StandardClient()
 	httpClient.Transport = createRoundTripper(httpClient.Transport, o)
 
-	rt := httptransport.NewWithClient(url.Host, client.DefaultBasePath, []string{url.Scheme}, httpClient)
+	// sanitize path
+	if url.Path == "" {
+		url.Path = client.DefaultBasePath
+	}
+
+	rt := httptransport.NewWithClient(url.Host, url.Path, []string{url.Scheme}, httpClient)
 	rt.Consumers["application/json"] = runtime.JSONConsumer()
 	rt.Consumers["application/x-pem-file"] = runtime.TextConsumer()
 	rt.Producers["application/json"] = runtime.JSONProducer()

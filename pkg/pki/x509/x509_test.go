@@ -22,6 +22,7 @@ import (
 	"crypto/x509"
 	"net/url"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -42,14 +43,16 @@ dKtM6YKBKSo47oTKQHsCIQDDKZgal50Cd3W+lOWpNO23QGZgBhJrJ70TpcPWGEsS
 DQIhAIDIMLnq1G1Z4B2IbRRPUP3icMtscbRlmNZ2xovsM8oLAiBluZh+w+gjEQFe
 hV3wBJajnf2+r2uKTvxO8WhSf/chQQIhAKzYjX2chfvPN6hRqeGeoPpRLXS8cdxC
 A4hZJRvZgkO3
------END PRIVATE KEY-----`
+-----END PRIVATE KEY-----
+`
 
 // Extracted from above with:
 // openssl rsa -in myprivate.pem -pubout
 const pkcs1v15Pub = `-----BEGIN PUBLIC KEY-----
 MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAKCxC+eynecPG+SwpUjPuZiW1WI+BqBV
 z/xsp35Opg4+2gDWFgJFO+MZI89AV9jatCE/Q8sViPGl2fAekWLW7D8CAwEAAQ==
------END PUBLIC KEY-----`
+-----END PUBLIC KEY-----
+`
 
 // Generated with:
 // openssl ecparam -genkey -name prime256v1 > ec_private.pem
@@ -58,7 +61,8 @@ const priv = `-----BEGIN PRIVATE KEY-----
 MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgmrLtCpBdXgXLUr7o
 nSUPfo3oXMjmvuwTOjpTulIBKlKhRANCAATH6KSpTFe6uXFmW1qNEFXaO7fWPfZt
 pPZrHZ1cFykidZoURKoYXfkohJ+U/USYy8Sd8b4DMd5xDRZCnlDM0h37
------END PRIVATE KEY-----`
+-----END PRIVATE KEY-----
+`
 
 // Extracted from above with:
 // openssl ec -in ec_private.pem -pubout
@@ -72,13 +76,15 @@ baT2ax2dXBcpInWaFESqGF35KISflP1EmMvEnfG+AzHecQ0WQp5QzNId+w==
 // openssl genpkey -algorithm ED25519 -out edprivate.pem
 const ed25519Priv = `-----BEGIN PRIVATE KEY-----
 MC4CAQAwBQYDK2VwBCIEIKjlXfR/VFvO9qM9+CG2qbuSM54k8ciKWHhgNwKTgqpG
------END PRIVATE KEY-----`
+-----END PRIVATE KEY-----
+`
 
 // Extracted from above with:
 // openssl pkey -in edprivate.pem -pubout
 const ed25519Pub = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAizWek2gKgMM+bad4rVJ5nc9NsbNOba0A0BNfzOgklRs=
------END PUBLIC KEY-----`
+-----END PUBLIC KEY-----
+`
 
 const pubWithTrailingNewLine = `-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEx+ikqUxXurlxZltajRBV2ju31j32
@@ -202,6 +208,15 @@ func TestSignature_VerifyFail(t *testing.T) {
 			if err := s.Verify(bytes.NewReader(data), pub); err == nil {
 				t.Error("Signature.Verify() expected error!")
 			}
+
+			expectedIDs := []string{tt.pub}
+			ids, err := pub.Identities()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(expectedIDs, ids) {
+				t.Errorf("%v: identities did not match, expected %v, got %v", tt.name, expectedIDs, ids)
+			}
 		})
 	}
 }
@@ -211,6 +226,8 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 	subCert, subKey, _ := testutils.GenerateSubordinateCa(rootCert, rootKey)
 	url, _ := url.Parse("https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1")
 	leafCert, leafKey, _ := testutils.GenerateLeafCert("subject@example.com", "oidc-issuer", url, subCert, subKey)
+	leafPEM, _ := cryptoutils.MarshalPublicKeyToPEM(leafKey.Public())
+	leafCertPEM, _ := cryptoutils.MarshalCertificateToPEM(leafCert)
 
 	pemCertChain, err := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, subCert, rootCert})
 	if err != nil {
@@ -237,6 +254,17 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 	expectedSubjects = append(expectedSubjects, leafCert.URIs[0].String())
 	if !reflect.DeepEqual(pub.Subjects(), expectedSubjects) {
 		t.Fatalf("expected matching subjects, expected %v, got %v", expectedSubjects, pub.Subjects())
+	}
+
+	expectedIDs := []string{string(leafCertPEM), string(leafPEM), "subject@example.com", url.String()}
+	ids, err := pub.Identities()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(ids)
+	sort.Strings(expectedIDs)
+	if !reflect.DeepEqual(expectedIDs, ids) {
+		t.Fatalf("identities do not match, expected %v, got %v", []string{}, ids)
 	}
 
 	canonicalValue, err := pub.CanonicalValue()

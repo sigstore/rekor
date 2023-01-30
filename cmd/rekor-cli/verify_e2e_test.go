@@ -13,30 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rekord
+//go:build e2e
+
+package main
 
 import (
-	"context"
 	"testing"
 
-	fuzz "github.com/AdaLogics/go-fuzz-headers"
-
-	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
-func FuzzRekordCreateProposedEntry(f *testing.F) {
-	f.Fuzz(func(t *testing.T, version string, propsData []byte) {
-		ff := fuzz.NewConsumer(propsData)
-		props := types.ArtifactProperties{}
-		ff.GenerateStruct(&props)
-		it := New()
-		entry, err := it.CreateProposedEntry(context.Background(), version, props)
-		if err != nil {
-			t.Skip()
-		}
-		_, err = it.UnmarshalEntry(entry)
-		if err != nil {
-			t.Skip()
-		}
-	})
+func TestVerifyNonExistentIndex(t *testing.T) {
+	// this index is extremely likely to not exist
+	out := util.RunCliErr(t, "verify", "--log-index", "100000000")
+	util.OutputContains(t, out, "entry in log cannot be located")
 }

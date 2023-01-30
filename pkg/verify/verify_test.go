@@ -60,6 +60,7 @@ func TestConsistency(t *testing.T) {
 	root2String := "5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"
 	root2, _ := hex.DecodeString(root2String)
 	root1, _ := hex.DecodeString("59a575f157274702c38de3ab1e1784226f391fb79500ebf9f02b4439fb77574c")
+	root0, _ := hex.DecodeString("1a341bc342ff4e567387de9789ab14000b147124317841489172419874198147")
 	hashes := []string{"d3be742c8d73e2dd3c5635843e987ad3dfb3837616f412a07bf730c3ad73f5cb"}
 	for _, test := range []struct {
 		name    string
@@ -134,6 +135,20 @@ func TestConsistency(t *testing.T) {
 			newC: util.Checkpoint{
 				Origin: "test",
 				Size:   uint64(1),
+				Hash:   root2,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid consistency - empty log",
+			oldC: util.Checkpoint{
+				Origin: "test",
+				Size:   uint64(0),
+				Hash:   root0,
+			},
+			newC: util.Checkpoint{
+				Origin: "test",
+				Size:   uint64(2),
 				Hash:   root2,
 			},
 			wantErr: true,

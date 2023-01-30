@@ -387,6 +387,16 @@ func TestEmailAddresses(t *testing.T) {
 			t.Errorf("%v: Error getting subjects from keys length, got %v, expected %v", tc.caseDesc, len(subjects), len(tc.subjects))
 		}
 
+		expectedIDs := tc.subjects
+		key, _ := inputKey.CanonicalValue()
+		expectedIDs = append(expectedIDs, string(key))
+		ids, err := inputKey.Identities()
+		if err != nil {
+			t.Fatalf("unexpected error getting identities: %v", err)
+		}
+		if !reflect.DeepEqual(ids, expectedIDs) {
+			t.Errorf("identities are not equal")
+		}
 	}
 }
 

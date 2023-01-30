@@ -88,6 +88,10 @@ func (t testPublicKey) Subjects() []string {
 	return nil
 }
 
+func (t testPublicKey) Identities() ([]string, error) {
+	return nil, nil
+}
+
 func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }
@@ -159,22 +163,25 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 	msgWithAAD := makeSignedCose(t, priv, []byte("hello"), []byte("external aad"), "")
 
 	tests := []struct {
-		name    string
-		want    models.CoseV001Schema
-		it      *models.CoseV001Schema
-		wantErr bool
+		name            string
+		want            models.CoseV001Schema
+		it              *models.CoseV001Schema
+		wantErr         bool
+		wantVerifierErr bool
 	}{
 		{
-			name:    "empty",
-			it:      &models.CoseV001Schema{},
-			wantErr: true,
+			name:            "empty",
+			it:              &models.CoseV001Schema{},
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 		{
 			name: "missing data",
 			it: &models.CoseV001Schema{
 				PublicKey: p(pub),
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: false,
 		},
 		{
 			name: "missing envelope",
@@ -182,7 +189,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				Data:      &models.CoseV001SchemaData{},
 				PublicKey: p([]byte("hello")),
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 		{
 			name: "valid",
@@ -191,7 +199,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p(pub),
 				Message:   msg,
 			},
-			wantErr: false,
+			wantErr:         false,
+			wantVerifierErr: false,
 		},
 		{
 			name: "valid with aad",
@@ -202,7 +211,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p(pub),
 				Message:   msgWithAAD,
 			},
-			wantErr: false,
+			wantErr:         false,
+			wantVerifierErr: false,
 		},
 		{
 			name: "extra aad",
@@ -213,7 +223,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p(pub),
 				Message:   msg,
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: false,
 		},
 		{
 			name: "invalid envelope",
@@ -222,7 +233,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p([]byte(pemBytes)),
 				Message:   []byte("hello"),
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: false,
 		},
 		{
 			name: "cert",
@@ -231,7 +243,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p([]byte(pemBytes)),
 				Message:   msg,
 			},
-			wantErr: false,
+			wantErr:         false,
+			wantVerifierErr: false,
 		},
 		{
 			name: "invalid key",
@@ -240,7 +253,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p([]byte("notavalidkey")),
 				Message:   []byte("hello"),
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 	}
 
@@ -254,6 +268,21 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 			}
 			if err := v.Unmarshal(it); (err != nil) != tt.wantErr {
 				t.Errorf("V001Entry.Unmarshal() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			verifier, err := v.Verifier()
+			if !tt.wantVerifierErr {
+				if err != nil {
+					s, _ := verifier.CanonicalValue()
+					t.Errorf("%v: unexpected error for %v, got %v", tt.name, string(s), err)
+				}
+				pubV, _ := verifier.CanonicalValue()
+				if !reflect.DeepEqual(pubV, pub) && !reflect.DeepEqual(pubV, pemBytes) {
+					t.Errorf("verifier and public keys do not match: %v, %v", string(pubV), string(pub))
+				}
+			} else if err == nil {
+				s, _ := verifier.CanonicalValue()
+				t.Errorf("%v: expected error for %v, got %v", tt.name, string(s), err)
 			}
 		})
 	}

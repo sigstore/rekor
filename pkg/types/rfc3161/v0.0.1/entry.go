@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/types/rfc3161"
 
 	"github.com/go-openapi/strfmt"
@@ -204,4 +205,8 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	returnVal.APIVersion = swag.String(re.APIVersion())
 
 	return &returnVal, nil
+}
+
+func (v V001Entry) Verifier() (pki.PublicKey, error) {
+	return nil, errors.New("Verifier() does not support rfc3161 entry type")
 }

@@ -13,20 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cose
+//go:build e2e
+
+package main
 
 import (
-	"context"
 	"testing"
 
-	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
-func FuzzCreateProposedEntry(f *testing.F) {
-	f.Fuzz(func(t *testing.T, version string) {
-		ctx := context.Background()
-		brt := New()
-		props := types.ArtifactProperties{}
-		_, _ = brt.CreateProposedEntry(ctx, version, props)
-	})
+func TestGetNonExistentIndex(t *testing.T) {
+	// this index is extremely likely to not exist
+	out := util.RunCliErr(t, "get", "--log-index", "100000000")
+	util.OutputContains(t, out, "404")
+}
+func TestGetNonExistentUUID(t *testing.T) {
+	// this uuid is extremely likely to not exist
+	out := util.RunCliErr(t, "get", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+	util.OutputContains(t, out, "404")
 }
