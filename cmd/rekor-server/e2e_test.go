@@ -108,7 +108,7 @@ func TestMetricsCounts(t *testing.T) {
 }
 func getRekorMetricCount(metricLine string, t *testing.T) (int, error) {
 	t.Helper()
-	re, err := regexp.Compile(fmt.Sprintf("^%s.*([0-9]+)$", regexp.QuoteMeta(metricLine)))
+	re, err := regexp.Compile(fmt.Sprintf("^%s\\s*([0-9]+)$", regexp.QuoteMeta(metricLine)))
 	if err != nil {
 		return 0, err
 	}
@@ -128,7 +128,7 @@ func getRekorMetricCount(metricLine string, t *testing.T) (int, error) {
 
 		result, err := strconv.Atoi(match[1])
 		if err != nil {
-			return 0, nil
+			return 0, err
 		}
 		t.Log("Matched metric line: " + scanner.Text())
 		return result, nil
