@@ -17,9 +17,9 @@ package alpine
 
 import (
 	"archive/tar"
+
 	"bytes"
 	"compress/gzip"
-	"io"
 	"strings"
 	"testing"
 
@@ -98,180 +98,121 @@ func createPkgInfoFileContents(ff *fuzz.ConsumeFuzzer) ([]byte, error) {
 	return []byte(b.String()), nil
 }
 
-// Copies files from structured tarBytes to the tw
-// This is used when adding files to tarBytes
-func copyTarFiles(tw *tar.Writer, tarBytes []byte) error {
-	tr := tar.NewReader(bytes.NewReader(tarBytes))
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		fileContents, err := io.ReadAll(tr)
-		if err != nil {
-			return err
-		}
-		tw.WriteHeader(hdr)
-		tw.Write(fileContents)
-	}
-	return nil
-}
-
 // Adds a .SIGN file to tarBytes
-func addSignFile(tw *tar.Writer, ff *fuzz.ConsumeFuzzer, tarBytes []byte) error {
-	err := copyTarFiles(tw, tarBytes)
-	if err != nil {
-		return err
-	}
+func addSignFile(ff *fuzz.ConsumeFuzzer, tarFiles []*fuzz.TarFile) ([]*fuzz.TarFile, error) {
 	SIGNFileContents, err := ff.GetBytes()
 	if err != nil {
-		return err
+		return tarFiles, err
 	}
+
 	SIGNFileName, err := getSignFilename(ff)
 	if err != nil {
-		return err
+		return tarFiles, err
 	}
-	tw.WriteHeader(&tar.Header{
-		Name:     SIGNFileName,
-		Mode:     0644,
-		Size:     int64(len(SIGNFileContents)),
-		Typeflag: tar.TypeReg,
-		Gid:      0,
-		Uid:      0,
-	})
-	tw.Write(SIGNFileContents)
-	return nil
+	signFile := &fuzz.TarFile{
+		Body: SIGNFileContents,
+		Hdr: &tar.Header{
+			Name:     SIGNFileName,
+			Mode:     0644,
+			Size:     int64(len(SIGNFileContents)),
+			Typeflag: tar.TypeReg,
+			Gid:      0,
+			Uid:      0,
+		},
+	}
+	tarFiles = append(tarFiles, signFile)
+
+	return tarFiles, nil
 }
 
 // Allows the fuzzer to randomize whether a .SIGN file should
 // be added to tarBytes
-func shouldAddSignFile(ff *fuzz.ConsumeFuzzer, tarBytes []byte) bool {
+func shouldAddSignFile(ff *fuzz.ConsumeFuzzer, tarFiles []*fuzz.TarFile) bool {
 	shouldRequireSIGNFile, err := ff.GetBool()
 	if err != nil {
 		return false
 	}
 	if shouldRequireSIGNFile {
-		tr := tar.NewReader(bytes.NewReader(tarBytes))
-		for {
-			hdr, err := tr.Next()
-			if err == io.EOF {
+		for _, tarFile := range tarFiles {
+			if strings.HasPrefix(tarFile.Hdr.Name, ".SIGN") {
 				return false
-			}
-			if err != nil {
-				return false
-			}
-			if strings.HasPrefix(hdr.Name, ".SIGN") {
-				return true
 			}
 		}
+		return true
 	}
 	return false
 }
 
 // Allows the fuzzer to randomize whether a .PKGINFO file should
 // be added to tarBytes
-func shouldAddPkgInfoFile(ff *fuzz.ConsumeFuzzer, tarBytes []byte) bool {
+func shouldAddPkgInfoFile(ff *fuzz.ConsumeFuzzer, tarFiles []*fuzz.TarFile) bool {
 	shouldRequirePKGINFOFile, err := ff.GetBool()
 	if err != nil {
 		return false
 	}
 	if shouldRequirePKGINFOFile {
-		tr := tar.NewReader(bytes.NewReader(tarBytes))
-		for {
-			hdr, err := tr.Next()
-			if err == io.EOF {
+		for _, tarFile := range tarFiles {
+			if strings.HasPrefix(tarFile.Hdr.Name, ".PKGINFO") {
 				return false
-			}
-			if err != nil {
-				return false
-			}
-			if hdr.Name == ".PKGINFO" {
-				return true
 			}
 		}
+		return true
 	}
 	return false
 }
 
-// Adds the .PKGINFO file to tarBytes
-func addPkgInfoFile(tw *tar.Writer, ff *fuzz.ConsumeFuzzer, tarBytes []byte) error {
-	tr := tar.NewReader(bytes.NewReader(tarBytes))
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		fileContents, err := io.ReadAll(tr)
-		if err != nil {
-			return err
-		}
-		tw.WriteHeader(hdr)
-		tw.Write(fileContents)
-	}
-	PKGINFOFileContents, err := createPkgInfoFileContents(ff) //nolint:all
+// Adds the .PKGINFO file to the tar files
+func addPkgInfoFile(ff *fuzz.ConsumeFuzzer, tarFiles []*fuzz.TarFile) ([]*fuzz.TarFile, error) {
+	tarFile := &fuzz.TarFile{}
+	PKGINFOFileContents, err := createPkgInfoFileContents(ff)
 	if err != nil {
-		return err
+		return tarFiles, err
 	}
-	tw.WriteHeader(&tar.Header{
+	tarFile.Body = PKGINFOFileContents
+	tarFile.Hdr = &tar.Header{
 		Name:     ".PKGINFO",
 		Mode:     0644,
 		Size:     int64(len(PKGINFOFileContents)),
 		Typeflag: tar.TypeReg,
 		Gid:      0,
 		Uid:      0,
-	})
-	tw.Write(PKGINFOFileContents)
-	return nil
+	}
+
+	return tarFiles, nil
 }
 
 // FuzzPackageUnmarshal implements the fuzz test
 func FuzzPackageUnmarshal(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
+		var tarFiles, tarFiles2 []*fuzz.TarFile
+		var err error
+
 		ff := fuzz.NewConsumer(data)
 
-		// signature segment
-		tarBytes, err := ff.TarBytes()
+		tarFiles, err = ff.TarFiles()
 		if err != nil {
 			return
 		}
-
-		if shouldAddSignFile(ff, tarBytes) {
-			var buf bytes.Buffer
-			tw := tar.NewWriter(&buf)
-			err := addSignFile(tw, ff, tarBytes)
+		if shouldAddSignFile(ff, tarFiles) {
+			tarFiles, err = addSignFile(ff, tarFiles)
 			if err != nil {
-				tw.Close()
 				t.Skip()
 			}
-			tw.Close()
-			tarBytes = buf.Bytes()
 		}
 
-		// control segment
-		tarBytes2, err := ff.TarBytes()
+		tarFiles2, err = ff.TarFiles()
 		if err != nil {
 			t.Skip()
 		}
 
-		if shouldAddPkgInfoFile(ff, tarBytes2) {
-			var buf bytes.Buffer
-			tw := tar.NewWriter(&buf)
-			err := addPkgInfoFile(tw, ff, tarBytes)
+		if shouldAddPkgInfoFile(ff, tarFiles2) {
+			tarFiles2, err = addPkgInfoFile(ff, tarFiles2)
 			if err != nil {
-				tw.Close()
 				t.Skip()
 			}
-			tw.Close()
-			tarBytes2 = buf.Bytes()
 		}
 
-		concatenated, err := concatenateTarBytes(tarBytes, tarBytes2)
+		concatenated, err := concatenateTarArchives(tarFiles, tarFiles2)
 		if err != nil {
 			t.Skip()
 		}
@@ -281,8 +222,25 @@ func FuzzPackageUnmarshal(f *testing.F) {
 	})
 }
 
-// Concatenates two tar archives.
-func concatenateTarBytes(tarBytes []byte, tarBytes2 []byte) ([]byte, error) {
+func concatenateTarArchives(tarFiles1 []*fuzz.TarFile, tarFiles2 []*fuzz.TarFile) ([]byte, error) {
+	var buf1, buf2 bytes.Buffer
+
+	tw1 := tar.NewWriter(&buf1)
+	for _, tf := range tarFiles1 {
+		tw1.WriteHeader(tf.Hdr)
+		tw1.Write(tf.Body)
+	}
+	tw1.Close()
+	tarBytes := buf1.Bytes()
+
+	tw2 := tar.NewWriter(&buf2)
+	for _, tf := range tarFiles2 {
+		tw2.WriteHeader(tf.Hdr)
+		tw2.Write(tf.Body)
+	}
+	tw2.Close()
+	tarBytes2 := buf2.Bytes()
+
 	var b1 bytes.Buffer
 	w1 := gzip.NewWriter(&b1)
 	defer w1.Close()
