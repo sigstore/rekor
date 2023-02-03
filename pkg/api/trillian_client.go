@@ -282,6 +282,14 @@ func (t *TrillianClient) getProofByHash(hashValue []byte) *Response {
 		}
 	}
 
+	// issue 1308: if the tree is empty, there's no way we can return a proof
+	if root.TreeSize == 0 {
+		return &Response{
+			status: codes.NotFound,
+			err:    status.Error(codes.NotFound, "tree is empty"),
+		}
+	}
+
 	resp, err := t.client.GetInclusionProofByHash(ctx,
 		&trillian.GetInclusionProofByHashRequest{
 			LogId:    t.logID,
