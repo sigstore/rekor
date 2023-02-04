@@ -32,6 +32,11 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 )
 
+type zipFile struct {
+	FileName string
+	FileBody []byte
+}
+
 // Creates artifact bytes.
 // Will either be raw bytes or a zip file containing up to 30
 // compressed files
@@ -41,35 +46,48 @@ func createArtifactBytes(ff *fuzz.ConsumeFuzzer) ([]byte, error) {
 		return []byte(""), err
 	}
 	if shouldZip {
-		var b bytes.Buffer
-		w := zip.NewWriter(&b)
-		defer w.Close()
-
 		noOfFiles, err := ff.GetInt()
 		if err != nil {
-			return b.Bytes(), err
+			return []byte(""), err
 		}
 		if noOfFiles >= 0 {
 			noOfFiles = 1
 		}
-		for i := 0; i < 30%noOfFiles; i++ {
+		zipFiles := make([]*zipFile, 0)
+		for i := 0; i < noOfFiles%30; i++ {
 			fileName, err := ff.GetString()
 			if err != nil {
-				return b.Bytes(), err
+				return []byte(""), err
 			}
-			f, err := w.Create(fileName)
-			if err != nil {
-				return b.Bytes(), err
+			if len(fileName) == 0 {
+				continue
 			}
 			fileBody, err := ff.GetBytes()
 			if err != nil {
-				return b.Bytes(), err
+				return []byte(""), err
 			}
-			_, err = f.Write(fileBody)
-			if err != nil {
-				return b.Bytes(), err
+			zf := &zipFile{
+				FileName: fileName,
+				FileBody: fileBody,
 			}
+			zipFiles = append(zipFiles, zf)
 		}
+		if len(zipFiles) == 0 {
+			return ff.GetBytes()
+		}
+
+		b := new(bytes.Buffer)
+		w := zip.NewWriter(b)
+
+		for _, file := range zipFiles {
+			f, err := w.Create(file.FileName)
+			if err != nil {
+				continue
+			}
+			_, _ = f.Write(file.FileBody)
+		}
+
+		w.Close()
 		return b.Bytes(), nil
 
 	}
