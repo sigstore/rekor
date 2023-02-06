@@ -162,7 +162,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					Envelope: envelope(t, key, validPayload, "application/vnd.in-toto+json"),
 				},
 			},
-			wantErr:         false,
+			wantErr: false,
 		},
 		{
 			name: "valid intoto but hash specified by client (should be ignored)",
@@ -176,7 +176,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr:         false,
+			wantErr: false,
 		},
 		{
 			name: "valid intoto but payloadhash specified by client (should be ignored)",
@@ -190,7 +190,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr:         false,
+			wantErr: false,
 		},
 		{
 			name: "valid intoto but envelope and payloadhash specified by client (hash values should be ignored)",
