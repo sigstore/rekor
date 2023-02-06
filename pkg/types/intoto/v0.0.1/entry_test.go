@@ -151,7 +151,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 			wantVerifierErr: false,
 		},
 		{
-			name: "missing envelope",
+			name: "invalid key",
 			it: &models.IntotoV001Schema{
 				PublicKey: p([]byte("hello")),
 			},
@@ -164,8 +164,54 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p(pub),
 				Content: &models.IntotoV001SchemaContent{
 					Envelope: envelope(t, key, validPayload, "application/vnd.in-toto+json"),
+				},
+			},
+			wantErr:         false,
+			wantVerifierErr: false,
+		},
+		{
+			name: "valid intoto but hash specified by client (should be ignored)",
+			it: &models.IntotoV001Schema{
+				PublicKey: p(pub),
+				Content: &models.IntotoV001SchemaContent{
+					Envelope: envelope(t, key, validPayload, "application/vnd.in-toto+json"),
 					Hash: &models.IntotoV001SchemaContentHash{
 						Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+						Value:     swag.String("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+					},
+				},
+			},
+			wantErr:         false,
+			wantVerifierErr: false,
+		},
+		{
+			name: "valid intoto but payloadhash specified by client (should be ignored)",
+			it: &models.IntotoV001Schema{
+				PublicKey: p(pub),
+				Content: &models.IntotoV001SchemaContent{
+					Envelope: envelope(t, key, validPayload, "application/vnd.in-toto+json"),
+					PayloadHash: &models.IntotoV001SchemaContentPayloadHash{
+						Algorithm: swag.String(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
+						Value:     swag.String("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+					},
+				},
+			},
+			wantErr:         false,
+			wantVerifierErr: false,
+		},
+		{
+			name: "valid intoto but envelope and payloadhash specified by client (hash values should be ignored)",
+			it: &models.IntotoV001Schema{
+				PublicKey: p(pub),
+				Content: &models.IntotoV001SchemaContent{
+					Envelope: envelope(t, key, validPayload, "application/vnd.in-toto+json"),
+					Hash: &models.IntotoV001SchemaContentHash{
+						Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+						Value:     swag.String("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+					},
+					PayloadHash: &models.IntotoV001SchemaContentPayloadHash{
+						Algorithm: swag.String(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
+						Value:     swag.String("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
 					},
 				},
 			},
@@ -178,9 +224,6 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p(pub),
 				Content: &models.IntotoV001SchemaContent{
 					Envelope: envelope(t, key, validPayload, "text"),
-					Hash: &models.IntotoV001SchemaContentHash{
-						Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-					},
 				},
 			},
 			wantErr:         false,
@@ -192,9 +235,6 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p([]byte(pemBytes)),
 				Content: &models.IntotoV001SchemaContent{
 					Envelope: envelope(t, priv, validPayload, "text"),
-					Hash: &models.IntotoV001SchemaContentHash{
-						Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-					},
 				},
 			},
 			additionalIndexKeys: []string{"joe@schmoe.com"},
@@ -207,9 +247,6 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p(pub),
 				Content: &models.IntotoV001SchemaContent{
 					Envelope: string(invalid),
-					Hash: &models.IntotoV001SchemaContentHash{
-						Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-					},
 				},
 			},
 			wantErr:         true,
@@ -221,9 +258,6 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p([]byte("notavalidkey")),
 				Content: &models.IntotoV001SchemaContent{
 					Envelope: envelope(t, key, validPayload, "text"),
-					Hash: &models.IntotoV001SchemaContentHash{
-						Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-					},
 				},
 			},
 			wantErr:         true,
@@ -233,11 +267,6 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := &V001Entry{}
-			if tt.it.Content != nil {
-				h := sha256.Sum256([]byte(tt.it.Content.Envelope))
-				tt.it.Content.Hash.Algorithm = swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256)
-				tt.it.Content.Hash.Value = swag.String(hex.EncodeToString(h[:]))
-			}
 
 			it := &models.Intoto{
 				Spec: tt.it,
@@ -245,9 +274,6 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 
 			var uv = func() error {
 				if err := v.Unmarshal(it); err != nil {
-					return err
-				}
-				if err := v.validate(); err != nil {
 					return err
 				}
 				if v.IntotoObj.Content.Hash == nil || v.IntotoObj.Content.Hash.Algorithm != tt.it.Content.Hash.Algorithm || v.IntotoObj.Content.Hash.Value != tt.it.Content.Hash.Value {
