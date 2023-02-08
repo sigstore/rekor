@@ -46,8 +46,8 @@ require (
 	golang.org/x/mod v0.7.0
 	golang.org/x/net v0.5.0
 	golang.org/x/sync v0.1.0
-	google.golang.org/genproto v0.0.0-20221227171554-f9683d7f8bef
-	google.golang.org/grpc v1.52.3
+	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f
+	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/ini.v1 v1.67.0
 	sigs.k8s.io/release-utils v0.7.3
@@ -73,14 +73,14 @@ require (
 
 require (
 	cloud.google.com/go v0.107.0 // indirect
-	cloud.google.com/go/compute v1.14.0 // indirect
+	cloud.google.com/go/compute v1.15.1 // indirect
 	cloud.google.com/go/iam v0.8.0 // indirect
 	cloud.google.com/go/kms v1.8.0 // indirect
 	cloud.google.com/go/storage v1.27.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cavaliercoder/badio v0.0.0-20160213150051-ce5280129e9e // indirect
 	github.com/cavaliercoder/go-cpio v0.0.0-20180626203310-925f9528c45e // indirect
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/danieljoos/wincred v1.1.1 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
