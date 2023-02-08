@@ -21,10 +21,13 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -356,5 +359,25 @@ func TestSearchQueryMalformedEntry(t *testing.T) {
 	}
 	if resp.StatusCode != 400 {
 		t.Fatalf("expected status 400, got %d instead", resp.StatusCode)
+	}
+}
+
+func TestHTTPMaxRequestBodySize(t *testing.T) {
+	// default value is 32Mb so let's try to propose something bigger
+	pipeR, pipeW := io.Pipe()
+	go func() {
+		_, _ = io.CopyN(base64.NewEncoder(base64.StdEncoding, pipeW), rand.New(rand.NewSource(123)), 33*1024768)
+		pipeW.Close()
+	}()
+	// json parsing will hit first so we need to make sure this is valid JSON
+	bodyReader := io.MultiReader(strings.NewReader("{ \"key\": \""), pipeR, strings.NewReader("\"}"))
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
+		"application/json",
+		bodyReader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected status %d, got %d instead", http.StatusRequestEntityTooLarge, resp.StatusCode)
 	}
 }
