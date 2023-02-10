@@ -61,3 +61,4 @@ compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/helm/v0.0.1 FuzzHel
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/rekord/v0.0.1 FuzzRekordCreateProposedEntry FuzzRekordCreateProposedEntry
 
 cp $SRC/rekor/tests/fuzz-testdata/*.options $OUT/
+zip $OUT/FuzzPackageUnmarshal_seed_corpus.zip $SRC/rekor/tests/fuzz-testdata/seeds/alpine/FuzzPackageUnmarshal/FuzzPackageUnmarshal_seed1
