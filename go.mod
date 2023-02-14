@@ -39,7 +39,7 @@ require (
 	github.com/transparency-dev/merkle v0.0.1
 	github.com/veraison/go-cose v1.0.0
 	github.com/zalando/go-keyring v0.1.1 // indirect
-	go.uber.org/goleak v1.2.0
+	go.uber.org/goleak v1.2.1
 	go.uber.org/zap v1.24.0
 	gocloud.dev v0.24.1-0.20211119014450-028788aaaa4c
 	golang.org/x/crypto v0.6.0
