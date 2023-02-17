@@ -39,9 +39,9 @@ steps:
   - TUF_ROOT=/tmp
   args:
   - 'verify'
-  - 'ghcr.io/gythialy/golang-cross:v1.20.0-0@sha256:d50b48a7cf2b90f70e35da6d7419b7b16ed29a10f3175a2c849ef2956d485aae'
+  - 'ghcr.io/gythialy/golang-cross:v1.20.1-0@sha256:ca8d8591b77ede34d28b1c73bcaf901552dbea8af9d59bad4d723d18dcfc6cd4'
 
-- name: ghcr.io/gythialy/golang-cross:v1.20.0-0@sha256:d50b48a7cf2b90f70e35da6d7419b7b16ed29a10f3175a2c849ef2956d485aae
+- name: ghcr.io/gythialy/golang-cross:v1.20.1-0@sha256:ca8d8591b77ede34d28b1c73bcaf901552dbea8af9d59bad4d723d18dcfc6cd4
   entrypoint: /bin/sh
   dir: "go/src/sigstore/rekor"
   env:
@@ -64,7 +64,7 @@ steps:
       gcloud auth configure-docker \
       && make release
 
-- name: ghcr.io/gythialy/golang-cross:v1.20.0-0@sha256:d50b48a7cf2b90f70e35da6d7419b7b16ed29a10f3175a2c849ef2956d485aae
+- name: ghcr.io/gythialy/golang-cross:v1.20.1-0@sha256:ca8d8591b77ede34d28b1c73bcaf901552dbea8af9d59bad4d723d18dcfc6cd4
   entrypoint: 'bash'
   dir: "go/src/sigstore/rekor"
   env:
