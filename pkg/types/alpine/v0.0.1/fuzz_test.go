@@ -36,7 +36,7 @@ func FuzzAlpineCreateProposedEntry(f *testing.F) {
 
 		ff := fuzz.NewConsumer(propsData)
 
-		props, cleanup, err := fuzzUtils.CreateProps(ff)
+		props, cleanup, err := fuzzUtils.CreateAlpineProps(ff)
 		if err != nil {
 			t.Skip()
 		}
