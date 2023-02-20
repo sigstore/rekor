@@ -67,6 +67,10 @@ func (u BaseUnmarshalTester) CreateFromArtifactProperties(_ context.Context, _ A
 	return nil, nil
 }
 
+func (u BaseUnmarshalTester) Insertable() (bool, error) {
+	return false, nil
+}
+
 type BaseProposedEntryTester struct{}
 
 func (b BaseProposedEntryTester) Kind() string {

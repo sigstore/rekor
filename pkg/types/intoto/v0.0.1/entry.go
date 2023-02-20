@@ -356,3 +356,17 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 	}
 	return x509.NewPublicKey(bytes.NewReader(*v.IntotoObj.PublicKey))
 }
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.IntotoObj.Content == nil {
+		return false, errors.New("missing content property")
+	}
+	if len(v.IntotoObj.Content.Envelope) == 0 {
+		return false, errors.New("missing envelope content")
+	}
+
+	if len(*v.IntotoObj.PublicKey) == 0 {
+		return false, errors.New("missing publicKey content")
+	}
+	return true, nil
+}

@@ -443,3 +443,27 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 		return nil, fmt.Errorf("unexpected format of public key: %s", f)
 	}
 }
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.RekordObj.Signature == nil {
+		return false, errors.New("missing signature property")
+	}
+	if len(*v.RekordObj.Signature.Content) == 0 {
+		return false, errors.New("missing signature content")
+	}
+	if v.RekordObj.Signature.PublicKey == nil {
+		return false, errors.New("missing publicKey property")
+	}
+	if len(*v.RekordObj.Signature.PublicKey.Content) == 0 {
+		return false, errors.New("missing publicKey content")
+	}
+
+	if v.RekordObj.Data == nil {
+		return false, errors.New("missing data property")
+	}
+	if len(v.RekordObj.Data.Content) == 0 {
+		return false, errors.New("missing data content")
+	}
+
+	return true, nil
+}

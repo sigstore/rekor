@@ -210,3 +210,15 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 func (v V001Entry) Verifier() (pki.PublicKey, error) {
 	return nil, errors.New("Verifier() does not support rfc3161 entry type")
 }
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.Rfc3161Obj.Tsr == nil {
+		return false, errors.New("missing tsr property")
+	}
+
+	if len(*v.Rfc3161Obj.Tsr.Content) == 0 {
+		return false, errors.New("missing tsr content")
+	}
+
+	return true, nil
+}

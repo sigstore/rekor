@@ -252,3 +252,25 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 	}
 	return x509.NewPublicKey(bytes.NewReader(v.HashedRekordObj.Signature.PublicKey.Content))
 }
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.HashedRekordObj.Signature == nil {
+		return false, errors.New("missing signature property")
+	}
+	if len(v.HashedRekordObj.Signature.Content) == 0 {
+		return false, errors.New("missing signature content")
+	}
+	if v.HashedRekordObj.Signature.PublicKey == nil {
+		return false, errors.New("missing publicKey property")
+	}
+	if len(v.HashedRekordObj.Signature.PublicKey.Content) == 0 {
+		return false, errors.New("missing publicKey content")
+	}
+	if v.HashedRekordObj.Data == nil {
+		return false, errors.New("missing data property")
+	}
+	if v.HashedRekordObj.Data.Hash == nil {
+		return false, errors.New("missing hash property")
+	}
+	return true, nil
+}

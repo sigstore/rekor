@@ -42,8 +42,7 @@
                                     "publicKey": {
                                         "description": "public key that corresponds to this signature",
                                         "type": "string",
-                                        "format": "byte",
-                                        "readOnly": true
+                                        "format": "byte"
                                     }
                                 }
                             }
