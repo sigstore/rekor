@@ -93,7 +93,10 @@
                     ],
                     "readOnly": true
                 }
-            }
+            },
+            "required": [
+                "envelope"
+            ]
         }
     },
     "required": [

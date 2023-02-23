@@ -29,6 +29,9 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -43,6 +46,13 @@ import (
 	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/util"
 )
+
+func rekorServer() string {
+	if s := os.Getenv("REKOR_SERVER"); s != "" {
+		return s
+	}
+	return "http://localhost:3000"
+}
 
 func TestIntoto(t *testing.T) {
 	td := t.TempDir()
@@ -276,4 +286,109 @@ func TestIntotoMultiSig(t *testing.T) {
 
 	out = util.RunCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
 	util.OutputContains(t, out, "Entry already exists")
+}
+
+func TestValidationSearchIntotoV002MissingEnvelope(t *testing.T) {
+	body := `{
+		"entries":[
+			{
+				"kind":"intoto",
+				"apiVersion": "0.0.2",
+				"spec":{
+					"content":{
+						"hash":{
+							"algorithm":"sha256",
+							"value":"782143e39f1e7a04e3f6da2d88b1c057e5657363c4f90679f3e8a071b7619e02"
+						},
+						"payloadHash":{
+							"algorithm":"sha256",
+							"value":"ebbfddda6277af199e93c5bb5cf5998a79311de238e49bcc8ac24102698761bb"
+						}
+					},
+					"publicKey":"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNwRENDQWlxZ0F3SUJBZ0lVYWhsOEFRd1lZV05ZbnV6dlFvOEVrN1dMTURvd0NnWUlLb1pJemowRUF3TXcKTnpFVk1CTUdBMVVFQ2hNTWMybG5jM1J2Y21VdVpHVjJNUjR3SEFZRFZRUURFeFZ6YVdkemRHOXlaUzFwYm5SbApjbTFsWkdsaGRHVXdIaGNOTWpJd09ESTJNREV4TnpFM1doY05Nakl3T0RJMk1ERXlOekUzV2pBQU1Ga3dFd1lICktvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUVLWmZEQzlpalVyclpBWE9jWFYrQXFHRUlTSlEzVHRqSndJdEEKdTE3Rml2aWpnSk1hYUhGNDcrT3Z2OVR1ekFDQ3lpSUV5UDUyZXI2ZmF5bmZKYVVqOEtPQ0FVa3dnZ0ZGTUE0RwpBMVVkRHdFQi93UUVBd0lIZ0RBVEJnTlZIU1VFRERBS0JnZ3JCZ0VGQlFjREF6QWRCZ05WSFE0RUZnUVVHQldUCkMwdUU3dTRQcURVRjFYV0c0QlVWVUpBd0h3WURWUjBqQkJnd0ZvQVUzOVBwejFZa0VaYjVxTmpwS0ZXaXhpNFkKWkQ4d0pRWURWUjBSQVFIL0JCc3dHWUVYYzJGemIyRnJhWEpoTmpFeE5FQm5iV0ZwYkM1amIyMHdLUVlLS3dZQgpCQUdEdnpBQkFRUWJhSFIwY0hNNkx5OWhZMk52ZFc1MGN5NW5iMjluYkdVdVkyOXRNSUdMQmdvckJnRUVBZFo1CkFnUUNCSDBFZXdCNUFIY0FDR0NTOENoUy8yaEYwZEZySjRTY1JXY1lyQlk5d3pqU2JlYThJZ1kyYjNJQUFBR0MKMTdtSmhnQUFCQU1BU0RCR0FpRUFoS09BSkdWVlhCb1cxTDR4alk5eWJWOGZUUXN5TStvUEpIeDk5S29LYUpVQwpJUURCZDllc1Q0Mk1STng3Vm9BM1paKzV4akhNZWR6amVxQ2ZoZTcvd1pxYTlUQUtCZ2dxaGtqT1BRUURBd05vCkFEQmxBakVBcnBkeXlFRjc3b2JyTENMUXpzYmIxM2lsNjd3dzM4Y050amdNQml6Y2VUakRiY2VLeVFSN1RKNHMKZENsclkxY1BBakE4aXB6SUQ4VU1CaGxkSmUvZXJGcGdtN2swNWFic2lPN3V5dVZuS29VNk0rTXJ6VVUrZTlGdwpJRGhCanVRa1dRYz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
+				}
+			}
+		]
+	}
+	`
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
+		"application/json",
+		bytes.NewBuffer([]byte(body)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != 400 {
+		t.Fatalf("expected status 400, got %d instead: %v", resp.StatusCode, string(c))
+	}
+}
+
+func TestValidationSearchIntotoV002MissingEnvelopeHash(t *testing.T) {
+	body := `{
+		"entries":[
+			{
+				"kind":"intoto",
+				"apiVersion": "0.0.2",
+				"spec":{
+					"content":{
+						"envelope":{
+							"payloadType":"asd",
+							"signatures":[ {} ]
+						},
+						"payloadHash":{
+							"algorithm":"sha256",
+							"value":"ebbfddda6277af199e93c5bb5cf5998a79311de238e49bcc8ac24102698761bb"
+						}
+					},
+					"publicKey":"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNwRENDQWlxZ0F3SUJBZ0lVYWhsOEFRd1lZV05ZbnV6dlFvOEVrN1dMTURvd0NnWUlLb1pJemowRUF3TXcKTnpFVk1CTUdBMVVFQ2hNTWMybG5jM1J2Y21VdVpHVjJNUjR3SEFZRFZRUURFeFZ6YVdkemRHOXlaUzFwYm5SbApjbTFsWkdsaGRHVXdIaGNOTWpJd09ESTJNREV4TnpFM1doY05Nakl3T0RJMk1ERXlOekUzV2pBQU1Ga3dFd1lICktvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUVLWmZEQzlpalVyclpBWE9jWFYrQXFHRUlTSlEzVHRqSndJdEEKdTE3Rml2aWpnSk1hYUhGNDcrT3Z2OVR1ekFDQ3lpSUV5UDUyZXI2ZmF5bmZKYVVqOEtPQ0FVa3dnZ0ZGTUE0RwpBMVVkRHdFQi93UUVBd0lIZ0RBVEJnTlZIU1VFRERBS0JnZ3JCZ0VGQlFjREF6QWRCZ05WSFE0RUZnUVVHQldUCkMwdUU3dTRQcURVRjFYV0c0QlVWVUpBd0h3WURWUjBqQkJnd0ZvQVUzOVBwejFZa0VaYjVxTmpwS0ZXaXhpNFkKWkQ4d0pRWURWUjBSQVFIL0JCc3dHWUVYYzJGemIyRnJhWEpoTmpFeE5FQm5iV0ZwYkM1amIyMHdLUVlLS3dZQgpCQUdEdnpBQkFRUWJhSFIwY0hNNkx5OWhZMk52ZFc1MGN5NW5iMjluYkdVdVkyOXRNSUdMQmdvckJnRUVBZFo1CkFnUUNCSDBFZXdCNUFIY0FDR0NTOENoUy8yaEYwZEZySjRTY1JXY1lyQlk5d3pqU2JlYThJZ1kyYjNJQUFBR0MKMTdtSmhnQUFCQU1BU0RCR0FpRUFoS09BSkdWVlhCb1cxTDR4alk5eWJWOGZUUXN5TStvUEpIeDk5S29LYUpVQwpJUURCZDllc1Q0Mk1STng3Vm9BM1paKzV4akhNZWR6amVxQ2ZoZTcvd1pxYTlUQUtCZ2dxaGtqT1BRUURBd05vCkFEQmxBakVBcnBkeXlFRjc3b2JyTENMUXpzYmIxM2lsNjd3dzM4Y050amdNQml6Y2VUakRiY2VLeVFSN1RKNHMKZENsclkxY1BBakE4aXB6SUQ4VU1CaGxkSmUvZXJGcGdtN2swNWFic2lPN3V5dVZuS29VNk0rTXJ6VVUrZTlGdwpJRGhCanVRa1dRYz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
+				}
+			}
+		]
+	}
+	`
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
+		"application/json",
+		bytes.NewBuffer([]byte(body)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != 400 {
+		t.Fatalf("expected status 400, got %d instead: %v", resp.StatusCode, string(c))
+	}
+}
+
+func TestValidationSearchIntotoV002MissingPayloadHash(t *testing.T) {
+	body := `{
+		"entries":[
+			{
+				"kind":"intoto",
+				"apiVersion": "0.0.2",
+				"spec":{
+					"content":{
+						"envelope":{
+							"payloadType":"asd",
+							"signatures":[ {} ]
+						},
+						"hash":{
+							"algorithm":"sha256",
+							"value":"782143e39f1e7a04e3f6da2d88b1c057e5657363c4f90679f3e8a071b7619e02"
+						},
+					},
+					"publicKey":"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNwRENDQWlxZ0F3SUJBZ0lVYWhsOEFRd1lZV05ZbnV6dlFvOEVrN1dMTURvd0NnWUlLb1pJemowRUF3TXcKTnpFVk1CTUdBMVVFQ2hNTWMybG5jM1J2Y21VdVpHVjJNUjR3SEFZRFZRUURFeFZ6YVdkemRHOXlaUzFwYm5SbApjbTFsWkdsaGRHVXdIaGNOTWpJd09ESTJNREV4TnpFM1doY05Nakl3T0RJMk1ERXlOekUzV2pBQU1Ga3dFd1lICktvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUVLWmZEQzlpalVyclpBWE9jWFYrQXFHRUlTSlEzVHRqSndJdEEKdTE3Rml2aWpnSk1hYUhGNDcrT3Z2OVR1ekFDQ3lpSUV5UDUyZXI2ZmF5bmZKYVVqOEtPQ0FVa3dnZ0ZGTUE0RwpBMVVkRHdFQi93UUVBd0lIZ0RBVEJnTlZIU1VFRERBS0JnZ3JCZ0VGQlFjREF6QWRCZ05WSFE0RUZnUVVHQldUCkMwdUU3dTRQcURVRjFYV0c0QlVWVUpBd0h3WURWUjBqQkJnd0ZvQVUzOVBwejFZa0VaYjVxTmpwS0ZXaXhpNFkKWkQ4d0pRWURWUjBSQVFIL0JCc3dHWUVYYzJGemIyRnJhWEpoTmpFeE5FQm5iV0ZwYkM1amIyMHdLUVlLS3dZQgpCQUdEdnpBQkFRUWJhSFIwY0hNNkx5OWhZMk52ZFc1MGN5NW5iMjluYkdVdVkyOXRNSUdMQmdvckJnRUVBZFo1CkFnUUNCSDBFZXdCNUFIY0FDR0NTOENoUy8yaEYwZEZySjRTY1JXY1lyQlk5d3pqU2JlYThJZ1kyYjNJQUFBR0MKMTdtSmhnQUFCQU1BU0RCR0FpRUFoS09BSkdWVlhCb1cxTDR4alk5eWJWOGZUUXN5TStvUEpIeDk5S29LYUpVQwpJUURCZDllc1Q0Mk1STng3Vm9BM1paKzV4akhNZWR6amVxQ2ZoZTcvd1pxYTlUQUtCZ2dxaGtqT1BRUURBd05vCkFEQmxBakVBcnBkeXlFRjc3b2JyTENMUXpzYmIxM2lsNjd3dzM4Y050amdNQml6Y2VUakRiY2VLeVFSN1RKNHMKZENsclkxY1BBakE4aXB6SUQ4VU1CaGxkSmUvZXJGcGdtN2swNWFic2lPN3V5dVZuS29VNk0rTXJ6VVUrZTlGdwpJRGhCanVRa1dRYz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
+				}
+			}
+		]
+	}
+	`
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
+		"application/json",
+		bytes.NewBuffer([]byte(body)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, _ := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != 400 {
+		t.Fatalf("expected status 400, got %d instead: %v", resp.StatusCode, string(c))
+	}
 }

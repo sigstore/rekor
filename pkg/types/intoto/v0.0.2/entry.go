@@ -212,6 +212,29 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 }
 
 func (v *V002Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+	if err := v.IntotoObj.Validate(strfmt.Default); err != nil {
+		return nil, err
+	}
+
+	if v.IntotoObj.Content.Hash == nil {
+		return nil, errors.New("missing envelope digest")
+	}
+
+	if err := v.IntotoObj.Content.Hash.Validate(strfmt.Default); err != nil {
+		return nil, fmt.Errorf("error validating envelope digest: %w", err)
+	}
+
+	if v.IntotoObj.Content.PayloadHash == nil {
+		return nil, errors.New("missing payload digest")
+	}
+
+	if err := v.IntotoObj.Content.PayloadHash.Validate(strfmt.Default); err != nil {
+		return nil, fmt.Errorf("error validating payload digest: %w", err)
+	}
+
+	if len(v.IntotoObj.Content.Envelope.Signatures) == 0 {
+		return nil, errors.New("missing signatures")
+	}
 
 	canonicalEntry := models.IntotoV002Schema{
 		Content: &models.IntotoV002SchemaContent{
