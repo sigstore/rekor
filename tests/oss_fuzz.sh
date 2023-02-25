@@ -60,5 +60,19 @@ compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/helm/v0.0.1 FuzzHel
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/helm/v0.0.1 FuzzHelmProvenanceUnmarshal FuzzHelmProvenanceUnmarshal
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/rekord/v0.0.1 FuzzRekordCreateProposedEntry FuzzRekordCreateProposedEntry
 
+# Test 3rd party API that rekor/pkg/types/jar/v0.0.1 uses
+cd $SRC
+git clone https://github.com/sassoftware/relic
+cd $SRC/relic
+git checkout dfb082b79b74bf792c0bfd7aca6e22bea6156a85
+cd $SRC/instrumentation
+go run main.go $SRC/relic
+cd $SRC/relic
+go mod tidy
+cd $SRC/rekor
+go mod edit -replace github.com/sassoftware/relic=$SRC/relic
+compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/jar/v0.0.1 FuzzJarutilsVerify FuzzJarutilsVerify 
+
+
 cp $SRC/rekor/tests/fuzz-testdata/*.options $OUT/
 zip $OUT/FuzzPackageUnmarshal_seed_corpus.zip $SRC/rekor/tests/fuzz-testdata/seeds/alpine/FuzzPackageUnmarshal/FuzzPackageUnmarshal_seed1
