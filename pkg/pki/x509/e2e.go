@@ -20,6 +20,7 @@ package x509
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -173,7 +174,7 @@ func (v *Verifier) Public() crypto.PublicKey {
 	return v.v.PublicKey
 }
 
-func (v *Verifier) Sign(data []byte) (sig []byte, err error) {
+func (v *Verifier) Sign(_ context.Context, data []byte) (sig []byte, err error) {
 	if v.S == nil {
 		return nil, errors.New("nil signer")
 	}
@@ -184,7 +185,7 @@ func (v *Verifier) Sign(data []byte) (sig []byte, err error) {
 	return sig, nil
 }
 
-func (v *Verifier) Verify(data, sig []byte) error {
+func (v *Verifier) Verify(_ context.Context, data, sig []byte) error {
 	if v.v == nil {
 		return errors.New("nil Verifier")
 	}
