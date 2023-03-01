@@ -29,8 +29,8 @@ require (
 	github.com/prometheus/client_golang v1.14.0
 	github.com/rs/cors v1.8.3
 	github.com/sassoftware/relic v0.0.0-20210427151427-dfb082b79b74
-	github.com/secure-systems-lab/go-securesystemslib v0.4.0
-	github.com/sigstore/sigstore v1.5.2
+	github.com/secure-systems-lab/go-securesystemslib v0.5.0
+	github.com/sigstore/sigstore v1.6.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
