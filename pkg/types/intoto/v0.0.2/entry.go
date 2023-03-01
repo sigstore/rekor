@@ -294,7 +294,7 @@ func (v *verifier) Public() crypto.PublicKey {
 	return nil
 }
 
-func (v *verifier) Sign(data []byte) (sig []byte, err error) {
+func (v *verifier) Sign(_ context.Context, data []byte) (sig []byte, err error) {
 	if v.s == nil {
 		return nil, errors.New("nil signer")
 	}
@@ -305,7 +305,7 @@ func (v *verifier) Sign(data []byte) (sig []byte, err error) {
 	return sig, nil
 }
 
-func (v *verifier) Verify(data, sig []byte) error {
+func (v *verifier) Verify(_ context.Context, data, sig []byte) error {
 	if v.v == nil {
 		return errors.New("nil verifier")
 	}
@@ -430,7 +430,7 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 			return nil, fmt.Errorf("could not use public key as a dsse verifier: %w", err)
 		}
 
-		accepted, err := dsseVfr.Verify(env)
+		accepted, err := dsseVfr.Verify(context.Background(), env)
 		if err != nil {
 			return nil, fmt.Errorf("could not verify envelope: %w", err)
 		}

@@ -19,6 +19,7 @@ package intoto
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
@@ -37,6 +38,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -70,14 +72,14 @@ func TestIntoto(t *testing.T) {
 			Subject: []in_toto.Subject{
 				{
 					Name: "foobar",
-					Digest: slsa.DigestSet{
+					Digest: common.DigestSet{
 						"foo": "bar",
 					},
 				},
 			},
 		},
 		Predicate: slsa.ProvenancePredicate{
-			Builder: slsa.ProvenanceBuilder{
+			Builder: common.ProvenanceBuilder{
 				ID: "foo" + id,
 			},
 		},
@@ -106,7 +108,7 @@ func TestIntoto(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	env, err := signer.SignPayload(in_toto.PayloadType, b)
+	env, err := signer.SignPayload(context.Background(), in_toto.PayloadType, b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,14 +179,14 @@ func TestIntotoMultiSig(t *testing.T) {
 			Subject: []in_toto.Subject{
 				{
 					Name: "foobar",
-					Digest: slsa.DigestSet{
+					Digest: common.DigestSet{
 						"foo": "bar",
 					},
 				},
 			},
 		},
 		Predicate: slsa.ProvenancePredicate{
-			Builder: slsa.ProvenanceBuilder{
+			Builder: common.ProvenanceBuilder{
 				ID: "foo" + id,
 			},
 		},
@@ -232,7 +234,7 @@ func TestIntotoMultiSig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	env, err := signer.SignPayload(in_toto.PayloadType, b)
+	env, err := signer.SignPayload(context.Background(), in_toto.PayloadType, b)
 	if err != nil {
 		t.Fatal(err)
 	}

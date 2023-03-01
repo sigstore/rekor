@@ -42,6 +42,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -387,7 +388,7 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 			want: []string{"sha256:bar", hashkey},
 			statement: in_toto.Statement{
 				Predicate: slsa.ProvenancePredicate{
-					Materials: []slsa.ProvenanceMaterial{
+					Materials: []common.ProvenanceMaterial{
 						{
 							URI: "foo",
 							Digest: map[string]string{
