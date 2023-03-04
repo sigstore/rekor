@@ -16,11 +16,15 @@
 package jar
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"sync"
 	"testing"
 
 	fuzz "github.com/AdaLogics/go-fuzz-headers"
+
+	jarutils "github.com/sassoftware/relic/lib/signjar"
 
 	fuzzUtils "github.com/sigstore/rekor/pkg/fuzz"
 	"github.com/sigstore/rekor/pkg/types/jar"
@@ -52,5 +56,62 @@ func FuzzJarCreateProposedEntry(f *testing.F) {
 			t.Skip()
 		}
 		_, _ = c.IndexKeys()
+	})
+}
+
+type zipFile struct {
+	fileName string
+	fileBody []byte
+}
+
+func FuzzJarutilsVerify(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		ff := fuzz.NewConsumer(data)
+		noOfFiles, err := ff.GetInt()
+		if err != nil {
+			return
+		}
+		zipFiles := make([]*zipFile, 0)
+		for i := 0; i < noOfFiles%20; i++ {
+			fileName, err := ff.GetString()
+			if err != nil {
+				return
+			}
+			fileBody, err := ff.GetBytes()
+			if err != nil {
+				return
+			}
+			zf := &zipFile{
+				fileName: fileName,
+				fileBody: fileBody,
+			}
+			zipFiles = append(zipFiles, zf)
+		}
+		if len(zipFiles) == 0 {
+			return
+		}
+
+		buf := new(bytes.Buffer)
+		w := zip.NewWriter(buf)
+		for _, file := range zipFiles {
+			f, err := w.Create(file.fileName)
+			if err != nil {
+				w.Close()
+				return
+			}
+			_, err = f.Write([]byte(file.fileBody))
+			if err != nil {
+				w.Close()
+				return
+			}
+		}
+
+		w.Close()
+		zipData := buf.Bytes()
+		zipReader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
+		if err != nil {
+			return
+		}
+		_, _ = jarutils.Verify(zipReader, false)
 	})
 }
