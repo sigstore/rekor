@@ -63,27 +63,11 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
-	github.com/DataDog/zstd v1.4.5 // indirect
-	github.com/beevik/etree v1.1.0 // indirect
-	github.com/bradfitz/gomemcache v0.0.0-20230124162541-5f7a7d875746 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
-	github.com/klauspost/compress v1.15.11 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
-	github.com/kr/text v0.2.0 // indirect
-	github.com/lib/pq v1.10.7 // indirect
-	github.com/miekg/pkcs11 v1.1.1 // indirect
-	github.com/qur/ar v0.0.0-20130629153254-282534b91770 // indirect
-	github.com/rogpeppe/go-internal v1.9.0 // indirect
-	github.com/sassoftware/go-rpmutils v0.2.0 // indirect
-	github.com/satori/go.uuid v1.2.0 // indirect
-	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271 // indirect
-	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	go.opentelemetry.io/otel v1.11.1 // indirect
 	go.opentelemetry.io/otel/trace v1.11.1 // indirect
-	golang.org/x/time v0.2.0 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
 )
 
