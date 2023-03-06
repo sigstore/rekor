@@ -40,6 +40,10 @@ steps:
   args:
   - 'verify'
   - 'ghcr.io/gythialy/golang-cross:v1.20.1-1@sha256:38af1ee9c64749dc4a456494aae853760f2db50648e955648bdeca8ef260215f'
+  - '--certificate-oidc-issuer'
+  - "https://token.actions.githubusercontent.com"
+  - '--certificate-identity'
+  - "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.20.1-0"
 
 - name: ghcr.io/gythialy/golang-cross:v1.20.1-1@sha256:38af1ee9c64749dc4a456494aae853760f2db50648e955648bdeca8ef260215f
   entrypoint: /bin/sh
