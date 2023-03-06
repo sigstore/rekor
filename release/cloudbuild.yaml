@@ -35,7 +35,6 @@ steps:
 - name: 'gcr.io/projectsigstore/cosign:v2.0.0@sha256:728944a9542a7235b4358c4ab2bcea855840e9d4b9594febca5c2207f5da7f38'
   dir: "go/src/sigstore/rekor"
   env:
-  - COSIGN_EXPERIMENTAL=true
   - TUF_ROOT=/tmp
   args:
   - 'verify'
@@ -58,7 +57,7 @@ steps:
   - KEY_VERSION=${_KEY_VERSION}
   - GIT_TAG=${_GIT_TAG}
   - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
-  - COSIGN_EXPERIMENTAL=true
+  - COSIGN_YES=true
   - KO_PREFIX=gcr.io/${PROJECT_ID}
   secretEnv:
   - GITHUB_TOKEN
