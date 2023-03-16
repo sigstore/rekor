@@ -47,7 +47,7 @@ jobs:
       image: ghcr.io/gythialy/golang-cross:v1.20.1-1@sha256:38af1ee9c64749dc4a456494aae853760f2db50648e955648bdeca8ef260215f
 
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
 
       # Error: fatal: detected dubious ownership in repository at '/__w/rekor/rekor'
       #      To add an exception for this directory, call:
