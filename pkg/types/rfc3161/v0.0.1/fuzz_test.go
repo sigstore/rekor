@@ -39,11 +39,15 @@ func FuzzRfc3161CreateProposedEntry(f *testing.F) {
 
 		ff := fuzz.NewConsumer(propsData)
 
-		props, cleanup, err := fuzzUtils.CreateProps(ff)
+		props, cleanup, err := fuzzUtils.CreateProps(ff, "rfc3161V001")
 		if err != nil {
 			t.Skip()
 		}
-		defer cleanup()
+		defer func() {
+			for _, c := range cleanup {
+				c()
+			}
+		}()
 
 		it := rfc3161.New()
 		entry, err := it.CreateProposedEntry(context.Background(), version, props)

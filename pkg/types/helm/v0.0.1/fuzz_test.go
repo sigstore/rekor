@@ -40,11 +40,16 @@ func FuzzHelmCreateProposedEntry(f *testing.F) {
 
 		ff := fuzz.NewConsumer(propsData)
 
-		props, cleanup, err := fuzzUtils.CreateProps(ff)
+		props, cleanup, err := fuzzUtils.CreateProps(ff, "helmV001")
 		if err != nil {
+			//fmt.Println(err)
 			t.Skip()
 		}
-		defer cleanup()
+		defer func() {
+			for _, c := range cleanup {
+				c()
+			}
+		}()
 
 		it := helm.New()
 		entry, err := it.CreateProposedEntry(context.Background(), version, props)
