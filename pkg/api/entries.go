@@ -255,9 +255,9 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 				go func() {
 					if err := storeAttestation(context.Background(), attKey, attVal); err != nil {
 						// entryIDstruct.UUID
-						log.ContextLogger(ctx).Errorf("error storing attestation: %s", err)
+						log.ContextLogger(ctx).Debugf("error storing attestation: %s", err)
 					} else {
-						log.ContextLogger(ctx).Infof("stored attestation for uuid %s with filename %s", entryIDstruct.UUID, attKey)
+						log.ContextLogger(ctx).Debugf("stored attestation for uuid %s with filename %s", entryIDstruct.UUID, attKey)
 					}
 				}()
 			} else {
