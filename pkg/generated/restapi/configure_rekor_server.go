@@ -20,6 +20,7 @@ package restapi
 import (
 	"context"
 	"crypto/tls"
+	go_errors "errors"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -251,6 +252,10 @@ func (l *logFormatter) NewLogEntry(r *http.Request) middleware.LogEntry {
 // So this is a good place to plug in a panic handling middleware, logging and metrics
 func setupGlobalMiddleware(handler http.Handler) http.Handler {
 	returnHandler := recoverer(handler)
+	maxReqBodySize := viper.GetInt64("max_request_body_size")
+	if maxReqBodySize > 0 {
+		returnHandler = maxBodySize(maxReqBodySize, returnHandler)
+	}
 	middleware.DefaultLogger = middleware.RequestLogger(&logFormatter{})
 	returnHandler = middleware.Logger(returnHandler)
 	returnHandler = middleware.Heartbeat("/ping")(returnHandler)
@@ -339,8 +344,18 @@ func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
 	} else {
 		log.ContextLogger(ctx).Error(err)
 	}
+	if compErr, ok := err.(*errors.CompositeError); ok {
+		// iterate over composite error looking for something more specific
+		for _, embeddedErr := range compErr.Errors {
+			var maxBytesError *http.MaxBytesError
+			if parseErr, ok := embeddedErr.(*errors.ParseError); ok && go_errors.As(parseErr.Reason, &maxBytesError) {
+				err = errors.New(http.StatusRequestEntityTooLarge, http.StatusText(http.StatusRequestEntityTooLarge))
+				break
+			}
+		}
+	}
 	requestFields := map[string]interface{}{}
-	if err := mapstructure.Decode(r, &requestFields); err == nil {
+	if decodeErr := mapstructure.Decode(r, &requestFields); decodeErr == nil {
 		log.ContextLogger(ctx).Debug(requestFields)
 	}
 	errors.ServeError(w, r, err)
@@ -381,6 +396,16 @@ func recoverer(next http.Handler) http.Handler {
 			}
 		}()
 
+		next.ServeHTTP(w, r)
+	}
+
+	return http.HandlerFunc(fn)
+}
+
+// maxBodySize limits the request body
+func maxBodySize(maxLength int64, next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxLength)
 		next.ServeHTTP(w, r)
 	}
 

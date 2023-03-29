@@ -14,20 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apt-get update && apt-get install -y wget
-cd $SRC
-wget https://go.dev/dl/go1.19.5.linux-amd64.tar.gz
-
-mkdir temp-go
-rm -rf /root/.go/*
-tar -C temp-go/ -xzf go1.19.5.linux-amd64.tar.gz
-mv temp-go/go/* /root/.go/
-
-
-cd $SRC
-git clone --depth=1 https://github.com/AdamKorcz/instrumentation
-cd instrumentation
-go run main.go $SRC/rekor
+cd $SRC/instrumentation
+go mod tidy
+go run main.go --target_dir=$SRC/rekor --check_io_length=true
+go run main.go --target_dir=$SRC/relic --check_io_length=false
 
 cd $SRC/rekor
 go mod tidy
@@ -59,6 +49,13 @@ compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/rpm/v0.0.1 FuzzRpmC
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/helm/v0.0.1 FuzzHelmCreateProposedEntry FuzzHelmCreateProposedEntry
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/helm/v0.0.1 FuzzHelmProvenanceUnmarshal FuzzHelmProvenanceUnmarshal
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/rekord/v0.0.1 FuzzRekordCreateProposedEntry FuzzRekordCreateProposedEntry
+
+# Test 3rd party API that rekor/pkg/types/jar/v0.0.1 uses
+go mod edit -replace github.com/sassoftware/relic=$SRC/relic
+go mod tidy
+go get github.com/AdamKorcz/go-118-fuzz-build/testing
+compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/jar/v0.0.1 FuzzJarutilsVerify FuzzJarutilsVerify 
+
 
 cp $SRC/rekor/tests/fuzz-testdata/*.options $OUT/
 zip $OUT/FuzzPackageUnmarshal_seed_corpus.zip $SRC/rekor/tests/fuzz-testdata/seeds/alpine/FuzzPackageUnmarshal/FuzzPackageUnmarshal_seed1

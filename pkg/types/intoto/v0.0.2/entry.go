@@ -212,6 +212,29 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 }
 
 func (v *V002Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+	if err := v.IntotoObj.Validate(strfmt.Default); err != nil {
+		return nil, err
+	}
+
+	if v.IntotoObj.Content.Hash == nil {
+		return nil, errors.New("missing envelope digest")
+	}
+
+	if err := v.IntotoObj.Content.Hash.Validate(strfmt.Default); err != nil {
+		return nil, fmt.Errorf("error validating envelope digest: %w", err)
+	}
+
+	if v.IntotoObj.Content.PayloadHash == nil {
+		return nil, errors.New("missing payload digest")
+	}
+
+	if err := v.IntotoObj.Content.PayloadHash.Validate(strfmt.Default); err != nil {
+		return nil, fmt.Errorf("error validating payload digest: %w", err)
+	}
+
+	if len(v.IntotoObj.Content.Envelope.Signatures) == 0 {
+		return nil, errors.New("missing signatures")
+	}
 
 	canonicalEntry := models.IntotoV002Schema{
 		Content: &models.IntotoV002SchemaContent{
@@ -271,7 +294,7 @@ func (v *verifier) Public() crypto.PublicKey {
 	return nil
 }
 
-func (v *verifier) Sign(data []byte) (sig []byte, err error) {
+func (v *verifier) Sign(_ context.Context, data []byte) (sig []byte, err error) {
 	if v.s == nil {
 		return nil, errors.New("nil signer")
 	}
@@ -282,7 +305,7 @@ func (v *verifier) Sign(data []byte) (sig []byte, err error) {
 	return sig, nil
 }
 
-func (v *verifier) Verify(data, sig []byte) error {
+func (v *verifier) Verify(_ context.Context, data, sig []byte) error {
 	if v.v == nil {
 		return errors.New("nil verifier")
 	}
@@ -407,7 +430,7 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 			return nil, fmt.Errorf("could not use public key as a dsse verifier: %w", err)
 		}
 
-		accepted, err := dsseVfr.Verify(env)
+		accepted, err := dsseVfr.Verify(context.Background(), env)
 		if err != nil {
 			return nil, fmt.Errorf("could not verify envelope: %w", err)
 		}

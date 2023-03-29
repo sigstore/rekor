@@ -27,6 +27,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sassoftware/relic/lib/pkcs7"
 	"github.com/sassoftware/relic/lib/pkcs9"
 
 	"github.com/go-openapi/runtime"
@@ -230,7 +231,7 @@ func tBadContent(t *testing.T, bytes []byte) []byte {
 	if _, err := asn1.Unmarshal(bytes, &tsr); err != nil {
 		t.Fatal(err)
 	}
-	tsr.TimeStampToken.Content.Certificates = []asn1.RawValue{}
+	tsr.TimeStampToken.Content.Certificates = pkcs7.RawCertificates{}
 	if b, err := asn1.Marshal(tsr); err != nil {
 		t.Fatal(err)
 	} else {

@@ -136,29 +136,29 @@ e2e:
 	go test -c -tags=e2e ./pkg/types/rekord
 
 sign-container: ko
-	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
-	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-cli:$(GIT_HASH)
+	cosign sign --yes --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
+	cosign sign --yes --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-cli:$(GIT_HASH)
 
 .PHONY: sign-keyless-ci
 sign-keyless-ci: ko
-	cosign sign --force -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
-	cosign sign --force -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-cli:$(GIT_HASH)
+	cosign sign --yes -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
+	cosign sign --yes -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-cli:$(GIT_HASH)
 
 .PHONY: ko-local
 ko-local:
-	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local --image-refs rekorImagerefs \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs rekorImagerefs \
 		github.com/sigstore/rekor/cmd/rekor-server
 
-	LDFLAGS="$(CLI_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=ko.local LDFLAGS="$(CLI_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local --image-refs cliImagerefs \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs cliImagerefs \
 		github.com/sigstore/rekor/cmd/rekor-cli
 
-	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local --image-refs redisImagerefs \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs redisImagerefs \
 		github.com/sigstore/rekor/cmd/backfill-redis
 
 # This builds the trillian containers we rely on using ko for cross platform support
