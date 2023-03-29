@@ -295,22 +295,22 @@ func (v *verifier) Public() crypto.PublicKey {
 	return nil
 }
 
-func (v *verifier) Sign(data []byte) (sig []byte, err error) {
+func (v *verifier) Sign(ctx context.Context, data []byte) (sig []byte, err error) {
 	if v.s == nil {
 		return nil, errors.New("nil signer")
 	}
-	sig, err = v.s.SignMessage(bytes.NewReader(data), options.WithCryptoSignerOpts(crypto.SHA256))
+	sig, err = v.s.SignMessage(bytes.NewReader(data), options.WithCryptoSignerOpts(crypto.SHA256), options.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
 	return sig, nil
 }
 
-func (v *verifier) Verify(data, sig []byte) error {
+func (v *verifier) Verify(ctx context.Context, data, sig []byte) error {
 	if v.v == nil {
 		return errors.New("nil verifier")
 	}
-	return v.v.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data))
+	return v.v.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data), options.WithContext(ctx))
 }
 
 func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
@@ -406,7 +406,7 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 			return nil, fmt.Errorf("could not use public key as a dsse verifier: %w", err)
 		}
 
-		accepted, err := dsseVfr.Verify(env)
+		accepted, err := dsseVfr.Verify(context.Background(), env)
 		if err != nil {
 			return nil, fmt.Errorf("could not verify envelope: %w", err)
 		}

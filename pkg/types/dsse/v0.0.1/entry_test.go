@@ -41,6 +41,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/in-toto/in-toto-golang/in_toto"
+	slsaCommon "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -73,7 +74,7 @@ func envelope(t *testing.T, k *ecdsa.PrivateKey, payload []byte) *dsse.Envelope 
 	if err != nil {
 		t.Fatal(err)
 	}
-	dsseEnv, err := signer.SignPayload(payload)
+	dsseEnv, err := signer.SignPayload(context.Background(), payload)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +98,7 @@ func multiSignEnvelope(t *testing.T, k []*ecdsa.PrivateKey, payload []byte) *dss
 	if err != nil {
 		t.Fatal(err)
 	}
-	dsseEnv, err := signer.SignPayload(in_toto.PayloadType, payload)
+	dsseEnv, err := signer.SignPayload(context.Background(), in_toto.PayloadType, payload)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +340,7 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 			want: []string{"sha256:bar"},
 			statement: in_toto.Statement{
 				Predicate: slsa.ProvenancePredicate{
-					Materials: []slsa.ProvenanceMaterial{
+					Materials: []slsaCommon.ProvenanceMaterial{
 						{
 							URI: "foo",
 							Digest: map[string]string{
@@ -364,7 +365,7 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 					},
 				},
 				Predicate: slsa.ProvenancePredicate{
-					Materials: []slsa.ProvenanceMaterial{
+					Materials: []slsaCommon.ProvenanceMaterial{
 						{
 							URI: "foo",
 							Digest: map[string]string{
