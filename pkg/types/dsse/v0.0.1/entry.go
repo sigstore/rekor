@@ -42,7 +42,7 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 	dsseType "github.com/sigstore/rekor/pkg/types/dsse"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/options"
+	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 )
 
 const (
@@ -277,42 +277,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 // AttestationKey and AttestationKeyValue are not implemented so the envelopes will not be persisted in Rekor
 
-type verifier struct {
-	s signature.Signer
-	v signature.Verifier
-}
-
-func (v *verifier) KeyID() (string, error) {
-	return "", nil
-}
-
-func (v *verifier) Public() crypto.PublicKey {
-	// the dsse library uses this to generate a key ID if the KeyID function returns an empty string
-	// as well for the AcceptedKey return value.  Unfortunately since key ids can be arbitrary, we don't
-	// know how to generate a matching id for the key id on the envelope's signature...
-	// dsse verify will skip verifiers whose key id doesn't match the signature's key id, unless it fails
-	// to generate one from the public key... so we trick it by returning nil ¯\_(ツ)_/¯
-	return nil
-}
-
-func (v *verifier) Sign(ctx context.Context, data []byte) (sig []byte, err error) {
-	if v.s == nil {
-		return nil, errors.New("nil signer")
-	}
-	sig, err = v.s.SignMessage(bytes.NewReader(data), options.WithCryptoSignerOpts(crypto.SHA256), options.WithContext(ctx))
-	if err != nil {
-		return nil, err
-	}
-	return sig, nil
-}
-
-func (v *verifier) Verify(ctx context.Context, data, sig []byte) error {
-	if v.v == nil {
-		return errors.New("nil verifier")
-	}
-	return v.v.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data), options.WithContext(ctx))
-}
-
 func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	returnVal := models.DSSE{}
 	re := V001Entry{
@@ -401,7 +365,7 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 			return nil, fmt.Errorf("could not load verifier: %w", err)
 		}
 
-		dsseVfr, err := dsse.NewEnvelopeVerifier(&verifier{v: vfr})
+		dsseVfr, err := dsse.NewEnvelopeVerifier(&sigdsse.VerifierAdapter{SignatureVerifier: vfr})
 		if err != nil {
 			return nil, fmt.Errorf("could not use public key as a dsse verifier: %w", err)
 		}

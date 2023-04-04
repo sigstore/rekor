@@ -47,6 +47,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
+	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 	"go.uber.org/goleak"
 )
 
@@ -68,8 +69,8 @@ func envelope(t *testing.T, k *ecdsa.PrivateKey, payload []byte) *dsse.Envelope 
 		t.Fatal(err)
 	}
 	signer, err := in_toto.NewDSSESigner(
-		&verifier{
-			s: s,
+		&sigdsse.SignerAdapter{
+			SignatureSigner: s,
 		})
 	if err != nil {
 		t.Fatal(err)
@@ -83,14 +84,14 @@ func envelope(t *testing.T, k *ecdsa.PrivateKey, payload []byte) *dsse.Envelope 
 }
 
 func multiSignEnvelope(t *testing.T, k []*ecdsa.PrivateKey, payload []byte) *dsse.Envelope {
-	evps := []*verifier{}
+	evps := []*sigdsse.SignerAdapter{}
 	for _, key := range k {
 		s, err := signature.LoadECDSASigner(key, crypto.SHA256)
 		if err != nil {
 			t.Fatal(err)
 		}
-		evps = append(evps, &verifier{
-			s: s,
+		evps = append(evps, &sigdsse.SignerAdapter{
+			SignatureSigner: s,
 		})
 	}
 
