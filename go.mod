@@ -30,7 +30,7 @@ require (
 	github.com/rs/cors v1.8.3
 	github.com/sassoftware/relic v7.2.1+incompatible
 	github.com/secure-systems-lab/go-securesystemslib v0.5.0
-	github.com/sigstore/sigstore v1.6.0
+	github.com/sigstore/sigstore v1.6.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
@@ -46,7 +46,7 @@ require (
 	golang.org/x/mod v0.9.0
 	golang.org/x/net v0.8.0
 	golang.org/x/sync v0.1.0
-	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4
+	google.golang.org/genproto v0.0.0-20230331144136-dcfb400f0633
 	google.golang.org/grpc v1.54.0
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/ini.v1 v1.67.0
@@ -74,9 +74,9 @@ require (
 
 require (
 	cloud.google.com/go v0.110.0 // indirect
-	cloud.google.com/go/compute v1.18.0 // indirect
-	cloud.google.com/go/iam v0.12.0 // indirect
-	cloud.google.com/go/kms v1.10.0 // indirect
+	cloud.google.com/go/compute v1.19.0 // indirect
+	cloud.google.com/go/iam v0.13.0 // indirect
+	cloud.google.com/go/kms v1.10.1 // indirect
 	cloud.google.com/go/storage v1.29.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cavaliercoder/badio v0.0.0-20160213150051-ce5280129e9e // indirect
@@ -94,15 +94,15 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/godbus/dbus/v5 v5.0.6 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-containerregistry v0.13.0 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/google/go-containerregistry v0.14.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/google/wire v0.5.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.8.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c // indirect
-	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jellydator/ttlcache/v2 v2.11.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/leodido/go-urn v1.2.2 // indirect
@@ -137,7 +137,7 @@ require (
 	golang.org/x/term v0.6.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
-	google.golang.org/api v0.114.0 // indirect
+	google.golang.org/api v0.115.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
