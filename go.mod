@@ -20,7 +20,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/rpmpack v0.0.0-20210518075352-dc539ef4f2ea
 	github.com/google/trillian v1.5.1
-	github.com/in-toto/in-toto-golang v0.7.0
+	github.com/in-toto/in-toto-golang v0.7.1
 	github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b
 	github.com/mediocregopher/radix/v4 v4.1.2
 	github.com/mitchellh/go-homedir v1.1.0
@@ -31,7 +31,7 @@ require (
 	github.com/sassoftware/relic v7.2.1+incompatible
 	github.com/secure-systems-lab/go-securesystemslib v0.5.0
 	github.com/sigstore/sigstore v1.6.1
-	github.com/spf13/cobra v1.6.1
+	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
 	github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
