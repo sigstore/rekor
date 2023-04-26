@@ -19,7 +19,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/rpmpack v0.0.0-20210518075352-dc539ef4f2ea
 	github.com/google/trillian v1.5.1
-	github.com/in-toto/in-toto-golang v0.7.1
+	github.com/in-toto/in-toto-golang v0.8.0
 	github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b
 	github.com/mediocregopher/radix/v4 v4.1.2
 	github.com/mitchellh/go-homedir v1.1.0
