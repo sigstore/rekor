@@ -52,7 +52,7 @@ require (
 )
 
 require (
-	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1
+	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230329111138-12e09aba5ebd
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7
 	github.com/golang/mock v1.6.0
 	github.com/hashicorp/go-cleanhttp v0.5.2

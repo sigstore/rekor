@@ -3,7 +3,7 @@ module github.com/sigstore/rekor/hack/tools
 go 1.20
 
 require (
-	github.com/AdaLogics/go-fuzz-headers v0.0.0-20220708163326-82d177caec6e
+	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230329111138-12e09aba5ebd
 	github.com/go-swagger/go-swagger v0.30.4
 	github.com/google/trillian v1.5.1
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad

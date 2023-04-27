@@ -23,7 +23,7 @@ import (
 	"os"
 	"strings"
 
-	fuzz "github.com/AdaLogics/go-fuzz-headers"
+	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
 	"github.com/sigstore/rekor/pkg/types"
 )
 

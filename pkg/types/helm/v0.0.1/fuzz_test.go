@@ -21,7 +21,7 @@ import (
 	"sync"
 	"testing"
 
-	fuzz "github.com/AdaLogics/go-fuzz-headers"
+	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
 
 	fuzzUtils "github.com/sigstore/rekor/pkg/fuzz"
 	"github.com/sigstore/rekor/pkg/types/helm"
