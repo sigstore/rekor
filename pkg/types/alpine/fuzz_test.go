@@ -19,7 +19,7 @@ import (
 	"bytes"
 	"testing"
 
-	fuzz "github.com/AdaLogics/go-fuzz-headers"
+	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
 	utils "github.com/sigstore/rekor/pkg/fuzz"
 )
 
