@@ -25,7 +25,6 @@ import (
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/swag"
-	radix "github.com/mediocregopher/radix/v4"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
@@ -46,8 +45,8 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 	if params.Query.Hash != "" {
 		// This must be a valid hash
 		sha := util.PrefixSHA(params.Query.Hash)
-		var resultUUIDs []string
-		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(sha), "0", "-1")); err != nil {
+		resultUUIDs, err := redisClient.LRange(httpReqCtx, strings.ToLower(sha), 0, -1).Result()
+		if err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("redis client: %w", err), redisUnexpectedResult)
 		}
 		result.Add(resultUUIDs)
@@ -73,15 +72,15 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 		}
 
 		keyHash := sha256.Sum256(canonicalKey)
-		var resultUUIDs []string
-		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(hex.EncodeToString(keyHash[:])), "0", "-1")); err != nil {
+		resultUUIDs, err := redisClient.LRange(httpReqCtx, strings.ToLower(hex.EncodeToString(keyHash[:])), 0, -1).Result()
+		if err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("redis client: %w", err), redisUnexpectedResult)
 		}
 		result.Add(resultUUIDs)
 	}
 	if params.Query.Email != "" {
-		var resultUUIDs []string
-		if err := redisClient.Do(httpReqCtx, radix.Cmd(&resultUUIDs, "LRANGE", strings.ToLower(params.Query.Email.String()), "0", "-1")); err != nil {
+		resultUUIDs, err := redisClient.LRange(httpReqCtx, strings.ToLower(params.Query.Email.String()), 0, -1).Result()
+		if err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("redis client: %w", err), redisUnexpectedResult)
 		}
 		result.Add(resultUUIDs)
@@ -101,7 +100,8 @@ func SearchIndexNotImplementedHandler(params index.SearchIndexParams) middleware
 }
 
 func addToIndex(ctx context.Context, key, value string) error {
-	if err := redisClient.Do(ctx, radix.Cmd(nil, "LPUSH", key, value)); err != nil {
+	_, err := redisClient.LPush(ctx, key, value).Result()
+	if err != nil {
 		return fmt.Errorf("redis client: %w", err)
 	}
 	return nil
