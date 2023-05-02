@@ -20,6 +20,7 @@ import (
 	"context"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/go-openapi/runtime"
@@ -27,6 +28,7 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/spf13/viper"
 	"go.uber.org/goleak"
 )
 
@@ -148,5 +150,45 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 				t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
 			}
 		}
+	}
+}
+
+func TestJarMetadataSize(t *testing.T) {
+	type TestCase struct {
+		caseDesc                  string
+		entry                     V001Entry
+		expectUnmarshalSuccess    bool
+		expectCanonicalizeSuccess bool
+		expectedVerifierSuccess   bool
+	}
+
+	jarBytes, _ := os.ReadFile("tests/test.jar")
+
+	os.Setenv("MAX_JAR_METADATA_SIZE", "10")
+	viper.AutomaticEnv()
+
+	v := V001Entry{
+		JARModel: models.JarV001Schema{
+			Archive: &models.JarV001SchemaArchive{
+				Content: strfmt.Base64(jarBytes),
+			},
+		},
+	}
+
+	r := models.Jar{
+		APIVersion: swag.String(v.APIVersion()),
+		Spec:       v.JARModel,
+	}
+
+	if err := v.Unmarshal(&r); err != nil {
+		t.Errorf("unexpected unmarshal failure: %v", err)
+	}
+
+	_, err := v.Canonicalize(context.TODO())
+	if err == nil {
+		t.Fatal("expecting metadata too large err")
+	}
+	if !strings.Contains(err.Error(), "exceeds max allowed size 10") {
+		t.Fatalf("unexpected error %v", err)
 	}
 }
