@@ -143,7 +143,7 @@ func (c *CheckpointPublisher) publish(tc *trillianclient.TrillianClient, sTreeID
 
 	// return value ignored, which is whether or not the entry was set
 	// no error is thrown if the key already exists
-	_, err = c.redisClient.SetNX(ctx, key, hexCP, 0).Result()
+	successNX, err := c.redisClient.SetNX(ctx, key, hexCP, 0).Result()
 	if err != nil {
 		c.reqCounter.With(
 			map[string]string{
@@ -153,7 +153,12 @@ func (c *CheckpointPublisher) publish(tc *trillianclient.TrillianClient, sTreeID
 		log.Logger.Errorf("error with client publishing checkpoint: %v", err)
 		return
 	}
+	// if the key was not set, then the key already exists for this time period
+	if !successNX {
+		return
+	}
 
+	// successful obtaining of lock for time period
 	c.reqCounter.With(
 		map[string]string{
 			"shard": sTreeID,
