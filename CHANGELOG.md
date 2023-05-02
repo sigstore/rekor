@@ -1,3 +1,26 @@
+# v1.1.1
+
+## Functional Enhancements
+* Refactor Trillian client with exported methods (#1454)
+* Switch to official redis-go client (#1459)
+* Remove replace in go.mod (#1444)
+* Add Rekor OID info. (#1390)
+
+## Quality Enhancements
+* remove legacy encrypted cosign key (#1446)
+* swap cjson dependency (#1441)
+* Update release readme (#1456)
+
+## Bug Fixes
+* Merge pull request from GHSA-2h5h-59f5-c5x9
+
+## Contributors
+* Billy Lynch
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Ceridwen Coghlan
+* Hayden B
+
 # v1.1.0
 
 ## Functional Enhancements
