@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/swag"
@@ -56,9 +55,8 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 
 	stable := swag.BoolValue(params.Stable)
 	if stable {
-		ts := time.Now().Truncate(time.Duration(viper.GetUint("publish_frequency")) * time.Minute).UnixNano()
-		// key is treeID/timestamp, where timestamp is rounded down to the nearest X minutes
-		key := fmt.Sprintf("%d/%d", api.logRanges.ActiveTreeID(), ts)
+		// key is treeID/latest
+		key := fmt.Sprintf("%d/latest", api.logRanges.ActiveTreeID())
 		redisResult, err := redisClient.Get(params.HTTPRequest.Context(), key).Result()
 		if err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError,
@@ -80,7 +78,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 		logInfo := models.LogInfo{
 			RootHash:       stringPointer(hex.EncodeToString(checkpoint.Hash)),
 			TreeSize:       swag.Int64(int64(checkpoint.Size)),
-			SignedTreeHead: stringPointer(string(redisResult)),
+			SignedTreeHead: stringPointer(string(decoded)),
 			TreeID:         stringPointer(fmt.Sprintf("%d", api.logID)),
 			InactiveShards: inactiveShards,
 		}

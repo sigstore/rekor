@@ -54,10 +54,12 @@ type CheckpointPublisher struct {
 // Constant values used with metrics
 const (
 	Success = iota
+	SuccessObtainLock
 	GetCheckpoint
 	UnmarshalCheckpoint
 	SignCheckpoint
 	RedisFailure
+	RedisLatestFailure
 )
 
 // NewCheckpointPublisher creates a CheckpointPublisher to write stable checkpoints to Redis
@@ -132,6 +134,7 @@ func (c *CheckpointPublisher) publish(tc *trillianclient.TrillianClient, sTreeID
 	hexCP := hex.EncodeToString(checkpoint)
 
 	// write checkpoint to Redis if key does not yet exist
+	// this prevents multiple instances of Rekor from writing different checkpoints in the same time window
 	ts := time.Now().Truncate(time.Duration(c.checkpointFreq) * time.Minute).UnixNano()
 	// key is treeID/timestamp, where timestamp is rounded down to the nearest X minutes
 	key := fmt.Sprintf("%d/%d", c.treeID, ts)
@@ -148,6 +151,30 @@ func (c *CheckpointPublisher) publish(tc *trillianclient.TrillianClient, sTreeID
 				"code":  strconv.Itoa(RedisFailure),
 			}).Inc()
 		log.Logger.Errorf("error with client publishing checkpoint: %v", err)
+		return
+	}
+
+	c.reqCounter.With(
+		map[string]string{
+			"shard": sTreeID,
+			"code":  strconv.Itoa(SuccessObtainLock),
+		}).Inc()
+
+	// on successfully obtaining the "lock" for the time window, update latest checkpoint
+	latestKey := fmt.Sprintf("%d/latest", c.treeID)
+	latestCtx, latestCancel := context.WithTimeout(c.ctx, 10*time.Second)
+	defer latestCancel()
+
+	// return value ignored, which is whether or not the entry was set
+	// no error is thrown if the key already exists
+	_, err = c.redisClient.Set(latestCtx, latestKey, hexCP, 0).Result()
+	if err != nil {
+		c.reqCounter.With(
+			map[string]string{
+				"shard": sTreeID,
+				"code":  strconv.Itoa(RedisLatestFailure),
+			}).Inc()
+		log.Logger.Errorf("error with client publishing latest checkpoint: %v", err)
 		return
 	}
 
