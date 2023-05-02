@@ -26,10 +26,8 @@ import (
 )
 
 func GetPublicKeyHandler(params pubkey.GetPublicKeyParams) middleware.Responder {
-	ctx := params.HTTPRequest.Context()
 	treeID := swag.StringValue(params.TreeID)
-	tc := NewTrillianClient(ctx)
-	pk, err := tc.ranges.PublicKey(api.pubkey, treeID)
+	pk, err := api.logRanges.PublicKey(api.pubkey, treeID)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusBadRequest, err, "")
 	}
