@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/swag"
@@ -51,6 +52,39 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("inactive shard error: %w", err), unexpectedInactiveShardError)
 		}
 		inactiveShards = append(inactiveShards, is)
+	}
+
+	stable := swag.BoolValue(params.Stable)
+	if stable {
+		ts := time.Now().Truncate(time.Duration(viper.GetUint("publish_frequency")) * time.Minute).UnixNano()
+		// key is treeID/timestamp, where timestamp is rounded down to the nearest X minutes
+		key := fmt.Sprintf("%d/%d", api.logRanges.ActiveTreeID(), ts)
+		redisResult, err := redisClient.Get(params.HTTPRequest.Context(), key).Result()
+		if err != nil {
+			return handleRekorAPIError(params, http.StatusInternalServerError,
+				fmt.Errorf("error getting checkpoint from redis: %w", err), "error getting checkpoint from redis")
+		}
+		if redisResult == "" {
+			return handleRekorAPIError(params, http.StatusInternalServerError,
+				fmt.Errorf("no checkpoint found in redis: %w", err), "no checkpoint found in redis")
+		}
+		decoded, err := hex.DecodeString(redisResult)
+		if err != nil {
+			return handleRekorAPIError(params, http.StatusInternalServerError,
+				fmt.Errorf("error decoding checkpoint from redis: %w", err), "error decoding checkpoint from redis")
+		}
+		checkpoint := util.SignedCheckpoint{}
+		if err := checkpoint.UnmarshalText(decoded); err != nil {
+			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("invalid checkpoint: %w", err), "invalid checkpoint")
+		}
+		logInfo := models.LogInfo{
+			RootHash:       stringPointer(hex.EncodeToString(checkpoint.Hash)),
+			TreeSize:       swag.Int64(int64(checkpoint.Size)),
+			SignedTreeHead: stringPointer(string(redisResult)),
+			TreeID:         stringPointer(fmt.Sprintf("%d", api.logID)),
+			InactiveShards: inactiveShards,
+		}
+		return tlog.NewGetLogInfoOK().WithPayload(&logInfo)
 	}
 
 	resp := tc.GetLatest(0)

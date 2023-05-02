@@ -35,6 +35,7 @@ import (
 	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/rekor/pkg/storage"
 	"github.com/sigstore/rekor/pkg/trillianclient"
+	"github.com/sigstore/rekor/pkg/witness"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -134,7 +135,8 @@ func ConfigureAPI(treeID uint) {
 	if err != nil {
 		log.Logger.Panic(err)
 	}
-	if viper.GetBool("enable_retrieve_api") || slices.Contains(viper.GetStringSlice("enabled_api_endpoints"), "searchIndex") {
+	if viper.GetBool("enable_retrieve_api") || viper.GetBool("enable_stable_checkpoint") ||
+		slices.Contains(viper.GetStringSlice("enabled_api_endpoints"), "searchIndex") {
 		redisClient = redis.NewClient(&redis.Options{
 			Addr:    fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")),
 			Network: "tcp",
@@ -147,5 +149,11 @@ func ConfigureAPI(treeID uint) {
 		if err != nil {
 			log.Logger.Panic(err)
 		}
+	}
+
+	if viper.GetBool("enable_stable_checkpoint") {
+		checkpointPublisher := witness.NewCheckpointPublisher(context.Background(), api.logClient, api.logRanges.ActiveTreeID(),
+			viper.GetString("rekor_server.hostname"), api.signer, redisClient, viper.GetUint("publish_frequency"), CheckpointPublishCount)
+		checkpointPublisher.StartPublisher()
 	}
 }

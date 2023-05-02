@@ -25,15 +25,25 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/errors"
+	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
+	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
 )
 
 // NewGetLogInfoParams creates a new GetLogInfoParams object
-//
-// There are no default values defined in the spec.
+// with the default values initialized.
 func NewGetLogInfoParams() GetLogInfoParams {
 
-	return GetLogInfoParams{}
+	var (
+		// initialize parameters with default values
+
+		stableDefault = bool(false)
+	)
+
+	return GetLogInfoParams{
+		Stable: &stableDefault,
+	}
 }
 
 // GetLogInfoParams contains all the bound params for the get log info operation
@@ -44,6 +54,12 @@ type GetLogInfoParams struct {
 
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
+
+	/*Whether to return a stable checkpoint for the active shard
+	  In: query
+	  Default: false
+	*/
+	Stable *bool
 }
 
 // BindRequest both binds and validates a request, it assumes that complex things implement a Validatable(strfmt.Registry) error interface
@@ -55,8 +71,38 @@ func (o *GetLogInfoParams) BindRequest(r *http.Request, route *middleware.Matche
 
 	o.HTTPRequest = r
 
+	qs := runtime.Values(r.URL.Query())
+
+	qStable, qhkStable, _ := qs.GetOK("stable")
+	if err := o.bindStable(qStable, qhkStable, route.Formats); err != nil {
+		res = append(res, err)
+	}
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+// bindStable binds and validates parameter Stable from query.
+func (o *GetLogInfoParams) bindStable(rawData []string, hasKey bool, formats strfmt.Registry) error {
+	var raw string
+	if len(rawData) > 0 {
+		raw = rawData[len(rawData)-1]
+	}
+
+	// Required: false
+	// AllowEmptyValue: false
+
+	if raw == "" { // empty values pass all other validations
+		// Default values have been previously initialized by NewGetLogInfoParams()
+		return nil
+	}
+
+	value, err := swag.ConvertBool(raw)
+	if err != nil {
+		return errors.InvalidType("stable", "query", "bool", raw)
+	}
+	o.Stable = &value
+
 	return nil
 }
