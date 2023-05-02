@@ -36,7 +36,7 @@ import (
 	"os"
 
 	"github.com/go-openapi/runtime"
-	radix "github.com/mediocregopher/radix/v4"
+	"github.com/redis/go-redis/v9"
 	"sigs.k8s.io/release-utils/version"
 
 	"github.com/sigstore/rekor/pkg/client"
@@ -96,11 +96,11 @@ func main() {
 
 	log.Printf("running backfill redis Version: %s GitCommit: %s BuildDate: %s", versionInfo.GitVersion, versionInfo.GitCommit, versionInfo.BuildDate)
 
-	cfg := radix.PoolConfig{}
-	redisClient, err := cfg.New(context.Background(), "tcp", fmt.Sprintf("%s:%s", *redisHostname, *redisPort))
-	if err != nil {
-		log.Fatal(err)
-	}
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:    fmt.Sprintf("%s:%s", *redisHostname, *redisPort),
+		Network: "tcp",
+		DB:      0, // default DB
+	})
 
 	rekorClient, err := client.GetRekorClient(*rekorAddress)
 	if err != nil {
@@ -171,11 +171,13 @@ func unmarshalEntryImpl(e string) (types.EntryImpl, string, string, error) {
 
 // removeFromIndex removes all occurrences of a value from a given key. This guards against
 // multiple invocations of backfilling creating duplicates.
-func removeFromIndex(ctx context.Context, redisClient radix.Client, key, value string) error {
-	return redisClient.Do(ctx, radix.Cmd(nil, "LREM", key, "0", value))
+func removeFromIndex(ctx context.Context, redisClient *redis.Client, key, value string) error {
+	_, err := redisClient.LRem(ctx, key, 0, value).Result()
+	return err
 }
 
 // addToIndex pushes a value onto a key of type list.
-func addToIndex(ctx context.Context, redisClient radix.Client, key, value string) error {
-	return redisClient.Do(ctx, radix.Cmd(nil, "LPUSH", key, value))
+func addToIndex(ctx context.Context, redisClient *redis.Client, key, value string) error {
+	_, err := redisClient.LPush(ctx, key, value).Result()
+	return err
 }

@@ -21,7 +21,6 @@ require (
 	github.com/google/trillian v1.5.1
 	github.com/in-toto/in-toto-golang v0.8.0
 	github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b
-	github.com/mediocregopher/radix/v4 v4.1.2
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pkg/errors v0.9.1 // indirect
@@ -57,6 +56,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.2
+	github.com/redis/go-redis/v9 v9.0.3
 	golang.org/x/exp v0.0.0-20230124195608-d38c7dcee874
 )
 
@@ -64,6 +64,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/s2a-go v0.1.2 // indirect
@@ -123,7 +124,6 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	github.com/tilinna/clock v1.1.0 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
