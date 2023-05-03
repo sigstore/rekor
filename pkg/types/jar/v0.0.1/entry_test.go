@@ -154,14 +154,6 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 }
 
 func TestJarMetadataSize(t *testing.T) {
-	type TestCase struct {
-		caseDesc                  string
-		entry                     V001Entry
-		expectUnmarshalSuccess    bool
-		expectCanonicalizeSuccess bool
-		expectedVerifierSuccess   bool
-	}
-
 	jarBytes, _ := os.ReadFile("tests/test.jar")
 
 	os.Setenv("MAX_JAR_METADATA_SIZE", "10")
