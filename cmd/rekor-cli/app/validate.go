@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package app
 
 import (
 	"strings"
@@ -24,7 +24,7 @@ import (
 // validateSHA512Value ensures that the supplied string matches the
 // following format: [sha512:]<128 hexadecimal characters>
 // where [sha512:] is optional
-func ValidateSHA512Value(v string) error {
+func validateSHA512Value(v string) error {
 	var prefix, hash string
 
 	split := strings.SplitN(v, ":", 2)
@@ -48,7 +48,7 @@ func ValidateSHA512Value(v string) error {
 // validateSHA256Value ensures that the supplied string matches the following format:
 // [sha256:]<64 hexadecimal characters>
 // where [sha256:] is optional
-func ValidateSHA256Value(v string) error {
+func validateSHA256Value(v string) error {
 	var prefix, hash string
 
 	split := strings.SplitN(v, ":", 2)
@@ -69,7 +69,7 @@ func ValidateSHA256Value(v string) error {
 	return validate.Struct(s)
 }
 
-func ValidateSHA1Value(v string) error {
+func validateSHA1Value(v string) error {
 	var prefix, hash string
 
 	split := strings.SplitN(v, ":", 2)
