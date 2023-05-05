@@ -33,7 +33,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
 	github.com/theupdateframework/go-tuf v0.5.2
-	github.com/transparency-dev/merkle v0.0.1
+	github.com/transparency-dev/merkle v0.0.2
 	github.com/veraison/go-cose v1.0.0
 	github.com/zalando/go-keyring v0.1.1 // indirect
 	go.uber.org/goleak v1.2.1
