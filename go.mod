@@ -19,7 +19,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/rpmpack v0.0.0-20210518075352-dc539ef4f2ea
 	github.com/google/trillian v1.5.1
-	github.com/in-toto/in-toto-golang v0.8.0
+	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
@@ -27,7 +27,7 @@ require (
 	github.com/prometheus/client_golang v1.15.1
 	github.com/rs/cors v1.9.0
 	github.com/sassoftware/relic v7.2.1+incompatible
-	github.com/secure-systems-lab/go-securesystemslib v0.5.0
+	github.com/secure-systems-lab/go-securesystemslib v0.6.0
 	github.com/sigstore/sigstore v1.6.3
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
@@ -133,7 +133,7 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/term v0.7.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect

@@ -61,19 +61,18 @@ func TestNewEntryReturnType(t *testing.T) {
 }
 
 func envelope(t *testing.T, k *ecdsa.PrivateKey, payload []byte) *dsse.Envelope {
-
 	s, err := signature.LoadECDSASigner(k, crypto.SHA256)
 	if err != nil {
 		t.Fatal(err)
 	}
-	signer, err := in_toto.NewDSSESigner(
+	signer, err := dsse.NewEnvelopeSigner(
 		&verifier{
 			s: s,
 		})
 	if err != nil {
 		t.Fatal(err)
 	}
-	dsseEnv, err := signer.SignPayload(context.Background(), payload)
+	dsseEnv, err := signer.SignPayload(context.Background(), "application/vnd.in-toto+json", payload)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +105,6 @@ func multiSignEnvelope(t *testing.T, k []*ecdsa.PrivateKey, payload []byte) *dss
 }
 
 func createRekorEnvelope(dsseEnv *dsse.Envelope, pub [][]byte) *models.IntotoV002SchemaContentEnvelope {
-
 	env := &models.IntotoV002SchemaContentEnvelope{}
 	b64 := strfmt.Base64([]byte(dsseEnv.Payload))
 	env.Payload = b64
@@ -119,6 +117,7 @@ func createRekorEnvelope(dsseEnv *dsse.Envelope, pub [][]byte) *models.IntotoV00
 			PublicKey: strfmt.Base64(pub[i]),
 		})
 	}
+
 	return env
 }
 
@@ -127,6 +126,7 @@ func envelopeHash(t *testing.T, dsseEnv *dsse.Envelope) string {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	h := sha256.Sum256(val)
 	return hex.EncodeToString(h[:])
 }
