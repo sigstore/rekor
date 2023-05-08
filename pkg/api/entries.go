@@ -67,7 +67,7 @@ func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEnt
 }
 
 // logEntryFromLeaf creates a signed LogEntry struct from trillian structs
-func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianClient, leaf *trillian.LogLeaf,
+func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc util.TrillianClient, leaf *trillian.LogLeaf,
 	signedLogRoot *trillian.SignedLogRoot, proof *trillian.Proof, tid int64, ranges sharding.LogRanges) (models.LogEntry, error) {
 
 	log.ContextLogger(ctx).Debugf("log entry from leaf %d", leaf.GetLeafIndex())
@@ -93,7 +93,7 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 		return nil, fmt.Errorf("signing entry error: %w", err)
 	}
 
-	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tc.logID, root, api.signer)
+	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tid, root, api.signer)
 	if err != nil {
 		return nil, err
 	}
@@ -186,16 +186,16 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalEntry)
 	}
 
-	tc := NewTrillianClient(ctx)
+	tc := util.NewTrillianClient(ctx, api.logClient, api.logID)
 
-	resp := tc.addLeaf(leaf)
+	resp := tc.AddLeaf(leaf)
 	// this represents overall GRPC response state (not the results of insertion into the log)
-	if resp.status != codes.OK {
-		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
+	if resp.Status != codes.OK {
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.Err), trillianUnexpectedResult)
 	}
 
 	// this represents the results of inserting the proposed leaf into the log; status is nil in success path
-	insertionStatus := resp.getAddResult.QueuedLeaf.Status
+	insertionStatus := resp.GetAddResult.QueuedLeaf.Status
 	if insertionStatus != nil {
 		switch insertionStatus.Code {
 		case int32(code.Code_OK):
@@ -212,10 +212,10 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	// We made it this far, that means the entry was successfully added.
 	metricNewEntries.Inc()
 
-	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
+	queuedLeaf := resp.GetAddResult.QueuedLeaf.Leaf
 
 	uuid := hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
-	activeTree := fmt.Sprintf("%x", tc.logID)
+	activeTree := fmt.Sprintf("%x", api.logID)
 	entryIDstruct, err := sharding.CreateEntryIDFromParts(activeTree, uuid)
 	if err != nil {
 		err := fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, uuid, err)
@@ -271,15 +271,15 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	}
 
 	root := &ttypes.LogRootV1{}
-	if err := root.UnmarshalBinary(resp.getLeafAndProofResult.SignedLogRoot.LogRoot); err != nil {
+	if err := root.UnmarshalBinary(resp.GetLeafAndProofResult.SignedLogRoot.LogRoot); err != nil {
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("error unmarshalling log root: %v", err), sthGenerateError)
 	}
 	hashes := []string{}
-	for _, hash := range resp.getLeafAndProofResult.Proof.Hashes {
+	for _, hash := range resp.GetLeafAndProofResult.Proof.Hashes {
 		hashes = append(hashes, hex.EncodeToString(hash))
 	}
 
-	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tc.logID, root, api.signer)
+	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), api.logID, root, api.signer)
 	if err != nil {
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, sthGenerateError)
 	}
@@ -405,22 +405,22 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		for i, hash := range searchHashes {
 			var results map[int64]*trillian.GetEntryAndProofResponse
 			for _, shard := range api.logRanges.AllShards() {
-				tcs := NewTrillianClientFromTreeID(httpReqCtx, shard)
-				resp := tcs.getLeafAndProofByHash(hash)
-				switch resp.status {
+				tcs := util.NewTrillianClient(httpReqCtx, api.logClient, shard)
+				resp := tcs.GetLeafAndProofByHash(hash)
+				switch resp.Status {
 				case codes.OK:
-					leafResult := resp.getLeafAndProofResult
+					leafResult := resp.GetLeafAndProofResult
 					if leafResult != nil && leafResult.Leaf != nil {
 						if results == nil {
 							results = map[int64]*trillian.GetEntryAndProofResponse{}
 						}
-						results[shard] = resp.getLeafAndProofResult
+						results[shard] = resp.GetLeafAndProofResult
 					}
 				case codes.NotFound:
 					// do nothing here, do not throw 404 error
 					continue
 				default:
-					return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("error getLeafAndProofByHash(%s): code: %v, msg %v", hex.EncodeToString(hash), resp.status, resp.err), trillianCommunicationError)
+					return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("error getLeafAndProofByHash(%s): code: %v, msg %v", hex.EncodeToString(hash), resp.Status, resp.Err), trillianCommunicationError)
 				}
 			}
 			searchByHashResults[i] = results
@@ -431,7 +431,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 				if leafResp == nil {
 					continue
 				}
-				tcs := NewTrillianClientFromTreeID(httpReqCtx, shard)
+				tcs := util.NewTrillianClient(httpReqCtx, api.logClient, shard)
 				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tcs, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof, shard, api.logRanges)
 				if err != nil {
 					return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
@@ -461,19 +461,19 @@ func retrieveLogEntryByIndex(ctx context.Context, logIndex int) (models.LogEntry
 	log.ContextLogger(ctx).Infof("Retrieving log entry by index %d", logIndex)
 
 	tid, resolvedIndex := api.logRanges.ResolveVirtualIndex(logIndex)
-	tc := NewTrillianClientFromTreeID(ctx, tid)
+	tc := util.NewTrillianClient(ctx, api.logClient, tid)
 	log.ContextLogger(ctx).Debugf("Retrieving resolved index %v from TreeID %v", resolvedIndex, tid)
 
-	resp := tc.getLeafAndProofByIndex(resolvedIndex)
-	switch resp.status {
+	resp := tc.GetLeafAndProofByIndex(resolvedIndex)
+	switch resp.Status {
 	case codes.OK:
 	case codes.NotFound, codes.OutOfRange, codes.InvalidArgument:
 		return models.LogEntry{}, ErrNotFound
 	default:
-		return models.LogEntry{}, fmt.Errorf("grpc err: %w: %s", resp.err, trillianCommunicationError)
+		return models.LogEntry{}, fmt.Errorf("grpc err: %w: %s", resp.Err, trillianCommunicationError)
 	}
 
-	result := resp.getLeafAndProofResult
+	result := resp.GetLeafAndProofResult
 	leaf := result.Leaf
 	if leaf == nil {
 		return models.LogEntry{}, ErrNotFound
@@ -525,13 +525,13 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 		return models.LogEntry{}, types.ValidationError(err)
 	}
 
-	tc := NewTrillianClientFromTreeID(ctx, tid)
+	tc := util.NewTrillianClient(ctx, api.logClient, tid)
 	log.ContextLogger(ctx).Debugf("Attempting to retrieve UUID %v from TreeID %v", uuid, tid)
 
-	resp := tc.getLeafAndProofByHash(hashValue)
-	switch resp.status {
+	resp := tc.GetLeafAndProofByHash(hashValue)
+	switch resp.Status {
 	case codes.OK:
-		result := resp.getLeafAndProofResult
+		result := resp.GetLeafAndProofResult
 		leaf := result.Leaf
 		if leaf == nil {
 			return models.LogEntry{}, ErrNotFound
@@ -546,7 +546,7 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 	case codes.NotFound:
 		return models.LogEntry{}, ErrNotFound
 	default:
-		log.ContextLogger(ctx).Errorf("Unexpected response code while attempting to retrieve UUID %v from TreeID %v: %v", uuid, tid, resp.status)
+		log.ContextLogger(ctx).Errorf("Unexpected response code while attempting to retrieve UUID %v from TreeID %v: %v", uuid, tid, resp.Status)
 		return models.LogEntry{}, errors.New("unexpected error")
 	}
 }

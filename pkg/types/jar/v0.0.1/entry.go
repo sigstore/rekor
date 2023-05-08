@@ -45,6 +45,7 @@ import (
 	"github.com/go-openapi/swag"
 	jarutils "github.com/sassoftware/relic/lib/signjar"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -137,6 +138,20 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pkcs7.PublicKey
 	zipReader, err := zip.NewReader(bytes.NewReader(b.Bytes()), n)
 	if err != nil {
 		return nil, nil, types.ValidationError(err)
+	}
+
+	// Checking that uncompressed metadata files are within acceptable bounds before reading into memory.
+	// Checks match those performed by the relic library in the jarutils.Verify method below. For example,
+	// the META-INF/MANIFEST.MF is read into memory by the relic lib, but a META-INF/LICENSE file is not.
+	for _, f := range zipReader.File {
+		dir, name := path.Split(strings.ToUpper(f.Name))
+		if dir != "META-INF/" || name == "" || strings.LastIndex(name, ".") < 0 {
+			continue
+		}
+		if f.UncompressedSize64 > viper.GetUint64("max_jar_metadata_size") && viper.GetUint64("max_jar_metadata_size") > 0 {
+			return nil, nil, types.ValidationError(
+				fmt.Errorf("uncompressed jar metadata of size %d exceeds max allowed size %d", f.UncompressedSize64, viper.GetUint64("max_jar_metadata_size")))
+		}
 	}
 
 	// this ensures that the JAR is signed and the signature verifies, as

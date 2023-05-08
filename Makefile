@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: all test clean clean-gen lint gosec ko ko-local sign-container cross-cli gocovmerge
+.PHONY: all test clean clean-gen lint gosec ko ko-local cross-cli gocovmerge
 
 all: rekor-cli rekor-server
 
@@ -134,10 +134,6 @@ e2e:
 	go test -c -tags=e2e ./pkg/pki/x509
 	go test -c -tags=e2e ./pkg/pki/tuf
 	go test -c -tags=e2e ./pkg/types/rekord
-
-sign-container: ko
-	cosign sign --yes --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
-	cosign sign --yes --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-cli:$(GIT_HASH)
 
 .PHONY: sign-keyless-ci
 sign-keyless-ci: ko

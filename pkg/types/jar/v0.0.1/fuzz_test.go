@@ -22,7 +22,7 @@ import (
 	"sync"
 	"testing"
 
-	fuzz "github.com/AdaLogics/go-fuzz-headers"
+	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
 
 	jarutils "github.com/sassoftware/relic/lib/signjar"
 
