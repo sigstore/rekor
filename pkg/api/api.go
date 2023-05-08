@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/google/trillian"
-	radix "github.com/mediocregopher/radix/v4"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
@@ -34,6 +34,7 @@ import (
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/rekor/pkg/storage"
+	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -82,7 +83,7 @@ func NewAPI(treeID uint) (*API, error) {
 	tid := int64(treeID)
 	if tid == 0 {
 		log.Logger.Info("No tree ID specified, attempting to create a new tree")
-		t, err := createAndInitTree(ctx, logAdminClient, logClient)
+		t, err := trillianclient.CreateAndInitTree(ctx, logAdminClient, logClient)
 		if err != nil {
 			return nil, fmt.Errorf("create and init tree: %w", err)
 		}
@@ -122,12 +123,11 @@ func NewAPI(treeID uint) (*API, error) {
 
 var (
 	api           *API
-	redisClient   radix.Client
 	storageClient storage.AttestationStorage
+	redisClient   *redis.Client
 )
 
 func ConfigureAPI(treeID uint) {
-	cfg := radix.PoolConfig{}
 	var err error
 
 	api, err = NewAPI(treeID)
@@ -135,10 +135,11 @@ func ConfigureAPI(treeID uint) {
 		log.Logger.Panic(err)
 	}
 	if viper.GetBool("enable_retrieve_api") || slices.Contains(viper.GetStringSlice("enabled_api_endpoints"), "searchIndex") {
-		redisClient, err = cfg.New(context.Background(), "tcp", fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")))
-		if err != nil {
-			log.Logger.Panic("failure connecting to redis instance: ", err)
-		}
+		redisClient = redis.NewClient(&redis.Options{
+			Addr:    fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")),
+			Network: "tcp",
+			DB:      0, // default DB
+		})
 	}
 
 	if viper.GetBool("enable_attestation_storage") {
