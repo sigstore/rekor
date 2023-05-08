@@ -31,12 +31,13 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/rekor/pkg/util"
 )
 
 // GetLogInfoHandler returns the current size of the tree and the STH
 func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
-	tc := util.NewTrillianClient(params.HTTPRequest.Context(), api.logClient, api.logID)
+	tc := trillianclient.NewTrillianClient(params.HTTPRequest.Context(), api.logClient, api.logID)
 
 	// for each inactive shard, get the loginfo
 	var inactiveShards []*models.InactiveShardLogInfo
@@ -92,13 +93,13 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	if *params.FirstSize > params.LastSize {
 		return handleRekorAPIError(params, http.StatusBadRequest, nil, fmt.Sprintf(firstSizeLessThanLastSize, *params.FirstSize, params.LastSize))
 	}
-	tc := util.NewTrillianClient(params.HTTPRequest.Context(), api.logClient, api.logID)
+	tc := trillianclient.NewTrillianClient(params.HTTPRequest.Context(), api.logClient, api.logID)
 	if treeID := swag.StringValue(params.TreeID); treeID != "" {
 		id, err := strconv.Atoi(treeID)
 		if err != nil {
 			log.Logger.Infof("Unable to convert %s to string, skipping initializing client with Tree ID: %v", treeID, err)
 		} else {
-			tc = util.NewTrillianClient(params.HTTPRequest.Context(), api.logClient, int64(id))
+			tc = trillianclient.NewTrillianClient(params.HTTPRequest.Context(), api.logClient, int64(id))
 		}
 	}
 
@@ -136,7 +137,7 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 }
 
 func inactiveShardLogInfo(ctx context.Context, tid int64) (*models.InactiveShardLogInfo, error) {
-	tc := util.NewTrillianClient(ctx, api.logClient, tid)
+	tc := trillianclient.NewTrillianClient(ctx, api.logClient, tid)
 	resp := tc.GetLatest(0)
 	if resp.Status != codes.OK {
 		return nil, fmt.Errorf("resp code is %d", resp.Status)

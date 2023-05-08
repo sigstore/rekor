@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package app
 
 import (
 	"testing"
@@ -54,7 +54,7 @@ func TestSHA1(t *testing.T) {
 	}
 
 	for _, tr := range tests {
-		err := ValidateSHA1Value(tr.value)
+		err := validateSHA1Value(tr.value)
 		if tr.expectFail == (err == nil) {
 			t.Errorf("Failure validating '%s': %s", tr.value, err)
 		}
@@ -96,7 +96,7 @@ func TestSHA256(t *testing.T) {
 	}
 
 	for _, tr := range tests {
-		err := ValidateSHA256Value(tr.value)
+		err := validateSHA256Value(tr.value)
 		if tr.expectFail == (err == nil) {
 			t.Errorf("Failure validating '%s': %s", tr.value, err)
 		}
@@ -138,7 +138,7 @@ func TestSHA512(t *testing.T) {
 	}
 
 	for _, tr := range tests {
-		err := ValidateSHA512Value(tr.value)
+		err := validateSHA512Value(tr.value)
 		if tr.expectFail == (err == nil) {
 			t.Errorf("Failure validating '%s': %s", tr.value, err)
 		}

@@ -40,6 +40,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/sharding"
+	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/util"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -67,7 +68,7 @@ func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEnt
 }
 
 // logEntryFromLeaf creates a signed LogEntry struct from trillian structs
-func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc util.TrillianClient, leaf *trillian.LogLeaf,
+func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc trillianclient.TrillianClient, leaf *trillian.LogLeaf,
 	signedLogRoot *trillian.SignedLogRoot, proof *trillian.Proof, tid int64, ranges sharding.LogRanges) (models.LogEntry, error) {
 
 	log.ContextLogger(ctx).Debugf("log entry from leaf %d", leaf.GetLeafIndex())
@@ -186,7 +187,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalEntry)
 	}
 
-	tc := util.NewTrillianClient(ctx, api.logClient, api.logID)
+	tc := trillianclient.NewTrillianClient(ctx, api.logClient, api.logID)
 
 	resp := tc.AddLeaf(leaf)
 	// this represents overall GRPC response state (not the results of insertion into the log)
@@ -405,7 +406,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		for i, hash := range searchHashes {
 			var results map[int64]*trillian.GetEntryAndProofResponse
 			for _, shard := range api.logRanges.AllShards() {
-				tcs := util.NewTrillianClient(httpReqCtx, api.logClient, shard)
+				tcs := trillianclient.NewTrillianClient(httpReqCtx, api.logClient, shard)
 				resp := tcs.GetLeafAndProofByHash(hash)
 				switch resp.Status {
 				case codes.OK:
@@ -431,7 +432,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 				if leafResp == nil {
 					continue
 				}
-				tcs := util.NewTrillianClient(httpReqCtx, api.logClient, shard)
+				tcs := trillianclient.NewTrillianClient(httpReqCtx, api.logClient, shard)
 				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tcs, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof, shard, api.logRanges)
 				if err != nil {
 					return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
@@ -461,7 +462,7 @@ func retrieveLogEntryByIndex(ctx context.Context, logIndex int) (models.LogEntry
 	log.ContextLogger(ctx).Infof("Retrieving log entry by index %d", logIndex)
 
 	tid, resolvedIndex := api.logRanges.ResolveVirtualIndex(logIndex)
-	tc := util.NewTrillianClient(ctx, api.logClient, tid)
+	tc := trillianclient.NewTrillianClient(ctx, api.logClient, tid)
 	log.ContextLogger(ctx).Debugf("Retrieving resolved index %v from TreeID %v", resolvedIndex, tid)
 
 	resp := tc.GetLeafAndProofByIndex(resolvedIndex)
@@ -525,7 +526,7 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 		return models.LogEntry{}, types.ValidationError(err)
 	}
 
-	tc := util.NewTrillianClient(ctx, api.logClient, tid)
+	tc := trillianclient.NewTrillianClient(ctx, api.logClient, tid)
 	log.ContextLogger(ctx).Debugf("Attempting to retrieve UUID %v from TreeID %v", uuid, tid)
 
 	resp := tc.GetLeafAndProofByHash(hashValue)

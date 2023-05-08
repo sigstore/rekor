@@ -21,9 +21,11 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -43,14 +45,15 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/sigstore/rekor/pkg/client"
+	generatedClient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
+	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
 	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
-	"github.com/sigstore/rekor/pkg/util"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -207,6 +210,24 @@ func TestWatch(t *testing.T) {
 	fmt.Println(fi[0].Name())
 }
 
+func publicKeyFromRekorClient(ctx context.Context, c *generatedClient.Rekor) (*ecdsa.PublicKey, error) {
+	resp, err := c.Pubkey.GetPublicKey(&pubkey.GetPublicKeyParams{Context: ctx})
+	if err != nil {
+		return nil, err
+	}
+
+	// marshal the pubkey
+	pubKey, err := cryptoutils.UnmarshalPEMToPublicKey([]byte(resp.GetPayload()))
+	if err != nil {
+		return nil, err
+	}
+	ed, ok := pubKey.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, errors.New("public key retrieved from Rekor is not an ECDSA key")
+	}
+	return ed, nil
+}
+
 func TestSignedEntryTimestamp(t *testing.T) {
 	// Create a random payload and sign it
 	ctx := context.Background()
@@ -273,7 +294,7 @@ func TestSignedEntryTimestamp(t *testing.T) {
 		t.Fatal(err)
 	}
 	// get rekor's public key
-	rekorPubKey, err := util.PublicKey(ctx, rekorClient)
+	rekorPubKey, err := publicKeyFromRekorClient(ctx, rekorClient)
 	if err != nil {
 		t.Fatal(err)
 	}
