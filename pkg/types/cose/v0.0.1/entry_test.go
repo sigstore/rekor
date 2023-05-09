@@ -17,6 +17,7 @@ package cose
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -30,6 +31,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
@@ -270,12 +272,39 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				t.Errorf("V001Entry.Unmarshal() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
+			if !tt.wantErr {
+				if ok, err := v.Insertable(); !ok || err != nil {
+					t.Errorf("unexpected error calling Insertable on valid proposed entry: %v", err)
+				}
+			}
+
 			verifier, err := v.Verifier()
 			if !tt.wantVerifierErr {
 				if err != nil {
 					s, _ := verifier.CanonicalValue()
 					t.Errorf("%v: unexpected error for %v, got %v", tt.name, string(s), err)
 				}
+
+				if !tt.wantErr {
+					b, err := v.Canonicalize(context.Background())
+					if err != nil {
+						t.Errorf("unexpected error canonicalizing %v", tt.name)
+					}
+					if len(b) != 0 {
+						pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
+						if err != nil {
+							t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tt.name, err)
+						}
+						ei, err := types.UnmarshalEntry(pe)
+						if err != nil {
+							t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tt.name, err)
+						}
+						if ok, err := ei.Insertable(); ok || err == nil {
+							t.Errorf("entry created from canonicalized entry should not also be insertable")
+						}
+					}
+				}
+
 				pubV, _ := verifier.CanonicalValue()
 				if !reflect.DeepEqual(pubV, pub) && !reflect.DeepEqual(pubV, pemBytes) {
 					t.Errorf("verifier and public keys do not match: %v, %v", string(pubV), string(pub))

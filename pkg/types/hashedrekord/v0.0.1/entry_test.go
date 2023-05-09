@@ -284,6 +284,13 @@ func TestCrossFieldValidation(t *testing.T) {
 			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
 		}
 
+		if tc.expectUnmarshalSuccess {
+			ok, err := v.Insertable()
+			if !ok || err != nil {
+				t.Errorf("unexpected failure in testing insertable on valid entry: %v", err)
+			}
+		}
+
 		b, err := v.Canonicalize(context.TODO())
 		if (err == nil) != tc.expectCanonicalizeSuccess {
 			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
@@ -297,8 +304,14 @@ func TestCrossFieldValidation(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
 			}
-			if _, err := types.UnmarshalEntry(pe); err != nil {
+			ei, err := types.UnmarshalEntry(pe)
+			if err != nil {
 				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+			}
+			// hashedrekord is one of two types (rfc3161, hashedrekord) in that what is persisted is also insertable
+			ok, err := ei.Insertable()
+			if !ok || err != nil {
+				t.Errorf("unexpected failure in testing insertable on entry created from canonicalized content: %v", err)
 			}
 		}
 

@@ -177,68 +177,77 @@ func TestCrossFieldValidation(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if err := tc.entry.Validate(); (err == nil) != tc.expectUnmarshalSuccess {
-			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
-		}
-		// No need to continue here if we failed at unmarshal
-		if !tc.expectUnmarshalSuccess {
-			continue
-		}
-
-		v := &V001Entry{}
-		r := models.TUF{
-			APIVersion: swag.String(tc.entry.APIVersion()),
-			Spec:       tc.entry.TufObj,
-		}
-
-		unmarshalAndValidate := func() error {
-			if err := v.Unmarshal(&r); err != nil {
-				return err
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if err := tc.entry.Validate(); (err == nil) != tc.expectUnmarshalSuccess {
+				t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
 			}
-			return v.Validate()
-		}
-		if err := unmarshalAndValidate(); (err == nil) != tc.expectUnmarshalSuccess {
-			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
-		}
-
-		b, err := v.Canonicalize(context.TODO())
-		if (err == nil) != tc.expectCanonicalizeSuccess {
-			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
-		} else if err != nil {
-			if _, ok := err.(types.ValidationError); !ok {
-				t.Errorf("canonicalize returned an unexpected error that isn't of type types.ValidationError: %v", err)
+			// No need to continue here if we failed at unmarshal
+			if !tc.expectUnmarshalSuccess {
+				return
 			}
-		}
 
-		if b != nil {
-			pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
-			if err != nil {
-				t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
+			v := &V001Entry{}
+			r := models.TUF{
+				APIVersion: swag.String(tc.entry.APIVersion()),
+				Spec:       tc.entry.TufObj,
 			}
-			if _, err := types.UnmarshalEntry(pe); err != nil {
-				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
-			}
-		}
 
-		verifier, err := v.Verifier()
-		if tc.expectVerifierSuccess {
-			if err != nil {
-				t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
+			unmarshalAndValidate := func() error {
+				if err := v.Unmarshal(&r); err != nil {
+					return err
+				}
+				return v.Validate()
+			}
+			if err := unmarshalAndValidate(); (err == nil) != tc.expectUnmarshalSuccess {
+				t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
+			}
+
+			if tc.expectUnmarshalSuccess {
+				if ok, err := v.Insertable(); !ok || err != nil {
+					t.Errorf("unexpected error calling Insertable on valid proposed entry: %v", err)
+				}
+			}
+
+			b, err := v.Canonicalize(context.TODO())
+			if (err == nil) != tc.expectCanonicalizeSuccess {
+				t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
+			} else if err != nil {
+				if _, ok := err.(types.ValidationError); !ok {
+					t.Errorf("canonicalize returned an unexpected error that isn't of type types.ValidationError: %v", err)
+				}
+			}
+
+			if b != nil {
+				pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
+				if err != nil {
+					t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
+				}
+				if _, err := types.UnmarshalEntry(pe); err != nil {
+					t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+				}
+				// Insertable on canonicalized content is variable so we skip testing it here
+			}
+
+			verifier, err := v.Verifier()
+			if tc.expectVerifierSuccess {
+				if err != nil {
+					t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
+				} else {
+					pub, _ := verifier.CanonicalValue()
+					rootBytes := new(bytes.Buffer)
+					if err := json.Compact(rootBytes, keyBytes); err != nil {
+						t.Fatal(err)
+					}
+					if !reflect.DeepEqual(pub, rootBytes.Bytes()) {
+						t.Errorf("%v: verifier and public keys do not match: %v, %v", tc.caseDesc, string(pub), rootBytes)
+					}
+				}
 			} else {
-				pub, _ := verifier.CanonicalValue()
-				rootBytes := new(bytes.Buffer)
-				if err := json.Compact(rootBytes, keyBytes); err != nil {
-					t.Fatal(err)
-				}
-				if !reflect.DeepEqual(pub, rootBytes.Bytes()) {
-					t.Errorf("%v: verifier and public keys do not match: %v, %v", tc.caseDesc, string(pub), rootBytes)
+				if err == nil {
+					s, _ := verifier.CanonicalValue()
+					t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
 				}
 			}
-		} else {
-			if err == nil {
-				s, _ := verifier.CanonicalValue()
-				t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
-			}
-		}
+		})
 	}
 }

@@ -286,6 +286,13 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 				if err := v.Unmarshal(it); err != nil {
 					return err
 				}
+
+				if !tt.wantErr {
+					if ok, err := v.Insertable(); !ok || err != nil {
+						t.Errorf("unexpected error calling insertable on valid proposed entry: %v", err)
+					}
+				}
+
 				want := []string{}
 				for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
 					keyHash := sha256.Sum256(sig.PublicKey)
@@ -324,6 +331,9 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 				canonicalEntry, err := types.UnmarshalEntry(pe)
 				if err != nil {
 					t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tt.name, err)
+				}
+				if ok, err := canonicalEntry.Insertable(); ok || err == nil {
+					t.Errorf("unexpected success calling Insertable on entry created from canonicalized content")
 				}
 				canonicalV002 := canonicalEntry.(*V002Entry)
 				fmt.Printf("%v", canonicalV002.IntotoObj.Content)

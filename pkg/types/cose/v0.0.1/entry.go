@@ -365,14 +365,14 @@ func (v V001Entry) Insertable() (bool, error) {
 	if v.CoseObj.Data == nil {
 		return false, errors.New("missing COSE data property")
 	}
-	if len(v.CoseObj.Data.Aad) == 0 {
-		return false, errors.New("missing COSE AAD")
-	}
 	if len(v.envelopeHash) == 0 {
 		return false, errors.New("envelope hash has not been computed")
 	}
 	if v.keyObj == nil {
 		return false, errors.New("public key has not been parsed")
+	}
+	if v.sign1Msg == nil {
+		return false, errors.New("signature has not been validated")
 	}
 
 	return true, nil

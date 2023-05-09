@@ -277,6 +277,13 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				if err := v.Unmarshal(it); err != nil {
 					return err
 				}
+
+				if !tt.wantErr {
+					if ok, err := v.Insertable(); !ok || err != nil {
+						t.Errorf("unexpected error calling Insertable on valid proposed entry: %v", err)
+					}
+				}
+
 				if v.IntotoObj.Content.Hash == nil || v.IntotoObj.Content.Hash.Algorithm != tt.it.Content.Hash.Algorithm || v.IntotoObj.Content.Hash.Value != tt.it.Content.Hash.Value {
 					return errors.New("missing envelope hash in validated object")
 				}
@@ -310,6 +317,11 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				if err != nil {
 					t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tt.name, err)
 				}
+
+				if ok, err := canonicalEntry.Insertable(); ok || err == nil {
+					t.Errorf("unexpected success calling Insertable on entry created from canonicalized content")
+				}
+
 				canonicalV001 := canonicalEntry.(*V001Entry)
 				fmt.Printf("%v", canonicalV001.IntotoObj.Content)
 				if *canonicalV001.IntotoObj.Content.Hash.Value != *tt.it.Content.Hash.Value {

@@ -167,6 +167,12 @@ func TestCrossFieldValidation(t *testing.T) {
 			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
 		}
 
+		if tc.expectUnmarshalSuccess {
+			if ok, err := v.Insertable(); !ok || err != nil {
+				t.Errorf("unexpected error calling Insertable on valid proposed entry: %v", err)
+			}
+		}
+
 		b, err := v.Canonicalize(context.TODO())
 		if (err == nil) != tc.expectCanonicalizeSuccess {
 			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
@@ -181,8 +187,12 @@ func TestCrossFieldValidation(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
 			}
-			if _, err := types.UnmarshalEntry(pe); err != nil {
+			ei, err := types.UnmarshalEntry(pe)
+			if err != nil {
 				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+			}
+			if ok, err := ei.Insertable(); ok || err == nil {
+				t.Errorf("unexpected success calling Insertable on entry created from canonicalized content")
 			}
 		}
 
