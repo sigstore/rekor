@@ -76,6 +76,10 @@ func NewCheckpointPublisher(ctx context.Context,
 }
 
 // StartPublisher creates a long-running task that publishes the latest checkpoint every X minutes
+// Writing to Redis is best effort. Failure will be detected either through metrics or by witnesses
+// or Verifiers monitoring for fresh checkpoints. Failure can occur after a lock is obtained but
+// before publishing the latest checkpoint. If this occurs due to a sporadic failure, this simply
+// means that a witness will not see a fresh checkpoint for an additional period.
 func (c *CheckpointPublisher) StartPublisher() {
 	tc := trillianclient.NewTrillianClient(context.Background(), c.logClient, c.treeID)
 	sTreeID := strconv.FormatInt(c.treeID, 10)
