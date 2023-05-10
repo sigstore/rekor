@@ -176,8 +176,7 @@ func (c *CheckpointPublisher) publish(tc *trillianclient.TrillianClient, sTreeID
 
 	// return value ignored, which is whether or not the entry was set
 	// no error is thrown if the key already exists
-	_, err = c.redisClient.Set(latestCtx, latestKey, hexCP, 0).Result()
-	if err != nil {
+	if _, err = c.redisClient.Set(latestCtx, latestKey, hexCP, 0).Result(); err != nil {
 		c.reqCounter.With(
 			map[string]string{
 				"shard": sTreeID,

@@ -53,8 +53,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 		inactiveShards = append(inactiveShards, is)
 	}
 
-	stable := swag.BoolValue(params.Stable)
-	if stable {
+	if swag.BoolValue(params.Stable) {
 		// key is treeID/latest
 		key := fmt.Sprintf("%d/latest", api.logRanges.ActiveTreeID())
 		redisResult, err := redisClient.Get(params.HTTPRequest.Context(), key).Result()
