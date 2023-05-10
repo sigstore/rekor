@@ -61,6 +61,8 @@ type API struct {
 	pubkey     string // PEM encoded public key
 	pubkeyHash string // SHA256 hash of DER-encoded public key
 	signer     signature.Signer
+	// stops checkpoint publishing
+	checkpointPublishCancel context.CancelFunc
 }
 
 func NewAPI(treeID uint) (*API, error) {
@@ -154,6 +156,14 @@ func ConfigureAPI(treeID uint) {
 	if viper.GetBool("enable_stable_checkpoint") {
 		checkpointPublisher := witness.NewCheckpointPublisher(context.Background(), api.logClient, api.logRanges.ActiveTreeID(),
 			viper.GetString("rekor_server.hostname"), api.signer, redisClient, viper.GetUint("publish_frequency"), CheckpointPublishCount)
-		checkpointPublisher.StartPublisher()
+
+		// create context to cancel goroutine on server shutdown
+		ctx, cancel := context.WithCancel(context.Background())
+		api.checkpointPublishCancel = cancel
+		checkpointPublisher.StartPublisher(ctx)
 	}
+}
+
+func StopAPI() {
+	api.checkpointPublishCancel()
 }

@@ -80,7 +80,7 @@ func NewCheckpointPublisher(ctx context.Context,
 // or Verifiers monitoring for fresh checkpoints. Failure can occur after a lock is obtained but
 // before publishing the latest checkpoint. If this occurs due to a sporadic failure, this simply
 // means that a witness will not see a fresh checkpoint for an additional period.
-func (c *CheckpointPublisher) StartPublisher() {
+func (c *CheckpointPublisher) StartPublisher(ctx context.Context) {
 	tc := trillianclient.NewTrillianClient(context.Background(), c.logClient, c.treeID)
 	sTreeID := strconv.FormatInt(c.treeID, 10)
 
@@ -90,8 +90,12 @@ func (c *CheckpointPublisher) StartPublisher() {
 	ticker := time.NewTicker(time.Duration(c.checkpointFreq) * time.Minute)
 	go func() {
 		for {
-			<-ticker.C
-			c.publish(&tc, sTreeID)
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				c.publish(&tc, sTreeID)
+			}
 		}
 	}()
 }

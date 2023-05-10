@@ -67,7 +67,10 @@ func TestPublishCheckpoint(t *testing.T) {
 	mock.Regexp().ExpectSet(fmt.Sprintf("%d/latest", treeID), "[0-9a-fA-F]+", 0).SetVal("OK")
 
 	publisher := NewCheckpointPublisher(context.Background(), mockTrillianLogClient, int64(treeID), hostname, signer, redisClient, uint(freq), counter)
-	publisher.StartPublisher()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	publisher.StartPublisher(ctx)
+	defer cancel()
 
 	// wait for initial publish
 	time.Sleep(1 * time.Second)
@@ -119,12 +122,16 @@ func TestPublishCheckpointMultiple(t *testing.T) {
 	mock.Regexp().ExpectSet(fmt.Sprintf("%d/latest", treeID), "[0-9a-fA-F]+", 0).SetVal("OK")
 
 	publisher := NewCheckpointPublisher(context.Background(), mockTrillianLogClient, int64(treeID), hostname, signer, redisClient, uint(freq), counter)
-	publisher.StartPublisher()
+	ctx, cancel := context.WithCancel(context.Background())
+	publisher.StartPublisher(ctx)
+	defer cancel()
 
 	redisClientEx, mockEx := redismock.NewClientMock()
 	mockEx.Regexp().ExpectSetNX(fmt.Sprintf("%d/%d", treeID, ts), "[0-9a-fA-F]+", 0).SetVal(false)
 	publisherEx := NewCheckpointPublisher(context.Background(), mockTrillianLogClient, int64(treeID), hostname, signer, redisClientEx, uint(freq), counter)
-	publisherEx.StartPublisher()
+	ctxEx, cancelEx := context.WithCancel(context.Background())
+	publisherEx.StartPublisher(ctxEx)
+	defer cancelEx()
 
 	// wait for initial publish
 	time.Sleep(1 * time.Second)
@@ -169,7 +176,9 @@ func TestPublishCheckpointTrillianError(t *testing.T) {
 	redisClient, _ := redismock.NewClientMock()
 
 	publisher := NewCheckpointPublisher(context.Background(), mockTrillianLogClient, int64(treeID), hostname, signer, redisClient, uint(freq), counter)
-	publisher.StartPublisher()
+	ctx, cancel := context.WithCancel(context.Background())
+	publisher.StartPublisher(ctx)
+	defer cancel()
 
 	// wait for initial publish
 	time.Sleep(1 * time.Second)
@@ -204,7 +213,9 @@ func TestPublishCheckpointInvalidTrillianResponse(t *testing.T) {
 	redisClient, _ := redismock.NewClientMock()
 
 	publisher := NewCheckpointPublisher(context.Background(), mockTrillianLogClient, int64(treeID), hostname, signer, redisClient, uint(freq), counter)
-	publisher.StartPublisher()
+	ctx, cancel := context.WithCancel(context.Background())
+	publisher.StartPublisher(ctx)
+	defer cancel()
 
 	// wait for initial publish
 	time.Sleep(1 * time.Second)
@@ -246,7 +257,9 @@ func TestPublishCheckpointRedisFailure(t *testing.T) {
 	mock.Regexp().ExpectSetNX(".+", "[0-9a-fA-F]+", 0).SetErr(errors.New("redis error"))
 
 	publisher := NewCheckpointPublisher(context.Background(), mockTrillianLogClient, int64(treeID), hostname, signer, redisClient, uint(freq), counter)
-	publisher.StartPublisher()
+	ctx, cancel := context.WithCancel(context.Background())
+	publisher.StartPublisher(ctx)
+	defer cancel()
 
 	// wait for initial publish
 	time.Sleep(1 * time.Second)
@@ -289,7 +302,9 @@ func TestPublishCheckpointRedisLatestFailure(t *testing.T) {
 	mock.Regexp().ExpectSet(".*", "[0-9a-fA-F]+", 0).SetErr(errors.New("error"))
 
 	publisher := NewCheckpointPublisher(context.Background(), mockTrillianLogClient, int64(treeID), hostname, signer, redisClient, uint(freq), counter)
-	publisher.StartPublisher()
+	ctx, cancel := context.WithCancel(context.Background())
+	publisher.StartPublisher(ctx)
+	defer cancel()
 
 	// wait for initial publish
 	time.Sleep(1 * time.Second)

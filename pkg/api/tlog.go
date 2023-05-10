@@ -53,7 +53,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 		inactiveShards = append(inactiveShards, is)
 	}
 
-	if swag.BoolValue(params.Stable) {
+	if swag.BoolValue(params.Stable) && redisClient != nil {
 		// key is treeID/latest
 		key := fmt.Sprintf("%d/latest", api.logRanges.ActiveTreeID())
 		redisResult, err := redisClient.Get(params.HTTPRequest.Context(), key).Result()
@@ -61,6 +61,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 			return handleRekorAPIError(params, http.StatusInternalServerError,
 				fmt.Errorf("error getting checkpoint from redis: %w", err), "error getting checkpoint from redis")
 		}
+		// should not occur, a checkpoint should always be present
 		if redisResult == "" {
 			return handleRekorAPIError(params, http.StatusInternalServerError,
 				fmt.Errorf("no checkpoint found in redis: %w", err), "no checkpoint found in redis")
