@@ -272,5 +272,11 @@ func (v V001Entry) Insertable() (bool, error) {
 	if v.HashedRekordObj.Data.Hash == nil {
 		return false, errors.New("missing hash property")
 	}
+	if v.HashedRekordObj.Data.Hash.Algorithm == nil {
+		return false, errors.New("missing hash algorithm")
+	}
+	if v.HashedRekordObj.Data.Hash.Value == nil {
+		return false, errors.New("missing hash value")
+	}
 	return true, nil
 }

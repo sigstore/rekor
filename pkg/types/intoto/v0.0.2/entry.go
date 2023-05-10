@@ -488,5 +488,9 @@ func (v V002Entry) Insertable() (bool, error) {
 		}
 	}
 
+	if v.env.Payload == "" || v.env.PayloadType == "" || len(v.env.Signatures) == 0 {
+		return false, errors.New("invalid DSSE envelope")
+	}
+
 	return true, nil
 }
