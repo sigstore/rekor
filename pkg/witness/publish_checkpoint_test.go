@@ -33,6 +33,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/sigstore/rekor/pkg/witness/mockclient"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"go.uber.org/goleak"
 )
 
 func TestPublishCheckpoint(t *testing.T) {
@@ -316,4 +317,8 @@ func TestPublishCheckpointRedisLatestFailure(t *testing.T) {
 	if res := testutil.ToFloat64(counter.WithLabelValues(fmt.Sprint(treeID), fmt.Sprint(RedisLatestFailure))); res != 1.0 {
 		t.Fatalf("unexpected number of metrics: %2f", res)
 	}
+}
+
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
 }
