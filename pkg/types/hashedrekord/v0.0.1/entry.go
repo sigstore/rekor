@@ -104,7 +104,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return err
 }
 
-func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	sigObj, keyObj, err := v.validate()
 	if err != nil {
 		return nil, types.ValidationError(err)
@@ -189,7 +189,7 @@ func (v *V001Entry) validate() (pki.Signature, pki.PublicKey, error) {
 	return sigObj, keyObj, nil
 }
 
-func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	returnVal := models.Hashedrekord{}
 	re := V001Entry{}
 

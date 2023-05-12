@@ -36,7 +36,7 @@ func GetPublicKeyHandler(params pubkey.GetPublicKeyParams) middleware.Responder 
 
 // handlers for APIs that may be disabled in a given instance
 
-func GetPublicKeyNotImplementedHandler(params pubkey.GetPublicKeyParams) middleware.Responder {
+func GetPublicKeyNotImplementedHandler(_ pubkey.GetPublicKeyParams) middleware.Responder {
 	err := &models.Error{
 		Code:    http.StatusNotImplemented,
 		Message: "Get Public Key API not enabled in this Rekor instance",

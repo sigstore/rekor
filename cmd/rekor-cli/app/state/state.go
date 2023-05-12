@@ -47,10 +47,7 @@ func Dump(key string, sth *util.SignedCheckpoint) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(statePath, b, 0600); err != nil {
-		return err
-	}
-	return nil
+	return os.WriteFile(statePath, b, 0600)
 }
 
 func loadStateFile() persistedState {

@@ -139,7 +139,7 @@ func setArtifactFields(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties) 
 }
 
 // creates a file on disk and returns the url of it.
-func createAbsFile(ff *fuzz.ConsumeFuzzer, fileName string, fileContents []byte) (*url.URL, error) {
+func createAbsFile(_ *fuzz.ConsumeFuzzer, fileName string, fileContents []byte) (*url.URL, error) {
 	file, err := os.Create(fileName)
 	if err != nil {
 		return nil, err

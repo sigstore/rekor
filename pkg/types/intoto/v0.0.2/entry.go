@@ -211,7 +211,7 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 	return nil
 }
 
-func (v *V002Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+func (v *V002Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	if err := v.IntotoObj.Validate(strfmt.Default); err != nil {
 		return nil, err
 	}
