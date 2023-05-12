@@ -18,7 +18,7 @@ require (
 	github.com/go-playground/validator/v10 v10.13.0
 	github.com/google/go-cmp v0.5.9
 	github.com/google/rpmpack v0.0.0-20210518075352-dc539ef4f2ea
-	github.com/google/trillian v1.5.1
+	github.com/google/trillian v1.5.2
 	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b
 	github.com/mitchellh/go-homedir v1.1.0
@@ -39,9 +39,9 @@ require (
 	go.uber.org/goleak v1.2.1
 	go.uber.org/zap v1.24.0
 	gocloud.dev v0.29.0
-	golang.org/x/crypto v0.8.0
+	golang.org/x/crypto v0.9.0
 	golang.org/x/mod v0.10.0
-	golang.org/x/net v0.9.0
+	golang.org/x/net v0.10.0
 	golang.org/x/sync v0.2.0
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 	google.golang.org/grpc v1.55.0
@@ -57,7 +57,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.2
 	github.com/redis/go-redis/v9 v9.0.4
-	golang.org/x/exp v0.0.0-20230124195608-d38c7dcee874
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 )
 
 require (
@@ -71,14 +71,14 @@ require (
 	github.com/jellydator/ttlcache/v3 v3.0.1 // indirect
 	go.opentelemetry.io/otel v1.14.0 // indirect
 	go.opentelemetry.io/otel/trace v1.14.0 // indirect
-	k8s.io/klog/v2 v2.80.1 // indirect
+	k8s.io/klog/v2 v2.100.1 // indirect
 )
 
 require (
 	cloud.google.com/go v0.110.0 // indirect
 	cloud.google.com/go/compute v1.19.0 // indirect
 	cloud.google.com/go/iam v0.13.0 // indirect
-	cloud.google.com/go/kms v1.10.1 // indirect
+	cloud.google.com/go/kms v1.10.2 // indirect
 	cloud.google.com/go/storage v1.29.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cavaliercoder/badio v0.0.0-20160213150051-ce5280129e9e // indirect
@@ -115,7 +115,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.6 // indirect
-	github.com/prometheus/client_model v0.3.0 // indirect
+	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
@@ -129,7 +129,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.step.sm/crypto v0.29.3
+	go.step.sm/crypto v0.30.0
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
