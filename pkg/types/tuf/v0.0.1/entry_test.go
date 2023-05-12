@@ -251,3 +251,101 @@ func TestCrossFieldValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V001Entry
+		expectSuccess bool
+	}
+
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V001Entry{
+				TufObj: models.TUFV001Schema{
+					Metadata: &models.TUFV001SchemaMetadata{
+						Content: struct{}{},
+					},
+					Root: &models.TUFV001SchemaRoot{
+						Content: struct{}{},
+					},
+				},
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "missing root content",
+			entry: V001Entry{
+				TufObj: models.TUFV001Schema{
+					Metadata: &models.TUFV001SchemaMetadata{
+						Content: struct{}{},
+					},
+					Root: &models.TUFV001SchemaRoot{
+						//Content: struct{}{},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing root obj",
+			entry: V001Entry{
+				TufObj: models.TUFV001Schema{
+					Metadata: &models.TUFV001SchemaMetadata{
+						Content: struct{}{},
+					},
+					/*
+						Root: &models.TUFV001SchemaRoot{
+							Content: struct{}{},
+						},
+					*/
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing metadata content",
+			entry: V001Entry{
+				TufObj: models.TUFV001Schema{
+					Metadata: &models.TUFV001SchemaMetadata{
+						//Content: struct{}{},
+					},
+					Root: &models.TUFV001SchemaRoot{
+						Content: struct{}{},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing metadata content",
+			entry: V001Entry{
+				TufObj: models.TUFV001Schema{
+					/*
+						Metadata: &models.TUFV001SchemaMetadata{
+							Content: struct{}{},
+						},
+					*/
+					Root: &models.TUFV001SchemaRoot{
+						Content: struct{}{},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "empty obj",
+			entry:         V001Entry{},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
+			}
+		})
+	}
+}

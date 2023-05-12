@@ -255,3 +255,93 @@ func p(b []byte) *strfmt.Base64 {
 	b64 := strfmt.Base64(b)
 	return &b64
 }
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V001Entry
+		expectSuccess bool
+	}
+
+	tsr := strfmt.Base64([]byte("tsr"))
+
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V001Entry{
+				Rfc3161Obj: models.Rfc3161V001Schema{
+					Tsr: &models.Rfc3161V001SchemaTsr{
+						Content: &tsr,
+					},
+				},
+				tsrContent: &tsr,
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "unparsed tsr",
+			entry: V001Entry{
+				Rfc3161Obj: models.Rfc3161V001Schema{
+					Tsr: &models.Rfc3161V001SchemaTsr{
+						Content: &tsr,
+					},
+				},
+				//tsrContent: &tsr,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing tsr content",
+			entry: V001Entry{
+				Rfc3161Obj: models.Rfc3161V001Schema{
+					Tsr: &models.Rfc3161V001SchemaTsr{
+						//Content: &tsr,
+					},
+				},
+				tsrContent: &tsr,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing tsr obj",
+			entry: V001Entry{
+				Rfc3161Obj: models.Rfc3161V001Schema{
+					/*
+						Tsr: &models.Rfc3161V001SchemaTsr{
+							Content: &tsr,
+						},
+					*/
+				},
+				tsrContent: &tsr,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing Rfc3161 obj",
+			entry: V001Entry{
+				/*
+					Rfc3161Obj: models.Rfc3161V001Schema{
+						Tsr: &models.Rfc3161V001SchemaTsr{
+							Content: &tsr,
+						},
+					},
+				*/
+				tsrContent: &tsr,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "empty obj",
+			entry:         V001Entry{},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
+			}
+		})
+	}
+}

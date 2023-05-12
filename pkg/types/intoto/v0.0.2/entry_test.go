@@ -499,3 +499,225 @@ func TestV002Entry_IndexKeys(t *testing.T) {
 		})
 	}
 }
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V002Entry
+		expectSuccess bool
+	}
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	env := envelope(t, key, []byte("payload"))
+
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						Envelope: &models.IntotoV002SchemaContentEnvelope{
+							Payload:     strfmt.Base64("payload"),
+							PayloadType: swag.String("payloadType"),
+							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+								{
+									PublicKey: strfmt.Base64([]byte("key")),
+									Sig:       strfmt.Base64([]byte("sig")),
+								},
+							},
+						},
+					},
+				},
+				env: *env,
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "valid entry but hasn't been parsed",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						Envelope: &models.IntotoV002SchemaContentEnvelope{
+							Payload:     strfmt.Base64("payload"),
+							PayloadType: swag.String("payloadType"),
+							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+								{
+									PublicKey: strfmt.Base64([]byte("key")),
+									Sig:       strfmt.Base64([]byte("sig")),
+								},
+							},
+						},
+					},
+				},
+				env: dsse.Envelope{},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing sig",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						Envelope: &models.IntotoV002SchemaContentEnvelope{
+							Payload:     strfmt.Base64("payload"),
+							PayloadType: swag.String("payloadType"),
+							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+								{
+									PublicKey: strfmt.Base64([]byte("key")),
+									//Sig:       strfmt.Base64([]byte("sig")),
+								},
+							},
+						},
+					},
+				},
+				env: *env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing key",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						Envelope: &models.IntotoV002SchemaContentEnvelope{
+							Payload:     strfmt.Base64("payload"),
+							PayloadType: swag.String("payloadType"),
+							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+								{
+									//PublicKey: strfmt.Base64([]byte("key")),
+									Sig: strfmt.Base64([]byte("sig")),
+								},
+							},
+						},
+					},
+				},
+				env: *env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "empty signatures",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						Envelope: &models.IntotoV002SchemaContentEnvelope{
+							Payload:     strfmt.Base64("payload"),
+							PayloadType: swag.String("payloadType"),
+							Signatures:  []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{},
+							/*
+								Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+									{
+										PublicKey: strfmt.Base64([]byte("key")),
+										Sig:       strfmt.Base64([]byte("sig")),
+									},
+								},
+							*/
+						},
+					},
+				},
+				env: *env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing payloadType",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						Envelope: &models.IntotoV002SchemaContentEnvelope{
+							Payload: strfmt.Base64("payload"),
+							//PayloadType: swag.String("payloadType"),
+							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+								{
+									PublicKey: strfmt.Base64([]byte("key")),
+									Sig:       strfmt.Base64([]byte("sig")),
+								},
+							},
+						},
+					},
+				},
+				env: *env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing payload",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						Envelope: &models.IntotoV002SchemaContentEnvelope{
+							//Payload:     strfmt.Base64("payload"),
+							PayloadType: swag.String("payloadType"),
+							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+								{
+									PublicKey: strfmt.Base64([]byte("key")),
+									Sig:       strfmt.Base64([]byte("sig")),
+								},
+							},
+						},
+					},
+				},
+				env: *env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing envelope",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						/*
+							Envelope: &models.IntotoV002SchemaContentEnvelope{
+								Payload:     strfmt.Base64("payload"),
+								PayloadType: swag.String("payloadType"),
+								Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+									{
+										PublicKey: strfmt.Base64([]byte("key")),
+										Sig:       strfmt.Base64([]byte("sig")),
+									},
+								},
+							},
+						*/
+					},
+				},
+				env: *env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing content",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					/*
+						Content: &models.IntotoV002SchemaContent{
+							Envelope: &models.IntotoV002SchemaContentEnvelope{
+								Payload:     strfmt.Base64("payload"),
+								PayloadType: swag.String("payloadType"),
+								Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+									{
+										PublicKey: strfmt.Base64([]byte("key")),
+										Sig:       strfmt.Base64([]byte("sig")),
+									},
+								},
+							},
+						},
+					*/
+				},
+				env: *env,
+			},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
+			}
+		})
+	}
+}

@@ -365,8 +365,11 @@ func (v V001Entry) Insertable() (bool, error) {
 	if len(v.AlpineModel.Package.Content) == 0 {
 		return false, fmt.Errorf("missing package content")
 	}
-	if v.AlpineModel.PublicKey == nil || len(*v.AlpineModel.PublicKey.Content) == 0 {
+	if v.AlpineModel.PublicKey == nil {
 		return false, fmt.Errorf("missing public key")
+	}
+	if v.AlpineModel.PublicKey.Content == nil || len(*v.AlpineModel.PublicKey.Content) == 0 {
+		return false, fmt.Errorf("missing public key content")
 	}
 	return true, nil
 }

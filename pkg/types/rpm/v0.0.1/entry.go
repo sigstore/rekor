@@ -382,7 +382,7 @@ func (v V001Entry) Insertable() (bool, error) {
 	if v.RPMModel.PublicKey == nil {
 		return false, errors.New("missing publicKey property")
 	}
-	if len(*v.RPMModel.PublicKey.Content) == 0 {
+	if v.RPMModel.PublicKey.Content == nil || len(*v.RPMModel.PublicKey.Content) == 0 {
 		return false, errors.New("missing publicKey content")
 	}
 

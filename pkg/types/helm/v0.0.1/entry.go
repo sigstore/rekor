@@ -360,7 +360,7 @@ func (v V001Entry) Insertable() (bool, error) {
 	if v.HelmObj.PublicKey == nil {
 		return false, errors.New("missing public key property")
 	}
-	if len(*v.HelmObj.PublicKey.Content) == 0 {
+	if v.HelmObj.PublicKey.Content == nil || len(*v.HelmObj.PublicKey.Content) == 0 {
 		return false, errors.New("missing public key content")
 	}
 

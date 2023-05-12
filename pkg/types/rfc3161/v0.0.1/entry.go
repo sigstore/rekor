@@ -216,8 +216,12 @@ func (v V001Entry) Insertable() (bool, error) {
 		return false, errors.New("missing tsr property")
 	}
 
-	if len(*v.Rfc3161Obj.Tsr.Content) == 0 {
+	if v.Rfc3161Obj.Tsr.Content == nil || len(*v.Rfc3161Obj.Tsr.Content) == 0 {
 		return false, errors.New("missing tsr content")
+	}
+
+	if v.tsrContent == nil || len(*v.tsrContent) == 0 {
+		return false, errors.New("timestamp response has not been parsed")
 	}
 
 	return true, nil

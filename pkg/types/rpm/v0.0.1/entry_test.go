@@ -215,3 +215,103 @@ func TestCrossFieldValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V001Entry
+		expectSuccess bool
+	}
+
+	pub := strfmt.Base64([]byte("pub"))
+
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V001Entry{
+				RPMModel: models.RpmV001Schema{
+					Package: &models.RpmV001SchemaPackage{
+						Content: strfmt.Base64([]byte("content")),
+					},
+					PublicKey: &models.RpmV001SchemaPublicKey{
+						Content: &pub,
+					},
+				},
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "missing public key content",
+			entry: V001Entry{
+				RPMModel: models.RpmV001Schema{
+					Package: &models.RpmV001SchemaPackage{
+						Content: strfmt.Base64([]byte("content")),
+					},
+					PublicKey: &models.RpmV001SchemaPublicKey{
+						//Content: &pub,
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing public key obj",
+			entry: V001Entry{
+				RPMModel: models.RpmV001Schema{
+					Package: &models.RpmV001SchemaPackage{
+						Content: strfmt.Base64([]byte("content")),
+					},
+					/*
+						PublicKey: &models.RpmV001SchemaPublicKey{
+							Content: &pub,
+						},
+					*/
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing package content",
+			entry: V001Entry{
+				RPMModel: models.RpmV001Schema{
+					Package: &models.RpmV001SchemaPackage{
+						//Content: strfmt.Base64([]byte("content")),
+					},
+					PublicKey: &models.RpmV001SchemaPublicKey{
+						Content: &pub,
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing package obj",
+			entry: V001Entry{
+				RPMModel: models.RpmV001Schema{
+					/*
+						Package: &models.RpmV001SchemaPackage{
+							Content: strfmt.Base64([]byte("content")),
+						},
+					*/
+					PublicKey: &models.RpmV001SchemaPublicKey{
+						Content: &pub,
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "empty obj",
+			entry:         V001Entry{},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
+			}
+		})
+	}
+}

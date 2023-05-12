@@ -514,6 +514,24 @@ func TestInsertable(t *testing.T) {
 					},
 					Signature: &models.HashedrekordV001SchemaSignature{
 						Content:   strfmt.Base64("sig"),
+						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing key content",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Data: &models.HashedrekordV001SchemaData{
+						Hash: &models.HashedrekordV001SchemaDataHash{
+							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     swag.String("deadbeef"),
+						},
+					},
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content:   strfmt.Base64("sig"),
 						PublicKey: nil,
 					},
 				},

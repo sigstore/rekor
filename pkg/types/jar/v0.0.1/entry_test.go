@@ -192,3 +192,56 @@ func TestJarMetadataSize(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 }
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V001Entry
+		expectSuccess bool
+	}
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V001Entry{
+				JARModel: models.JarV001Schema{
+					Archive: &models.JarV001SchemaArchive{
+						Content: strfmt.Base64([]byte("content")),
+					},
+				},
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "missing archive content",
+			entry: V001Entry{
+				JARModel: models.JarV001Schema{
+					Archive: &models.JarV001SchemaArchive{
+						//Content: strfmt.Base64([]byte("content")),
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing archive obj",
+			entry: V001Entry{
+				JARModel: models.JarV001Schema{
+					/*
+						Archive: &models.JarV001SchemaArchive{
+							Content: strfmt.Base64([]byte("content")),
+						},
+					*/
+				},
+			},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
+			}
+		})
+	}
+}

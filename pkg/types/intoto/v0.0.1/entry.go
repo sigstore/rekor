@@ -365,7 +365,7 @@ func (v V001Entry) Insertable() (bool, error) {
 		return false, errors.New("missing envelope content")
 	}
 
-	if len(*v.IntotoObj.PublicKey) == 0 {
+	if v.IntotoObj.PublicKey == nil || len(*v.IntotoObj.PublicKey) == 0 {
 		return false, errors.New("missing publicKey content")
 	}
 

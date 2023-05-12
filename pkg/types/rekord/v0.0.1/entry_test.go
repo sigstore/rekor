@@ -296,3 +296,194 @@ func TestUnspecifiedPKIFormat(t *testing.T) {
 		t.Errorf("invalid pki format should not create a valid entry")
 	}
 }
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V001Entry
+		expectSuccess bool
+	}
+
+	sig := strfmt.Base64([]byte("sig"))
+	pub := strfmt.Base64([]byte("pub"))
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V001Entry{
+				RekordObj: models.RekordV001Schema{
+					Data: &models.RekordV001SchemaData{
+						Content: strfmt.Base64([]byte("content")),
+					},
+					Signature: &models.RekordV001SchemaSignature{
+						Content: &sig,
+						Format:  swag.String("format"),
+						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+							Content: &pub,
+						},
+					},
+				},
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "missing public key content",
+			entry: V001Entry{
+				RekordObj: models.RekordV001Schema{
+					Data: &models.RekordV001SchemaData{
+						Content: strfmt.Base64([]byte("content")),
+					},
+					Signature: &models.RekordV001SchemaSignature{
+						Content:   &sig,
+						Format:    swag.String("format"),
+						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+							//Content: &pub,
+						},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing public key obj",
+			entry: V001Entry{
+				RekordObj: models.RekordV001Schema{
+					Data: &models.RekordV001SchemaData{
+						Content: strfmt.Base64([]byte("content")),
+					},
+					Signature: &models.RekordV001SchemaSignature{
+						Content: &sig,
+						Format:  swag.String("format"),
+						/*
+							PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+								Content: &pub,
+							},
+						*/
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing format string",
+			entry: V001Entry{
+				RekordObj: models.RekordV001Schema{
+					Data: &models.RekordV001SchemaData{
+						Content: strfmt.Base64([]byte("content")),
+					},
+					Signature: &models.RekordV001SchemaSignature{
+						Content: &sig,
+						//Format:  swag.String("format"),
+						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+							Content: &pub,
+						},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing signature content",
+			entry: V001Entry{
+				RekordObj: models.RekordV001Schema{
+					Data: &models.RekordV001SchemaData{
+						Content: strfmt.Base64([]byte("content")),
+					},
+					Signature: &models.RekordV001SchemaSignature{
+						//Content: &sig,
+						Format: swag.String("format"),
+						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+							Content: &pub,
+						},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing signature obj",
+			entry: V001Entry{
+				RekordObj: models.RekordV001Schema{
+					Data: &models.RekordV001SchemaData{
+						Content: strfmt.Base64([]byte("content")),
+					},
+					/*
+						Signature: &models.RekordV001SchemaSignature{
+							Content: &sig,
+							Format:  swag.String("format"),
+							PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+								Content: &pub,
+							},
+						},
+					*/
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing data content",
+			entry: V001Entry{
+				RekordObj: models.RekordV001Schema{
+					Data: &models.RekordV001SchemaData{
+						//Content: strfmt.Base64([]byte("content")),
+					},
+					Signature: &models.RekordV001SchemaSignature{
+						Content: &sig,
+						Format:  swag.String("format"),
+						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+							Content: &pub,
+						},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing data obj",
+			entry: V001Entry{
+				RekordObj: models.RekordV001Schema{
+					/*
+						Data: &models.RekordV001SchemaData{
+							Content: strfmt.Base64([]byte("content")),
+						},
+					*/
+					Signature: &models.RekordV001SchemaSignature{
+						Content: &sig,
+						Format:  swag.String("format"),
+						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+							Content: &pub,
+						},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "empty obj",
+			entry: V001Entry{
+				RekordObj: models.RekordV001Schema{
+					/*
+						Data: &models.RekordV001SchemaData{
+							Content: strfmt.Base64([]byte("content")),
+						},
+						Signature: &models.RekordV001SchemaSignature{
+							Content: &sig,
+							Format:  swag.String("format"),
+							PublicKey: &models.RekordV001SchemaSignaturePublicKey{
+								Content: &pub,
+							},
+						},
+					*/
+				},
+			},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
+			}
+		})
+	}
+}

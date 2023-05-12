@@ -197,3 +197,114 @@ func TestCrossFieldValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V001Entry
+		expectSuccess bool
+	}
+
+	pub := strfmt.Base64([]byte("pub"))
+
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V001Entry{
+				AlpineModel: models.AlpineV001Schema{
+					Package: &models.AlpineV001SchemaPackage{
+						Content: strfmt.Base64("package"),
+					},
+					PublicKey: &models.AlpineV001SchemaPublicKey{
+						Content: &pub,
+					},
+				},
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "missing key content",
+			entry: V001Entry{
+				AlpineModel: models.AlpineV001Schema{
+					Package: &models.AlpineV001SchemaPackage{
+						Content: strfmt.Base64("package"),
+					},
+					PublicKey: &models.AlpineV001SchemaPublicKey{
+						//Content: &pub,
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing public key",
+			entry: V001Entry{
+				AlpineModel: models.AlpineV001Schema{
+					Package: &models.AlpineV001SchemaPackage{
+						Content: strfmt.Base64("package"),
+					},
+					/*
+						PublicKey: &models.AlpineV001SchemaPublicKey{
+							Content: &pub,
+						},
+					*/
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing package content",
+			entry: V001Entry{
+				AlpineModel: models.AlpineV001Schema{
+					Package: &models.AlpineV001SchemaPackage{
+						//Content: strfmt.Base64("package"),
+					},
+					PublicKey: &models.AlpineV001SchemaPublicKey{
+						Content: &pub,
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing package",
+			entry: V001Entry{
+				AlpineModel: models.AlpineV001Schema{
+					/*
+						Package: &models.AlpineV001SchemaPackage{
+							Content: strfmt.Base64("package"),
+						},
+					*/
+					PublicKey: &models.AlpineV001SchemaPublicKey{
+						Content: &pub,
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "empty model",
+			entry: V001Entry{
+				AlpineModel: models.AlpineV001Schema{
+					/*
+						Package: &models.AlpineV001SchemaPackage{
+							Content: strfmt.Base64("package"),
+						},
+						PublicKey: &models.AlpineV001SchemaPublicKey{
+							Content: &pub,
+						},
+					*/
+				},
+			},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
+			}
+		})
+	}
+}

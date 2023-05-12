@@ -448,14 +448,17 @@ func (v V001Entry) Insertable() (bool, error) {
 	if v.RekordObj.Signature == nil {
 		return false, errors.New("missing signature property")
 	}
-	if len(*v.RekordObj.Signature.Content) == 0 {
+	if v.RekordObj.Signature.Content == nil || len(*v.RekordObj.Signature.Content) == 0 {
 		return false, errors.New("missing signature content")
 	}
 	if v.RekordObj.Signature.PublicKey == nil {
 		return false, errors.New("missing publicKey property")
 	}
-	if len(*v.RekordObj.Signature.PublicKey.Content) == 0 {
+	if v.RekordObj.Signature.PublicKey.Content == nil || len(*v.RekordObj.Signature.PublicKey.Content) == 0 {
 		return false, errors.New("missing publicKey content")
+	}
+	if v.RekordObj.Signature.Format == nil || len(*v.RekordObj.Signature.Format) == 0 {
+		return false, errors.New("missing signature format")
 	}
 
 	if v.RekordObj.Data == nil {

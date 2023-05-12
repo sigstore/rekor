@@ -359,7 +359,7 @@ func (v V001Entry) Insertable() (bool, error) {
 	if len(v.CoseObj.Message) == 0 {
 		return false, errors.New("missing COSE Sign1 message")
 	}
-	if len(*v.CoseObj.PublicKey) == 0 {
+	if v.CoseObj.PublicKey == nil || len(*v.CoseObj.PublicKey) == 0 {
 		return false, errors.New("missing public key")
 	}
 	if v.CoseObj.Data == nil {

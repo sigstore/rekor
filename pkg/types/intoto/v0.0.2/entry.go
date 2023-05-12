@@ -472,7 +472,7 @@ func (v V002Entry) Insertable() (bool, error) {
 		return false, errors.New("missing envelope content")
 	}
 
-	if len(*v.IntotoObj.Content.Envelope.PayloadType) == 0 {
+	if v.IntotoObj.Content.Envelope.PayloadType == nil || len(*v.IntotoObj.Content.Envelope.PayloadType) == 0 {
 		return false, errors.New("missing payloadType content")
 	}
 
