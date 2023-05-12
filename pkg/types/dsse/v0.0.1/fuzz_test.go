@@ -32,8 +32,6 @@ func FuzzDSSECreateProposedEntry(f *testing.F) {
 	f.Fuzz(func(t *testing.T, propsData []byte) {
 		initter.Do(fuzzUtils.SetFuzzLogger)
 
-		version := "0.0.1"
-
 		ff := fuzz.NewConsumer(propsData)
 
 		props, cleanup, err := fuzzUtils.CreateProps(ff)
@@ -43,7 +41,7 @@ func FuzzDSSECreateProposedEntry(f *testing.F) {
 		defer cleanup()
 
 		it := dsse.New()
-		entry, err := it.CreateProposedEntry(context.Background(), version, props)
+		entry, err := it.CreateProposedEntry(context.Background(), APIVERSION, props)
 		if err != nil {
 			t.Skip()
 		}

@@ -133,23 +133,40 @@ func TestDsse(t *testing.T) {
 		t.Fatal("unexpected attestation present in response")
 	}
 
-	attHash := sha256.Sum256(b)
+	payloadHash := sha256.Sum256(b)
+	envelopeHash := sha256.Sum256(eb)
 
 	dsseModel := &models.DSSEV001Schema{}
 	if err := types.DecodeEntry(g.Body.(map[string]interface{})["DSSEObj"], dsseModel); err != nil {
 		t.Errorf("could not convert body into dsse type: %v", err)
 	}
 	if dsseModel.PayloadHash == nil {
-		t.Errorf("could not find hash over attestation %v", dsseModel)
+		t.Errorf("could not find hash over payload %v", dsseModel)
 	}
 	recordedPayloadHash, err := hex.DecodeString(*dsseModel.PayloadHash.Value)
 	if err != nil {
-		t.Errorf("error converting attestation hash to []byte: %v", err)
+		t.Errorf("error converting payload hash to []byte: %v", err)
 	}
 
-	if !bytes.Equal(attHash[:], recordedPayloadHash) {
-		t.Fatal(fmt.Errorf("attestation hash %v doesnt match the payload we sent %v", hex.EncodeToString(attHash[:]),
+	if !bytes.Equal(payloadHash[:], recordedPayloadHash) {
+		t.Fatal(fmt.Errorf("payload hash %v doesnt match the payload we sent %v", hex.EncodeToString(payloadHash[:]),
 			*dsseModel.PayloadHash.Value))
+	}
+	if dsseModel.EnvelopeHash == nil {
+		t.Errorf("could not find hash over entire envelope %v", dsseModel)
+	}
+	recordedEnvelopeHash, err := hex.DecodeString(*dsseModel.EnvelopeHash.Value)
+	if err != nil {
+		t.Errorf("error converting Envelope hash to []byte: %v", err)
+	}
+
+	if !bytes.Equal(envelopeHash[:], recordedEnvelopeHash) {
+		t.Fatal(fmt.Errorf("envelope hash %v doesnt match the payload we sent %v", hex.EncodeToString(envelopeHash[:]),
+			*dsseModel.EnvelopeHash.Value))
+	}
+
+	if len(dsseModel.Signatures) != 1 {
+		t.Fatalf("expected one signatures but got %d instead", len(dsseModel.Signatures))
 	}
 
 	out = util.RunCli(t, "upload", "--artifact", attestationPath, "--type", "dsse", "--public-key", pubKeyPath)
@@ -256,23 +273,41 @@ func TestDsseMultiSig(t *testing.T) {
 		t.Fatal("unexpected attestation present in response")
 	}
 
-	attHash := sha256.Sum256(b)
+	payloadHash := sha256.Sum256(b)
+	envelopeHash := sha256.Sum256(eb)
 
 	dsseModel := &models.DSSEV001Schema{}
 	if err := types.DecodeEntry(g.Body.(map[string]interface{})["DSSEObj"], dsseModel); err != nil {
 		t.Errorf("could not convert body into dsse type: %v", err)
 	}
 	if dsseModel.PayloadHash == nil {
-		t.Errorf("could not find hash over attestation %v", dsseModel)
+		t.Errorf("could not find hash over payload %v", dsseModel)
 	}
 	recordedPayloadHash, err := hex.DecodeString(*dsseModel.PayloadHash.Value)
 	if err != nil {
-		t.Errorf("error converting attestation hash to []byte: %v", err)
+		t.Errorf("error converting payload hash to []byte: %v", err)
 	}
 
-	if !bytes.Equal(attHash[:], recordedPayloadHash) {
-		t.Fatal(fmt.Errorf("attestation hash %v doesnt match the payload we sent %v", hex.EncodeToString(attHash[:]),
+	if !bytes.Equal(payloadHash[:], recordedPayloadHash) {
+		t.Fatal(fmt.Errorf("payload hash %v doesnt match the payload we sent %v", hex.EncodeToString(payloadHash[:]),
 			*dsseModel.PayloadHash.Value))
+	}
+
+	if dsseModel.EnvelopeHash == nil {
+		t.Errorf("could not find hash over envelope %v", dsseModel)
+	}
+	recordedEnvelopeHash, err := hex.DecodeString(*dsseModel.EnvelopeHash.Value)
+	if err != nil {
+		t.Errorf("error converting envelope hash to []byte: %v", err)
+	}
+
+	if !bytes.Equal(envelopeHash[:], recordedEnvelopeHash) {
+		t.Fatal(fmt.Errorf("envelope hash %v doesnt match the payload we sent %v", hex.EncodeToString(envelopeHash[:]),
+			*dsseModel.EnvelopeHash.Value))
+	}
+
+	if len(dsseModel.Signatures) != 2 {
+		t.Fatalf("expected two signatures but got %d instead", len(dsseModel.Signatures))
 	}
 
 	out = util.RunCli(t, "upload", "--artifact", attestationPath, "--type", "dsse", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
