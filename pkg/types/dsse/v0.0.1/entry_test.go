@@ -68,14 +68,13 @@ func envelope(t *testing.T, k *ecdsa.PrivateKey, payload []byte) *dsse.Envelope 
 	if err != nil {
 		t.Fatal(err)
 	}
-	signer, err := in_toto.NewDSSESigner(
-		&sigdsse.SignerAdapter{
-			SignatureSigner: s,
-		})
+	signer, err := dsse.NewEnvelopeSigner(&sigdsse.SignerAdapter{
+		SignatureSigner: s,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	dsseEnv, err := signer.SignPayload(context.Background(), payload)
+	dsseEnv, err := signer.SignPayload(context.Background(), "application/vnd.in-toto+json", payload)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,6 +231,12 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				if err := v.Unmarshal(it); err != nil {
 					return err
 				}
+
+				if !tt.wantErr {
+					if ok, err := v.Insertable(); !ok || err != nil {
+						return fmt.Errorf("unexpected error calling Insertable: %w", err)
+					}
+				}
 				want := []string{}
 				for _, sig := range v.DSSEObj.Signatures {
 					keyHash := sha256.Sum256(*sig.PublicKey)
@@ -273,6 +278,9 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tt.name, err)
 				}
 				canonicalV001 := canonicalEntry.(*V001Entry)
+				if ok, err := canonicalV001.Insertable(); ok || err == nil {
+					t.Errorf("unexpected success testing Insertable against entry created from canonicalized content")
+				}
 				if *canonicalV001.DSSEObj.EnvelopeHash.Value != envHash {
 					t.Errorf("envelope hashes do not match post canonicalization: %v %v", *canonicalV001.DSSEObj.EnvelopeHash.Value, envHash)
 				}
@@ -416,6 +424,85 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 			sort.Strings(want)
 			if !cmp.Equal(got, want, cmpopts.EquateEmpty()) {
 				t.Errorf("V001Entry.IndexKeys() = %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V001Entry
+		expectSuccess bool
+	}
+
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V001Entry{
+				DSSEObj: models.DSSEV001Schema{
+					ProposedContent: &models.DSSEV001SchemaProposedContent{
+						Envelope: swag.String("envelope"),
+						PublicKeys: []strfmt.Base64{
+							[]byte("keys"),
+						},
+					},
+				},
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "missing public keys",
+			entry: V001Entry{
+				DSSEObj: models.DSSEV001Schema{
+					ProposedContent: &models.DSSEV001SchemaProposedContent{
+						Envelope: swag.String("envelope"),
+						/*
+							PublicKeys: []strfmt.Base64{
+								[]byte("keys"),
+							},
+						*/
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing envelope",
+			entry: V001Entry{
+				DSSEObj: models.DSSEV001Schema{
+					ProposedContent: &models.DSSEV001SchemaProposedContent{
+						//Envelope: swag.String("envelope"),
+						PublicKeys: []strfmt.Base64{
+							[]byte("keys"),
+						},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing proposed content obj",
+			entry: V001Entry{
+				DSSEObj: models.DSSEV001Schema{
+					/*
+						ProposedContent: &models.DSSEV001SchemaProposedContent{
+							Envelope: swag.String("envelope"),
+							PublicKeys: []strfmt.Base64{
+								[]byte("keys"),
+							},
+						},
+					*/
+				},
+			},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
 			}
 		})
 	}

@@ -257,7 +257,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 //
 // This function should not use v.DSSEObj.ProposedContent fields as they are client provided and
 // should not be trusted; the other fields at the top level are only set server side.
-func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	canonicalEntry := models.DSSEV001Schema{
 		Signatures:   v.DSSEObj.Signatures,
 		EnvelopeHash: v.DSSEObj.EnvelopeHash,
@@ -395,4 +395,18 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 
 	//TODO: return multiple pki.PublicKeys
 	return x509.NewPublicKey(bytes.NewReader(*v.DSSEObj.Signatures[0].PublicKey))
+}
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.DSSEObj.ProposedContent == nil {
+		return false, errors.New("missing proposed content")
+	}
+	if v.DSSEObj.ProposedContent.Envelope == nil || len(*v.DSSEObj.ProposedContent.Envelope) == 0 {
+		return false, errors.New("missing proposed DSSE envelope")
+	}
+	if len(v.DSSEObj.ProposedContent.PublicKeys) == 0 {
+		return false, errors.New("missing proposed public keys")
+	}
+
+	return true, nil
 }
