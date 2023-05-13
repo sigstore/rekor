@@ -183,7 +183,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return v.validate()
 }
 
-func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	if v.keyObj == nil {
 		return nil, errors.New("cannot canonicalize empty key")
 	}

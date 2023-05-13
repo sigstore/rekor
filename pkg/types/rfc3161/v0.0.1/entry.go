@@ -118,7 +118,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return nil
 }
 
-func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	if v.tsrContent == nil {
 		return nil, errors.New("tsr content must be set before canonicalizing")
 	}

@@ -61,10 +61,7 @@ var uploadCmd = &cobra.Command{
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			return err
 		}
-		if err := validateArtifactPFlags(false, false); err != nil {
-			return err
-		}
-		return nil
+		return validateArtifactPFlags(false, false)
 	},
 	Long: `This command takes the public key, signature and URL of the release artifact and uploads it to the rekor server.`,
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {

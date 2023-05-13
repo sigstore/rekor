@@ -110,7 +110,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return v.validate()
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pkcs7.PublicKey, *pkcs7.Signature, error) {
+func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, *pkcs7.Signature, error) {
 	if err := v.validate(); err != nil {
 		return nil, nil, types.ValidationError(err)
 	}

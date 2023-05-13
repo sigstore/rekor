@@ -122,7 +122,7 @@ func TestReadSignature(t *testing.T) {
 type BadReader struct {
 }
 
-func (br BadReader) Read(p []byte) (n int, err error) {
+func (br BadReader) Read(_ []byte) (n int, err error) {
 	return 0, errors.New("test error")
 }
 
