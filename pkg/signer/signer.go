@@ -25,6 +25,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 	"golang.org/x/exp/slices"
 
+	// these are imported to load the providers via init() calls
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
