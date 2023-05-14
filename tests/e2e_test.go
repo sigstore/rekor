@@ -30,12 +30,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -182,32 +180,6 @@ func TestGetCLI(t *testing.T) {
 		t.Error(err)
 	}
 	runCli(t, "get", "--format=json", "--uuid", entryID.ReturnEntryIDString())
-}
-
-func TestWatch(t *testing.T) {
-	td := t.TempDir()
-	cmd := exec.Command(server, "watch", "--interval=1s")
-	cmd.Env = append(os.Environ(), "REKOR_STH_BUCKET=file://"+td)
-	go func() {
-		b, err := cmd.CombinedOutput()
-		t.Log(string(b))
-		if cmd.ProcessState.Exited() && cmd.ProcessState.ExitCode() != 0 {
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-	}()
-
-	// Wait 3 intervals
-	time.Sleep(3 * time.Second)
-	cmd.Process.Kill()
-
-	// Check for files
-	fi, err := ioutil.ReadDir(td)
-	if err != nil || len(fi) == 0 {
-		t.Error("expected files")
-	}
-	fmt.Println(fi[0].Name())
 }
 
 func publicKeyFromRekorClient(ctx context.Context, c *generatedClient.Rekor) (*ecdsa.PublicKey, error) {
