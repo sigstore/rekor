@@ -92,6 +92,7 @@ services:
       "--rekor_server.signer=memory",
       "--enable_attestation_storage",
       "--attestation_storage_bucket=file:///var/run/attestations",
+      "--enable_stable_checkpoint",
       # Uncomment this for production logging
       # "--log_type=prod",
       ]

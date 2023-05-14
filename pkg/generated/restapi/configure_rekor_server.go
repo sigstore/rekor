@@ -156,7 +156,9 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.RegisterFormat("signedCheckpoint", &util.SignedNote{}, util.SignedCheckpointValidator)
 
 	api.PreServerShutdown = func() {}
-	api.ServerShutdown = func() {}
+	api.ServerShutdown = func() {
+		pkgapi.StopAPI()
+	}
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
 }
