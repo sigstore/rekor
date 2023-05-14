@@ -284,6 +284,13 @@ func TestCrossFieldValidation(t *testing.T) {
 			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
 		}
 
+		if tc.expectUnmarshalSuccess {
+			ok, err := v.Insertable()
+			if !ok || err != nil {
+				t.Errorf("unexpected failure in testing insertable on valid entry: %v", err)
+			}
+		}
+
 		b, err := v.Canonicalize(context.TODO())
 		if (err == nil) != tc.expectCanonicalizeSuccess {
 			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
@@ -297,8 +304,14 @@ func TestCrossFieldValidation(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
 			}
-			if _, err := types.UnmarshalEntry(pe); err != nil {
+			ei, err := types.UnmarshalEntry(pe)
+			if err != nil {
 				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+			}
+			// hashedrekord is one of two types (rfc3161, hashedrekord) in that what is persisted is also insertable
+			ok, err := ei.Insertable()
+			if !ok || err != nil {
+				t.Errorf("unexpected failure in testing insertable on entry created from canonicalized content: %v", err)
 			}
 		}
 
@@ -442,4 +455,204 @@ func testKeyAndCert(t *testing.T) ([]byte, []byte, *ecdsa.PrivateKey) {
 	})
 
 	return pub, certPem, priv
+}
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V001Entry
+		expectSuccess bool
+	}
+
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Data: &models.HashedrekordV001SchemaData{
+						Hash: &models.HashedrekordV001SchemaDataHash{
+							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     swag.String("deadbeef"),
+						},
+					},
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content: strfmt.Base64("sig"),
+						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
+							Content: strfmt.Base64("key"),
+						},
+					},
+				},
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "missing key",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Data: &models.HashedrekordV001SchemaData{
+						Hash: &models.HashedrekordV001SchemaDataHash{
+							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     swag.String("deadbeef"),
+						},
+					},
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content: strfmt.Base64("sig"),
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing key content",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Data: &models.HashedrekordV001SchemaData{
+						Hash: &models.HashedrekordV001SchemaDataHash{
+							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     swag.String("deadbeef"),
+						},
+					},
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content:   strfmt.Base64("sig"),
+						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing key content",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Data: &models.HashedrekordV001SchemaData{
+						Hash: &models.HashedrekordV001SchemaDataHash{
+							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     swag.String("deadbeef"),
+						},
+					},
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content:   strfmt.Base64("sig"),
+						PublicKey: nil,
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing sig content",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Data: &models.HashedrekordV001SchemaData{
+						Hash: &models.HashedrekordV001SchemaDataHash{
+							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     swag.String("deadbeef"),
+						},
+					},
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content: nil,
+						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
+							Content: strfmt.Base64("key"),
+						},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing hash value",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Data: &models.HashedrekordV001SchemaData{
+						Hash: &models.HashedrekordV001SchemaDataHash{
+							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+						},
+					},
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content: strfmt.Base64("sig"),
+						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
+							Content: strfmt.Base64("key"),
+						},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing hash algorithm",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Data: &models.HashedrekordV001SchemaData{
+						Hash: &models.HashedrekordV001SchemaDataHash{
+							Value: swag.String("deadbeef"),
+						},
+					},
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content: strfmt.Base64("sig"),
+						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
+							Content: strfmt.Base64("key"),
+						},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing hash object",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Data: &models.HashedrekordV001SchemaData{},
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content: strfmt.Base64("sig"),
+						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
+							Content: strfmt.Base64("key"),
+						},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing data object",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content: strfmt.Base64("sig"),
+						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
+							Content: strfmt.Base64("key"),
+						},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing sig object",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Data: &models.HashedrekordV001SchemaData{
+						Hash: &models.HashedrekordV001SchemaDataHash{
+							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     swag.String("deadbeef"),
+						},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "empty object",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{},
+			},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
+			}
+		})
+	}
 }

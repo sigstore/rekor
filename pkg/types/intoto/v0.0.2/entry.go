@@ -460,3 +460,37 @@ func (v V002Entry) Verifier() (pki.PublicKey, error) {
 
 	return x509.NewPublicKey(bytes.NewReader(v.IntotoObj.Content.Envelope.Signatures[0].PublicKey))
 }
+
+func (v V002Entry) Insertable() (bool, error) {
+	if v.IntotoObj.Content == nil {
+		return false, errors.New("missing content property")
+	}
+	if v.IntotoObj.Content.Envelope == nil {
+		return false, errors.New("missing envelope property")
+	}
+	if len(v.IntotoObj.Content.Envelope.Payload) == 0 {
+		return false, errors.New("missing envelope content")
+	}
+
+	if v.IntotoObj.Content.Envelope.PayloadType == nil || len(*v.IntotoObj.Content.Envelope.PayloadType) == 0 {
+		return false, errors.New("missing payloadType content")
+	}
+
+	if len(v.IntotoObj.Content.Envelope.Signatures) == 0 {
+		return false, errors.New("missing signatures content")
+	}
+	for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
+		if len(sig.Sig) == 0 {
+			return false, errors.New("missing signature content")
+		}
+		if len(sig.PublicKey) == 0 {
+			return false, errors.New("missing publicKey content")
+		}
+	}
+
+	if v.env.Payload == "" || v.env.PayloadType == "" || len(v.env.Signatures) == 0 {
+		return false, errors.New("invalid DSSE envelope")
+	}
+
+	return true, nil
+}

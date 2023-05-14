@@ -2042,8 +2042,7 @@ func init() {
         "publicKey": {
           "description": "public key that corresponds to this signature",
           "type": "string",
-          "format": "byte",
-          "readOnly": true
+          "format": "byte"
         },
         "sig": {
           "description": "signature of the payload",
@@ -2665,7 +2664,7 @@ func init() {
       "description": "TUF metadata",
       "type": "object",
       "required": [
-        "metadata"
+        "content"
       ],
       "properties": {
         "content": {
@@ -3852,7 +3851,7 @@ func init() {
           "description": "TUF metadata",
           "type": "object",
           "required": [
-            "metadata"
+            "content"
           ],
           "properties": {
             "content": {

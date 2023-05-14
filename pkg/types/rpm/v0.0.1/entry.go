@@ -377,3 +377,20 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 	}
 	return pgp.NewPublicKey(bytes.NewReader(*v.RPMModel.PublicKey.Content))
 }
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.RPMModel.PublicKey == nil {
+		return false, errors.New("missing publicKey property")
+	}
+	if v.RPMModel.PublicKey.Content == nil || len(*v.RPMModel.PublicKey.Content) == 0 {
+		return false, errors.New("missing publicKey content")
+	}
+
+	if v.RPMModel.Package == nil {
+		return false, errors.New("missing package property")
+	}
+	if len(v.RPMModel.Package.Content) == 0 {
+		return false, errors.New("missing package content")
+	}
+	return true, nil
+}

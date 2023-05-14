@@ -47,6 +47,10 @@ func (u UnmarshalFailsTester) Verifier() (pki.PublicKey, error) {
 	return nil, nil
 }
 
+func (u UnmarshalFailsTester) Insertable() (bool, error) {
+	return false, nil
+}
+
 func TestAlpineType(t *testing.T) {
 	// empty to start
 	if VersionMap.Count() != 0 {

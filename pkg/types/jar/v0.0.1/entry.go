@@ -344,3 +344,14 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 	}
 	return x509.NewPublicKey(bytes.NewReader(*v.JARModel.Signature.PublicKey.Content))
 }
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.JARModel.Archive == nil {
+		return false, errors.New("missing archive property")
+	}
+	if len(v.JARModel.Archive.Content) == 0 {
+		return false, errors.New("missing archive content")
+	}
+
+	return true, nil
+}

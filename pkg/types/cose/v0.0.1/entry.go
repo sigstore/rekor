@@ -354,3 +354,26 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 	}
 	return x509.NewPublicKey(bytes.NewReader(*v.CoseObj.PublicKey))
 }
+
+func (v V001Entry) Insertable() (bool, error) {
+	if len(v.CoseObj.Message) == 0 {
+		return false, errors.New("missing COSE Sign1 message")
+	}
+	if v.CoseObj.PublicKey == nil || len(*v.CoseObj.PublicKey) == 0 {
+		return false, errors.New("missing public key")
+	}
+	if v.CoseObj.Data == nil {
+		return false, errors.New("missing COSE data property")
+	}
+	if len(v.envelopeHash) == 0 {
+		return false, errors.New("envelope hash has not been computed")
+	}
+	if v.keyObj == nil {
+		return false, errors.New("public key has not been parsed")
+	}
+	if v.sign1Msg == nil {
+		return false, errors.New("signature has not been validated")
+	}
+
+	return true, nil
+}
