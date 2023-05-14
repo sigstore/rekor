@@ -450,7 +450,6 @@ type IntotoV002SchemaContentEnvelopeSignaturesItems0 struct {
 	Keyid string `json:"keyid,omitempty"`
 
 	// public key that corresponds to this signature
-	// Read Only: true
 	// Format: byte
 	PublicKey strfmt.Base64 `json:"publicKey,omitempty"`
 
@@ -464,26 +463,8 @@ func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) Validate(formats strfm
 	return nil
 }
 
-// ContextValidate validate this intoto v002 schema content envelope signatures items0 based on the context it is used
+// ContextValidate validates this intoto v002 schema content envelope signatures items0 based on context it is used
 func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidatePublicKey(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) contextValidatePublicKey(ctx context.Context, formats strfmt.Registry) error {
-
-	if err := validate.ReadOnly(ctx, "publicKey", "body", strfmt.Base64(m.PublicKey)); err != nil {
-		return err
-	}
-
 	return nil
 }
 

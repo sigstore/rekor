@@ -67,6 +67,12 @@ paths:
       operationId: getLogInfo
       tags:
         - tlog
+      parameters:
+        - in: query
+          name: stable
+          type: boolean
+          default: false
+          description: Whether to return a stable checkpoint for the active shard
       responses:
         200:
           description: A JSON object with the root hash and tree size as properties

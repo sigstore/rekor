@@ -379,3 +379,20 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 	}
 	return ptuf.NewPublicKey(bytes.NewReader(keyBytes))
 }
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.TufObj.Metadata == nil {
+		return false, errors.New("missing metadata property")
+	}
+	if v.TufObj.Metadata.Content == nil {
+		return false, errors.New("missing metadata content")
+	}
+
+	if v.TufObj.Root == nil {
+		return false, errors.New("missing root property")
+	}
+	if v.TufObj.Root.Content == nil {
+		return false, errors.New("missing root content")
+	}
+	return true, nil
+}

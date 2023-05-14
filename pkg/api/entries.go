@@ -68,7 +68,7 @@ func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEnt
 }
 
 // logEntryFromLeaf creates a signed LogEntry struct from trillian structs
-func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc trillianclient.TrillianClient, leaf *trillian.LogLeaf,
+func logEntryFromLeaf(ctx context.Context, signer signature.Signer, _ trillianclient.TrillianClient, leaf *trillian.LogLeaf,
 	signedLogRoot *trillian.SignedLogRoot, proof *trillian.Proof, tid int64, ranges sharding.LogRanges) (models.LogEntry, error) {
 
 	log.ContextLogger(ctx).Debugf("log entry from leaf %d", leaf.GetLeafIndex())
@@ -554,7 +554,7 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 
 // handlers for APIs that may be disabled in a given instance
 
-func CreateLogEntryNotImplementedHandler(params entries.CreateLogEntryParams) middleware.Responder {
+func CreateLogEntryNotImplementedHandler(_ entries.CreateLogEntryParams) middleware.Responder {
 	err := &models.Error{
 		Code:    http.StatusNotImplemented,
 		Message: "Create Entry API not enabled in this Rekor instance",
@@ -563,7 +563,7 @@ func CreateLogEntryNotImplementedHandler(params entries.CreateLogEntryParams) mi
 	return entries.NewCreateLogEntryDefault(http.StatusNotImplemented).WithPayload(err)
 }
 
-func GetLogEntryByIndexNotImplementedHandler(params entries.GetLogEntryByIndexParams) middleware.Responder {
+func GetLogEntryByIndexNotImplementedHandler(_ entries.GetLogEntryByIndexParams) middleware.Responder {
 	err := &models.Error{
 		Code:    http.StatusNotImplemented,
 		Message: "Get Log Entry by Index API not enabled in this Rekor instance",
@@ -572,7 +572,7 @@ func GetLogEntryByIndexNotImplementedHandler(params entries.GetLogEntryByIndexPa
 	return entries.NewGetLogEntryByIndexDefault(http.StatusNotImplemented).WithPayload(err)
 }
 
-func GetLogEntryByUUIDNotImplementedHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
+func GetLogEntryByUUIDNotImplementedHandler(_ entries.GetLogEntryByUUIDParams) middleware.Responder {
 	err := &models.Error{
 		Code:    http.StatusNotImplemented,
 		Message: "Get Log Entry by UUID API not enabled in this Rekor instance",
@@ -581,7 +581,7 @@ func GetLogEntryByUUIDNotImplementedHandler(params entries.GetLogEntryByUUIDPara
 	return entries.NewGetLogEntryByUUIDDefault(http.StatusNotImplemented).WithPayload(err)
 }
 
-func SearchLogQueryNotImplementedHandler(params entries.SearchLogQueryParams) middleware.Responder {
+func SearchLogQueryNotImplementedHandler(_ entries.SearchLogQueryParams) middleware.Responder {
 	err := &models.Error{
 		Code:    http.StatusNotImplemented,
 		Message: "Search Log Query API not enabled in this Rekor instance",

@@ -116,6 +116,10 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 			continue
 		}
 
+		if ok, err := v.Insertable(); !ok || err != nil {
+			t.Errorf("unexpected error calling Insertable on valid proposed entry: %v", err)
+		}
+
 		b, err := v.Canonicalize(context.TODO())
 		if (err == nil) != tc.expectCanonicalizeSuccess {
 			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
@@ -129,8 +133,12 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 			if err != nil {
 				t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
 			}
-			if _, err := types.UnmarshalEntry(pe); err != nil {
+			ei, err := types.UnmarshalEntry(pe)
+			if err != nil {
 				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+			}
+			if ok, err := ei.Insertable(); ok || err == nil {
+				t.Errorf("unexpected err from calling Insertable on entry created from canonicalized content")
 			}
 		}
 
@@ -182,5 +190,58 @@ func TestJarMetadataSize(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "exceeds max allowed size 10") {
 		t.Fatalf("unexpected error %v", err)
+	}
+}
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V001Entry
+		expectSuccess bool
+	}
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V001Entry{
+				JARModel: models.JarV001Schema{
+					Archive: &models.JarV001SchemaArchive{
+						Content: strfmt.Base64([]byte("content")),
+					},
+				},
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "missing archive content",
+			entry: V001Entry{
+				JARModel: models.JarV001Schema{
+					Archive: &models.JarV001SchemaArchive{
+						//Content: strfmt.Base64([]byte("content")),
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing archive obj",
+			entry: V001Entry{
+				JARModel: models.JarV001Schema{
+					/*
+						Archive: &models.JarV001SchemaArchive{
+							Content: strfmt.Base64([]byte("content")),
+						},
+					*/
+				},
+			},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
+			}
+		})
 	}
 }

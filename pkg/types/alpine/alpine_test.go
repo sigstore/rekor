@@ -39,12 +39,16 @@ func (u UnmarshalFailsTester) NewEntry() types.EntryImpl {
 	return &UnmarshalFailsTester{}
 }
 
-func (u UnmarshalFailsTester) Unmarshal(pe models.ProposedEntry) error {
+func (u UnmarshalFailsTester) Unmarshal(_ models.ProposedEntry) error {
 	return errors.New("error")
 }
 
 func (u UnmarshalFailsTester) Verifier() (pki.PublicKey, error) {
 	return nil, nil
+}
+
+func (u UnmarshalFailsTester) Insertable() (bool, error) {
+	return false, nil
 }
 
 func TestAlpineType(t *testing.T) {

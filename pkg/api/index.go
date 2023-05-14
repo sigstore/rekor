@@ -89,7 +89,7 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 	return index.NewSearchIndexOK().WithPayload(result.Values())
 }
 
-func SearchIndexNotImplementedHandler(params index.SearchIndexParams) middleware.Responder {
+func SearchIndexNotImplementedHandler(_ index.SearchIndexParams) middleware.Responder {
 	err := models.Error{
 		Code:    http.StatusNotImplemented,
 		Message: "Search Index API not enabled in this Rekor instance",

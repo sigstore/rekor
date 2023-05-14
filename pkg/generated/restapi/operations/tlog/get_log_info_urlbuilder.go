@@ -25,11 +25,17 @@ import (
 	"errors"
 	"net/url"
 	golangswaggerpaths "path"
+
+	"github.com/go-openapi/swag"
 )
 
 // GetLogInfoURL generates an URL for the get log info operation
 type GetLogInfoURL struct {
+	Stable *bool
+
 	_basePath string
+	// avoid unkeyed usage
+	_ struct{}
 }
 
 // WithBasePath sets the base path for this url builder, only required when it's different from the
@@ -55,6 +61,18 @@ func (o *GetLogInfoURL) Build() (*url.URL, error) {
 
 	_basePath := o._basePath
 	_result.Path = golangswaggerpaths.Join(_basePath, _path)
+
+	qs := make(url.Values)
+
+	var stableQ string
+	if o.Stable != nil {
+		stableQ = swag.FormatBool(*o.Stable)
+	}
+	if stableQ != "" {
+		qs.Set("stable", stableQ)
+	}
+
+	_result.RawQuery = qs.Encode()
 
 	return &_result, nil
 }

@@ -357,3 +357,19 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 	}
 	return x509.NewPublicKey(bytes.NewReader(*v.AlpineModel.PublicKey.Content))
 }
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.AlpineModel.Package == nil {
+		return false, fmt.Errorf("missing package entry")
+	}
+	if len(v.AlpineModel.Package.Content) == 0 {
+		return false, fmt.Errorf("missing package content")
+	}
+	if v.AlpineModel.PublicKey == nil {
+		return false, fmt.Errorf("missing public key")
+	}
+	if v.AlpineModel.PublicKey.Content == nil || len(*v.AlpineModel.PublicKey.Content) == 0 {
+		return false, fmt.Errorf("missing public key content")
+	}
+	return true, nil
+}

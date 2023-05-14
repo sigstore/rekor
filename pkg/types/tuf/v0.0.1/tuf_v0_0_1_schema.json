@@ -20,7 +20,7 @@
                     "additionalProperties": true
                 }
             },
-            "required": [ "metadata" ]
+            "required": [ "content" ]
         },
         "root" : {
             "description": "root metadata containing about the public keys used to sign the manifest",

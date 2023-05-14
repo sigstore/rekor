@@ -167,6 +167,12 @@ func TestCrossFieldValidation(t *testing.T) {
 			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
 		}
 
+		if tc.expectUnmarshalSuccess {
+			if ok, err := v.Insertable(); !ok || err != nil {
+				t.Errorf("unexpected error calling Insertable on valid proposed entry: %v", err)
+			}
+		}
+
 		b, err := v.Canonicalize(context.TODO())
 		if (err == nil) != tc.expectCanonicalizeSuccess {
 			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
@@ -181,8 +187,12 @@ func TestCrossFieldValidation(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
 			}
-			if _, err := types.UnmarshalEntry(pe); err != nil {
+			ei, err := types.UnmarshalEntry(pe)
+			if err != nil {
 				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+			}
+			if ok, err := ei.Insertable(); ok || err == nil {
+				t.Errorf("unexpected success calling Insertable on entry created from canonicalized content")
 			}
 		}
 
@@ -203,5 +213,105 @@ func TestCrossFieldValidation(t *testing.T) {
 				t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
 			}
 		}
+	}
+}
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V001Entry
+		expectSuccess bool
+	}
+
+	pub := strfmt.Base64([]byte("pub"))
+
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V001Entry{
+				RPMModel: models.RpmV001Schema{
+					Package: &models.RpmV001SchemaPackage{
+						Content: strfmt.Base64([]byte("content")),
+					},
+					PublicKey: &models.RpmV001SchemaPublicKey{
+						Content: &pub,
+					},
+				},
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "missing public key content",
+			entry: V001Entry{
+				RPMModel: models.RpmV001Schema{
+					Package: &models.RpmV001SchemaPackage{
+						Content: strfmt.Base64([]byte("content")),
+					},
+					PublicKey: &models.RpmV001SchemaPublicKey{
+						//Content: &pub,
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing public key obj",
+			entry: V001Entry{
+				RPMModel: models.RpmV001Schema{
+					Package: &models.RpmV001SchemaPackage{
+						Content: strfmt.Base64([]byte("content")),
+					},
+					/*
+						PublicKey: &models.RpmV001SchemaPublicKey{
+							Content: &pub,
+						},
+					*/
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing package content",
+			entry: V001Entry{
+				RPMModel: models.RpmV001Schema{
+					Package: &models.RpmV001SchemaPackage{
+						//Content: strfmt.Base64([]byte("content")),
+					},
+					PublicKey: &models.RpmV001SchemaPublicKey{
+						Content: &pub,
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing package obj",
+			entry: V001Entry{
+				RPMModel: models.RpmV001Schema{
+					/*
+						Package: &models.RpmV001SchemaPackage{
+							Content: strfmt.Base64([]byte("content")),
+						},
+					*/
+					PublicKey: &models.RpmV001SchemaPublicKey{
+						Content: &pub,
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "empty obj",
+			entry:         V001Entry{},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
+			}
+		})
 	}
 }
