@@ -47,7 +47,7 @@ jobs:
       - name: Test
         run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
       - name: Upload Coverage Report
-        uses: codecov/codecov-action@894ff025c7b54547a9a2a1e9f228beae737ad3c2 # v3.1.3
+        uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d # v3.1.4
         with:
           flags: unittests
       - name: Ensure no files were modified as a result of the build
@@ -99,7 +99,7 @@ jobs:
           name: E2E Docker Compose logs
           path: /tmp/docker-compose.log
       - name: Upload Coverage Report
-        uses: codecov/codecov-action@894ff025c7b54547a9a2a1e9f228beae737ad3c2 # v3.1.3
+        uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d # v3.1.4
         with:
           files: /tmp/rekor-merged.cov,/tmp/pkg-rekor-merged.cov
           flags: e2etests
