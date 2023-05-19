@@ -196,6 +196,10 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
+	if len(env.Signatures) == 0 {
+		return errors.New("DSSE envelope must contain 1 or more signatures")
+	}
+
 	allPubKeyBytes := make([][]byte, 0)
 	for _, publicKey := range dsseObj.ProposedContent.PublicKeys {
 		allPubKeyBytes = append(allPubKeyBytes, publicKey)
@@ -355,6 +359,9 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 	}
 
 	for _, pubKeyBytes := range allPubKeyBytes {
+		if len(allSigs) == 0 {
+			break // if all signatures have been verified, do not attempt anymore
+		}
 		key, err := x509.NewPublicKey(bytes.NewReader(pubKeyBytes))
 		if err != nil {
 			return nil, fmt.Errorf("could not parse public key as x509: %w", err)
