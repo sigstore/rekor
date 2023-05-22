@@ -510,14 +510,14 @@ func (m *DSSEV001SchemaPayloadHash) UnmarshalBinary(b []byte) error {
 // swagger:model DSSEV001SchemaProposedContent
 type DSSEV001SchemaProposedContent struct {
 
-	// DSSE envelope specified as a stringified JSON object; payloadType in the envelope MUST be set to 'application/vnd.in-toto+json'
+	// DSSE envelope specified as a stringified JSON object
 	// Required: true
 	Envelope *string `json:"envelope"`
 
-	// collection of all public keys used to verify signatures over envelope's payload, specified as base64-encoded strings
+	// collection of all public keys or certificates used to verify signatures over envelope's payload, specified as base64-encoded strings
 	// Required: true
 	// Min Items: 1
-	PublicKeys []strfmt.Base64 `json:"publicKeys"`
+	Verifiers []strfmt.Base64 `json:"verifiers"`
 }
 
 // Validate validates this DSSE v001 schema proposed content
@@ -528,7 +528,7 @@ func (m *DSSEV001SchemaProposedContent) Validate(formats strfmt.Registry) error 
 		res = append(res, err)
 	}
 
-	if err := m.validatePublicKeys(formats); err != nil {
+	if err := m.validateVerifiers(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -547,15 +547,15 @@ func (m *DSSEV001SchemaProposedContent) validateEnvelope(formats strfmt.Registry
 	return nil
 }
 
-func (m *DSSEV001SchemaProposedContent) validatePublicKeys(formats strfmt.Registry) error {
+func (m *DSSEV001SchemaProposedContent) validateVerifiers(formats strfmt.Registry) error {
 
-	if err := validate.Required("proposedContent"+"."+"publicKeys", "body", m.PublicKeys); err != nil {
+	if err := validate.Required("proposedContent"+"."+"verifiers", "body", m.Verifiers); err != nil {
 		return err
 	}
 
-	iPublicKeysSize := int64(len(m.PublicKeys))
+	iVerifiersSize := int64(len(m.Verifiers))
 
-	if err := validate.MinItems("proposedContent"+"."+"publicKeys", "body", iPublicKeysSize, 1); err != nil {
+	if err := validate.MinItems("proposedContent"+"."+"verifiers", "body", iVerifiersSize, 1); err != nil {
 		return err
 	}
 

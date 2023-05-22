@@ -1590,16 +1590,16 @@ func init() {
       "type": "object",
       "required": [
         "envelope",
-        "publicKeys"
+        "verifiers"
       ],
       "properties": {
         "envelope": {
-          "description": "DSSE envelope specified as a stringified JSON object; payloadType in the envelope MUST be set to 'application/vnd.in-toto+json'",
+          "description": "DSSE envelope specified as a stringified JSON object",
           "type": "string",
           "writeOnly": true
         },
-        "publicKeys": {
-          "description": "collection of all public keys used to verify signatures over envelope's payload, specified as base64-encoded strings",
+        "verifiers": {
+          "description": "collection of all public keys or certificates used to verify signatures over envelope's payload, specified as base64-encoded strings",
           "type": "array",
           "minItems": 1,
           "items": {
@@ -3160,16 +3160,16 @@ func init() {
           "type": "object",
           "required": [
             "envelope",
-            "publicKeys"
+            "verifiers"
           ],
           "properties": {
             "envelope": {
-              "description": "DSSE envelope specified as a stringified JSON object; payloadType in the envelope MUST be set to 'application/vnd.in-toto+json'",
+              "description": "DSSE envelope specified as a stringified JSON object",
               "type": "string",
               "writeOnly": true
             },
-            "publicKeys": {
-              "description": "collection of all public keys used to verify signatures over envelope's payload, specified as base64-encoded strings",
+            "verifiers": {
+              "description": "collection of all public keys or certificates used to verify signatures over envelope's payload, specified as base64-encoded strings",
               "type": "array",
               "minItems": 1,
               "items": {

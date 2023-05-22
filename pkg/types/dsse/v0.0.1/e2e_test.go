@@ -398,7 +398,7 @@ func TestSendingCanonicalizedDSSE(t *testing.T) {
 	if err := json.Unmarshal([]byte(*v001.ProposedContent.Envelope), env); err != nil {
 		t.Fatalf("error extracting DSSE envelope")
 	}
-	pk := v001.ProposedContent.PublicKeys[0]
+	pk := v001.ProposedContent.Verifiers[0]
 	v001.Signatures = []*models.DSSEV001SchemaSignaturesItems0{
 		{
 			Signature: &env.Signatures[0].Sig,
@@ -513,7 +513,7 @@ func TestMismatchedKeySingleSigner(t *testing.T) {
 	// swap out good public key for mismatched one
 	dsse_entry := entry.(*models.DSSE)
 	v001 := dsse_entry.Spec.(models.DSSEV001Schema)
-	v001.ProposedContent.PublicKeys[0] = strfmt.Base64(sigx509.RSACert)
+	v001.ProposedContent.Verifiers[0] = strfmt.Base64(sigx509.RSACert)
 	dsse_entry.Spec = v001
 
 	rc, err := client.GetRekorClient(rekorServer())
@@ -648,8 +648,8 @@ func TestTwoPublicKeysTwoSignatures(t *testing.T) {
 	// swap out one of the good public keys for a mismatched one
 	dsse_entry := entry.(*models.DSSE)
 	v001 := dsse_entry.Spec.(models.DSSEV001Schema)
-	v001.ProposedContent.PublicKeys[0] = strfmt.Base64(sigx509.RSACert)
-	v001.ProposedContent.PublicKeys[1] = strfmt.Base64(sigx509.RSACert)
+	v001.ProposedContent.Verifiers[0] = strfmt.Base64(sigx509.RSACert)
+	v001.ProposedContent.Verifiers[1] = strfmt.Base64(sigx509.RSACert)
 	dsse_entry.Spec = v001
 
 	rc, err := client.GetRekorClient(rekorServer())

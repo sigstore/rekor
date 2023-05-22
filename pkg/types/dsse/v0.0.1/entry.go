@@ -201,7 +201,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	allPubKeyBytes := make([][]byte, 0)
-	for _, publicKey := range dsseObj.ProposedContent.PublicKeys {
+	for _, publicKey := range dsseObj.ProposedContent.Verifiers {
 		allPubKeyBytes = append(allPubKeyBytes, publicKey)
 	}
 
@@ -338,7 +338,7 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		if err != nil {
 			return nil, err
 		}
-		re.DSSEObj.ProposedContent.PublicKeys = append(re.DSSEObj.ProposedContent.PublicKeys, strfmt.Base64(canonicalKey))
+		re.DSSEObj.ProposedContent.Verifiers = append(re.DSSEObj.ProposedContent.Verifiers, strfmt.Base64(canonicalKey))
 	}
 	re.DSSEObj.ProposedContent.Envelope = swag.String(string(artifactBytes))
 
@@ -412,8 +412,8 @@ func (v V001Entry) Insertable() (bool, error) {
 	if v.DSSEObj.ProposedContent.Envelope == nil || len(*v.DSSEObj.ProposedContent.Envelope) == 0 {
 		return false, errors.New("missing proposed DSSE envelope")
 	}
-	if len(v.DSSEObj.ProposedContent.PublicKeys) == 0 {
-		return false, errors.New("missing proposed public keys")
+	if len(v.DSSEObj.ProposedContent.Verifiers) == 0 {
+		return false, errors.New("missing proposed verifiers")
 	}
 
 	return true, nil

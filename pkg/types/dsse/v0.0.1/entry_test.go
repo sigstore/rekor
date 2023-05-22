@@ -113,7 +113,7 @@ func createRekorEnvelope(dsseEnv *dsse.Envelope, pub [][]byte) *models.DSSEV001S
 		Envelope: swag.String(string(envelopeBytes)),
 	}
 	for _, key := range pub {
-		proposedContent.PublicKeys = append(proposedContent.PublicKeys, strfmt.Base64(key))
+		proposedContent.Verifiers = append(proposedContent.Verifiers, strfmt.Base64(key))
 	}
 	return proposedContent
 }
@@ -443,7 +443,7 @@ func TestInsertable(t *testing.T) {
 				DSSEObj: models.DSSEV001Schema{
 					ProposedContent: &models.DSSEV001SchemaProposedContent{
 						Envelope: swag.String("envelope"),
-						PublicKeys: []strfmt.Base64{
+						Verifiers: []strfmt.Base64{
 							[]byte("keys"),
 						},
 					},
@@ -458,7 +458,7 @@ func TestInsertable(t *testing.T) {
 					ProposedContent: &models.DSSEV001SchemaProposedContent{
 						Envelope: swag.String("envelope"),
 						/*
-							PublicKeys: []strfmt.Base64{
+							Verifiers: []strfmt.Base64{
 								[]byte("keys"),
 							},
 						*/
@@ -473,7 +473,7 @@ func TestInsertable(t *testing.T) {
 				DSSEObj: models.DSSEV001Schema{
 					ProposedContent: &models.DSSEV001SchemaProposedContent{
 						//Envelope: swag.String("envelope"),
-						PublicKeys: []strfmt.Base64{
+						Verifiers: []strfmt.Base64{
 							[]byte("keys"),
 						},
 					},
@@ -488,7 +488,7 @@ func TestInsertable(t *testing.T) {
 					/*
 						ProposedContent: &models.DSSEV001SchemaProposedContent{
 							Envelope: swag.String("envelope"),
-							PublicKeys: []strfmt.Base64{
+							Verifiers: []strfmt.Base64{
 								[]byte("keys"),
 							},
 						},
