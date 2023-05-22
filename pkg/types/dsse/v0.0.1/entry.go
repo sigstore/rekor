@@ -263,9 +263,10 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 // should not be trusted; the other fields at the top level are only set server side.
 func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	canonicalEntry := models.DSSEV001Schema{
-		Signatures:   v.DSSEObj.Signatures,
-		EnvelopeHash: v.DSSEObj.EnvelopeHash,
-		PayloadHash:  v.DSSEObj.PayloadHash,
+		Signatures:      v.DSSEObj.Signatures,
+		EnvelopeHash:    v.DSSEObj.EnvelopeHash,
+		PayloadHash:     v.DSSEObj.PayloadHash,
+		ProposedContent: nil, // this is explicitly done as we don't want to canonicalize the envelope
 	}
 
 	sort.Slice(canonicalEntry.Signatures, func(i, j int) bool {
