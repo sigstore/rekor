@@ -19,8 +19,7 @@ The "Body" field will include an "dsseObj" field.
 
 **What data about the envelope is stored in Rekor**
 
-Only the hash of the payload, the hash of the DSSE envelope, the signature(s)
-and their corresponding public key(s) are stored.
+Only the hash of the payload (the content covered by the digital signature inside the envelope), the hash of the entire DSSE envelope (including signatures),
+the signature(s) and their corresponding verifying materials (e.g. public key(s) or certificates) are stored.
 
-Even if Rekor is configured to use attestation storage, the entire DSSE
-envelope will not be stored.
+Even if Rekor is configured to use attestation storage, the entire DSSE envelope will not be stored.

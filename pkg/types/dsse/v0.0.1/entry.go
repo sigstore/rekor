@@ -401,7 +401,7 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 		return nil, errors.New("dsse v0.0.1 entry not initialized")
 	}
 
-	//TODO: return multiple pki.PublicKeys
+	//TODO: return multiple pki.PublicKeys; sigstore/rekor issue #1278
 	return x509.NewPublicKey(bytes.NewReader(*v.DSSEObj.Signatures[0].PublicKey))
 }
 
