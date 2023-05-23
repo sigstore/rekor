@@ -75,7 +75,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
 	for _, sig := range v.DSSEObj.Signatures {
-		keyObj, err := x509.NewPublicKey(bytes.NewReader(*sig.PublicKey))
+		keyObj, err := x509.NewPublicKey(bytes.NewReader(*sig.Verifier))
 		if err != nil {
 			return result, err
 		}
@@ -227,7 +227,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 		dsseObj.Signatures = append(dsseObj.Signatures, &models.DSSEV001SchemaSignaturesItems0{
 			Signature: &sortedSigs[i],
-			PublicKey: &b64CanonicalizedKey,
+			Verifier:  &b64CanonicalizedKey,
 		})
 	}
 
@@ -402,7 +402,7 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 	}
 
 	//TODO: return multiple pki.PublicKeys; sigstore/rekor issue #1278
-	return x509.NewPublicKey(bytes.NewReader(*v.DSSEObj.Signatures[0].PublicKey))
+	return x509.NewPublicKey(bytes.NewReader(*v.DSSEObj.Signatures[0].Verifier))
 }
 
 func (v V001Entry) Insertable() (bool, error) {

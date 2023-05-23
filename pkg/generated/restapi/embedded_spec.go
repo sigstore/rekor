@@ -1599,7 +1599,7 @@ func init() {
           "writeOnly": true
         },
         "verifiers": {
-          "description": "collection of all public keys or certificates used to verify signatures over envelope's payload, specified as base64-encoded strings",
+          "description": "collection of all verification material (e.g. public keys or certificates) used to verify signatures over envelope's payload, specified as base64-encoded strings",
           "type": "array",
           "minItems": 1,
           "items": {
@@ -1612,22 +1612,22 @@ func init() {
       "writeOnly": true
     },
     "DSSEV001SchemaSignaturesItems0": {
-      "description": "a signature of the envelope's payload along with the public key for the signature",
+      "description": "a signature of the envelope's payload along with the verification material for the signature",
       "type": "object",
       "required": [
         "signature",
-        "publicKey"
+        "verifier"
       ],
       "properties": {
-        "publicKey": {
-          "description": "public key that was used to verify the corresponding signature, specified as a base64 encoded string",
-          "type": "string",
-          "format": "byte"
-        },
         "signature": {
           "description": "base64 encoded signature of the payload",
           "type": "string",
           "pattern": "^(?:[A-Za-z0-9+\\/]{4})*(?:[A-Za-z0-9+\\/]{2}==|[A-Za-z0-9+\\/]{3}=|[A-Za-z0-9+\\/]{4})$"
+        },
+        "verifier": {
+          "description": "verification material that was used to verify the corresponding signature, specified as a base64 encoded string",
+          "type": "string",
+          "format": "byte"
         }
       }
     },
@@ -3169,7 +3169,7 @@ func init() {
               "writeOnly": true
             },
             "verifiers": {
-              "description": "collection of all public keys or certificates used to verify signatures over envelope's payload, specified as base64-encoded strings",
+              "description": "collection of all verification material (e.g. public keys or certificates) used to verify signatures over envelope's payload, specified as base64-encoded strings",
               "type": "array",
               "minItems": 1,
               "items": {

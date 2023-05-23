@@ -239,7 +239,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				}
 				want := []string{}
 				for _, sig := range v.DSSEObj.Signatures {
-					keyHash := sha256.Sum256(*sig.PublicKey)
+					keyHash := sha256.Sum256(*sig.Verifier)
 					want = append(want, "sha256:"+hex.EncodeToString(keyHash[:]))
 				}
 				decodedPayload, err := base64.StdEncoding.DecodeString(tt.env.Payload)
@@ -403,7 +403,7 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 			}
 			want := []string{}
 			for _, sig := range v.DSSEObj.Signatures {
-				keyHash := sha256.Sum256(*sig.PublicKey)
+				keyHash := sha256.Sum256(*sig.Verifier)
 				want = append(want, "sha256:"+hex.EncodeToString(keyHash[:]))
 			}
 			decodedPayload, _ := base64.StdEncoding.DecodeString(v.env.Payload)

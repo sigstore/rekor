@@ -514,7 +514,7 @@ type DSSEV001SchemaProposedContent struct {
 	// Required: true
 	Envelope *string `json:"envelope"`
 
-	// collection of all public keys or certificates used to verify signatures over envelope's payload, specified as base64-encoded strings
+	// collection of all verification material (e.g. public keys or certificates) used to verify signatures over envelope's payload, specified as base64-encoded strings
 	// Required: true
 	// Min Items: 1
 	Verifiers []strfmt.Base64 `json:"verifiers"`
@@ -585,46 +585,37 @@ func (m *DSSEV001SchemaProposedContent) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-// DSSEV001SchemaSignaturesItems0 a signature of the envelope's payload along with the public key for the signature
+// DSSEV001SchemaSignaturesItems0 a signature of the envelope's payload along with the verification material for the signature
 //
 // swagger:model DSSEV001SchemaSignaturesItems0
 type DSSEV001SchemaSignaturesItems0 struct {
-
-	// public key that was used to verify the corresponding signature, specified as a base64 encoded string
-	// Required: true
-	// Format: byte
-	PublicKey *strfmt.Base64 `json:"publicKey"`
 
 	// base64 encoded signature of the payload
 	// Required: true
 	// Pattern: ^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{4})$
 	Signature *string `json:"signature"`
+
+	// verification material that was used to verify the corresponding signature, specified as a base64 encoded string
+	// Required: true
+	// Format: byte
+	Verifier *strfmt.Base64 `json:"verifier"`
 }
 
 // Validate validates this DSSE v001 schema signatures items0
 func (m *DSSEV001SchemaSignaturesItems0) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validatePublicKey(formats); err != nil {
+	if err := m.validateSignature(formats); err != nil {
 		res = append(res, err)
 	}
 
-	if err := m.validateSignature(formats); err != nil {
+	if err := m.validateVerifier(formats); err != nil {
 		res = append(res, err)
 	}
 
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *DSSEV001SchemaSignaturesItems0) validatePublicKey(formats strfmt.Registry) error {
-
-	if err := validate.Required("publicKey", "body", m.PublicKey); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -635,6 +626,15 @@ func (m *DSSEV001SchemaSignaturesItems0) validateSignature(formats strfmt.Regist
 	}
 
 	if err := validate.Pattern("signature", "body", *m.Signature, `^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{4})$`); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *DSSEV001SchemaSignaturesItems0) validateVerifier(formats strfmt.Registry) error {
+
+	if err := validate.Required("verifier", "body", m.Verifier); err != nil {
 		return err
 	}
 

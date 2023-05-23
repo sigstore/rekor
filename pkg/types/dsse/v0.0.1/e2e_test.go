@@ -402,7 +402,7 @@ func TestSendingCanonicalizedDSSE(t *testing.T) {
 	v001.Signatures = []*models.DSSEV001SchemaSignaturesItems0{
 		{
 			Signature: &env.Signatures[0].Sig,
-			PublicKey: &pk,
+			Verifier:  &pk,
 		},
 	}
 	// erase proposed content and overwrite previous
