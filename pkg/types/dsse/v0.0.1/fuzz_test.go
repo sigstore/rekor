@@ -61,6 +61,8 @@ func FuzzDSSECreateProposedEntry(f *testing.F) {
 		if _, err := types.CanonicalizeEntry(context.Background(), ei); err != nil {
 			t.Errorf("valid insertable entry should be able to be canonicalized: %v", err)
 		}
+
+		_, _ = ei.IndexKeys()
 	})
 }
 
