@@ -58,6 +58,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.2
 	github.com/redis/go-redis/v9 v9.0.4
+	github.com/sigstore/protobuf-specs v0.1.0
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 )
 
@@ -72,7 +73,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/s2a-go v0.1.3 // indirect
 	github.com/jellydator/ttlcache/v3 v3.0.1 // indirect
-	github.com/sigstore/protobuf-specs v0.1.0 // indirect
 	go.opentelemetry.io/otel v1.14.0 // indirect
 	go.opentelemetry.io/otel/trace v1.14.0 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
