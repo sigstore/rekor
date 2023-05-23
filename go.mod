@@ -72,6 +72,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/s2a-go v0.1.3 // indirect
 	github.com/jellydator/ttlcache/v3 v3.0.1 // indirect
+	github.com/sigstore/protobuf-specs v0.1.0 // indirect
 	go.opentelemetry.io/otel v1.14.0 // indirect
 	go.opentelemetry.io/otel/trace v1.14.0 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
