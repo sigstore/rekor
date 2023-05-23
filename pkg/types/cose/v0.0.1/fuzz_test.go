@@ -21,8 +21,11 @@ import (
 	"testing"
 
 	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
+	"github.com/go-openapi/swag"
 
 	fuzzUtils "github.com/sigstore/rekor/pkg/fuzz"
+	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/cose"
 )
 
@@ -47,9 +50,48 @@ func FuzzCoseCreateProposedEntry(f *testing.F) {
 		if err != nil {
 			t.Skip()
 		}
-		_, err = it.UnmarshalEntry(entry)
+
+		ei, err := types.CreateVersionedEntry(entry)
 		if err != nil {
 			t.Skip()
+		}
+
+		if ok, err := ei.Insertable(); !ok || err != nil {
+			t.Errorf("entry created via CreateProposedEntry should be insertable: %v", err)
+		}
+
+		if _, err := types.CanonicalizeEntry(context.Background(), ei); err != nil {
+			t.Errorf("valid insertable entry should be able to be canonicalized: %v", err)
+		}
+
+		_, _ = ei.IndexKeys()
+	})
+}
+
+func FuzzCoseUnmarshalAndCanonicalize(f *testing.F) {
+	f.Fuzz(func(t *testing.T, entryData []byte) {
+		initter.Do(fuzzUtils.SetFuzzLogger)
+
+		ff := fuzz.NewConsumer(entryData)
+
+		targetV001 := &models.CoseV001Schema{}
+
+		if err := ff.GenerateStruct(targetV001); err != nil {
+			t.Skip()
+		}
+
+		targetEntry := &models.Cose{
+			APIVersion: swag.String(APIVERSION),
+			Spec:       targetV001,
+		}
+
+		ei, err := types.UnmarshalEntry(targetEntry)
+		if err != nil {
+			t.Skip()
+		}
+
+		if _, err := types.CanonicalizeEntry(context.Background(), ei); err != nil {
+			t.Errorf("error canonicalizing unmarshalled entry: %v", err)
 		}
 	})
 }
