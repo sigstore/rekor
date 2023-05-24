@@ -110,7 +110,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return v.validate()
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pkcs7.PublicKey, *pkcs7.Signature, error) {
+func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, *pkcs7.Signature, error) {
 	if err := v.validate(); err != nil {
 		return nil, nil, types.ValidationError(err)
 	}
@@ -343,4 +343,15 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 		return nil, errors.New("jar v0.0.1 entry not initialized")
 	}
 	return x509.NewPublicKey(bytes.NewReader(*v.JARModel.Signature.PublicKey.Content))
+}
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.JARModel.Archive == nil {
+		return false, errors.New("missing archive property")
+	}
+	if len(v.JARModel.Archive.Content) == 0 {
+		return false, errors.New("missing archive content")
+	}
+
+	return true, nil
 }

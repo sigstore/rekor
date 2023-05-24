@@ -114,7 +114,7 @@ func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOptio
 		r = bytes.NewReader(h.Sum(nil))
 	}
 
-	return verifier.VerifySignature(bytes.NewReader(s.signature.Signature[:]), r)
+	return verifier.VerifySignature(bytes.NewReader(s.signature.Signature[:]), r, opts...)
 }
 
 // PublicKey Public Key that follows the minisign standard; supports signify and minisign public keys

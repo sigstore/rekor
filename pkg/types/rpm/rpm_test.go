@@ -39,7 +39,7 @@ func (u UnmarshalFailsTester) NewEntry() types.EntryImpl {
 	return &UnmarshalFailsTester{}
 }
 
-func (u UnmarshalFailsTester) Unmarshal(pe models.ProposedEntry) error {
+func (u UnmarshalFailsTester) Unmarshal(_ models.ProposedEntry) error {
 	return errors.New("error")
 }
 

@@ -46,6 +46,7 @@ import (
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	pkix509 "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 	dsse_signer "github.com/sigstore/sigstore/pkg/signature/dsse"
@@ -277,6 +278,13 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				if err := v.Unmarshal(it); err != nil {
 					return err
 				}
+
+				if !tt.wantErr {
+					if ok, err := v.Insertable(); !ok || err != nil {
+						t.Errorf("unexpected error calling Insertable on valid proposed entry: %v", err)
+					}
+				}
+
 				if v.IntotoObj.Content.Hash == nil || v.IntotoObj.Content.Hash.Algorithm != tt.it.Content.Hash.Algorithm || v.IntotoObj.Content.Hash.Value != tt.it.Content.Hash.Value {
 					return errors.New("missing envelope hash in validated object")
 				}
@@ -310,6 +318,11 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				if err != nil {
 					t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tt.name, err)
 				}
+
+				if ok, err := canonicalEntry.Insertable(); ok || err == nil {
+					t.Errorf("unexpected success calling Insertable on entry created from canonicalized content")
+				}
+
 				canonicalV001 := canonicalEntry.(*V001Entry)
 				fmt.Printf("%v", canonicalV001.IntotoObj.Content)
 				if *canonicalV001.IntotoObj.Content.Hash.Value != *tt.it.Content.Hash.Value {
@@ -346,6 +359,43 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				t.Errorf("V001Entry.Unmarshal() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+// Demonstrates that Unmarshal and Canonicalize will succeed with only a hash,
+// since committed entries will have no envelope and may have no payload hash
+func TestV001EntryWithoutEnvelopeOrPayloadHash(t *testing.T) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	der, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pub := pem.EncodeToMemory(&pem.Block{
+		Bytes: der,
+		Type:  "PUBLIC KEY",
+	})
+	m := &models.IntotoV001Schema{
+		PublicKey: p(pub),
+		Content: &models.IntotoV001SchemaContent{
+			Hash: &models.IntotoV001SchemaContentHash{
+				Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+				Value:     swag.String("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+			},
+		},
+	}
+	v := &V001Entry{}
+	it := &models.Intoto{
+		Spec: m,
+	}
+	if err := v.Unmarshal(it); err != nil {
+		t.Fatalf("error umarshalling intoto without envelope: %v", err)
+	}
+	_, err = v.Canonicalize(context.TODO())
+	if err != nil {
+		t.Fatalf("error canonicalizing intoto without envelope: %v", err)
 	}
 }
 
@@ -434,6 +484,139 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 			sort.Strings(want)
 			if !cmp.Equal(got, want) {
 				t.Errorf("V001Entry.IndexKeys() = %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V001Entry
+		expectSuccess bool
+	}
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	der, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pub := pem.EncodeToMemory(&pem.Block{
+		Bytes: der,
+		Type:  "PUBLIC KEY",
+	})
+	keyObj, err := pkix509.NewPublicKey(bytes.NewReader(pub))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	envStr := envelope(t, key, "payload", "payloadType")
+	env := dsse.Envelope{}
+
+	if err := json.Unmarshal([]byte(envStr), &env); err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V001Entry{
+				IntotoObj: models.IntotoV001Schema{
+					Content: &models.IntotoV001SchemaContent{
+						Envelope: "envelope",
+					},
+					PublicKey: p(pub),
+				},
+				keyObj: keyObj,
+				env:    env,
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "missing parsed keyObj",
+			entry: V001Entry{
+				IntotoObj: models.IntotoV001Schema{
+					Content: &models.IntotoV001SchemaContent{
+						Envelope: "envelope",
+					},
+					PublicKey: p(pub),
+				},
+				env: env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing parsed DSSE envelope",
+			entry: V001Entry{
+				IntotoObj: models.IntotoV001Schema{
+					Content: &models.IntotoV001SchemaContent{
+						Envelope: "envelope",
+					},
+					PublicKey: p(pub),
+				},
+				keyObj: keyObj,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing content",
+			entry: V001Entry{
+				IntotoObj: models.IntotoV001Schema{
+					PublicKey: p(pub),
+				},
+				keyObj: keyObj,
+				env:    env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing envelope string",
+			entry: V001Entry{
+				IntotoObj: models.IntotoV001Schema{
+					Content:   &models.IntotoV001SchemaContent{},
+					PublicKey: p(pub),
+				},
+				keyObj: keyObj,
+				env:    env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing unparsed public key",
+			entry: V001Entry{
+				IntotoObj: models.IntotoV001Schema{
+					Content: &models.IntotoV001SchemaContent{
+						Envelope: "envelope",
+					},
+				},
+				keyObj: keyObj,
+				env:    env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "empty parsed DSSE envelope",
+			entry: V001Entry{
+				IntotoObj: models.IntotoV001Schema{
+					Content: &models.IntotoV001SchemaContent{
+						Envelope: "envelope",
+					},
+					PublicKey: p(pub),
+				},
+				keyObj: keyObj,
+				env:    dsse.Envelope{},
+			},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
 			}
 		})
 	}

@@ -38,7 +38,7 @@ type TlogClient struct {
 	LogInfo models.LogInfo
 }
 
-func (m *TlogClient) GetLogProof(params *tlog.GetLogProofParams, opts ...tlog.ClientOption) (*tlog.GetLogProofOK, error) {
+func (m *TlogClient) GetLogProof(_ *tlog.GetLogProofParams, _ ...tlog.ClientOption) (*tlog.GetLogProofOK, error) {
 	return &tlog.GetLogProofOK{
 		Payload: &models.ConsistencyProof{
 			Hashes:   m.Proof,
@@ -46,14 +46,14 @@ func (m *TlogClient) GetLogProof(params *tlog.GetLogProofParams, opts ...tlog.Cl
 		}}, nil
 }
 
-func (m *TlogClient) GetLogInfo(params *tlog.GetLogInfoParams, opts ...tlog.ClientOption) (*tlog.GetLogInfoOK, error) {
+func (m *TlogClient) GetLogInfo(_ *tlog.GetLogInfoParams, _ ...tlog.ClientOption) (*tlog.GetLogInfoOK, error) {
 	return &tlog.GetLogInfoOK{
 		Payload: &m.LogInfo,
 	}, nil
 }
 
 // TODO: Implement mock
-func (m *TlogClient) SetTransport(transport runtime.ClientTransport) {
+func (m *TlogClient) SetTransport(_ runtime.ClientTransport) {
 }
 
 func TestConsistency(t *testing.T) {

@@ -104,7 +104,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return err
 }
 
-func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	sigObj, keyObj, err := v.validate()
 	if err != nil {
 		return nil, types.ValidationError(err)
@@ -189,7 +189,7 @@ func (v *V001Entry) validate() (pki.Signature, pki.PublicKey, error) {
 	return sigObj, keyObj, nil
 }
 
-func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
+func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	returnVal := models.Hashedrekord{}
 	re := V001Entry{}
 
@@ -251,4 +251,32 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 		return nil, errors.New("hashedrekord v0.0.1 entry not initialized")
 	}
 	return x509.NewPublicKey(bytes.NewReader(v.HashedRekordObj.Signature.PublicKey.Content))
+}
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.HashedRekordObj.Signature == nil {
+		return false, errors.New("missing signature property")
+	}
+	if len(v.HashedRekordObj.Signature.Content) == 0 {
+		return false, errors.New("missing signature content")
+	}
+	if v.HashedRekordObj.Signature.PublicKey == nil {
+		return false, errors.New("missing publicKey property")
+	}
+	if len(v.HashedRekordObj.Signature.PublicKey.Content) == 0 {
+		return false, errors.New("missing publicKey content")
+	}
+	if v.HashedRekordObj.Data == nil {
+		return false, errors.New("missing data property")
+	}
+	if v.HashedRekordObj.Data.Hash == nil {
+		return false, errors.New("missing hash property")
+	}
+	if v.HashedRekordObj.Data.Hash.Algorithm == nil {
+		return false, errors.New("missing hash algorithm")
+	}
+	if v.HashedRekordObj.Data.Hash.Value == nil {
+		return false, errors.New("missing hash value")
+	}
+	return true, nil
 }

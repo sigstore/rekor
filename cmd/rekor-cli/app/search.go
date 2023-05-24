@@ -201,7 +201,9 @@ var searchCmd = &cobra.Command{
 			return nil, fmt.Errorf("no matching entries found")
 		}
 
-		fmt.Fprintln(os.Stderr, "Found matching entries (listed by UUID):")
+		if viper.GetString("format") != "json" {
+			fmt.Fprintln(os.Stderr, "Found matching entries (listed by UUID):")
+		}
 
 		return &searchCmdOutput{
 			UUIDs: resp.GetPayload(),

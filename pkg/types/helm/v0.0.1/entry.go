@@ -355,3 +355,23 @@ func (v V001Entry) Verifier() (pki.PublicKey, error) {
 	}
 	return pgp.NewPublicKey(bytes.NewReader(*v.HelmObj.PublicKey.Content))
 }
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.HelmObj.PublicKey == nil {
+		return false, errors.New("missing public key property")
+	}
+	if v.HelmObj.PublicKey.Content == nil || len(*v.HelmObj.PublicKey.Content) == 0 {
+		return false, errors.New("missing public key content")
+	}
+
+	if v.HelmObj.Chart == nil {
+		return false, errors.New("missing chart property")
+	}
+	if v.HelmObj.Chart.Provenance == nil {
+		return false, errors.New("missing provenance property")
+	}
+	if len(v.HelmObj.Chart.Provenance.Content) == 0 {
+		return false, errors.New("missing provenance content")
+	}
+	return true, nil
+}

@@ -53,6 +53,38 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 		inactiveShards = append(inactiveShards, is)
 	}
 
+	if swag.BoolValue(params.Stable) && redisClient != nil {
+		// key is treeID/latest
+		key := fmt.Sprintf("%d/latest", api.logRanges.ActiveTreeID())
+		redisResult, err := redisClient.Get(params.HTTPRequest.Context(), key).Result()
+		if err != nil {
+			return handleRekorAPIError(params, http.StatusInternalServerError,
+				fmt.Errorf("error getting checkpoint from redis: %w", err), "error getting checkpoint from redis")
+		}
+		// should not occur, a checkpoint should always be present
+		if redisResult == "" {
+			return handleRekorAPIError(params, http.StatusInternalServerError,
+				fmt.Errorf("no checkpoint found in redis: %w", err), "no checkpoint found in redis")
+		}
+		decoded, err := hex.DecodeString(redisResult)
+		if err != nil {
+			return handleRekorAPIError(params, http.StatusInternalServerError,
+				fmt.Errorf("error decoding checkpoint from redis: %w", err), "error decoding checkpoint from redis")
+		}
+		checkpoint := util.SignedCheckpoint{}
+		if err := checkpoint.UnmarshalText(decoded); err != nil {
+			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("invalid checkpoint: %w", err), "invalid checkpoint")
+		}
+		logInfo := models.LogInfo{
+			RootHash:       stringPointer(hex.EncodeToString(checkpoint.Hash)),
+			TreeSize:       swag.Int64(int64(checkpoint.Size)),
+			SignedTreeHead: stringPointer(string(decoded)),
+			TreeID:         stringPointer(fmt.Sprintf("%d", api.logID)),
+			InactiveShards: inactiveShards,
+		}
+		return tlog.NewGetLogInfoOK().WithPayload(&logInfo)
+	}
+
 	resp := tc.GetLatest(0)
 	if resp.Status != codes.OK {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.Err), trillianCommunicationError)
@@ -168,7 +200,7 @@ func inactiveShardLogInfo(ctx context.Context, tid int64) (*models.InactiveShard
 
 // handlers for APIs that may be disabled in a given instance
 
-func GetLogInfoNotImplementedHandler(params tlog.GetLogInfoParams) middleware.Responder {
+func GetLogInfoNotImplementedHandler(_ tlog.GetLogInfoParams) middleware.Responder {
 	err := &models.Error{
 		Code:    http.StatusNotImplemented,
 		Message: "Get Log Info API not enabled in this Rekor instance",
@@ -177,7 +209,7 @@ func GetLogInfoNotImplementedHandler(params tlog.GetLogInfoParams) middleware.Re
 	return tlog.NewGetLogInfoDefault(http.StatusNotImplemented).WithPayload(err)
 }
 
-func GetLogProofNotImplementedHandler(params tlog.GetLogProofParams) middleware.Responder {
+func GetLogProofNotImplementedHandler(_ tlog.GetLogProofParams) middleware.Responder {
 	err := &models.Error{
 		Code:    http.StatusNotImplemented,
 		Message: "Get Log Proof API not enabled in this Rekor instance",
