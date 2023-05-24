@@ -111,7 +111,7 @@ func initializePFlagMap() {
 		},
 		formatFlag: func() pflag.Value {
 			// this validates the output format requested
-			return valueFactory(formatFlag, validateString("required,oneof=json default"), "")
+			return valueFactory(formatFlag, validateString("required,oneof=json default tle"), "")
 		},
 		timeoutFlag: func() pflag.Value {
 			// this validates the timeout is >= 0

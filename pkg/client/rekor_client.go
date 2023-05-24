@@ -34,6 +34,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/util"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error) {
@@ -73,6 +74,7 @@ func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error
 	return client.New(rt, registry), nil
 }
 
+// GenerateTransparencyLogEntry returns a sigstore/protobuf-specs compliant
 func GenerateTransparencyLogEntry(anon models.LogEntryAnon) (*rekor_pb.TransparencyLogEntry, error) {
 	logIDHash, err := hex.DecodeString(*anon.LogID)
 	if err != nil {
@@ -131,4 +133,9 @@ func GenerateTransparencyLogEntry(anon models.LogEntryAnon) (*rekor_pb.Transpare
 		},
 		CanonicalizedBody: b, // we don't call eimpl.Canonicalize in the case that the logic is different in this caller vs when it was persisted in the log
 	}, nil
+}
+
+// MarshalTLEToJSON marshals a TransparencyLogEntry message to JSON according to the protobuf JSON encoding rules
+func MarshalTLEToJSON(tle *rekor_pb.TransparencyLogEntry) ([]byte, error) {
+	return protojson.Marshal(tle)
 }

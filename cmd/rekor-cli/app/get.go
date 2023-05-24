@@ -203,6 +203,10 @@ func compareEntryUUIDs(requestEntryUUID string, responseEntryUUID string) error 
 }
 
 func parseEntry(uuid string, e models.LogEntryAnon) (interface{}, error) {
+	if viper.GetString("format") == "tle" {
+		return client.GenerateTransparencyLogEntry(e)
+	}
+
 	b, err := base64.StdEncoding.DecodeString(e.Body.(string))
 	if err != nil {
 		return nil, err
