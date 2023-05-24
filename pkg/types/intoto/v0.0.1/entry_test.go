@@ -362,6 +362,43 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 	}
 }
 
+// Demonstrates that Unmarshal and Canonicalize will succeed with only a hash,
+// since committed entries will have no envelope and may have no payload hash
+func TestV001EntryWithoutEnvelopeOrPayloadHash(t *testing.T) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	der, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pub := pem.EncodeToMemory(&pem.Block{
+		Bytes: der,
+		Type:  "PUBLIC KEY",
+	})
+	m := &models.IntotoV001Schema{
+		PublicKey: p(pub),
+		Content: &models.IntotoV001SchemaContent{
+			Hash: &models.IntotoV001SchemaContentHash{
+				Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
+				Value:     swag.String("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+			},
+		},
+	}
+	v := &V001Entry{}
+	it := &models.Intoto{
+		Spec: m,
+	}
+	if err := v.Unmarshal(it); err != nil {
+		t.Fatalf("error umarshalling intoto without envelope: %v", err)
+	}
+	_, err = v.Canonicalize(context.TODO())
+	if err != nil {
+		t.Fatalf("error canonicalizing intoto without envelope: %v", err)
+	}
+}
+
 func TestV001Entry_IndexKeys(t *testing.T) {
 	h := sha256.Sum256([]byte("foo"))
 	dataSHA := hex.EncodeToString(h[:])
