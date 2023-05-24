@@ -50,9 +50,7 @@ import (
 	_ "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	_ "github.com/sigstore/rekor/pkg/types/helm/v0.0.1"
 	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
-
-	// remove 0.0.2 intoto type due to bugs
-	// _ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.2"
+	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.2"
 	_ "github.com/sigstore/rekor/pkg/types/jar/v0.0.1"
 	_ "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	_ "github.com/sigstore/rekor/pkg/types/rfc3161/v0.0.1"
