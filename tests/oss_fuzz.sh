@@ -60,6 +60,8 @@ compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/helm/v0.0.1 FuzzHel
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/helm/v0.0.1 FuzzHelmProvenanceUnmarshal FuzzHelmProvenanceUnmarshal
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/rekord/v0.0.1 FuzzRekordCreateProposedEntry FuzzRekordCreateProposedEntry
 compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/rekord/v0.0.1 FuzzRekordUnmarshalAndCanonicalize FuzzRekordUnmarshalAndCanonicalize
+compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/dsse/v0.0.1 FuzzDSSECreateProposedEntry FuzzDSSECreateProposedEntry
+compile_native_go_fuzzer github.com/sigstore/rekor/pkg/types/dsse/v0.0.1 FuzzDSSEUnmarshalAndCanonicalize FuzzDSSEUnmarshalAndCanonicalize
 
 # Test 3rd party API that rekor/pkg/types/jar/v0.0.1 uses
 go mod edit -replace github.com/sassoftware/relic=$SRC/relic
