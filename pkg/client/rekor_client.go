@@ -74,7 +74,8 @@ func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error
 	return client.New(rt, registry), nil
 }
 
-// GenerateTransparencyLogEntry returns a sigstore/protobuf-specs compliant
+// GenerateTransparencyLogEntry returns a sigstore/protobuf-specs compliant message containing a
+// TransparencyLogEntry as defined at https://github.com/sigstore/protobuf-specs/blob/main/protos/sigstore_rekor.proto
 func GenerateTransparencyLogEntry(anon models.LogEntryAnon) (*rekor_pb.TransparencyLogEntry, error) {
 	logIDHash, err := hex.DecodeString(*anon.LogID)
 	if err != nil {
