@@ -44,7 +44,7 @@ func WrapCmd(f formatCmd) CobraCmd {
 			} else {
 				fmt.Println(toJSON(s))
 			}
-		case "json", "bundle":
+		case "json":
 			fmt.Println(toJSON(obj))
 		}
 	}

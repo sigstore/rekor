@@ -107,7 +107,7 @@ func GenerateTransparencyLogEntry(anon models.LogEntryAnon) (*rekor_pb.Transpare
 		return nil, err
 	}
 
-	tle := &rekor_pb.TransparencyLogEntry{
+	return &rekor_pb.TransparencyLogEntry{
 		LogIndex: *anon.LogIndex,
 		LogId: &rekor_pb_common.LogId{
 			KeyId: logIDHash,
@@ -118,7 +118,7 @@ func GenerateTransparencyLogEntry(anon models.LogEntryAnon) (*rekor_pb.Transpare
 		},
 		IntegratedTime: *anon.IntegratedTime,
 		InclusionPromise: &rekor_pb.InclusionPromise{
-			SignedEntryTimestamp: anon.Verification.SignedEntryTimestamp, // may need to b64 decode
+			SignedEntryTimestamp: anon.Verification.SignedEntryTimestamp,
 		},
 		InclusionProof: &rekor_pb.InclusionProof{
 			LogIndex: *anon.LogIndex,
@@ -130,7 +130,5 @@ func GenerateTransparencyLogEntry(anon models.LogEntryAnon) (*rekor_pb.Transpare
 			},
 		},
 		CanonicalizedBody: b, // we don't call eimpl.Canonicalize in the case that the logic is different in this caller vs when it was persisted in the log
-	}
-
-	return tle, nil
+	}, nil
 }
