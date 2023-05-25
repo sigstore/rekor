@@ -19,6 +19,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
+
+	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -46,6 +49,16 @@ func WrapCmd(f formatCmd) CobraCmd {
 			}
 		case "json":
 			fmt.Println(toJSON(obj))
+		case "tle":
+			if tle, ok := obj.(*rekor_pb.TransparencyLogEntry); ok {
+				json, err := client.MarshalTLEToJSON(tle)
+				if err != nil {
+					log.CliLogger.Fatalf("error converting to transparency log entry: %v", err)
+				}
+				fmt.Println(string(json))
+			} else {
+				log.CliLogger.Fatal("unable to print transparency log entry")
+			}
 		}
 	}
 }

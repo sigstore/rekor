@@ -58,6 +58,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.2
 	github.com/redis/go-redis/v9 v9.0.4
+	github.com/sigstore/protobuf-specs v0.1.0
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 )
 
