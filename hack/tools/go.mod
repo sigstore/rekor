@@ -91,6 +91,7 @@ require (
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
+	github.com/prometheus/prometheus v0.35.0 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/afero v1.9.2 // indirect
