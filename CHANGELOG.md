@@ -1,3 +1,11 @@
+# v1.2.1
+
+## Bug Fixes
+* run go mod tidy in hack/tools (#1510)
+
+## Contributors
+* Bob Callaway
+
 # v1.2.0
 
 ## Functional Enhancements
