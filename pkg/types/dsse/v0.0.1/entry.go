@@ -75,6 +75,9 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
 	for _, sig := range v.DSSEObj.Signatures {
+		if sig == nil || sig.Verifier == nil {
+			return result, errors.New("missing or malformed public key")
+		}
 		keyObj, err := x509.NewPublicKey(bytes.NewReader(*sig.Verifier))
 		if err != nil {
 			return result, err
@@ -202,6 +205,10 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 	allPubKeyBytes := make([][]byte, 0)
 	for _, publicKey := range dsseObj.ProposedContent.Verifiers {
+		if publicKey == nil {
+			return errors.New("an invalid null verifier was provided in ProposedContent")
+		}
+
 		allPubKeyBytes = append(allPubKeyBytes, publicKey)
 	}
 

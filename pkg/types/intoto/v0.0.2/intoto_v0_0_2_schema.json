@@ -44,7 +44,8 @@
                                         "type": "string",
                                         "format": "byte"
                                     }
-                                }
+                                },
+                                "required": ["sig", "publicKey"]
                             }
                         }
                     },

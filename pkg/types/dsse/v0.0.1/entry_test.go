@@ -158,6 +158,9 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 		},
 	}
 
+	validEnv := envelope(t, key, []byte("payload"))
+	validEnvBytes, _ := json.Marshal(validEnv)
+
 	validPayload := "hellothispayloadisvalid"
 
 	tests := []struct {
@@ -217,6 +220,17 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				ProposedContent: createRekorEnvelope(multiSignEnvelope(t, []*ecdsa.PrivateKey{key, priv}, []byte(validPayload)), [][]byte{pub, pemBytes}),
 			},
 			wantErr: false,
+		},
+		{
+			env:  validEnv,
+			name: "null verifier in array",
+			it: &models.DSSEV001Schema{
+				ProposedContent: &models.DSSEV001SchemaProposedContent{
+					Envelope:  swag.String(string(validEnvBytes)),
+					Verifiers: []strfmt.Base64{pub, nil},
+				},
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

@@ -2167,6 +2167,10 @@ func init() {
     "IntotoV002SchemaContentEnvelopeSignaturesItems0": {
       "description": "a signature of the envelope's payload along with the public key for the signature",
       "type": "object",
+      "required": [
+        "sig",
+        "publicKey"
+      ],
       "properties": {
         "keyid": {
           "description": "optional id of the key used to create the signature",

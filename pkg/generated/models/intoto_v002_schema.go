@@ -450,16 +450,49 @@ type IntotoV002SchemaContentEnvelopeSignaturesItems0 struct {
 	Keyid string `json:"keyid,omitempty"`
 
 	// public key that corresponds to this signature
+	// Required: true
 	// Format: byte
-	PublicKey strfmt.Base64 `json:"publicKey,omitempty"`
+	PublicKey *strfmt.Base64 `json:"publicKey"`
 
 	// signature of the payload
+	// Required: true
 	// Format: byte
-	Sig strfmt.Base64 `json:"sig,omitempty"`
+	Sig *strfmt.Base64 `json:"sig"`
 }
 
 // Validate validates this intoto v002 schema content envelope signatures items0
 func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validatePublicKey(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateSig(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) validatePublicKey(formats strfmt.Registry) error {
+
+	if err := validate.Required("publicKey", "body", m.PublicKey); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) validateSig(formats strfmt.Registry) error {
+
+	if err := validate.Required("sig", "body", m.Sig); err != nil {
+		return err
+	}
+
 	return nil
 }
 

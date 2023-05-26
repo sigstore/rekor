@@ -111,10 +111,12 @@ func createRekorEnvelope(dsseEnv *dsse.Envelope, pub [][]byte) *models.IntotoV00
 	env.PayloadType = &dsseEnv.PayloadType
 
 	for i, sig := range dsseEnv.Signatures {
+		keyBytes := strfmt.Base64(pub[i])
+		sigBytes := strfmt.Base64([]byte(sig.Sig))
 		env.Signatures = append(env.Signatures, &models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 			Keyid:     sig.KeyID,
-			Sig:       strfmt.Base64([]byte(sig.Sig)),
-			PublicKey: strfmt.Base64(pub[i]),
+			Sig:       &sigBytes,
+			PublicKey: &keyBytes,
 		})
 	}
 
@@ -172,6 +174,8 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 	}
 
 	validPayload := "hellothispayloadisvalid"
+	keyBytes := strfmt.Base64("key")
+	sigBytes := strfmt.Base64("sig")
 
 	tests := []struct {
 		env             *dsse.Envelope
@@ -273,6 +277,31 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 			wantErr:         false,
 			wantVerifierErr: false,
 		},
+		{
+			env:  envelope(t, key, []byte(validPayload)),
+			name: "null array entry",
+			it: &models.IntotoV002Schema{
+				Content: &models.IntotoV002SchemaContent{
+					Envelope: &models.IntotoV002SchemaContentEnvelope{
+						Payload:     strfmt.Base64("cGF5bG9hZAo="),
+						PayloadType: swag.String("payloadType"),
+						Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+							{
+								PublicKey: &keyBytes,
+								Sig:       &sigBytes,
+							},
+							nil,
+						},
+					},
+					Hash: &models.IntotoV002SchemaContentHash{
+						Algorithm: swag.String(models.IntotoV002SchemaContentHashAlgorithmSha256),
+						Value:     swag.String(envelopeHash(t, envelope(t, key, []byte(validPayload)))),
+					},
+				},
+			},
+			wantErr:         true,
+			wantVerifierErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -295,7 +324,7 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 
 				want := []string{}
 				for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
-					keyHash := sha256.Sum256(sig.PublicKey)
+					keyHash := sha256.Sum256(*sig.PublicKey)
 					want = append(want, "sha256:"+hex.EncodeToString(keyHash[:]))
 				}
 				decodedPayload, err := base64.StdEncoding.DecodeString(tt.env.Payload)
@@ -483,7 +512,7 @@ func TestV002Entry_IndexKeys(t *testing.T) {
 			}
 			want := []string{}
 			for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
-				keyHash := sha256.Sum256(sig.PublicKey)
+				keyHash := sha256.Sum256(*sig.PublicKey)
 				want = append(want, "sha256:"+hex.EncodeToString(keyHash[:]))
 			}
 
@@ -513,6 +542,8 @@ func TestInsertable(t *testing.T) {
 	}
 
 	env := envelope(t, key, []byte("payload"))
+	keyBytes := strfmt.Base64([]byte("key"))
+	sigBytes := strfmt.Base64([]byte("sig"))
 
 	testCases := []TestCase{
 		{
@@ -525,8 +556,8 @@ func TestInsertable(t *testing.T) {
 							PayloadType: swag.String("payloadType"),
 							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 								{
-									PublicKey: strfmt.Base64([]byte("key")),
-									Sig:       strfmt.Base64([]byte("sig")),
+									PublicKey: &keyBytes,
+									Sig:       &sigBytes,
 								},
 							},
 						},
@@ -546,8 +577,8 @@ func TestInsertable(t *testing.T) {
 							PayloadType: swag.String("payloadType"),
 							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 								{
-									PublicKey: strfmt.Base64([]byte("key")),
-									Sig:       strfmt.Base64([]byte("sig")),
+									PublicKey: &keyBytes,
+									Sig:       &sigBytes,
 								},
 							},
 						},
@@ -567,7 +598,7 @@ func TestInsertable(t *testing.T) {
 							PayloadType: swag.String("payloadType"),
 							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 								{
-									PublicKey: strfmt.Base64([]byte("key")),
+									PublicKey: &keyBytes,
 									//Sig:       strfmt.Base64([]byte("sig")),
 								},
 							},
@@ -589,7 +620,7 @@ func TestInsertable(t *testing.T) {
 							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 								{
 									//PublicKey: strfmt.Base64([]byte("key")),
-									Sig: strfmt.Base64([]byte("sig")),
+									Sig: &sigBytes,
 								},
 							},
 						},
@@ -633,8 +664,8 @@ func TestInsertable(t *testing.T) {
 							//PayloadType: swag.String("payloadType"),
 							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 								{
-									PublicKey: strfmt.Base64([]byte("key")),
-									Sig:       strfmt.Base64([]byte("sig")),
+									PublicKey: &keyBytes,
+									Sig:       &sigBytes,
 								},
 							},
 						},
@@ -654,8 +685,8 @@ func TestInsertable(t *testing.T) {
 							PayloadType: swag.String("payloadType"),
 							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 								{
-									PublicKey: strfmt.Base64([]byte("key")),
-									Sig:       strfmt.Base64([]byte("sig")),
+									PublicKey: &keyBytes,
+									Sig:       &sigBytes,
 								},
 							},
 						},

@@ -32,6 +32,7 @@ import (
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/spf13/viper"
+	"golang.org/x/exp/slices"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -78,7 +79,10 @@ func (v V002Entry) IndexKeys() ([]string, error) {
 	}
 
 	for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
-		keyObj, err := x509.NewPublicKey(bytes.NewReader(sig.PublicKey))
+		if sig == nil || sig.PublicKey == nil {
+			return result, errors.New("malformed or missing signature")
+		}
+		keyObj, err := x509.NewPublicKey(bytes.NewReader(*sig.PublicKey))
 		if err != nil {
 			return result, err
 		}
@@ -182,13 +186,17 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	allPubKeyBytes := make([][]byte, 0)
-	for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
+	for i, sig := range v.IntotoObj.Content.Envelope.Signatures {
+		if sig == nil {
+			v.IntotoObj.Content.Envelope.Signatures = slices.Delete(v.IntotoObj.Content.Envelope.Signatures, i, i)
+			continue
+		}
 		env.Signatures = append(env.Signatures, dsse.Signature{
 			KeyID: sig.Keyid,
-			Sig:   string(sig.Sig),
+			Sig:   string(*sig.Sig),
 		})
 
-		allPubKeyBytes = append(allPubKeyBytes, sig.PublicKey)
+		allPubKeyBytes = append(allPubKeyBytes, *sig.PublicKey)
 	}
 
 	if _, err := verifyEnvelope(allPubKeyBytes, env); err != nil {
@@ -381,10 +389,11 @@ func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		}
 
 		keyBytes := strfmt.Base64(canonKey)
+		sigBytes := strfmt.Base64([]byte(sig.Sig))
 		re.IntotoObj.Content.Envelope.Signatures = append(re.IntotoObj.Content.Envelope.Signatures, &models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 			Keyid:     sig.KeyID,
-			Sig:       strfmt.Base64([]byte(sig.Sig)),
-			PublicKey: keyBytes,
+			Sig:       &sigBytes,
+			PublicKey: &keyBytes,
 		})
 	}
 
@@ -458,7 +467,7 @@ func (v V002Entry) Verifier() (pki.PublicKey, error) {
 		return nil, errors.New("no signatures found on intoto entry")
 	}
 
-	return x509.NewPublicKey(bytes.NewReader(v.IntotoObj.Content.Envelope.Signatures[0].PublicKey))
+	return x509.NewPublicKey(bytes.NewReader(*v.IntotoObj.Content.Envelope.Signatures[0].PublicKey))
 }
 
 func (v V002Entry) Insertable() (bool, error) {
@@ -480,10 +489,13 @@ func (v V002Entry) Insertable() (bool, error) {
 		return false, errors.New("missing signatures content")
 	}
 	for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
-		if len(sig.Sig) == 0 {
+		if sig == nil {
+			return false, errors.New("missing signature entry")
+		}
+		if sig.Sig == nil || len(*sig.Sig) == 0 {
 			return false, errors.New("missing signature content")
 		}
-		if len(sig.PublicKey) == 0 {
+		if sig.PublicKey == nil || len(*sig.PublicKey) == 0 {
 			return false, errors.New("missing publicKey content")
 		}
 	}
