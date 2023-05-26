@@ -1,3 +1,34 @@
+# v1.2.0
+
+## Functional Enhancements
+* add client method to generate TLE struct (#1498)
+* add dsse type (#1487)
+* support other KMS providers (AWS, Azure, Hashicorp) in addition to GCP (#1488)
+* Add concurrency to backfill-redis (#1504)
+* omit informational message if machine-parseable output has been requested (#1486)
+* Publish stable checkpoint periodically to Redis (#1461)
+* Add intoto v0.0.2 to backfill script (#1500)
+* add new method to test insertability of proposed entries into log (#1410)
+
+## Quality Enhancements
+* use t.Skip() in fuzzers (#1506)
+* improve fuzzing coverage (#1499)
+* Remove watcher script (#1484)
+
+## Bug Fixes
+* Merge pull request from GHSA-frqx-jfcm-6jjr
+* Remove requirement of PayloadHash for intoto 0.0.1 (#1490)
+* fix lint errors, bump linter up to 1.52 (#1485)
+* Remove dependencies from pkg/util (#1469)
+
+## Contributors
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Ceridwen Coghlan
+* Cody Soyland
+* Hayden B
+* Miloslav Trmač
+
 # v1.1.1
 
 ## Functional Enhancements
