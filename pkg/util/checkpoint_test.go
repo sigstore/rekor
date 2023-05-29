@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/trillian/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	"golang.org/x/mod/sumdb/note"
@@ -458,7 +457,7 @@ func TestSignCheckpoint(t *testing.T) {
 		t.Fatalf("error generating signer: %v", err)
 	}
 	ctx := context.Background()
-	scBytes, err := CreateAndSignCheckpoint(ctx, hostname, treeID, &types.LogRootV1{TreeSize: treeSize, RootHash: rootHash[:]}, signer)
+	scBytes, err := CreateAndSignCheckpoint(ctx, hostname, treeID, treeSize, rootHash[:], signer)
 	if err != nil {
 		t.Fatalf("error creating signed checkpoint: %v", err)
 	}

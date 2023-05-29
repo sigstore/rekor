@@ -127,7 +127,7 @@ func (c *CheckpointPublisher) publish(tc *trillianclient.TrillianClient, sTreeID
 	}
 
 	// sign checkpoint with Rekor private key
-	checkpoint, err := util.CreateAndSignCheckpoint(context.Background(), c.hostname, c.treeID, root, c.signer)
+	checkpoint, err := util.CreateAndSignCheckpoint(context.Background(), c.hostname, c.treeID, root.TreeSize, root.RootHash, c.signer)
 	if err != nil {
 		c.reqCounter.With(
 			map[string]string{
