@@ -35,6 +35,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/sharding"
+	"github.com/sigstore/rekor/pkg/tle"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/verify"
 )
@@ -204,7 +205,7 @@ func compareEntryUUIDs(requestEntryUUID string, responseEntryUUID string) error 
 
 func parseEntry(uuid string, e models.LogEntryAnon) (interface{}, error) {
 	if viper.GetString("format") == "tle" {
-		return client.GenerateTransparencyLogEntry(e)
+		return tle.GenerateTransparencyLogEntry(e)
 	}
 
 	b, err := base64.StdEncoding.DecodeString(e.Body.(string))
