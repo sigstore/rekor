@@ -24,7 +24,6 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"github.com/google/trillian/types"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/tlog"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -253,7 +252,7 @@ func TestCheckpoint(t *testing.T) {
 		t.Fatalf("error generating signer: %v", err)
 	}
 	ctx := context.Background()
-	scBytes, err := util.CreateAndSignCheckpoint(ctx, hostname, treeID, &types.LogRootV1{TreeSize: treeSize, RootHash: rootHash[:]}, signer)
+	scBytes, err := util.CreateAndSignCheckpoint(ctx, hostname, treeID, treeSize, rootHash[:], signer)
 	if err != nil {
 		t.Fatalf("error creating signed checkpoint: %v", err)
 	}
