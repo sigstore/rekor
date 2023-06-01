@@ -2088,8 +2088,8 @@ go.opentelemetry.io/proto/otlp v0.11.0/go.mod h1:QpEjXPrNQzrFDZgoTo49dgHR9RYRSrg
 go.opentelemetry.io/proto/otlp v0.12.1/go.mod h1:H7XAot3MsfNsj7EXtrA2q5xSNQ10UqI405h3+duxN4U=
 go.opentelemetry.io/proto/otlp v0.15.0/go.mod h1:H7XAot3MsfNsj7EXtrA2q5xSNQ10UqI405h3+duxN4U=
 go.opentelemetry.io/proto/otlp v0.19.0/go.mod h1:H7XAot3MsfNsj7EXtrA2q5xSNQ10UqI405h3+duxN4U=
-go.step.sm/crypto v0.31.1 h1:Ua2asApVvWP3DP26L1q1fHGV1Ud/w8VQUA6JQyj2TUI=
-go.step.sm/crypto v0.31.1/go.mod h1:gFQ/XlQIIiFRfZrXglqKbrX9bgC1HmsASErev9sZN4A=
+go.step.sm/crypto v0.31.2 h1:GJX4A15zXxxcbuS++g2SvETTitAUClGIfg5QnKlscDs=
+go.step.sm/crypto v0.31.2/go.mod h1:gFQ/XlQIIiFRfZrXglqKbrX9bgC1HmsASErev9sZN4A=
 go.uber.org/atomic v1.3.2/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
 go.uber.org/atomic v1.4.0/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
 go.uber.org/atomic v1.5.0/go.mod h1:sABNBOSYdrvTF6hTgEIbc7YasKWGhgEQZyfxyTvoXHQ=
