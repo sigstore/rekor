@@ -28,7 +28,7 @@ require (
 	github.com/rs/cors v1.9.0
 	github.com/sassoftware/relic v7.2.1+incompatible
 	github.com/secure-systems-lab/go-securesystemslib v0.6.0
-	github.com/sigstore/sigstore v1.6.5
+	github.com/sigstore/sigstore v1.7.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.16.0
@@ -175,7 +175,7 @@ require (
 	go.step.sm/crypto v0.32.0
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/oauth2 v0.8.0 // indirect
+	golang.org/x/oauth2 v0.9.0 // indirect
 	golang.org/x/sys v0.9.0 // indirect
 	golang.org/x/term v0.9.0 // indirect
 	golang.org/x/text v0.10.0 // indirect
