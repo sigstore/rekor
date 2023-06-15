@@ -433,8 +433,8 @@ github.com/Azure/azure-sdk-for-go/sdk/azcore v1.1.1/go.mod h1:uGG2W01BaETf0Ozp+Q
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.1.2/go.mod h1:uGG2W01BaETf0Ozp+QxxKJdMBNRWPdstHG0Fmdwn1/U=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.3.0/go.mod h1:tZoQYdDZNOiIjdSn0dVWVfl0NEPGOJqVLzSrcFk4Is0=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.3.1/go.mod h1:DffdKW9RFqa5VgmsjUOsS7UE7eiA5iAvYUs63bhKQ0M=
-github.com/Azure/azure-sdk-for-go/sdk/azcore v1.6.0 h1:8kDqDngH+DmVBiCtIjCFTGa7MBnsIOkF9IccInFEbjk=
-github.com/Azure/azure-sdk-for-go/sdk/azcore v1.6.0/go.mod h1:bjGvMhVMb+EEm3VRNQawDMUyMMjo+S5ewNjflkep/0Q=
+github.com/Azure/azure-sdk-for-go/sdk/azcore v1.6.1 h1:SEy2xmstIphdPwNBUi7uhvjyjhVKISfwjfOJmuy7kg4=
+github.com/Azure/azure-sdk-for-go/sdk/azcore v1.6.1/go.mod h1:bjGvMhVMb+EEm3VRNQawDMUyMMjo+S5ewNjflkep/0Q=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.0.0/go.mod h1:+6sju8gk8FRmSajX3Oz4G5Gm7P+mbqE9FVaXXFYTkCM=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.1.0/go.mod h1:bhXu1AjYL+wutSL/kpSq6s7733q2Rb0yuot9Zgfqa/0=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.2.1/go.mod h1:gLa1CL2RNE4s7M3yopJ/p0iq5DdY6Yv5ZUt9MTRZOQM=
@@ -1846,8 +1846,8 @@ github.com/sigstore/sigstore v1.6.5 h1:/liHIo7YPJp6sN31DzBYDOuRPmN1xbzROMBE5DLll
 github.com/sigstore/sigstore v1.6.5/go.mod h1:h+EoQsf9+6UKgNYxKhBcPgo4PZeEVfzAJxKRRIYhyN4=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.6.5 h1:SXzp0/S2fBT3O45BKBxInJ5zLqPTqN/nJRG9ZU6ZS1o=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.6.5/go.mod h1:iJ1fhlOHajTppwDbFpSrrxvteZcbDt96yOkAQZ3AWdY=
-github.com/sigstore/sigstore/pkg/signature/kms/azure v1.6.5 h1:Eq7FRpCmtWgqO0W8PTV4uEtoLfVOJfDuLYGEwCN1Cy8=
-github.com/sigstore/sigstore/pkg/signature/kms/azure v1.6.5/go.mod h1:dmXaolTdykiQwqCb4WIGjEQWWz0V9NQ+OI2HeeWETRk=
+github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.0 h1:ST1G207w73d1t4nXHyXGM9LvRDjSQUtnANbkoGRaBi4=
+github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.0/go.mod h1:VFU3ghlvBSAExeyzrGPn8LHz7CASkma49/uzN4OJObo=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.6.5 h1:ayZpTdJReIyvS1LrXlTFo+cP7WUJalQAs3Bc2PWf6Zk=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.6.5/go.mod h1:xFrqobvdK11t7uvLovNwTcH8ht7/aqR+KIF93oTw+LQ=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.6.5 h1:mddEhD42KiPm3ZCW8gNa0bI6gcAYzTEPgqykweE6uGM=
