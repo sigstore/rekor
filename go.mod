@@ -62,7 +62,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.6.5
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.0
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.0
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.6.5
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.0
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc
 )
@@ -105,7 +105,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.7 // indirect
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.2 // indirect
-	github.com/hashicorp/vault/api v1.9.1 // indirect
+	github.com/hashicorp/vault/api v1.9.2 // indirect
 	github.com/jellydator/ttlcache/v3 v3.0.1 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
