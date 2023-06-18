@@ -51,7 +51,7 @@ require (
 )
 
 require (
-	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230329111138-12e09aba5ebd
+	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230618131144-803cd8460583
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7
 	github.com/go-redis/redismock/v9 v9.0.3
 	github.com/golang/mock v1.6.0
@@ -92,7 +92,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.19.2 // indirect
 	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
-	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
