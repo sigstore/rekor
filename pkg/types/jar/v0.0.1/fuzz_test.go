@@ -47,7 +47,7 @@ func FuzzJarCreateProposedEntry(f *testing.F) {
 		if err != nil {
 			t.Skip()
 		}
-		panic("HERE")
+
 		defer func() {
 			for _, c := range cleanup {
 				c()
