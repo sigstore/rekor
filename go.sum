@@ -631,8 +631,8 @@ filippo.io/edwards25519 v1.0.0/go.mod h1:N1IkdkCkiLB6tki+MYJoSx2JTY9NUlxZE7eHn5E
 gioui.org v0.0.0-20210308172011-57750fc8a0a6/go.mod h1:RSH6KIUZ0p2xy5zHDxgAM4zumjgTw83q2ge/PI+yyw8=
 git.sr.ht/~sbinet/gg v0.3.1/go.mod h1:KGYtlADtqsqANL9ueOFkWymvzUvLMQllU5Ixo+8v3pc=
 github.com/AdaLogics/go-fuzz-headers v0.0.0-20210715213245-6c3934b029d8/go.mod h1:CzsSbkDixRphAF5hS6wbMKq0eI6ccJRb7/A0M6JBnwg=
-github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230618131144-803cd8460583 h1:fCTdfLZGqO8tb2Cij0fPeSGCZPDq6NBS0YhWmJdK6bI=
-github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230618131144-803cd8460583/go.mod h1:fgJuSBrJP5qZtKqaMJE0hmhS2tmRH+44IkfZvjtaf1M=
+github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230618160516-e936619f9f18 h1:rd389Q26LMy03gG4anandGFC2LW/xvjga5GezeeaxQk=
+github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230618160516-e936619f9f18/go.mod h1:fgJuSBrJP5qZtKqaMJE0hmhS2tmRH+44IkfZvjtaf1M=
 github.com/Azure/azure-amqp-common-go/v3 v3.2.3/go.mod h1:7rPmbSfszeovxGfc5fSAXE4ehlXQZHpMja2OtxC2Tas=
 github.com/Azure/azure-sdk-for-go v16.2.1+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
 github.com/Azure/azure-sdk-for-go v63.0.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=

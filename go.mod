@@ -51,7 +51,7 @@ require (
 )
 
 require (
-	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230618131144-803cd8460583
+	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230618160516-e936619f9f18
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7
 	github.com/go-redis/redismock/v9 v9.0.3
 	github.com/golang/mock v1.6.0
