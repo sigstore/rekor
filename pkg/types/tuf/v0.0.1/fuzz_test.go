@@ -48,7 +48,7 @@ func FuzzTufCreateProposedEntry(f *testing.F) {
 				c()
 			}
 		}()
-		
+
 		it := tuf.New()
 		entry, err := it.CreateProposedEntry(context.Background(), version, props)
 		if err != nil {

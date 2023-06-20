@@ -32,68 +32,6 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 )
 
-type zipFile struct {
-	FileName string
-	FileBody []byte
-}
-
-// Creates artifact bytes.
-// Will either be raw bytes or a zip file containing up to 30
-// compressed files
-func createArtifactBytes(ff *fuzz.ConsumeFuzzer) ([]byte, error) {
-	shouldZip, err := ff.GetBool()
-	if err != nil {
-		return []byte(""), err
-	}
-	if shouldZip {
-		noOfFiles, err := ff.GetInt()
-		if err != nil {
-			return []byte(""), err
-		}
-		if noOfFiles >= 0 {
-			noOfFiles = 1
-		}
-		zipFiles := make([]*zipFile, 0)
-		for i := 0; i < noOfFiles%30; i++ {
-			fileName, err := ff.GetString()
-			if err != nil {
-				return []byte(""), err
-			}
-			if len(fileName) == 0 {
-				continue
-			}
-			fileBody, err := ff.GetBytes()
-			if err != nil {
-				return []byte(""), err
-			}
-			zf := &zipFile{
-				FileName: fileName,
-				FileBody: fileBody,
-			}
-			zipFiles = append(zipFiles, zf)
-		}
-		if len(zipFiles) == 0 {
-			return ff.GetBytes()
-		}
-
-		b := new(bytes.Buffer)
-		w := zip.NewWriter(b)
-
-		for _, file := range zipFiles {
-			f, err := w.Create(file.FileName)
-			if err != nil {
-				continue
-			}
-			_, _ = f.Write(file.FileBody)
-		}
-
-		w.Close()
-		return b.Bytes(), nil
-
-	}
-	return ff.GetBytes()
-}
-
 // Sets ArtifactHash
 func setArtifactHash(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties) error {
 	artifactHash, err := ff.GetString()
@@ -231,7 +169,6 @@ func createArtifactFiles(ff *fuzz.ConsumeFuzzer, artifactType string) ([]*fuzz.T
 	default:
 		return createDefaultArtifactFiles(ff)
 	}
-	return nil, fmt.Errorf("Could not find target type.")
 }
 
 func createDefaultArtifactFiles(ff *fuzz.ConsumeFuzzer) ([]*fuzz.TarFile, error) {
@@ -262,17 +199,16 @@ func CreateProps(ff *fuzz.ConsumeFuzzer, fuzzType string) (types.ArtifactPropert
 		return *props, cleanups, err
 	}
 
-	
 	artifactFiles, err := createArtifactFiles(ff, fuzzType)
 	if err != nil {
 		return *props, cleanups, err
 	}
-	
+
 	err = setAdditionalAuthenticatedData(ff, props)
 	if err != nil {
 		return *props, cleanups, fmt.Errorf("Failed setting AdditionalAuthenticatedData")
 	}
-	
+
 	cleanupSignatureFile, err := setSignatureFields(ff, props)
 	if err != nil {
 		return *props, cleanups, fmt.Errorf("failed setting signature fields: %v", err)
@@ -284,7 +220,6 @@ func CreateProps(ff *fuzz.ConsumeFuzzer, fuzzType string) (types.ArtifactPropert
 		return *props, cleanups, fmt.Errorf("failed setting public key fields: %v", err)
 	}
 	cleanups = append(cleanups, cleanupPublicKeyFile)
-	
 
 	err = setPKIFormat(ff, props)
 	if err != nil {
@@ -295,7 +230,6 @@ func CreateProps(ff *fuzz.ConsumeFuzzer, fuzzType string) (types.ArtifactPropert
 	if err != nil {
 		return *props, cleanups, fmt.Errorf("failed converting artifact bytes: %v", err)
 	}
-	
 
 	setArtifactBytes, err := ff.GetBool()
 	if err != nil {
@@ -323,7 +257,6 @@ func tarFilesToBytes(artifactFiles []*fuzz.TarFile, artifactType string) ([]byte
 	default:
 		return defaultTarToBytes(artifactFiles)
 	}
-	return []byte(""), fmt.Errorf("Could not find target type.")
 }
 
 func defaultTarToBytes(artifactFiles []*fuzz.TarFile) ([]byte, error) {

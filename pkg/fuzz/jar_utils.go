@@ -168,10 +168,16 @@ func tarfilesToJar(artifactFiles []*fuzz.TarFile) ([]byte, error) {
 			zw.Close()
 			return jarBytes, err
 		}
-		jw.Write(zipFile.Body)
+		_, err = jw.Write(zipFile.Body)
+		if err != nil {
+			continue
+		}
 	}
 	zw.Close()
-	f.Sync()
+	err = f.Sync()
+	if err != nil {
+		return jarBytes, err
+	}
 	buf := bytes.Buffer{}
 	err = zipslicer.ZipToTar(f, &buf)
 	if err != nil {

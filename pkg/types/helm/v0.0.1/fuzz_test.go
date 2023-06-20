@@ -42,7 +42,6 @@ func FuzzHelmCreateProposedEntry(f *testing.F) {
 
 		props, cleanup, err := fuzzUtils.CreateProps(ff, "helmV001")
 		if err != nil {
-			//fmt.Println(err)
 			t.Skip()
 		}
 		defer func() {
