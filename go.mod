@@ -61,7 +61,7 @@ require (
 	github.com/sigstore/protobuf-specs v0.1.0
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.1
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.1
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.0
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.1
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.1
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc
@@ -121,7 +121,7 @@ require (
 	cloud.google.com/go v0.110.2 // indirect
 	cloud.google.com/go/compute v1.20.0 // indirect
 	cloud.google.com/go/iam v1.1.0 // indirect
-	cloud.google.com/go/kms v1.12.0 // indirect
+	cloud.google.com/go/kms v1.12.1 // indirect
 	cloud.google.com/go/storage v1.30.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cavaliercoder/badio v0.0.0-20160213150051-ce5280129e9e // indirect
