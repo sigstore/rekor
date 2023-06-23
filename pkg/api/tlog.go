@@ -157,7 +157,8 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 		// The proof field may be empty if the requested tree_size was larger than that available at the server
 		// (e.g. because there is skew between server instances, and an earlier client request was processed by
 		// a more up-to-date instance). root.TreeSize is the maximum size currently observed
-		return handleRekorAPIError(params, http.StatusBadRequest, nil, fmt.Sprintf(lastSizeGreaterThanKnown, params.LastSize, root.TreeSize))
+		err := fmt.Errorf(lastSizeGreaterThanKnown, params.LastSize, root.TreeSize)
+		return handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
 	}
 
 	consistencyProof := models.ConsistencyProof{
