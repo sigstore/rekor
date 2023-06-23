@@ -655,11 +655,13 @@ github.com/Azure/azure-sdk-for-go/sdk/internal v1.1.2/go.mod h1:eWRD7oawr1Mu1sLC
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.2.0/go.mod h1:eWRD7oawr1Mu1sLCawqVc0CUiF43ia3qQMxLscsKQ9w=
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.3.0 h1:sXr+ck84g/ZlZUOZiNELInmMgOsuGwdjjVkEIde0OtY=
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.3.0/go.mod h1:okt5dMMTOFjX/aovMlrjvvXoPMBVSPzk9185BT0+eZM=
-github.com/Azure/azure-sdk-for-go/sdk/keyvault/azkeys v0.10.0 h1:m/sWOGCREuSBqg2htVQTBY8nOZpyajYztF0vUvSZTuM=
 github.com/Azure/azure-sdk-for-go/sdk/keyvault/azkeys v0.10.0/go.mod h1:Pu5Zksi2KrU7LPbZbNINx6fuVrUp/ffvpxdDj+i8LeE=
-github.com/Azure/azure-sdk-for-go/sdk/keyvault/internal v0.7.1 h1:FbH3BbSb4bvGluTesZZ+ttN/MDsnMmQP36OSnDuSXqw=
 github.com/Azure/azure-sdk-for-go/sdk/keyvault/internal v0.7.1/go.mod h1:9V2j0jn9jDEkCkv8w/bKTNppX/d0FVA1ud77xCIP4KA=
 github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus v1.4.0/go.mod h1:pXDkeh10bAqElvd+S5Ppncj+DCKvJGXNa8rRT2R7rIw=
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azkeys v0.12.0 h1:4Kynh6Hn2ekyIsBgNQJb3dn1+/MyvzfUJebti2emB/A=
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azkeys v0.12.0/go.mod h1:Q28U+75mpCaSCDowNEmhIo/rmgdkqmkmzI7N6TGR4UY=
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v0.8.0 h1:T028gtTPiYt/RMUfs8nVsAL7FDQrfLlrm/NnRG/zcC4=
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v0.8.0/go.mod h1:cw4zVQgBby0Z5f2v0itn6se2dDP17nTjbZFXW5uPyHA=
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0/go.mod h1:2e8rMJtl2+2j+HXbTBwnyGpm5Nou7KhvSfxOq8JpTag=
 github.com/Azure/go-amqp v0.17.0/go.mod h1:9YJ3RhxRT1gquYnzpZO1vcYMMpAdJT+QEg6fwmw9Zlg=
 github.com/Azure/go-amqp v1.0.0/go.mod h1:+bg0x3ce5+Q3ahCEXnCsGG3ETpDQe3MEVnOuT2ywPwc=
@@ -2126,8 +2128,8 @@ github.com/sigstore/sigstore v1.7.0 h1:0jLlzxX68LtirwSTWAwRPMKhulT0aWVLmFU5ofnbt
 github.com/sigstore/sigstore v1.7.0/go.mod h1:0PmMzfJP2Y9+lugD0wer4e7TihR5tM7NcIs3bQNk5xg=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.0 h1:fRv9grFx22NsmXTkfhF8/+UzqkrCND8JI/QfCpYjEnc=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.0/go.mod h1:IgMwzsYgwhi0eB37GTylJxHPUVRtYXDBtL6/wOTvMKU=
-github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.0 h1:ST1G207w73d1t4nXHyXGM9LvRDjSQUtnANbkoGRaBi4=
-github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.0/go.mod h1:VFU3ghlvBSAExeyzrGPn8LHz7CASkma49/uzN4OJObo=
+github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.1 h1:X3ezwolP+b1jP3R6XPOWhUU0TZKONiv6EIRuySlZGrY=
+github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.1/go.mod h1:SG2NPEdX2Vi7CBp/o93kJqXrovkis/T9ou9oxZONyEA=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.0 h1:rYJ7+nRDGxSneFcawUzYyVcRKvGrqqdMUbjZMLI6iCc=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.0/go.mod h1:pJD5JoV/1i61LwGFMgQ/xfpEX8QlSk90sfYFGMnxQX0=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.1 h1:fhOToGY5fC5TY101an8i/oDYpoLzUJ1nUFwhnHA1+XY=
