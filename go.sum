@@ -344,8 +344,9 @@ cloud.google.com/go/kms v1.9.0/go.mod h1:qb1tPTgfF9RQP8e1wq4cLFErVuTJv7UsSC915J8
 cloud.google.com/go/kms v1.10.0/go.mod h1:ng3KTUtQQU9bPX3+QGLsflZIHlkbn8amFAMY63m8d24=
 cloud.google.com/go/kms v1.10.1/go.mod h1:rIWk/TryCkR59GMC3YtHtXeLzd634lBbKenvyySAyYI=
 cloud.google.com/go/kms v1.10.2/go.mod h1:9mX3Q6pdroWzL20pbK6RaOdBbXBEhMNgK4Pfz2bweb4=
-cloud.google.com/go/kms v1.12.0 h1:IEYV44WsGc6yVO1PlvnRlYzsHM2ImpB598Cglh/3uGw=
 cloud.google.com/go/kms v1.12.0/go.mod h1:syfpIBSOqQ/ZqK48RLPkwUhFhvbsA1SyGAq/vPohd20=
+cloud.google.com/go/kms v1.12.1 h1:xZmZuwy2cwzsocmKDOPu4BL7umg8QXagQx6fKVmf45U=
+cloud.google.com/go/kms v1.12.1/go.mod h1:c9J991h5DTl+kg7gi3MYomh12YEENGrf48ee/N/2CDM=
 cloud.google.com/go/language v1.4.0/go.mod h1:F9dRpNFQmJbkaop6g0JhSBXCNlO90e1KWx5iDdxbWic=
 cloud.google.com/go/language v1.6.0/go.mod h1:6dJ8t3B+lUYfStgls25GusK04NLh3eDLQnWM3mdEbhI=
 cloud.google.com/go/language v1.7.0/go.mod h1:DJ6dYN/W+SQOjF8e1hLQXMF21AkH2w9wiPzPCJa2MIE=
@@ -2130,8 +2131,8 @@ github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.1 h1:rDHrG/63b3nBq3G9plg
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.1/go.mod h1:hl0LRidnJG1uL1lLSHGEjcs+MxLjT65NJ7pX/TQDIsk=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.1 h1:X3ezwolP+b1jP3R6XPOWhUU0TZKONiv6EIRuySlZGrY=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.1/go.mod h1:SG2NPEdX2Vi7CBp/o93kJqXrovkis/T9ou9oxZONyEA=
-github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.0 h1:rYJ7+nRDGxSneFcawUzYyVcRKvGrqqdMUbjZMLI6iCc=
-github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.0/go.mod h1:pJD5JoV/1i61LwGFMgQ/xfpEX8QlSk90sfYFGMnxQX0=
+github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.1 h1:mj1KhdzzP1me994bt1UXhq5KZGSR1SoqxTqcT+hfPMk=
+github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.1/go.mod h1:Z7LFrKKfj5ZPhy0YS9HcI4H6kbUQzBsE3e3hR+R3YY8=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.1 h1:fhOToGY5fC5TY101an8i/oDYpoLzUJ1nUFwhnHA1+XY=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.1/go.mod h1:SN4QZHHDs2VqXh5bRXrIi8vqLbOijIp2XoSlmV/WJ/c=
 github.com/sirupsen/logrus v1.0.4-0.20170822132746-89742aefa4b2/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
