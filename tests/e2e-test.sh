@@ -22,6 +22,9 @@ rm -f /tmp/rekor-*.cov
 echo "installing gocovmerge"
 make gocovmerge
 
+echo "building test-only containers"
+docker build -t gcp-pubsub-emulator -f Dockerfile.pubsub-emulator .
+
 echo "starting services"
 docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d --build
 
@@ -32,14 +35,16 @@ go test -c ./cmd/rekor-server -o rekor-server -covermode=count -coverpkg=./...
 count=0
 
 echo -n "waiting up to 60 sec for system to start"
-until [ $(docker-compose ps | grep -c "(healthy)") == 3 ];
+until [ $(docker-compose ps | \
+   grep -E "(rekor-mysql|rekor-redis|rekor-server|rekor-gcp-pubsub)" | \
+   grep -c "(healthy)" ) == 4 ];
 do
-    if [ $count -eq 6 ]; then
+    if [ $count -eq 60 ]; then
        echo "! timeout reached"
        exit 1
     else
        echo -n "."
-       sleep 10
+       sleep 1
        let 'count+=1'
     fi
 done
@@ -67,7 +72,7 @@ fi
 echo "generating code coverage"
 docker-compose restart rekor-server
 
-if ! docker cp $(docker ps -aqf "name=rekor_rekor-server"):go/rekor-server.cov /tmp/rekor-server.cov ; then
+if ! docker cp $(docker ps -aqf "name=rekor-rekor-server"):go/rekor-server.cov /tmp/rekor-server.cov ; then
    # failed to copy code coverage report from server
    echo "Failed to retrieve server code coverage report"
    docker-compose logs --no-color > /tmp/docker-compose.log

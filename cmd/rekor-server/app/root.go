@@ -93,6 +93,8 @@ func init() {
 Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().String("rekor_server.signer-passwd", "", "Password to decrypt signer private key")
 
+	rootCmd.PersistentFlags().String("rekor_server.new_entry_publisher", "", "URL for pub/sub queue to send messages to when new entries are added to the log. Ignored if not set.")
+
 	rootCmd.PersistentFlags().Uint16("port", 3000, "Port to bind to")
 
 	rootCmd.PersistentFlags().Bool("enable_retrieve_api", true, "enables Redis-based index API endpoint")

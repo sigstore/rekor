@@ -61,7 +61,6 @@ var serveCmd = &cobra.Command{
 	Short: "start http server with configured api",
 	Long:  `Starts a http server and serves the configured api`,
 	Run: func(cmd *cobra.Command, args []string) {
-
 		// Setup the logger to dev/prod
 		log.ConfigureLogger(viper.GetString("log_type"))
 
@@ -83,7 +82,6 @@ var serveCmd = &cobra.Command{
 				log.Logger.Error(err)
 			}
 		}()
-
 		//TODO: make this a config option for server to load via viper field
 		//TODO: add command line option to print versions supported in binary
 
@@ -101,7 +99,6 @@ var serveCmd = &cobra.Command{
 			hashedrekord.KIND: {hashedrekord_v001.APIVERSION},
 			dsse.KIND:         {dsse_v001.APIVERSION},
 		}
-
 		for k, v := range pluggableTypeMap {
 			log.Logger.Infof("Loading support for pluggable type '%v'", k)
 			log.Logger.Infof("Loading version '%v' for pluggable type '%v'", v, k)

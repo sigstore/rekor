@@ -34,9 +34,11 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -284,13 +286,18 @@ func TestEntryUpload(t *testing.T) {
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
 	sigPath := filepath.Join(t.TempDir(), "signature.asc")
 
-	createdPGPSignedArtifact(t, artifactPath, sigPath)
-	payload, _ := ioutil.ReadFile(artifactPath)
-	sig, _ := ioutil.ReadFile(sigPath)
-
 	// Create the entry file
-	entryPath := filepath.Join(t.TempDir(), "entry.json")
+	createdPGPSignedArtifact(t, artifactPath, sigPath)
+	payload, err := ioutil.ReadFile(artifactPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sig, err := ioutil.ReadFile(sigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	entryPath := filepath.Join(t.TempDir(), "entry.json")
 	pubKeyBytes := []byte(publicKey)
 
 	re := rekord.V001Entry{
@@ -314,16 +321,58 @@ func TestEntryUpload(t *testing.T) {
 	}
 	entryBytes, err := json.Marshal(returnVal)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(entryPath, entryBytes, 0644); err != nil {
+		t.Fatal(err)
 	}
 
-	if err := ioutil.WriteFile(entryPath, entryBytes, 0644); err != nil {
-		t.Error(err)
+	// Start pubsub client to capture notifications. Values match those in
+	// docker-compose.test.yml.
+	os.Setenv("PUBSUB_EMULATOR_HOST", "localhost:8085")
+	defer func() { os.Unsetenv("PUBSUB_EMULATOR_HOST") }()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	psc, err := pubsub.NewClient(ctx, "fake-test-project")
+	if err != nil {
+		t.Fatalf("Create pubsub client: %v", err)
 	}
+	topic, err := psc.CreateTopic(ctx, "new-entry")
+	if err != nil {
+		t.Fatalf("Create pubsub topic: %v", err)
+	}
+	filters := []string{
+		`attributes:rekord_entry_kind`,                         // Ignore any messages that do not have this attribute
+		`attributes.rekor_signing_subjects = "test@rekor.dev"`, // This is the email in the hard-coded PGP test key
+	}
+	cfg := pubsub.SubscriptionConfig{
+		Topic:  topic,
+		Filter: strings.Join(filters, " AND "),
+	}
+	sub, err := psc.CreateSubscription(ctx, "new-entry-sub", cfg)
+	if err != nil {
+		t.Fatalf("Create pubsub subscription: %v", err)
+	}
+	ch := make(chan []byte, 1)
+	go func() {
+		if err := sub.Receive(ctx, func(_ context.Context, m *pubsub.Message) {
+			ch <- m.Data
+		}); err != nil {
+			t.Errorf("Receive pubusub msg: %v", err)
+		}
+	}()
 
 	// Now upload to rekor!
 	out := runCli(t, "upload", "--entry", entryPath)
 	outputContains(t, out, "Created entry at")
+
+	// Await pubsub
+	select {
+	case msg := <-ch:
+		t.Logf("Got pubsub message!\n%s", string(msg))
+	case <-ctx.Done():
+		t.Errorf("Did not receive pubsub message: %v", ctx.Err())
+	}
 }
 
 // Regression test for https://github.com/sigstore/rekor/pull/956

@@ -2,6 +2,9 @@ module github.com/sigstore/rekor
 
 go 1.19
 
+// TEMPORARY: DO NOT MERGE WITH THIS
+replace github.com/sigstore/protobuf-specs => ../../jalseth/protobuf-specs
+
 require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/blang/semver v3.5.1+incompatible
@@ -51,6 +54,7 @@ require (
 )
 
 require (
+	cloud.google.com/go/pubsub v1.31.0
 	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230329111138-12e09aba5ebd
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7
 	github.com/go-redis/redismock/v9 v9.0.3
@@ -180,7 +184,7 @@ require (
 	golang.org/x/term v0.9.0 // indirect
 	golang.org/x/text v0.10.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
-	google.golang.org/api v0.128.0 // indirect
+	google.golang.org/api v0.128.0
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0

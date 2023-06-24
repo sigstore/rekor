@@ -39,6 +39,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pubsub"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/rekor/pkg/types"
@@ -290,7 +291,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		RootHash:   swag.String(hex.EncodeToString(root.RootHash)),
 		LogIndex:   swag.Int64(queuedLeaf.LeafIndex),
 		Hashes:     hashes,
-		Checkpoint: stringPointer(string(scBytes)),
+		Checkpoint: swag.String(string(scBytes)),
 	}
 
 	logEntryAnon.Verification = &models.LogEntryAnonVerification{
@@ -301,6 +302,31 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	logEntry := models.LogEntry{
 		entryID: logEntryAnon,
 	}
+
+	if api.newEntryPublisher != nil {
+		// Publishing notifications should not block the API response.
+		go func() {
+			var subjects []string
+			verifier, err := entry.Verifier()
+			if err != nil {
+				log.ContextLogger(ctx).Warnf("Could not get verifier for log entry: %w", err)
+			} else {
+				subjects = verifier.Subjects()
+			}
+			event, err := pubsub.BuildNewEntryEvent(entryID, logEntryAnon, subjects)
+			if err != nil {
+				log.ContextLogger(ctx).Error(err)
+				return
+			}
+			err = api.newEntryPublisher.Publish(context.Background(), event)
+			if err != nil {
+				log.ContextLogger(ctx).Error(err)
+				return
+			}
+			log.ContextLogger(ctx).Debugf("Published new entry event: %+v", event)
+		}()
+	}
+
 	return logEntry, nil
 }
 

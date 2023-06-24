@@ -19,6 +19,8 @@ services:
     build:
       context: .
       target: "test"
+    environment:
+      PUBSUB_EMULATOR_HOST: gcp-pubsub-emulator:8085
     command: [
       "rekor-server",
       "-test.coverprofile=rekor-server.cov",
@@ -32,7 +34,27 @@ services:
       "--enable_attestation_storage",
       "--attestation_storage_bucket=file:///var/run/attestations",
       "--max_request_body_size=32792576",
+      "--rekor_server.new_entry_publisher=gcppubsub://projects/fake-test-project/topics/new-entry",
       ]
     ports:
       - "3000:3000"
       - "2112:2112"
+    depends_on:
+      - gcp-pubsub-emulator
+  gcp-pubsub-emulator:
+    image: gcp-pubsub-emulator
+    ports:
+      - "8085:8085"
+    command:
+      - gcloud
+      - beta
+      - emulators
+      - pubsub
+      - start
+      - --project=fake-test-project
+    healthcheck:
+      test: ["CMD", "nc", "-zv", "localhost", "8085"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
