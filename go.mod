@@ -6,7 +6,6 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cavaliercoder/go-rpm v0.0.0-20200122174316-8cb9fd9c31a8
-	github.com/ghodss/yaml v1.0.0
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-openapi/errors v0.20.4
 	github.com/go-openapi/loads v0.21.2
@@ -48,6 +47,7 @@ require (
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/ini.v1 v1.67.0
 	sigs.k8s.io/release-utils v0.7.4
+	sigs.k8s.io/yaml v1.3.0
 )
 
 require (

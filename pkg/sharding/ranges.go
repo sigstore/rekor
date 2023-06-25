@@ -25,10 +25,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ghodss/yaml"
 	"github.com/google/trillian"
 	"github.com/google/trillian/types"
 	"github.com/sigstore/rekor/pkg/log"
+	"sigs.k8s.io/yaml"
 )
 
 type LogRanges struct {
