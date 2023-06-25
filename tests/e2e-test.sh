@@ -65,8 +65,7 @@ if docker-compose logs --no-color | grep -q "panic: runtime error:" ; then
 fi
 
 echo "generating code coverage"
-curl -X GET 0.0.0.0:2345/kill
-sleep 5
+docker-compose restart rekor-server
 
 if ! docker cp $(docker ps -aqf "name=rekor_rekor-server"):go/rekor-server.cov /tmp/rekor-server.cov ; then
    # failed to copy code coverage report from server

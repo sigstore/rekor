@@ -31,10 +31,8 @@ services:
       "--rekor_server.signer=memory",
       "--enable_attestation_storage",
       "--attestation_storage_bucket=file:///var/run/attestations",
-      "--enable_killswitch",
       "--max_request_body_size=32792576",
       ]
     ports:
       - "3000:3000"
       - "2112:2112"
-      - "2345:2345"
