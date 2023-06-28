@@ -1,3 +1,19 @@
+# v1.2.2
+
+## Quality Enhancements
+* swap killswitch for 'docker-compose restart' (#1562)
+* pass treeSize and rootHash to avoid trillian import (#1513)
+* Move github.com/sigstore/protobuf-specs users into a separate subpackage (#1511)
+
+## Bug Fixes
+* pass down error with message instead of nil (#1560)
+
+## Contributors
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Eng Zer Jun
+* Miloslav Trmač
+
 # v1.2.1
 
 ## Bug Fixes
