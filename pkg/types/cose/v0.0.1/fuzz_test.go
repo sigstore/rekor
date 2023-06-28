@@ -39,11 +39,15 @@ func FuzzCoseCreateProposedEntry(f *testing.F) {
 
 		ff := fuzz.NewConsumer(propsData)
 
-		props, cleanup, err := fuzzUtils.CreateProps(ff)
+		props, cleanup, err := fuzzUtils.CreateProps(ff, "coseV001")
 		if err != nil {
 			t.Skip()
 		}
-		defer cleanup()
+		defer func() {
+			for _, c := range cleanup {
+				c()
+			}
+		}()
 
 		it := cose.New()
 		entry, err := it.CreateProposedEntry(context.Background(), version, props)

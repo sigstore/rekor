@@ -32,68 +32,6 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 )
 
-type zipFile struct {
-	FileName string
-	FileBody []byte
-}
-
-// Creates artifact bytes.
-// Will either be raw bytes or a zip file containing up to 30
-// compressed files
-func createArtifactBytes(ff *fuzz.ConsumeFuzzer) ([]byte, error) {
-	shouldZip, err := ff.GetBool()
-	if err != nil {
-		return []byte(""), err
-	}
-	if shouldZip {
-		noOfFiles, err := ff.GetInt()
-		if err != nil {
-			return []byte(""), err
-		}
-		if noOfFiles >= 0 {
-			noOfFiles = 1
-		}
-		zipFiles := make([]*zipFile, 0)
-		for i := 0; i < noOfFiles%30; i++ {
-			fileName, err := ff.GetString()
-			if err != nil {
-				return []byte(""), err
-			}
-			if len(fileName) == 0 {
-				continue
-			}
-			fileBody, err := ff.GetBytes()
-			if err != nil {
-				return []byte(""), err
-			}
-			zf := &zipFile{
-				FileName: fileName,
-				FileBody: fileBody,
-			}
-			zipFiles = append(zipFiles, zf)
-		}
-		if len(zipFiles) == 0 {
-			return ff.GetBytes()
-		}
-
-		b := new(bytes.Buffer)
-		w := zip.NewWriter(b)
-
-		for _, file := range zipFiles {
-			f, err := w.Create(file.FileName)
-			if err != nil {
-				continue
-			}
-			_, _ = f.Write(file.FileBody)
-		}
-
-		w.Close()
-		return b.Bytes(), nil
-
-	}
-	return ff.GetBytes()
-}
-
 // Sets ArtifactHash
 func setArtifactHash(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties) error {
 	artifactHash, err := ff.GetString()
@@ -102,40 +40,6 @@ func setArtifactHash(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties) er
 	}
 	props.ArtifactHash = artifactHash
 	return nil
-}
-
-// Sets the artifact fields.
-// It either sets the ArtifactBytes or ArtifactPath - never both.
-func setArtifactFields(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties) (func(), error) {
-	cleanup := func() {}
-
-	err := setArtifactHash(ff, props)
-	if err != nil {
-		return cleanup, err
-	}
-
-	artifactBytes, err := createArtifactBytes(ff)
-	if err != nil {
-		return cleanup, err
-	}
-
-	shouldSetArtifactBytes, err := ff.GetBool()
-	if err != nil {
-		return cleanup, err
-	}
-
-	if shouldSetArtifactBytes {
-		props.ArtifactBytes = artifactBytes
-		return func() {
-			// do nothing
-		}, nil
-	}
-	artifactFile, err := createAbsFile(ff, "ArtifactFile", artifactBytes)
-	cleanup = func() {
-		os.Remove("ArtifactFile")
-	}
-	props.ArtifactPath = artifactFile
-	return cleanup, err
 }
 
 // creates a file on disk and returns the url of it.
@@ -177,19 +81,17 @@ func setSignatureFields(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties)
 
 	if shouldSetSignatureBytes {
 		props.SignatureBytes = signatureBytes
-		return func() {
-			// do nothing
-		}, nil
+		return cleanup, nil
 	}
 	signatureURL, err := createAbsFile(ff, "SignatureFile", signatureBytes)
+
 	if err != nil {
-		return func() {
-			os.Remove("SignatureFile")
-		}, err
+		os.Remove("SignatureFile")
+		return cleanup, err
 	}
 	props.SignaturePath = signatureURL
 	return func() {
-		// do nothing
+		os.Remove("SignatureFile")
 	}, nil
 
 }
@@ -209,9 +111,7 @@ func setPublicKeyFields(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties)
 			return cleanup, err
 		}
 		props.PublicKeyBytes = publicKeyBytes
-		return func() {
-			// do nothing
-		}, nil
+		return cleanup, nil
 	}
 	publicKeyBytes, err := ff.GetBytes()
 	if err != nil {
@@ -219,13 +119,12 @@ func setPublicKeyFields(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties)
 	}
 	publicKeyURL, err := createAbsFile(ff, "PublicKeyFile", publicKeyBytes)
 	if err != nil {
-		return func() {
-			os.Remove("PublicKeyFile")
-		}, err
+		os.Remove("PublicKeyFile")
+		return cleanup, err
 	}
 	props.PublicKeyPaths = []*url.URL{publicKeyURL}
 	return func() {
-		// do nothing
+		os.Remove("PublicKeyFile")
 	}, nil
 }
 
@@ -263,54 +162,117 @@ func setPKIFormat(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties) error
 	return nil
 }
 
+func createArtifactFiles(ff *fuzz.ConsumeFuzzer, artifactType string) ([]*fuzz.TarFile, error) {
+	switch artifactType {
+	case "jarV001":
+		return createJarArtifactFiles(ff)
+	default:
+		return createDefaultArtifactFiles(ff)
+	}
+}
+
+func createDefaultArtifactFiles(ff *fuzz.ConsumeFuzzer) ([]*fuzz.TarFile, error) {
+	var files []*fuzz.TarFile
+	files, err := ff.TarFiles()
+	if err != nil {
+		return files, err
+	}
+	if len(files) <= 1 {
+		return files, err
+	}
+	for _, file := range files {
+		if len(file.Body) == 0 {
+			return files, fmt.Errorf("Created an empty file")
+		}
+	}
+	return files, nil
+}
+
 // Creates an ArtifactProperties with values determined by the fuzzer
-func CreateProps(ff *fuzz.ConsumeFuzzer) (types.ArtifactProperties, func(), error) {
+func CreateProps(ff *fuzz.ConsumeFuzzer, fuzzType string) (types.ArtifactProperties, []func(), error) {
+	var cleanups []func()
+
 	props := &types.ArtifactProperties{}
 
-	cleanupArtifactFile, err := setArtifactFields(ff, props)
+	err := setArtifactHash(ff, props)
 	if err != nil {
-		return *props, cleanupArtifactFile, err
+		return *props, cleanups, err
 	}
-	if props.ArtifactPath == nil && props.ArtifactBytes == nil {
-		return *props, cleanupArtifactFile, fmt.Errorf("ArtifactPath and ArtifactBytes cannot both be nil")
+
+	artifactFiles, err := createArtifactFiles(ff, fuzzType)
+	if err != nil {
+		return *props, cleanups, err
 	}
 
 	err = setAdditionalAuthenticatedData(ff, props)
 	if err != nil {
-		return *props, cleanupArtifactFile, fmt.Errorf("Failed setting AdditionalAuthenticatedData")
+		return *props, cleanups, fmt.Errorf("Failed setting AdditionalAuthenticatedData")
 	}
 
 	cleanupSignatureFile, err := setSignatureFields(ff, props)
 	if err != nil {
-		return *props, func() {
-			cleanupArtifactFile()
-			cleanupSignatureFile()
-		}, fmt.Errorf("failed setting signature fields: %v", err)
+		return *props, cleanups, fmt.Errorf("failed setting signature fields: %v", err)
 	}
+	cleanups = append(cleanups, cleanupSignatureFile)
 
 	cleanupPublicKeyFile, err := setPublicKeyFields(ff, props)
 	if err != nil {
-		return *props, func() {
-			cleanupArtifactFile()
-			cleanupSignatureFile()
-			cleanupPublicKeyFile()
-		}, fmt.Errorf("failed setting public key fields: %v", err)
+		return *props, cleanups, fmt.Errorf("failed setting public key fields: %v", err)
 	}
+	cleanups = append(cleanups, cleanupPublicKeyFile)
 
 	err = setPKIFormat(ff, props)
 	if err != nil {
-		return *props, func() {
-			cleanupArtifactFile()
-			cleanupSignatureFile()
-			cleanupPublicKeyFile()
-		}, fmt.Errorf("failed setting PKI Format: %v", err)
+		return *props, cleanups, fmt.Errorf("failed setting PKI Format: %v", err)
 	}
 
-	return *props, func() {
-		cleanupArtifactFile()
-		cleanupSignatureFile()
-		cleanupPublicKeyFile()
-	}, nil
+	artifactBytes, err := tarFilesToBytes(artifactFiles, fuzzType)
+	if err != nil {
+		return *props, cleanups, fmt.Errorf("failed converting artifact bytes: %v", err)
+	}
+
+	setArtifactBytes, err := ff.GetBool()
+	if err != nil {
+		return *props, cleanups, fmt.Errorf("failed converting artifact bytes: %v", err)
+	}
+	if setArtifactBytes {
+		props.ArtifactBytes = artifactBytes
+	} else {
+		artifactFile, err := createAbsFile(ff, "ArtifactFile", artifactBytes)
+		cleanups = append(cleanups, func() { os.Remove("ArtifactFile") })
+		if err != nil {
+			return *props, cleanups, fmt.Errorf("failed converting artifact bytes: %v", err)
+		}
+		props.ArtifactPath = artifactFile
+	}
+
+	props.ArtifactBytes = artifactBytes
+	return *props, cleanups, nil
+}
+
+func tarFilesToBytes(artifactFiles []*fuzz.TarFile, artifactType string) ([]byte, error) {
+	switch artifactType {
+	case "jarV001":
+		return tarfilesToJar(artifactFiles)
+	default:
+		return defaultTarToBytes(artifactFiles)
+	}
+}
+
+func defaultTarToBytes(artifactFiles []*fuzz.TarFile) ([]byte, error) {
+	b := new(bytes.Buffer)
+	w := zip.NewWriter(b)
+
+	for _, file := range artifactFiles {
+		f, err := w.Create(file.Hdr.Name)
+		if err != nil {
+			continue
+		}
+		_, _ = f.Write(file.Body)
+	}
+
+	w.Close()
+	return b.Bytes(), nil
 }
 
 func SetFuzzLogger() {

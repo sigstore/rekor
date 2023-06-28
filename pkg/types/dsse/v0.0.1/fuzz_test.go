@@ -37,11 +37,15 @@ func FuzzDSSECreateProposedEntry(f *testing.F) {
 
 		ff := fuzz.NewConsumer(propsData)
 
-		props, cleanup, err := fuzzUtils.CreateProps(ff)
+		props, cleanup, err := fuzzUtils.CreateProps(ff, "dssev001")
 		if err != nil {
 			t.Skip()
 		}
-		defer cleanup()
+		defer func() {
+			for _, c := range cleanup {
+				c()
+			}
+		}()
 
 		it := dsse.New()
 		entry, err := it.CreateProposedEntry(context.Background(), APIVERSION, props)
