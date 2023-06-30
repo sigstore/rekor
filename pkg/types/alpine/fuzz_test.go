@@ -17,11 +17,21 @@ package alpine
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
+
+	"github.com/spf13/viper"
 
 	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
 	utils "github.com/sigstore/rekor/pkg/fuzz"
 )
+
+func init() {
+	viper.Set("max_apk_metadata_size", 60000)
+	if viper.GetUint64("max_apk_metadata_size") != 60000 {
+		panic(fmt.Sprintf("max metadata size is not defined: %d", viper.GetUint64("max_apk_metadata_size")))
+	}
+}
 
 // FuzzPackageUnmarshal implements the fuzz test
 func FuzzPackageUnmarshal(f *testing.F) {

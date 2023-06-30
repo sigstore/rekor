@@ -53,8 +53,7 @@ func TestAlpinePackage(t *testing.T) {
 }
 
 func TestAlpineMetadataSize(t *testing.T) {
-	os.Setenv("MAX_APK_METADATA_SIZE", "10")
-	viper.AutomaticEnv()
+	viper.Set("max_apk_metadata_size", 10)
 
 	inputArchive, err := os.Open("tests/test_alpine.apk")
 	if err != nil {
