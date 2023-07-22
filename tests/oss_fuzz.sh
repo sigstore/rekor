@@ -20,11 +20,6 @@
 sed -i '16,17d' $SRC/rekor/pkg/pki/x509/e2e.go
 sed -i '16d' $SRC/rekor/pkg/util/util.go
 
-cd $SRC/instrumentation
-go mod tidy
-go run main.go --target_dir=$SRC/rekor --check_io_length=true
-go run main.go --target_dir=$SRC/relic --check_io_length=false
-
 cd $SRC/rekor
 go mod tidy
 go get github.com/AdamKorcz/go-118-fuzz-build/testing
