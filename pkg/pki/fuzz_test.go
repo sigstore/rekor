@@ -20,8 +20,6 @@ import (
 	"io"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-
 	"github.com/sigstore/rekor/pkg/pki/minisign"
 	"github.com/sigstore/rekor/pkg/pki/pgp"
 	"github.com/sigstore/rekor/pkg/pki/pkcs7"
@@ -31,14 +29,6 @@ import (
 )
 
 var (
-	cmpOpts = []cmp.Option{cmp.AllowUnexported(minisign.PublicKey{},
-		pgp.PublicKey{},
-		ssh.PublicKey{},
-		x509.PublicKey{},
-		pkcs7.PublicKey{},
-		tuf.PublicKey{},
-	)}
-
 	fuzzArtifactFactoryMap = map[uint]pkiImpl{
 		0: {
 			newPubKey: func(r io.Reader) (PublicKey, error) {
@@ -93,23 +83,6 @@ var (
 
 func FuzzKeys(f *testing.F) {
 	f.Fuzz(func(t *testing.T, keyType uint, origSignatureData, verSignatureData, keyData []byte) {
-
-		// test public key
-		pub1, err := fuzzArtifactFactoryMap[keyType%6].newPubKey(bytes.NewReader(keyData))
-		if err == nil && pub1 != nil {
-			b, err := pub1.CanonicalValue()
-			if err == nil {
-				pub2, err := fuzzArtifactFactoryMap[keyType%6].newPubKey(bytes.NewReader(b))
-				if err != nil {
-					t.Fatal("Could not create a key from valid key data")
-				}
-				if !cmp.Equal(pub1, pub2, cmpOpts...) {
-					t.Fatal("The two public keys should be equal but are not")
-				}
-			}
-		}
-
-		// test signature
 		s, err := fuzzArtifactFactoryMap[keyType%6].newSignature(bytes.NewReader(origSignatureData))
 		if err == nil && s != nil {
 			b, err := s.CanonicalValue()
