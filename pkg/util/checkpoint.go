@@ -29,7 +29,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
-// heavily borrowed from https://github.com/google/trillian-examples/blob/master/formats/log/checkpoint.go
+// heavily borrowed from https://github.com/transparency-dev/formats/blob/main/log/checkpoint.go
 
 type Checkpoint struct {
 	// Origin is the unique identifier/version string
