@@ -65,7 +65,7 @@ func GenerateTransparencyLogEntry(anon models.LogEntryAnon) (*rekor_pb.Transpare
 	}
 
 	return &rekor_pb.TransparencyLogEntry{
-		LogIndex: *anon.LogIndex,
+		LogIndex: *anon.LogIndex, // the global log index
 		LogId: &rekor_pb_common.LogId{
 			KeyId: logIDHash,
 		},
@@ -78,7 +78,7 @@ func GenerateTransparencyLogEntry(anon models.LogEntryAnon) (*rekor_pb.Transpare
 			SignedEntryTimestamp: anon.Verification.SignedEntryTimestamp,
 		},
 		InclusionProof: &rekor_pb.InclusionProof{
-			LogIndex: *anon.Verification.InclusionProof.LogIndex,
+			LogIndex: *anon.Verification.InclusionProof.LogIndex, // relative to the specific tree the entry is found in
 			RootHash: rootHash,
 			TreeSize: *anon.Verification.InclusionProof.TreeSize,
 			Hashes:   inclusionProofHashes,
