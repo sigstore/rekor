@@ -78,7 +78,7 @@ func GenerateTransparencyLogEntry(anon models.LogEntryAnon) (*rekor_pb.Transpare
 			SignedEntryTimestamp: anon.Verification.SignedEntryTimestamp,
 		},
 		InclusionProof: &rekor_pb.InclusionProof{
-			LogIndex: *anon.LogIndex,
+			LogIndex: *anon.Verification.InclusionProof.LogIndex,
 			RootHash: rootHash,
 			TreeSize: *anon.Verification.InclusionProof.TreeSize,
 			Hashes:   inclusionProofHashes,
