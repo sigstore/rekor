@@ -338,11 +338,15 @@ func (v *V001Entry) CreateFromArtifactProperties(ctx context.Context, props type
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifier() (pki.PublicKey, error) {
+func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	if v.JARModel.Signature == nil || v.JARModel.Signature.PublicKey == nil || v.JARModel.Signature.PublicKey.Content == nil {
 		return nil, errors.New("jar v0.0.1 entry not initialized")
 	}
-	return x509.NewPublicKey(bytes.NewReader(*v.JARModel.Signature.PublicKey.Content))
+	key, err := x509.NewPublicKey(bytes.NewReader(*v.JARModel.Signature.PublicKey.Content))
+	if err != nil {
+		return nil, err
+	}
+	return []pki.PublicKey{key}, nil
 }
 
 func (v V001Entry) Insertable() (bool, error) {

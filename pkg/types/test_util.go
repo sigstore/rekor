@@ -31,7 +31,7 @@ func (u BaseUnmarshalTester) NewEntry() EntryImpl {
 	return &BaseUnmarshalTester{}
 }
 
-func (u BaseUnmarshalTester) Verifier() (pki.PublicKey, error) {
+func (u BaseUnmarshalTester) Verifiers() ([]pki.PublicKey, error) {
 	return nil, nil
 }
 

@@ -246,11 +246,15 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifier() (pki.PublicKey, error) {
+func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	if v.HashedRekordObj.Signature == nil || v.HashedRekordObj.Signature.PublicKey == nil || v.HashedRekordObj.Signature.PublicKey.Content == nil {
 		return nil, errors.New("hashedrekord v0.0.1 entry not initialized")
 	}
-	return x509.NewPublicKey(bytes.NewReader(v.HashedRekordObj.Signature.PublicKey.Content))
+	key, err := x509.NewPublicKey(bytes.NewReader(v.HashedRekordObj.Signature.PublicKey.Content))
+	if err != nil {
+		return nil, err
+	}
+	return []pki.PublicKey{key}, nil
 }
 
 func (v V001Entry) Insertable() (bool, error) {

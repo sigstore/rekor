@@ -37,7 +37,7 @@ type EntryImpl interface {
 	Canonicalize(ctx context.Context) ([]byte, error) // marshal the canonical entry to be put into the tlog
 	Unmarshal(e models.ProposedEntry) error           // unmarshal the abstract entry into the specific struct for this versioned type
 	CreateFromArtifactProperties(context.Context, ArtifactProperties) (models.ProposedEntry, error)
-	Verifier() (pki.PublicKey, error)
+	Verifiers() ([]pki.PublicKey, error)
 	Insertable() (bool, error) // denotes whether the entry that was unmarshalled has the writeOnly fields required to validate and insert into the log
 }
 

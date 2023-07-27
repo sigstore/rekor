@@ -179,19 +179,19 @@ func TestCrossFieldValidation(t *testing.T) {
 			}
 		}
 
-		verifier, err := v.Verifier()
+		verifiers, err := v.Verifiers()
 		if tc.expectedVerifierSuccess {
 			if err != nil {
 				t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
 			} else {
-				pub, _ := verifier.CanonicalValue()
+				pub, _ := verifiers[0].CanonicalValue()
 				if !reflect.DeepEqual(pub, keyBytes) {
 					t.Errorf("%v: verifier and public keys do not match: %v, %v", tc.caseDesc, string(pub), string(keyBytes))
 				}
 			}
 		} else {
 			if err == nil {
-				s, _ := verifier.CanonicalValue()
+				s, _ := verifiers[0].CanonicalValue()
 				t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
 			}
 		}

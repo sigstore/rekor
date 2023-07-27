@@ -348,11 +348,15 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifier() (pki.PublicKey, error) {
+func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	if v.CoseObj.PublicKey == nil {
 		return nil, errors.New("cose v0.0.1 entry not initialized")
 	}
-	return x509.NewPublicKey(bytes.NewReader(*v.CoseObj.PublicKey))
+	key, err := x509.NewPublicKey(bytes.NewReader(*v.CoseObj.PublicKey))
+	if err != nil {
+		return nil, err
+	}
+	return []pki.PublicKey{key}, nil
 }
 
 func (v V001Entry) Insertable() (bool, error) {

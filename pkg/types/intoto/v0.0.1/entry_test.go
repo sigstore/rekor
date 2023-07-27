@@ -336,19 +336,19 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					t.Errorf("index keys from hydrated object do not match those generated from canonicalized (and re-hydrated) object: %v %v", got, canonicalIndexKeys)
 				}
 
-				verifier, err := v.Verifier()
+				verifiers, err := v.Verifiers()
 				if !tt.wantVerifierErr {
 					if err != nil {
 						t.Errorf("%v: unexpected error, got %v", tt.name, err)
 					} else {
-						pubV, _ := verifier.CanonicalValue()
+						pubV, _ := verifiers[0].CanonicalValue()
 						if !reflect.DeepEqual(pubV, pub) && !reflect.DeepEqual(pubV, pemBytes) {
 							t.Errorf("verifier and public keys do not match: %v, %v", string(pubV), string(pub))
 						}
 					}
 				} else {
 					if err == nil {
-						s, _ := verifier.CanonicalValue()
+						s, _ := verifiers[0].CanonicalValue()
 						t.Errorf("%v: expected error for %v, got %v", tt.name, string(s), err)
 					}
 				}
