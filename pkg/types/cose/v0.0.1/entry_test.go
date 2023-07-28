@@ -278,10 +278,10 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				}
 			}
 
-			verifier, err := v.Verifier()
+			verifiers, err := v.Verifiers()
 			if !tt.wantVerifierErr {
 				if err != nil {
-					s, _ := verifier.CanonicalValue()
+					s, _ := verifiers[0].CanonicalValue()
 					t.Errorf("%v: unexpected error for %v, got %v", tt.name, string(s), err)
 				}
 
@@ -305,12 +305,12 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					}
 				}
 
-				pubV, _ := verifier.CanonicalValue()
+				pubV, _ := verifiers[0].CanonicalValue()
 				if !reflect.DeepEqual(pubV, pub) && !reflect.DeepEqual(pubV, pemBytes) {
 					t.Errorf("verifier and public keys do not match: %v, %v", string(pubV), string(pub))
 				}
 			} else if err == nil {
-				s, _ := verifier.CanonicalValue()
+				s, _ := verifiers[0].CanonicalValue()
 				t.Errorf("%v: expected error for %v, got %v", tt.name, string(s), err)
 			}
 		})

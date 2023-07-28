@@ -457,7 +457,7 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 	return verifierBySig, nil
 }
 
-func (v V002Entry) Verifier() (pki.PublicKey, error) {
+func (v V002Entry) Verifiers() ([]pki.PublicKey, error) {
 	if v.IntotoObj.Content == nil || v.IntotoObj.Content.Envelope == nil {
 		return nil, errors.New("intoto v0.0.2 entry not initialized")
 	}
@@ -467,7 +467,15 @@ func (v V002Entry) Verifier() (pki.PublicKey, error) {
 		return nil, errors.New("no signatures found on intoto entry")
 	}
 
-	return x509.NewPublicKey(bytes.NewReader(*v.IntotoObj.Content.Envelope.Signatures[0].PublicKey))
+	var keys []pki.PublicKey
+	for _, s := range v.IntotoObj.Content.Envelope.Signatures {
+		key, err := x509.NewPublicKey(bytes.NewReader(*s.PublicKey))
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, key)
+	}
+	return keys, nil
 }
 
 func (v V002Entry) Insertable() (bool, error) {

@@ -39,7 +39,7 @@ func (u UnmarshalFailsTester) NewEntry() types.EntryImpl {
 	return &UnmarshalFailsTester{}
 }
 
-func (u UnmarshalFailsTester) Verifier() (pki.PublicKey, error) {
+func (u UnmarshalFailsTester) Verifiers() ([]pki.PublicKey, error) {
 	return nil, nil
 }
 

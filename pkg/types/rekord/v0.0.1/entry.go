@@ -425,23 +425,29 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifier() (pki.PublicKey, error) {
+func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	if v.RekordObj.Signature == nil || v.RekordObj.Signature.PublicKey == nil || v.RekordObj.Signature.PublicKey.Content == nil {
 		return nil, errors.New("rekord v0.0.1 entry not initialized")
 	}
 
+	var key pki.PublicKey
+	var err error
 	switch f := *v.RekordObj.Signature.Format; f {
 	case "x509":
-		return x509.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
+		key, err = x509.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
 	case "ssh":
-		return ssh.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
+		key, err = ssh.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
 	case "pgp":
-		return pgp.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
+		key, err = pgp.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
 	case "minisign":
-		return minisign.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
+		key, err = minisign.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
 	default:
 		return nil, fmt.Errorf("unexpected format of public key: %s", f)
 	}
+	if err != nil {
+		return nil, err
+	}
+	return []pki.PublicKey{key}, nil
 }
 
 func (v V001Entry) Insertable() (bool, error) {

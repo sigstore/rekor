@@ -196,20 +196,20 @@ func TestCrossFieldValidation(t *testing.T) {
 			}
 		}
 
-		verifier, err := v.Verifier()
+		verifiers, err := v.Verifiers()
 		if tc.expectVerifierSuccess {
 			if err != nil {
 				t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
 			} else {
 				// TODO: Improve this test once CanonicalValue returns same result as input for PGP keys
-				_, err := verifier.CanonicalValue()
+				_, err := verifiers[0].CanonicalValue()
 				if err != nil {
 					t.Errorf("%v: unexpected error getting canonical value, got %v", tc.caseDesc, err)
 				}
 			}
 		} else {
 			if err == nil {
-				s, _ := verifier.CanonicalValue()
+				s, _ := verifiers[0].CanonicalValue()
 				t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
 			}
 		}

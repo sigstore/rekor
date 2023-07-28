@@ -207,8 +207,8 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifier() (pki.PublicKey, error) {
-	return nil, errors.New("Verifier() does not support rfc3161 entry type")
+func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
+	return nil, errors.New("Verifiers() does not support rfc3161 entry type")
 }
 
 func (v V001Entry) Insertable() (bool, error) {

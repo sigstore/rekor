@@ -349,11 +349,15 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifier() (pki.PublicKey, error) {
+func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	if v.HelmObj.PublicKey == nil || v.HelmObj.PublicKey.Content == nil {
 		return nil, errors.New("helm v0.0.1 entry not initialized")
 	}
-	return pgp.NewPublicKey(bytes.NewReader(*v.HelmObj.PublicKey.Content))
+	key, err := pgp.NewPublicKey(bytes.NewReader(*v.HelmObj.PublicKey.Content))
+	if err != nil {
+		return nil, err
+	}
+	return []pki.PublicKey{key}, nil
 }
 
 func (v V001Entry) Insertable() (bool, error) {

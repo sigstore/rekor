@@ -351,11 +351,15 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifier() (pki.PublicKey, error) {
+func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	if v.AlpineModel.PublicKey == nil || v.AlpineModel.PublicKey.Content == nil {
 		return nil, errors.New("alpine v0.0.1 entry not initialized")
 	}
-	return x509.NewPublicKey(bytes.NewReader(*v.AlpineModel.PublicKey.Content))
+	key, err := x509.NewPublicKey(bytes.NewReader(*v.AlpineModel.PublicKey.Content))
+	if err != nil {
+		return nil, err
+	}
+	return []pki.PublicKey{key}, nil
 }
 
 func (v V001Entry) Insertable() (bool, error) {

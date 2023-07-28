@@ -44,7 +44,7 @@ func (u UnmarshalFailsTester) Unmarshal(_ models.ProposedEntry) error {
 	return errors.New("error")
 }
 
-func (u UnmarshalFailsTester) Verifier() (pki.PublicKey, error) {
+func (u UnmarshalFailsTester) Verifiers() ([]pki.PublicKey, error) {
 	return nil, nil
 }
 
