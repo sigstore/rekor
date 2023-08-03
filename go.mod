@@ -40,7 +40,7 @@ require (
 	gocloud.dev v0.32.0
 	golang.org/x/crypto v0.11.0
 	golang.org/x/mod v0.12.0
-	golang.org/x/net v0.12.0
+	golang.org/x/net v0.13.0
 	golang.org/x/sync v0.3.0
 	google.golang.org/genproto v0.0.0-20230717213848-3f92550aa753 // indirect
 	google.golang.org/grpc v1.57.0
