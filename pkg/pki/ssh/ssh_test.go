@@ -17,32 +17,44 @@ package ssh
 import (
 	"math/rand"
 	"reflect"
-	"sort"
 	"strings"
 	"testing"
+
+	"github.com/sigstore/rekor/pkg/pki/identity"
+	"golang.org/x/crypto/ssh"
 )
 
 func TestIdentities(t *testing.T) {
 	// from ssh_e2e_test.go
 	publicKey := "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDXofkiahE7uavjWvxnwkUF27qMgz7pdTwzSv0XzVG6EtirOv3PDWct4YKoXE9c0EqbxnIfYEKwEextdvB7zkgwczdJSHxf/18jQumLn/FuoCmugVSk1H5Qli/qzwBpaTnOk3WuakGuoYUl8ZAokKKgOKLA0aZJ1WRQ2ZCZggA3EkwNZiY17y9Q6HqdgQcH6XN8aAMADNVJdMAJb33hSRJjjsAPTmzBTishP8lYDoGRSsSE7/8XRBCEV5E4I8mI9GElcZwV/1KJx98mpH8QvMzXM1idFcwPRtt1NTAOshwgUU0Fu1x8lU5RQIa6ZKW36qNQLvLxy/BscC7B/mdLptoDs/ot9NimUXZcgCR1a2Q3o7Wi6jIgcgJcyV10Nba81ol4RdN4qPHnVZIzuo+dBkqwG3CMtB4Rj84+Qi+7zyU01hIPreoxQDXaayiGPBUUIiAlW9gsiuRWJzNnu3cvuWDLVfQIkjh7Wug58z+v2NOJ7IMdyERillhzDcvVHaq14+U= test@rekor.dev"
+	expectedKey, _, _, _, _ := ssh.ParseAuthorizedKey([]byte(publicKey))
 
 	pub, err := NewPublicKey(strings.NewReader(publicKey))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	identities, err := pub.Identities()
-	if err != nil {
-		t.Fatalf("unexpected error getting identities: %v", err)
+	if !reflect.DeepEqual(pub.EmailAddresses(), []string{"test@rekor.dev"}) {
+		t.Fatalf("expected email address, got %v", pub.EmailAddresses())
+	}
+	if !reflect.DeepEqual(pub.Subjects(), []string{"test@rekor.dev"}) {
+		t.Fatalf("expected email address as subject, got %v", pub.Subjects())
 	}
 
-	expectedIDs := []string{"test@rekor.dev",
-		"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDXofkiahE7uavjWvxnwkUF27qMgz7pdTwzSv0XzVG6EtirOv3PDWct4YKoXE9c0EqbxnIfYEKwEextdvB7zkgwczdJSHxf/18jQumLn/FuoCmugVSk1H5Qli/qzwBpaTnOk3WuakGuoYUl8ZAokKKgOKLA0aZJ1WRQ2ZCZggA3EkwNZiY17y9Q6HqdgQcH6XN8aAMADNVJdMAJb33hSRJjjsAPTmzBTishP8lYDoGRSsSE7/8XRBCEV5E4I8mI9GElcZwV/1KJx98mpH8QvMzXM1idFcwPRtt1NTAOshwgUU0Fu1x8lU5RQIa6ZKW36qNQLvLxy/BscC7B/mdLptoDs/ot9NimUXZcgCR1a2Q3o7Wi6jIgcgJcyV10Nba81ol4RdN4qPHnVZIzuo+dBkqwG3CMtB4Rj84+Qi+7zyU01hIPreoxQDXaayiGPBUUIiAlW9gsiuRWJzNnu3cvuWDLVfQIkjh7Wug58z+v2NOJ7IMdyERillhzDcvVHaq14+U="}
-
-	sort.Strings(identities)
-	sort.Strings(expectedIDs)
-	if !reflect.DeepEqual(identities, expectedIDs) {
-		t.Errorf("err getting identities from keys, got %v, expected %v", identities, expectedIDs)
+	keyVal := "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDXofkiahE7uavjWvxnwkUF27qMgz7pdTwzSv0XzVG6EtirOv3PDWct4YKoXE9c0EqbxnIfYEKwEextdvB7zkgwczdJSHxf/18jQumLn/FuoCmugVSk1H5Qli/qzwBpaTnOk3WuakGuoYUl8ZAokKKgOKLA0aZJ1WRQ2ZCZggA3EkwNZiY17y9Q6HqdgQcH6XN8aAMADNVJdMAJb33hSRJjjsAPTmzBTishP8lYDoGRSsSE7/8XRBCEV5E4I8mI9GElcZwV/1KJx98mpH8QvMzXM1idFcwPRtt1NTAOshwgUU0Fu1x8lU5RQIa6ZKW36qNQLvLxy/BscC7B/mdLptoDs/ot9NimUXZcgCR1a2Q3o7Wi6jIgcgJcyV10Nba81ol4RdN4qPHnVZIzuo+dBkqwG3CMtB4Rj84+Qi+7zyU01hIPreoxQDXaayiGPBUUIiAlW9gsiuRWJzNnu3cvuWDLVfQIkjh7Wug58z+v2NOJ7IMdyERillhzDcvVHaq14+U="
+	expectedID := identity.Identity{Crypto: expectedKey, Raw: []byte(keyVal)}
+	ids, err := pub.Identities()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ids) != 1 {
+		t.Errorf("too many identities, expected 1, got %v", len(ids))
+	}
+	if !reflect.DeepEqual(ids[0].Crypto.(ssh.PublicKey).Marshal(), expectedID.Crypto.(ssh.PublicKey).Marshal()) {
+		t.Errorf("certificates did not match")
+	}
+	if !reflect.DeepEqual(ids[0].Raw, expectedID.Raw) {
+		t.Errorf("raw identities did not match, expected %v, got %v", string(ids[0].Raw), string(expectedID.Raw))
 	}
 }
 

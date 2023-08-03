@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	validator "github.com/go-playground/validator/v10"
+	"github.com/sigstore/rekor/pkg/pki/identity"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
@@ -222,14 +223,14 @@ func (k PublicKey) Subjects() []string {
 }
 
 // Identities implements the pki.PublicKey interface
-func (k PublicKey) Identities() ([]string, error) {
+func (k PublicKey) Identities() ([]identity.Identity, error) {
 	// k contains either a key, a cert, or a list of certs
 	if k.key != nil {
 		pem, err := cryptoutils.MarshalPublicKeyToPEM(k.key)
 		if err != nil {
 			return nil, err
 		}
-		return []string{string(pem)}, nil
+		return []identity.Identity{{Crypto: k.key, Raw: pem}}, nil
 	}
 
 	var cert *x509.Certificate
@@ -242,19 +243,11 @@ func (k PublicKey) Identities() ([]string, error) {
 		return nil, errors.New("no key, certificate or certificate chain provided")
 	}
 
-	var identities []string
 	pemCert, err := cryptoutils.MarshalCertificateToPEM(cert)
 	if err != nil {
 		return nil, err
 	}
-	identities = append(identities, string(pemCert))
-	pemKey, err := cryptoutils.MarshalPublicKeyToPEM(cert.PublicKey)
-	if err != nil {
-		return nil, err
-	}
-	identities = append(identities, string(pemKey))
-	identities = append(identities, cryptoutils.GetSubjectAlternateNames(cert)...)
-	return identities, nil
+	return []identity.Identity{{Crypto: cert, Raw: pemCert}}, nil
 }
 
 func verifyCertChain(certChain []*x509.Certificate) error {

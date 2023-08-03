@@ -16,14 +16,18 @@
 package tuf
 
 import (
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
 	"time"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
+	"github.com/sigstore/rekor/pkg/pki/identity"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 	"github.com/theupdateframework/go-tuf/data"
+	"github.com/theupdateframework/go-tuf/pkg/keys"
 	"github.com/theupdateframework/go-tuf/verify"
 )
 
@@ -119,6 +123,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	db := verify.NewDB()
 	for id, k := range root.Keys {
 		if err := db.AddKey(id, k); err != nil {
+			fmt.Println("potato")
 			return nil, err
 		}
 	}
@@ -168,14 +173,51 @@ func (k PublicKey) Subjects() []string {
 }
 
 // Identities implements the pki.PublicKey interface
-func (k PublicKey) Identities() ([]string, error) {
+func (k PublicKey) Identities() ([]identity.Identity, error) {
 	root := &data.Root{}
 	if err := json.Unmarshal(k.root.Signed, root); err != nil {
 		return nil, err
 	}
-	identity, err := json.Marshal(root.Keys)
-	if err != nil {
-		return nil, err
+	var ids []identity.Identity
+	for _, k := range root.Keys {
+		verifier, err := keys.GetVerifier(k)
+		if err != nil {
+			return nil, err
+		}
+		switch k.Type {
+		// RSA and ECDSA keys are PKIX-encoded without PEM header for the Verifier type
+		case data.KeyTypeRSASSA_PSS_SHA256:
+			fallthrough
+		// TODO: Update to constants once go-tuf is updated to 0.6.0 (need PR #508)
+		case "ecdsa-sha2-nistp256":
+			fallthrough
+		case "ecdsa":
+			pub, err := x509.ParsePKIXPublicKey([]byte(verifier.Public()))
+			if err != nil {
+				return nil, err
+			}
+			pemKey, err := cryptoutils.MarshalPublicKeyToPEM(pub)
+			if err != nil {
+				return nil, err
+			}
+			ids = append(ids, identity.Identity{
+				Crypto: pub,
+				Raw:    pemKey,
+			})
+		case data.KeyTypeEd25519:
+			// key is stored as a 32-byte string
+			pub := []byte(verifier.Public())
+			pemKey, err := cryptoutils.MarshalPublicKeyToPEM(pub)
+			if err != nil {
+				return nil, err
+			}
+			ids = append(ids, identity.Identity{
+				Crypto: pub,
+				Raw:    pemKey,
+			})
+		default:
+			return nil, fmt.Errorf("unsupported key type: %v", k.Type)
+		}
 	}
-	return []string{string(identity)}, nil
+	return ids, nil
 }

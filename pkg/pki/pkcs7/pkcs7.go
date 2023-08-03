@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/sassoftware/relic/lib/pkcs7"
+	"github.com/sigstore/rekor/pkg/pki/identity"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
@@ -224,24 +225,18 @@ func (k PublicKey) Subjects() []string {
 }
 
 // Identities implements the pki.PublicKey interface
-func (k PublicKey) Identities() ([]string, error) {
-	var identities []string
-
+func (k PublicKey) Identities() ([]identity.Identity, error) {
 	// pkcs7 structure may contain both a key and certificate chain
 	pemCert, err := cryptoutils.MarshalCertificateToPEM(k.certs[0])
 	if err != nil {
 		return nil, err
 	}
-	identities = append(identities, string(pemCert))
 	pemKey, err := cryptoutils.MarshalPublicKeyToPEM(k.key)
 	if err != nil {
 		return nil, err
 	}
-	identities = append(identities, string(pemKey))
-
-	// Subjects come from the certificate Subject and SANs
-	// SANs could include an email, IP address, DNS name, URI, or any other value in the SAN
-	identities = append(identities, k.Subjects()...)
-
-	return identities, nil
+	return []identity.Identity{
+		{Crypto: k.certs[0], Raw: pemCert},
+		{Crypto: k.key, Raw: pemKey},
+	}, nil
 }

@@ -17,13 +17,13 @@ package tuf
 
 import (
 	"bytes"
-	"encoding/json"
+	"crypto/ecdsa"
 	"io"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
-	"github.com/theupdateframework/go-tuf/data"
 	_ "github.com/theupdateframework/go-tuf/pkg/deprecated/set_ecdsa"
 	"github.com/theupdateframework/go-tuf/verify"
 )
@@ -81,15 +81,13 @@ func TestReadPublicKey(t *testing.T) {
 			if err != nil {
 				t.Errorf("%v: error getting identities for %v: %v", tc.caseDesc, tc.inputFile, err)
 			}
-			if len(identities) != 1 {
-				t.Errorf("%v: expected 1 identity, got: %d", tc.caseDesc, len(identities))
+			if len(identities) != 7 {
+				t.Errorf("%v: expected 7 identities, got: %d", tc.caseDesc, len(identities))
 			}
-			var keys map[string]*data.PublicKey
-			if err := json.Unmarshal([]byte(identities[0]), &keys); err != nil {
-				t.Fatal(err)
-			}
-			if len(keys) != 5 {
-				t.Errorf("%v: expected 5 keys, got %d", tc.caseDesc, len(keys))
+			for _, i := range identities {
+				if _, ok := i.Crypto.(*ecdsa.PublicKey); !ok {
+					t.Errorf("%v: key was not of type *ecdsa.PublicKey: %v", tc.caseDesc, reflect.TypeOf(i.Crypto))
+				}
 			}
 		}
 	}
@@ -168,12 +166,12 @@ func TestCanonicalValue(t *testing.T) {
 
 		outputKey, err := NewPublicKey(outputFile)
 		if err != nil {
-			t.Errorf("%v: Error reading input for TestCanonicalValue: %v", tc.caseDesc, err)
+			t.Fatalf("%v: Error reading input for TestCanonicalValue: %v", tc.caseDesc, err)
 		}
 
 		cvOutput, err := outputKey.CanonicalValue()
 		if err != nil {
-			t.Errorf("%v: Error canonicalizing public key '%v': %v", tc.caseDesc, tc.input, err)
+			t.Fatalf("%v: Error canonicalizing public key '%v': %v", tc.caseDesc, tc.input, err)
 		}
 
 		if bytes.Equal(cvInput, cvOutput) != tc.match {

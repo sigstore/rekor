@@ -18,6 +18,7 @@ package pki
 import (
 	"io"
 
+	"github.com/sigstore/rekor/pkg/pki/identity"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -28,8 +29,8 @@ type PublicKey interface {
 	// also return Subject URIs present in public keys.
 	EmailAddresses() []string
 	Subjects() []string
-	// Identities returns PEM-encoded public keys and subjects from either certificate or PGP keys
-	Identities() ([]string, error)
+	// Identities returns a list of typed keys and certificates.
+	Identities() ([]identity.Identity, error)
 }
 
 // Signature Generic object representing a signature (regardless of format & algorithm)

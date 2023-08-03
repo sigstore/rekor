@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	minisign "github.com/jedisct1/go-minisign"
 	"go.uber.org/goleak"
 )
 
@@ -63,6 +64,20 @@ func TestReadPublicKey(t *testing.T) {
 			}
 			if !bytes.Equal(rawGot.key.PublicKey[:], rawBytes) {
 				t.Errorf("expected parsed keys to be equal, %v != %v", rawGot.key.PublicKey, rawBytes)
+			}
+			ids, err := rawGot.Identities()
+			if err != nil {
+				t.Fatalf("unexpected error getting identities: %v", err)
+			}
+			if _, ok := ids[0].Crypto.(*minisign.PublicKey); !ok {
+				t.Fatalf("key is of unexpected type, expected *minisign.PublicKey, got %v", reflect.TypeOf(ids[0].Crypto))
+			}
+			val, err := rawGot.CanonicalValue()
+			if err != nil {
+				t.Fatalf("error canonicalizing key: %v", err)
+			}
+			if !reflect.DeepEqual(val, ids[0].Raw) {
+				t.Errorf("raw key and canonical value are not equal")
 			}
 		})
 	}
@@ -293,10 +308,17 @@ func TestCanonicalValuePublicKey(t *testing.T) {
 		// Identities should be equal to the canonical value for minisign
 		ids, err := outputKey.Identities()
 		if err != nil {
-			t.Errorf("unexpected error getting identities: %v", err)
+			t.Fatalf("unexpected error getting identities: %v", err)
 		}
-		if !reflect.DeepEqual([]string{string(cvOutput)}, ids) {
-			t.Errorf("identities and canonical value are not equal")
+		if _, ok := ids[0].Crypto.(*minisign.PublicKey); !ok {
+			t.Fatalf("key is of unexpected type, expected *minisign.PublicKey, got %v", reflect.TypeOf(ids[0].Crypto))
+		}
+		val, err := outputKey.CanonicalValue()
+		if err != nil {
+			t.Fatalf("error canonicalizing key: %v", err)
+		}
+		if !reflect.DeepEqual(val, ids[0].Raw) {
+			t.Errorf("raw key and canonical value are not equal")
 		}
 	}
 }

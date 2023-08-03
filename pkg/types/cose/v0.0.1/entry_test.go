@@ -34,6 +34,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/pki/identity"
 	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/spf13/viper"
@@ -90,7 +91,7 @@ func (t testPublicKey) Subjects() []string {
 	return nil
 }
 
-func (t testPublicKey) Identities() ([]string, error) {
+func (t testPublicKey) Identities() ([]identity.Identity, error) {
 	return nil, nil
 }
 

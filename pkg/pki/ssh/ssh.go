@@ -22,6 +22,7 @@ import (
 	"net/http"
 
 	"github.com/asaskevich/govalidator"
+	"github.com/sigstore/rekor/pkg/pki/identity"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/crypto/ssh"
 )
@@ -108,25 +109,20 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 
 // EmailAddresses implements the pki.PublicKey interface
 func (k PublicKey) EmailAddresses() []string {
+	if govalidator.IsEmail(k.comment) {
+		return []string{k.comment}
+	}
 	return nil
 }
 
 // Subjects implements the pki.PublicKey interface
 func (k PublicKey) Subjects() []string {
-	return nil
+	return k.EmailAddresses()
 }
 
 // Identities implements the pki.PublicKey interface
-func (k PublicKey) Identities() ([]string, error) {
-	var identities []string
-
+func (k PublicKey) Identities() ([]identity.Identity, error) {
 	// an authorized key format
-	authorizedKey := string(bytes.TrimSpace(ssh.MarshalAuthorizedKey(k.key)))
-	identities = append(identities, authorizedKey)
-
-	if govalidator.IsEmail(k.comment) {
-		identities = append(identities, k.comment)
-	}
-
-	return identities, nil
+	authorizedKey := bytes.TrimSpace(ssh.MarshalAuthorizedKey(k.key))
+	return []identity.Identity{{Crypto: k.key, Raw: authorizedKey}}, nil
 }
