@@ -123,7 +123,6 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	db := verify.NewDB()
 	for id, k := range root.Keys {
 		if err := db.AddKey(id, k); err != nil {
-			fmt.Println("potato")
 			return nil, err
 		}
 	}
