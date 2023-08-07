@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	minisign "github.com/jedisct1/go-minisign"
+	"github.com/sigstore/rekor/pkg/pki/identity"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/crypto/blake2b"
 )
@@ -184,11 +185,11 @@ func (k PublicKey) Subjects() []string {
 }
 
 // Identities implements the pki.PublicKey interface
-func (k PublicKey) Identities() ([]string, error) {
+func (k PublicKey) Identities() ([]identity.Identity, error) {
 	// returns base64-encoded key (sig alg, key ID, and public key)
 	key, err := k.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
-	return []string{string(key)}, nil
+	return []identity.Identity{{Crypto: k.key, Raw: key}}, nil
 }

@@ -19,13 +19,15 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
 	"crypto/x509"
 	"net/url"
 	"reflect"
-	"sort"
 	"strings"
 	"testing"
 
+	"github.com/sigstore/rekor/pkg/pki/identity"
 	"github.com/sigstore/rekor/pkg/pki/x509/testutils"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -163,6 +165,38 @@ func TestSignature_Verify(t *testing.T) {
 			if err := canonicalSig.Verify(bytes.NewReader(data), pub); err != nil {
 				t.Errorf("Signature.Verify() error = %v", err)
 			}
+
+			pubKey, _ := cryptoutils.UnmarshalPEMToPublicKey([]byte(tt.pub))
+			expectedID := identity.Identity{Crypto: pubKey, Raw: []byte(tt.pub)}
+			ids, err := pub.Identities()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(ids) != 1 {
+				t.Errorf("%v: too many identities, expected 1, got %v", tt.name, len(ids))
+			}
+			switch v := ids[0].Crypto.(type) {
+			case *rsa.PublicKey:
+				if tt.name != "rsa" {
+					t.Fatalf("unexpected key, expected RSA, got %v", reflect.TypeOf(v))
+				}
+			case *ecdsa.PublicKey:
+				if tt.name != "ec" {
+					t.Fatalf("unexpected key, expected RSA, got %v", reflect.TypeOf(v))
+				}
+			case ed25519.PublicKey:
+				if tt.name != "ed25519" {
+					t.Fatalf("unexpected key, expected RSA, got %v", reflect.TypeOf(v))
+				}
+			default:
+				t.Fatalf("unexpected key type, got %v", reflect.TypeOf(v))
+			}
+			if err := cryptoutils.EqualKeys(expectedID.Crypto, ids[0].Crypto); err != nil {
+				t.Errorf("%v: public keys did not match: %v", tt.name, err)
+			}
+			if !reflect.DeepEqual(ids[0].Raw, expectedID.Raw) {
+				t.Errorf("%v: raw identities did not match, expected %v, got %v", tt.name, tt.pub, string(expectedID.Raw))
+			}
 		})
 	}
 }
@@ -208,15 +242,6 @@ func TestSignature_VerifyFail(t *testing.T) {
 			if err := s.Verify(bytes.NewReader(data), pub); err == nil {
 				t.Error("Signature.Verify() expected error!")
 			}
-
-			expectedIDs := []string{tt.pub}
-			ids, err := pub.Identities()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !reflect.DeepEqual(expectedIDs, ids) {
-				t.Errorf("%v: identities did not match, expected %v, got %v", tt.name, expectedIDs, ids)
-			}
 		})
 	}
 }
@@ -226,7 +251,6 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 	subCert, subKey, _ := testutils.GenerateSubordinateCa(rootCert, rootKey)
 	url, _ := url.Parse("https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1")
 	leafCert, leafKey, _ := testutils.GenerateLeafCert("subject@example.com", "oidc-issuer", url, subCert, subKey)
-	leafPEM, _ := cryptoutils.MarshalPublicKeyToPEM(leafKey.Public())
 	leafCertPEM, _ := cryptoutils.MarshalCertificateToPEM(leafCert)
 
 	pemCertChain, err := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, subCert, rootCert})
@@ -256,15 +280,19 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 		t.Fatalf("expected matching subjects, expected %v, got %v", expectedSubjects, pub.Subjects())
 	}
 
-	expectedIDs := []string{string(leafCertPEM), string(leafPEM), "subject@example.com", url.String()}
+	expectedID := identity.Identity{Crypto: leafCert, Raw: leafCertPEM}
 	ids, err := pub.Identities()
 	if err != nil {
 		t.Fatal(err)
 	}
-	sort.Strings(ids)
-	sort.Strings(expectedIDs)
-	if !reflect.DeepEqual(expectedIDs, ids) {
-		t.Fatalf("identities do not match, expected %v, got %v", []string{}, ids)
+	if len(ids) != 1 {
+		t.Errorf("too many identities, expected 1, got %v", len(ids))
+	}
+	if !ids[0].Crypto.(*x509.Certificate).Equal(expectedID.Crypto.(*x509.Certificate)) {
+		t.Errorf("certificates did not match")
+	}
+	if !reflect.DeepEqual(ids[0].Raw, expectedID.Raw) {
+		t.Errorf("raw identities did not match, expected %v, got %v", ids[0].Raw, string(expectedID.Raw))
 	}
 
 	canonicalValue, err := pub.CanonicalValue()

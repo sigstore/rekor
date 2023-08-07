@@ -27,6 +27,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/sigstore/rekor/pkg/pki/identity"
 	"go.uber.org/goleak"
 )
 
@@ -387,9 +388,8 @@ func TestEmailAddresses(t *testing.T) {
 			t.Errorf("%v: Error getting subjects from keys length, got %v, expected %v", tc.caseDesc, len(subjects), len(tc.subjects))
 		}
 
-		expectedIDs := tc.subjects
-		key, _ := inputKey.CanonicalValue()
-		expectedIDs = append(expectedIDs, string(key))
+		keyVal, _ := inputKey.CanonicalValue()
+		expectedIDs := []identity.Identity{{Crypto: inputKey.key, Raw: keyVal}}
 		ids, err := inputKey.Identities()
 		if err != nil {
 			t.Fatalf("unexpected error getting identities: %v", err)

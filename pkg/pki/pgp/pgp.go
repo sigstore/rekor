@@ -31,6 +31,7 @@ import (
 	"golang.org/x/crypto/openpgp/armor"  //nolint:staticcheck
 	"golang.org/x/crypto/openpgp/packet" //nolint:staticcheck
 
+	"github.com/sigstore/rekor/pkg/pki/identity"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -305,14 +306,10 @@ func (k PublicKey) Subjects() []string {
 }
 
 // Identities implements the pki.PublicKey interface
-func (k PublicKey) Identities() ([]string, error) {
-	// returns the email addresses and armored public key
-	var identities []string
-	identities = append(identities, k.Subjects()...)
+func (k PublicKey) Identities() ([]identity.Identity, error) {
 	key, err := k.CanonicalValue()
 	if err != nil {
 		return nil, err
 	}
-	identities = append(identities, string(key))
-	return identities, nil
+	return []identity.Identity{{Crypto: k.key, Raw: key}}, nil
 }

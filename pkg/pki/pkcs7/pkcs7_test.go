@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/sassoftware/relic/lib/pkcs7"
+	"github.com/sigstore/rekor/pkg/pki/identity"
 	"github.com/sigstore/rekor/pkg/pki/x509/testutils"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
@@ -470,12 +471,12 @@ A6ydFG8HXGWcnVVIVQ==
 		{
 			name:       "email in subject",
 			pkcs7:      pkcsPEMEmail,
-			identities: []string{pkcsEmailCert, pkcsPEMEmailKey, "test@rekor.dev"},
+			identities: []string{pkcsEmailCert, pkcsPEMEmailKey},
 		},
 		{
 			name:       "email and URI in subject alternative name",
 			pkcs7:      string(pkcs7bytes),
-			identities: []string{string(leafCertPEM), string(leafPEM), "subject@example.com", "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1"},
+			identities: []string{string(leafCertPEM), string(leafPEM)},
 		},
 	}
 
@@ -485,23 +486,33 @@ A6ydFG8HXGWcnVVIVQ==
 			if err != nil {
 				t.Fatal(err)
 			}
-			identities, err := pub.Identities()
+			ids, err := pub.Identities()
 			if err != nil {
 				t.Fatalf("unexpected error getting identities: %v", err)
 			}
-
-			if len(identities) == len(tt.identities) {
-				if len(identities) > 0 {
-					sort.Strings(identities)
-					sort.Strings(tt.identities)
-					if !reflect.DeepEqual(identities, tt.identities) {
-						t.Errorf("%v: Error getting identities from keys, got %v, expected %v", tt.name, identities, tt.identities)
-					}
-				}
-			} else {
-				t.Errorf("%v: Error getting identities from keys, got %v, expected %v", tt.name, identities, tt.identities)
+			if len(ids) != 2 {
+				t.Fatalf("expected 2 identities, got %d", len(ids))
 			}
 
+			// compare certificate
+			cert, _ := cryptoutils.UnmarshalCertificatesFromPEM([]byte(tt.identities[0]))
+			expectedID := identity.Identity{Crypto: cert[0], Raw: []byte(tt.identities[0])}
+			if !ids[0].Crypto.(*x509.Certificate).Equal(expectedID.Crypto.(*x509.Certificate)) {
+				t.Errorf("certificates did not match")
+			}
+			if !reflect.DeepEqual(ids[0].Raw, expectedID.Raw) {
+				t.Errorf("raw identities did not match, expected %v, got %v", ids[0].Raw, string(expectedID.Raw))
+			}
+
+			// compare public key
+			key, _ := cryptoutils.UnmarshalPEMToPublicKey([]byte(tt.identities[1]))
+			expectedID = identity.Identity{Crypto: key, Raw: []byte(tt.identities[1])}
+			if err := cryptoutils.EqualKeys(expectedID.Crypto, ids[1].Crypto); err != nil {
+				t.Errorf("%v: public keys did not match: %v", tt.name, err)
+			}
+			if !reflect.DeepEqual(ids[1].Raw, expectedID.Raw) {
+				t.Errorf("%v: raw identities did not match", tt.name)
+			}
 		})
 	}
 }
