@@ -19,6 +19,8 @@ services:
     build:
       context: .
       target: "test"
+    environment:
+      - TMPDIR=/var/run/attestations # workaround for https://github.com/google/go-cloud/issues/3294
     command: [
       "rekor-server",
       "-test.coverprofile=rekor-server.cov",
