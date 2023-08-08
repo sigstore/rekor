@@ -15,7 +15,7 @@
 package identity
 
 type Identity struct {
-	// Types include: *rsa.PublicKey, *ecdsa.PublicKey, ed25519.Publickey,
+	// Types include: *rsa.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey,
 	// *x509.Certificate, openpgp.EntityList, *minisign.PublicKey, ssh.PublicKey
 	Crypto any
 	// Based on type of Crypto. Possible values include: PEM-encoded public key,
