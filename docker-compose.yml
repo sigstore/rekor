@@ -81,6 +81,8 @@ services:
     build:
       context: .
       target: "deploy"
+    environment:
+      - TMPDIR=/var/run/attestations # workaround for https://github.com/google/go-cloud/issues/3294
     command: [
       "rekor-server",
       "serve",
