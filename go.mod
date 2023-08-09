@@ -62,7 +62,7 @@ require (
 	github.com/sigstore/protobuf-specs v0.2.0
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.1
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.1
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.1
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.2
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.1
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230731193218-e0aa005b6bdf
@@ -178,7 +178,7 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.step.sm/crypto v0.34.0
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/oauth2 v0.10.0 // indirect
+	golang.org/x/oauth2 v0.11.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/term v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
