@@ -18,6 +18,7 @@ package api
 import (
 	"context"
 	"crypto/sha256"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
@@ -139,8 +140,14 @@ func ConfigureAPI(treeID uint) {
 	}
 	if viper.GetBool("enable_retrieve_api") || viper.GetBool("enable_stable_checkpoint") ||
 		slices.Contains(viper.GetStringSlice("enabled_api_endpoints"), "searchIndex") {
+
 		redisClient = redis.NewClient(&redis.Options{
-			Addr:    fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")),
+			Addr:     fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")),
+			Username: viper.GetString("redis_server.username"),
+			Password: viper.GetString("redis_server.password"),
+			TLSConfig: &tls.Config{
+				InsecureSkipVerify: viper.GetBool("redis_server.insecure-skip-verify"),
+			},
 			Network: "tcp",
 			DB:      0, // default DB
 		})
