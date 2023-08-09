@@ -75,7 +75,7 @@ github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj
 github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3dyBCFEj5IhUbnKptjxatkF07cF2ak3yi77so=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
-github.com/aws/aws-sdk-go v1.44.314 h1:d/5Jyk/Fb+PBd/4nzQg0JuC2W4A0knrDIzBgK/ggAow=
+github.com/aws/aws-sdk-go v1.44.317 h1:+8XWrLmGMwPPXSRSLPzhgcGnzJ2mYkgkrcB9C/GnSOU=
 github.com/aws/aws-sdk-go-v2 v1.20.0 h1:INUDpYLt4oiPOJl0XwZDK2OVAVf0Rzo+MGVTv9f+gy8=
 github.com/aws/aws-sdk-go-v2 v1.20.0/go.mod h1:uWOr0m0jDsiWw8nnXiqZ+YG6LdvAlGYDLLf2NmHZoy4=
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.11 h1:/MS8AzqYNAhhRNalOmxUvYs8VEbNGifTnzhPFdcRQkQ=
@@ -517,8 +517,8 @@ github.com/sigstore/protobuf-specs v0.2.0 h1:YFG4UYfBSQ608m3ZnIOtRDggt+3g6sMoxRA
 github.com/sigstore/protobuf-specs v0.2.0/go.mod h1:5shUCxf82hGnjUEFVWiktcxwzdtn6EfeeJssxZ5Q5HE=
 github.com/sigstore/sigstore v1.7.2 h1:MY0wSOhKWa8SIWSCO9SzFnUl+b7jbthgXHJpuUg31Qs=
 github.com/sigstore/sigstore v1.7.2/go.mod h1:2IPD5YXrXoznfnIoVsDF7ARC1Nha8xIdLpsC4kEQh5w=
-github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.1 h1:rDHrG/63b3nBq3G9plg7iYnWN6lBhOfq/XultlCZgII=
-github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.1/go.mod h1:hl0LRidnJG1uL1lLSHGEjcs+MxLjT65NJ7pX/TQDIsk=
+github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.2 h1:JtdEI/81xugNfHqHyK1icPtnjgrLHJmWm3fgUBhyFPw=
+github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.2/go.mod h1:GBGQtFm6XmC00DeGc1GI/PdETg7vrhzaHBgj5YCS9lY=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.1 h1:X3ezwolP+b1jP3R6XPOWhUU0TZKONiv6EIRuySlZGrY=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.1/go.mod h1:SG2NPEdX2Vi7CBp/o93kJqXrovkis/T9ou9oxZONyEA=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.2 h1:/c9AZS8mfOlpjCuBA1aBesuDxPMEN2QtmZS/CQ6Cz8I=
