@@ -16,7 +16,9 @@
 package tuf
 
 import (
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -191,28 +193,33 @@ func (k PublicKey) Identities() ([]identity.Identity, error) {
 		case "ecdsa-sha2-nistp256":
 			fallthrough
 		case "ecdsa":
+			// parse and marshal to check format is correct
 			pub, err := x509.ParsePKIXPublicKey([]byte(verifier.Public()))
 			if err != nil {
 				return nil, err
 			}
-			pemKey, err := cryptoutils.MarshalPublicKeyToPEM(pub)
+			pkixKey, err := cryptoutils.MarshalPublicKeyToDER(pub)
 			if err != nil {
 				return nil, err
 			}
+			digest := sha256.Sum256(pkixKey)
 			ids = append(ids, identity.Identity{
-				Crypto: pub,
-				Raw:    pemKey,
+				Crypto:      pub,
+				Raw:         pkixKey,
+				Fingerprint: hex.EncodeToString(digest[:]),
 			})
 		case data.KeyTypeEd25519:
 			// key is stored as a 32-byte string
 			pub := []byte(verifier.Public())
-			pemKey, err := cryptoutils.MarshalPublicKeyToPEM(pub)
+			pkixKey, err := cryptoutils.MarshalPublicKeyToDER(pub)
 			if err != nil {
 				return nil, err
 			}
+			digest := sha256.Sum256(pkixKey)
 			ids = append(ids, identity.Identity{
-				Crypto: pub,
-				Raw:    pemKey,
+				Crypto:      pub,
+				Raw:         pkixKey,
+				Fingerprint: hex.EncodeToString(digest[:]),
 			})
 		default:
 			return nil, fmt.Errorf("unsupported key type: %v", k.Type)

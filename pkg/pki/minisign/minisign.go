@@ -17,13 +17,17 @@ package minisign
 
 import (
 	"bytes"
+	"crypto/ed25519"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strings"
 
 	minisign "github.com/jedisct1/go-minisign"
 	"github.com/sigstore/rekor/pkg/pki/identity"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/crypto/blake2b"
 )
@@ -186,10 +190,15 @@ func (k PublicKey) Subjects() []string {
 
 // Identities implements the pki.PublicKey interface
 func (k PublicKey) Identities() ([]identity.Identity, error) {
-	// returns base64-encoded key (sig alg, key ID, and public key)
-	key, err := k.CanonicalValue()
+	// PKIX encode ed25519 public key
+	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(ed25519.PublicKey(k.key.PublicKey[:]))
 	if err != nil {
 		return nil, err
 	}
-	return []identity.Identity{{Crypto: k.key, Raw: key}}, nil
+	digest := sha256.Sum256(pkixKey)
+	return []identity.Identity{{
+		Crypto:      k.key,
+		Raw:         pkixKey,
+		Fingerprint: hex.EncodeToString(digest[:]),
+	}}, nil
 }

@@ -21,7 +21,9 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"net"
 	"net/url"
 	"reflect"
@@ -168,7 +170,9 @@ func TestSignature_Verify(t *testing.T) {
 			}
 
 			pubKey, _ := cryptoutils.UnmarshalPEMToPublicKey([]byte(tt.pub))
-			expectedID := identity.Identity{Crypto: pubKey, Raw: []byte(tt.pub)}
+			derKey, _ := cryptoutils.MarshalPublicKeyToDER(pubKey)
+			digest := sha256.Sum256(derKey)
+			expectedID := identity.Identity{Crypto: pubKey, Raw: derKey, Fingerprint: hex.EncodeToString(digest[:])}
 			ids, err := pub.Identities()
 			if err != nil {
 				t.Fatal(err)
@@ -195,8 +199,11 @@ func TestSignature_Verify(t *testing.T) {
 			if err := cryptoutils.EqualKeys(expectedID.Crypto, ids[0].Crypto); err != nil {
 				t.Errorf("%v: public keys did not match: %v", tt.name, err)
 			}
-			if !reflect.DeepEqual(ids[0].Raw, expectedID.Raw) {
-				t.Errorf("%v: raw identities did not match, expected %v, got %v", tt.name, tt.pub, string(expectedID.Raw))
+			if !reflect.DeepEqual(expectedID.Raw, ids[0].Raw) {
+				t.Errorf("%v: raw identities did not match, expected %v, got %v", tt.name, expectedID.Raw, ids[0].Raw)
+			}
+			if expectedID.Fingerprint != ids[0].Fingerprint {
+				t.Errorf("%v: fingerprints did not match, expected %v, got %v", tt.name, expectedID.Fingerprint, ids[0].Fingerprint)
 			}
 		})
 	}
@@ -253,7 +260,6 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 	subjectURL, _ := url.Parse("https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1")
 	leafCert, leafKey, _ := testutils.GenerateLeafCertWithSubjectAlternateNames(
 		[]string{"example.com"}, []string{"subject@example.com"}, []net.IP{{1, 1, 1, 1}}, []*url.URL{subjectURL}, "oidc-issuer", subCert, subKey)
-	leafCertPEM, _ := cryptoutils.MarshalCertificateToPEM(leafCert)
 
 	pemCertChain, err := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, subCert, rootCert})
 	if err != nil {
@@ -285,7 +291,8 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 		t.Fatalf("expected matching subjects, expected %v, got %v", expectedSubjects, pub.Subjects())
 	}
 
-	expectedID := identity.Identity{Crypto: leafCert, Raw: leafCertPEM}
+	digest := sha256.Sum256(leafCert.Raw)
+	expectedID := identity.Identity{Crypto: leafCert, Raw: leafCert.Raw, Fingerprint: hex.EncodeToString((digest[:]))}
 	ids, err := pub.Identities()
 	if err != nil {
 		t.Fatal(err)
@@ -296,8 +303,11 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 	if !ids[0].Crypto.(*x509.Certificate).Equal(expectedID.Crypto.(*x509.Certificate)) {
 		t.Errorf("certificates did not match")
 	}
-	if !reflect.DeepEqual(ids[0].Raw, expectedID.Raw) {
-		t.Errorf("raw identities did not match, expected %v, got %v", ids[0].Raw, string(expectedID.Raw))
+	if !reflect.DeepEqual(expectedID.Raw, ids[0].Raw) {
+		t.Errorf("raw identities did not match, expected %v, got %v", expectedID.Raw, ids[0].Raw)
+	}
+	if expectedID.Fingerprint != ids[0].Fingerprint {
+		t.Errorf("fingerprints did not match, expected %v, got %v", expectedID.Fingerprint, ids[0].Fingerprint)
 	}
 
 	canonicalValue, err := pub.CanonicalValue()

@@ -19,6 +19,10 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -32,6 +36,7 @@ import (
 	"golang.org/x/crypto/openpgp/packet" //nolint:staticcheck
 
 	"github.com/sigstore/rekor/pkg/pki/identity"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -307,9 +312,33 @@ func (k PublicKey) Subjects() []string {
 
 // Identities implements the pki.PublicKey interface
 func (k PublicKey) Identities() ([]identity.Identity, error) {
-	key, err := k.CanonicalValue()
-	if err != nil {
-		return nil, err
+	var ids []identity.Identity
+	for _, entity := range k.key {
+		var keys []*packet.PublicKey
+		keys = append(keys, entity.PrimaryKey)
+		for _, subKey := range entity.Subkeys {
+			keys = append(keys, subKey.PublicKey)
+		}
+		for _, pk := range keys {
+			pubKey := pk.PublicKey
+			// Only process supported types. Will ignore DSA
+			// and ElGamal keys.
+			// TODO: For a V2 PGP type, enforce on upload
+			switch pubKey.(type) {
+			case *rsa.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey:
+			default:
+				continue
+			}
+			pkixKey, err := cryptoutils.MarshalPublicKeyToDER(pubKey)
+			if err != nil {
+				return nil, err
+			}
+			ids = append(ids, identity.Identity{
+				Crypto:      pubKey,
+				Raw:         pkixKey,
+				Fingerprint: hex.EncodeToString(pk.Fingerprint[:]),
+			})
+		}
 	}
-	return []identity.Identity{{Crypto: k.key, Raw: key}}, nil
+	return ids, nil
 }
