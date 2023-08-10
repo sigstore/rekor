@@ -44,6 +44,9 @@ func TestIdentities(t *testing.T) {
 
 	keyVal := expectedKey.(ssh.CryptoPublicKey).CryptoPublicKey()
 	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(keyVal)
+	if err != nil {
+		t.Fatal(err)
+	}
 	ids, err := pub.Identities()
 	if err != nil {
 		t.Fatal(err)
@@ -51,7 +54,7 @@ func TestIdentities(t *testing.T) {
 	if len(ids) != 1 {
 		t.Errorf("too many identities, expected 1, got %v", len(ids))
 	}
-	if !reflect.DeepEqual(ids[0].Crypto.(ssh.PublicKey).Marshal(), expectedKey.(ssh.PublicKey).Marshal()) {
+	if !reflect.DeepEqual(ids[0].Crypto.(ssh.PublicKey).Marshal(), expectedKey.Marshal()) {
 		t.Errorf("certificates did not match")
 	}
 	if !reflect.DeepEqual(ids[0].Raw, pkixKey) {
