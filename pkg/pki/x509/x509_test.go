@@ -22,6 +22,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
+	"net"
 	"net/url"
 	"reflect"
 	"strings"
@@ -249,8 +250,9 @@ func TestSignature_VerifyFail(t *testing.T) {
 func TestPublicKeyWithCertChain(t *testing.T) {
 	rootCert, rootKey, _ := testutils.GenerateRootCa()
 	subCert, subKey, _ := testutils.GenerateSubordinateCa(rootCert, rootKey)
-	url, _ := url.Parse("https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1")
-	leafCert, leafKey, _ := testutils.GenerateLeafCert("subject@example.com", "oidc-issuer", url, subCert, subKey)
+	subjectUrl, _ := url.Parse("https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1")
+	leafCert, leafKey, _ := testutils.GenerateLeafCertWithSubjectAlternateNames(
+		[]string{"example.com"}, []string{"subject@example.com"}, []net.IP{{1, 1, 1, 1}}, []*url.URL{subjectUrl}, "oidc-issuer", subCert, subKey)
 	leafCertPEM, _ := cryptoutils.MarshalCertificateToPEM(leafCert)
 
 	pemCertChain, err := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, subCert, rootCert})
@@ -274,7 +276,10 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 		t.Fatalf("expected matching subjects, expected %v, got %v", leafCert.EmailAddresses, pub.EmailAddresses())
 	}
 
-	expectedSubjects := leafCert.EmailAddresses
+	var expectedSubjects []string
+	expectedSubjects = append(expectedSubjects, leafCert.DNSNames...)
+	expectedSubjects = append(expectedSubjects, leafCert.EmailAddresses...)
+	expectedSubjects = append(expectedSubjects, leafCert.IPAddresses[0].String())
 	expectedSubjects = append(expectedSubjects, leafCert.URIs[0].String())
 	if !reflect.DeepEqual(pub.Subjects(), expectedSubjects) {
 		t.Fatalf("expected matching subjects, expected %v, got %v", expectedSubjects, pub.Subjects())

@@ -195,7 +195,7 @@ func (k PublicKey) EmailAddresses() []string {
 
 // Subjects implements the pki.PublicKey interface
 func (k PublicKey) Subjects() []string {
-	var names []string
+	var subjects []string
 	var cert *x509.Certificate
 	if k.cert != nil {
 		cert = k.cert.c
@@ -203,23 +203,9 @@ func (k PublicKey) Subjects() []string {
 		cert = k.certs[0]
 	}
 	if cert != nil {
-		validate := validator.New()
-		for _, name := range cert.EmailAddresses {
-			if errs := validate.Var(name, "required,email"); errs == nil {
-				names = append(names, strings.ToLower(name))
-			}
-		}
-		for _, name := range cert.URIs {
-			if errs := validate.Var(name.String(), "required,uri"); errs == nil {
-				names = append(names, strings.ToLower(name.String()))
-			}
-		}
-		otherName, _ := cryptoutils.UnmarshalOtherNameSAN(cert.Extensions)
-		if len(otherName) > 0 {
-			names = append(names, otherName)
-		}
+		subjects = cryptoutils.GetSubjectAlternateNames(cert)
 	}
-	return names
+	return subjects
 }
 
 // Identities implements the pki.PublicKey interface
