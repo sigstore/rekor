@@ -250,9 +250,9 @@ func TestSignature_VerifyFail(t *testing.T) {
 func TestPublicKeyWithCertChain(t *testing.T) {
 	rootCert, rootKey, _ := testutils.GenerateRootCa()
 	subCert, subKey, _ := testutils.GenerateSubordinateCa(rootCert, rootKey)
-	subjectUrl, _ := url.Parse("https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1")
+	subjectURL, _ := url.Parse("https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1")
 	leafCert, leafKey, _ := testutils.GenerateLeafCertWithSubjectAlternateNames(
-		[]string{"example.com"}, []string{"subject@example.com"}, []net.IP{{1, 1, 1, 1}}, []*url.URL{subjectUrl}, "oidc-issuer", subCert, subKey)
+		[]string{"example.com"}, []string{"subject@example.com"}, []net.IP{{1, 1, 1, 1}}, []*url.URL{subjectURL}, "oidc-issuer", subCert, subKey)
 	leafCertPEM, _ := cryptoutils.MarshalCertificateToPEM(leafCert)
 
 	pemCertChain, err := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, subCert, rootCert})
