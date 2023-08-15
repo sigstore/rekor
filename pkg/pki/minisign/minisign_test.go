@@ -1,4 +1,3 @@
-//
 // Copyright 2021 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +16,10 @@ package minisign
 
 import (
 	"bytes"
+	"crypto/ed25519"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/hex"
 	"errors"
 	"io"
 	"os"
@@ -25,6 +28,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	minisign "github.com/jedisct1/go-minisign"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"go.uber.org/goleak"
 )
 
@@ -72,12 +76,23 @@ func TestReadPublicKey(t *testing.T) {
 			if _, ok := ids[0].Crypto.(*minisign.PublicKey); !ok {
 				t.Fatalf("key is of unexpected type, expected *minisign.PublicKey, got %v", reflect.TypeOf(ids[0].Crypto))
 			}
-			val, err := rawGot.CanonicalValue()
+			expectedDer, err := cryptoutils.MarshalPublicKeyToDER(ed25519.PublicKey(rawBytes))
 			if err != nil {
-				t.Fatalf("error canonicalizing key: %v", err)
+				t.Fatalf("unexpected error generating DER: %v", err)
 			}
-			if !reflect.DeepEqual(val, ids[0].Raw) {
-				t.Errorf("raw key and canonical value are not equal")
+			if !reflect.DeepEqual(expectedDer, ids[0].Raw) {
+				t.Errorf("raw keys are not equal")
+			}
+			edKey, _ := x509.ParsePKIXPublicKey(ids[0].Raw)
+			if err := cryptoutils.EqualKeys(edKey, ed25519.PublicKey(rawBytes)); err != nil {
+				t.Errorf("public keys did not match: %v", err)
+			}
+			if len(ids[0].Fingerprint) != 64 {
+				t.Errorf("%v: fingerprint is not expected length of 64 (hex 32-byte sha256): %d", tc.caseDesc, len(ids[0].Fingerprint))
+			}
+			digest := sha256.Sum256(expectedDer)
+			if hex.EncodeToString(digest[:]) != ids[0].Fingerprint {
+				t.Fatalf("fingerprints don't match")
 			}
 		})
 	}
@@ -313,12 +328,23 @@ func TestCanonicalValuePublicKey(t *testing.T) {
 		if _, ok := ids[0].Crypto.(*minisign.PublicKey); !ok {
 			t.Fatalf("key is of unexpected type, expected *minisign.PublicKey, got %v", reflect.TypeOf(ids[0].Crypto))
 		}
-		val, err := outputKey.CanonicalValue()
+		expectedDer, err := cryptoutils.MarshalPublicKeyToDER(ed25519.PublicKey(rt.key.PublicKey[:]))
 		if err != nil {
-			t.Fatalf("error canonicalizing key: %v", err)
+			t.Fatalf("unexpected error generating DER: %v", err)
 		}
-		if !reflect.DeepEqual(val, ids[0].Raw) {
-			t.Errorf("raw key and canonical value are not equal")
+		if !reflect.DeepEqual(expectedDer, ids[0].Raw) {
+			t.Errorf("raw keys are not equal")
+		}
+		edKey, _ := x509.ParsePKIXPublicKey(ids[0].Raw)
+		if err := cryptoutils.EqualKeys(edKey, ed25519.PublicKey(rt.key.PublicKey[:])); err != nil {
+			t.Errorf("public keys did not match: %v", err)
+		}
+		if len(ids[0].Fingerprint) != 64 {
+			t.Errorf("%v: fingerprint is not expected length of 64 (hex 32-byte sha256): %d", tc.caseDesc, len(ids[0].Fingerprint))
+		}
+		digest := sha256.Sum256(expectedDer)
+		if hex.EncodeToString(digest[:]) != ids[0].Fingerprint {
+			t.Fatalf("fingerprints don't match")
 		}
 	}
 }

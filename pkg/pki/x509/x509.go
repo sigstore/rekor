@@ -18,8 +18,10 @@ package x509
 import (
 	"bytes"
 	"crypto"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -212,11 +214,16 @@ func (k PublicKey) Subjects() []string {
 func (k PublicKey) Identities() ([]identity.Identity, error) {
 	// k contains either a key, a cert, or a list of certs
 	if k.key != nil {
-		pem, err := cryptoutils.MarshalPublicKeyToPEM(k.key)
+		pkixKey, err := cryptoutils.MarshalPublicKeyToDER(k.key)
 		if err != nil {
 			return nil, err
 		}
-		return []identity.Identity{{Crypto: k.key, Raw: pem}}, nil
+		digest := sha256.Sum256(pkixKey)
+		return []identity.Identity{{
+			Crypto:      k.key,
+			Raw:         pkixKey,
+			Fingerprint: hex.EncodeToString(digest[:]),
+		}}, nil
 	}
 
 	var cert *x509.Certificate
@@ -229,11 +236,12 @@ func (k PublicKey) Identities() ([]identity.Identity, error) {
 		return nil, errors.New("no key, certificate or certificate chain provided")
 	}
 
-	pemCert, err := cryptoutils.MarshalCertificateToPEM(cert)
-	if err != nil {
-		return nil, err
-	}
-	return []identity.Identity{{Crypto: cert, Raw: pemCert}}, nil
+	digest := sha256.Sum256(cert.Raw)
+	return []identity.Identity{{
+		Crypto:      cert,
+		Raw:         cert.Raw,
+		Fingerprint: hex.EncodeToString(digest[:]),
+	}}, nil
 }
 
 func verifyCertChain(certChain []*x509.Certificate) error {

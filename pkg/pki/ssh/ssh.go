@@ -16,13 +16,13 @@
 package ssh
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/asaskevich/govalidator"
 	"github.com/sigstore/rekor/pkg/pki/identity"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/crypto/ssh"
 )
@@ -122,7 +122,15 @@ func (k PublicKey) Subjects() []string {
 
 // Identities implements the pki.PublicKey interface
 func (k PublicKey) Identities() ([]identity.Identity, error) {
-	// an authorized key format
-	authorizedKey := bytes.TrimSpace(ssh.MarshalAuthorizedKey(k.key))
-	return []identity.Identity{{Crypto: k.key, Raw: authorizedKey}}, nil
+	key := k.key.(ssh.CryptoPublicKey).CryptoPublicKey()
+	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(key)
+	if err != nil {
+		return nil, err
+	}
+	fp := ssh.FingerprintSHA256(k.key)
+	return []identity.Identity{{
+		Crypto:      k.key,
+		Raw:         pkixKey,
+		Fingerprint: fp,
+	}}, nil
 }

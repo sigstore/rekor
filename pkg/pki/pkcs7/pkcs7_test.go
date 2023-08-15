@@ -19,8 +19,10 @@ package pkcs7
 import (
 	"bytes"
 	"crypto"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"net/url"
 	"reflect"
 	"sort"
@@ -496,22 +498,31 @@ A6ydFG8HXGWcnVVIVQ==
 
 			// compare certificate
 			cert, _ := cryptoutils.UnmarshalCertificatesFromPEM([]byte(tt.identities[0]))
-			expectedID := identity.Identity{Crypto: cert[0], Raw: []byte(tt.identities[0])}
+			digest := sha256.Sum256(cert[0].Raw)
+			expectedID := identity.Identity{Crypto: cert[0], Raw: cert[0].Raw, Fingerprint: hex.EncodeToString(digest[:])}
 			if !ids[0].Crypto.(*x509.Certificate).Equal(expectedID.Crypto.(*x509.Certificate)) {
 				t.Errorf("certificates did not match")
 			}
 			if !reflect.DeepEqual(ids[0].Raw, expectedID.Raw) {
-				t.Errorf("raw identities did not match, expected %v, got %v", ids[0].Raw, string(expectedID.Raw))
+				t.Errorf("raw identities did not match, expected %v, got %v", string(expectedID.Raw), ids[0].Raw)
+			}
+			if ids[0].Fingerprint != expectedID.Fingerprint {
+				t.Fatalf("fingerprints did not match, expected %v, got %v", expectedID.Fingerprint, ids[0].Fingerprint)
 			}
 
 			// compare public key
 			key, _ := cryptoutils.UnmarshalPEMToPublicKey([]byte(tt.identities[1]))
-			expectedID = identity.Identity{Crypto: key, Raw: []byte(tt.identities[1])}
+			pkixKey, _ := cryptoutils.MarshalPublicKeyToDER(key)
+			digest = sha256.Sum256(pkixKey)
+			expectedID = identity.Identity{Crypto: key, Raw: pkixKey, Fingerprint: hex.EncodeToString(digest[:])}
 			if err := cryptoutils.EqualKeys(expectedID.Crypto, ids[1].Crypto); err != nil {
 				t.Errorf("%v: public keys did not match: %v", tt.name, err)
 			}
 			if !reflect.DeepEqual(ids[1].Raw, expectedID.Raw) {
-				t.Errorf("%v: raw identities did not match", tt.name)
+				t.Errorf("%v: raw key identities did not match", tt.name)
+			}
+			if ids[1].Fingerprint != expectedID.Fingerprint {
+				t.Fatalf("key fingerprints did not match, expected %v, got %v", expectedID.Fingerprint, ids[1].Fingerprint)
 			}
 		})
 	}

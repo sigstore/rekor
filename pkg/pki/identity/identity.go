@@ -15,11 +15,24 @@
 package identity
 
 type Identity struct {
-	// Types include: *rsa.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey,
-	// *x509.Certificate, openpgp.EntityList, *minisign.PublicKey, ssh.PublicKey
+	// Types include:
+	// - *rsa.PublicKey
+	// - *ecdsa.PublicKey
+	// - ed25519.PublicKey
+	// - *x509.Certificate
+	// - openpgp.EntityList (golang.org/x/crypto/openpgp)
+	// - *minisign.PublicKey (github.com/jedisct1/go-minisign)
+	// - ssh.PublicKey (golang.org/x/crypto/ssh)
 	Crypto any
-	// Based on type of Crypto. Possible values include: PEM-encoded public key,
-	// PEM-encoded certificate, canonicalized PGP public key, encoded Minisign
-	// public key, encoded SSH public key
+	// Raw key or certificate extracted from Crypto. Values include:
+	// - PKIX ASN.1 DER-encoded public key
+	// - ASN.1 DER-encoded certificate
 	Raw []byte
+	// For keys, certificates, and minisign, hex-encoded SHA-256 digest
+	// of the public key or certificate
+	// For SSH and PGP, Fingerprint is the standard for each ecosystem
+	// For SSH, unpadded base-64 encoded SHA-256 digest of the key
+	// For PGP, hex-encoded SHA-1 digest of a key, which can be either
+	// a primary key or subkey
+	Fingerprint string
 }

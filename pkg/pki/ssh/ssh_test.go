@@ -15,12 +15,13 @@
 package ssh
 
 import (
+	"encoding/base64"
 	"math/rand"
 	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/sigstore/rekor/pkg/pki/identity"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -41,8 +42,11 @@ func TestIdentities(t *testing.T) {
 		t.Fatalf("expected email address as subject, got %v", pub.Subjects())
 	}
 
-	keyVal := "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDXofkiahE7uavjWvxnwkUF27qMgz7pdTwzSv0XzVG6EtirOv3PDWct4YKoXE9c0EqbxnIfYEKwEextdvB7zkgwczdJSHxf/18jQumLn/FuoCmugVSk1H5Qli/qzwBpaTnOk3WuakGuoYUl8ZAokKKgOKLA0aZJ1WRQ2ZCZggA3EkwNZiY17y9Q6HqdgQcH6XN8aAMADNVJdMAJb33hSRJjjsAPTmzBTishP8lYDoGRSsSE7/8XRBCEV5E4I8mI9GElcZwV/1KJx98mpH8QvMzXM1idFcwPRtt1NTAOshwgUU0Fu1x8lU5RQIa6ZKW36qNQLvLxy/BscC7B/mdLptoDs/ot9NimUXZcgCR1a2Q3o7Wi6jIgcgJcyV10Nba81ol4RdN4qPHnVZIzuo+dBkqwG3CMtB4Rj84+Qi+7zyU01hIPreoxQDXaayiGPBUUIiAlW9gsiuRWJzNnu3cvuWDLVfQIkjh7Wug58z+v2NOJ7IMdyERillhzDcvVHaq14+U="
-	expectedID := identity.Identity{Crypto: expectedKey, Raw: []byte(keyVal)}
+	keyVal := expectedKey.(ssh.CryptoPublicKey).CryptoPublicKey()
+	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(keyVal)
+	if err != nil {
+		t.Fatal(err)
+	}
 	ids, err := pub.Identities()
 	if err != nil {
 		t.Fatal(err)
@@ -50,11 +54,16 @@ func TestIdentities(t *testing.T) {
 	if len(ids) != 1 {
 		t.Errorf("too many identities, expected 1, got %v", len(ids))
 	}
-	if !reflect.DeepEqual(ids[0].Crypto.(ssh.PublicKey).Marshal(), expectedID.Crypto.(ssh.PublicKey).Marshal()) {
+	if !reflect.DeepEqual(ids[0].Crypto.(ssh.PublicKey).Marshal(), expectedKey.Marshal()) {
 		t.Errorf("certificates did not match")
 	}
-	if !reflect.DeepEqual(ids[0].Raw, expectedID.Raw) {
-		t.Errorf("raw identities did not match, expected %v, got %v", string(ids[0].Raw), string(expectedID.Raw))
+	if !reflect.DeepEqual(ids[0].Raw, pkixKey) {
+		t.Errorf("raw identities did not match, expected %v, got %v", string(pkixKey), string(ids[0].Raw))
+	}
+	// removing "SHA256:" prefix
+	fp, _ := base64.RawStdEncoding.DecodeString(ids[0].Fingerprint[7:])
+	if len(fp) != 32 {
+		t.Errorf("fingerprint is not expected length of 32 (32-byte sha256): %d", len(fp))
 	}
 }
 
