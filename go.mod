@@ -59,7 +59,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.4
 	github.com/redis/go-redis/v9 v9.0.5
 	github.com/sassoftware/relic/v7 v7.5.9
-	github.com/sigstore/protobuf-specs v0.2.0
+	github.com/sigstore/protobuf-specs v0.2.1
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.2
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.2
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.2
