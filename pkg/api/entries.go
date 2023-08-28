@@ -36,10 +36,14 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/grpc/codes"
 
+	"github.com/sigstore/rekor/pkg/events"
+	"github.com/sigstore/rekor/pkg/events/newentry"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pubsub"
 	"github.com/sigstore/rekor/pkg/sharding"
+	"github.com/sigstore/rekor/pkg/tle"
 	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/util"
@@ -290,7 +294,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		RootHash:   swag.String(hex.EncodeToString(root.RootHash)),
 		LogIndex:   swag.Int64(queuedLeaf.LeafIndex),
 		Hashes:     hashes,
-		Checkpoint: stringPointer(string(scBytes)),
+		Checkpoint: swag.String(string(scBytes)),
 	}
 
 	logEntryAnon.Verification = &models.LogEntryAnonVerification{
@@ -301,7 +305,64 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	logEntry := models.LogEntry{
 		entryID: logEntryAnon,
 	}
+
+	if api.newEntryPublisher != nil {
+		// Publishing notifications should not block the API response.
+		go func() {
+			verifiers, err := entry.Verifiers()
+			if err != nil {
+				incPublishEvent(newentry.Name, "", false)
+				log.ContextLogger(ctx).Errorf("Could not get verifiers for log entry %s: %v", entryID, err)
+				return
+			}
+			var subjects []string
+			for _, v := range verifiers {
+				subjects = append(subjects, v.Subjects()...)
+			}
+
+			pbEntry, err := tle.GenerateTransparencyLogEntry(logEntryAnon)
+			if err != nil {
+				incPublishEvent(newentry.Name, "", false)
+				log.ContextLogger(ctx).Error(err)
+				return
+			}
+			event, err := newentry.New(entryID, pbEntry, subjects)
+			if err != nil {
+				incPublishEvent(newentry.Name, "", false)
+				log.ContextLogger(ctx).Error(err)
+				return
+			}
+			if viper.GetBool("rekor_server.publish_events_protobuf") {
+				go publishEvent(ctx, api.newEntryPublisher, event, events.ContentTypeProtobuf)
+			}
+			if viper.GetBool("rekor_server.publish_events_json") {
+				go publishEvent(ctx, api.newEntryPublisher, event, events.ContentTypeJSON)
+			}
+		}()
+	}
+
 	return logEntry, nil
+}
+
+func publishEvent(ctx context.Context, publisher pubsub.Publisher, event *events.Event, contentType events.EventContentType) {
+	err := publisher.Publish(context.WithoutCancel(ctx), event, contentType)
+	incPublishEvent(event.Type().Name(), contentType, err == nil)
+	if err != nil {
+		log.ContextLogger(ctx).Error(err)
+	}
+}
+
+func incPublishEvent(event string, contentType events.EventContentType, ok bool) {
+	status := "SUCCESS"
+	if !ok {
+		status = "ERROR"
+	}
+	labels := map[string]string{
+		"event":        event,
+		"status":       status,
+		"content_type": string(contentType),
+	}
+	metricPublishEvents.With(labels).Inc()
 }
 
 // CreateLogEntryHandler creates new entry into log

@@ -29,6 +29,11 @@ var (
 		Help: "The total number of new log entries",
 	})
 
+	metricPublishEvents = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "rekor_publish_events",
+		Help: "The status of publishing events to Pub/Sub",
+	}, []string{"event", "content_type", "status"})
+
 	MetricLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "rekor_api_latency",
 		Help: "Api Latency on calls",

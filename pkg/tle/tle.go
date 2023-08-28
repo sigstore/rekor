@@ -50,12 +50,22 @@ func GenerateTransparencyLogEntry(anon models.LogEntryAnon) (*rekor_pb.Transpare
 		inclusionProofHashes[i] = hashBytes
 	}
 
-	b, err := base64.StdEncoding.DecodeString(anon.Body.(string))
-	if err != nil {
-		return nil, fmt.Errorf("base64 decoding body: %w", err)
+	// Different call paths may supply string or []byte. If string, it is base64 encoded.
+	var body []byte
+	switch v := anon.Body.(type) {
+	case string:
+		b, err := base64.StdEncoding.DecodeString(v)
+		if err != nil {
+			return nil, fmt.Errorf("base64 decoding body: %w", err)
+		}
+		body = b
+	case []byte:
+		body = v
+	default:
+		return nil, fmt.Errorf("body is not string or []byte: (%T)%v", v, v)
 	}
 
-	pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
+	pe, err := models.UnmarshalProposedEntry(bytes.NewReader(body), runtime.JSONConsumer())
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +96,7 @@ func GenerateTransparencyLogEntry(anon models.LogEntryAnon) (*rekor_pb.Transpare
 				Envelope: *anon.Verification.InclusionProof.Checkpoint,
 			},
 		},
-		CanonicalizedBody: b, // we don't call eimpl.Canonicalize in the case that the logic is different in this caller vs when it was persisted in the log
+		CanonicalizedBody: body, // we don't call eimpl.Canonicalize in the case that the logic is different in this caller vs when it was persisted in the log
 	}, nil
 }
 

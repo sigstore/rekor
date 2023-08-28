@@ -31,6 +31,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pubsub"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/rekor/pkg/storage"
@@ -39,6 +40,8 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+
+	_ "github.com/sigstore/rekor/pkg/pubsub/gcp" // Load GCP pubsub implementation
 )
 
 func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
@@ -63,6 +66,9 @@ type API struct {
 	signer     signature.Signer
 	// stops checkpoint publishing
 	checkpointPublishCancel context.CancelFunc
+	// Publishes notifications when new entries are added to the log. May be
+	// nil if no publisher is configured.
+	newEntryPublisher pubsub.Publisher
 }
 
 func NewAPI(treeID uint) (*API, error) {
@@ -112,6 +118,18 @@ func NewAPI(treeID uint) (*API, error) {
 
 	pubkey := cryptoutils.PEMEncode(cryptoutils.PublicKeyPEMType, b)
 
+	var newEntryPublisher pubsub.Publisher
+	if p := viper.GetString("rekor_server.new_entry_publisher"); p != "" {
+		if !viper.GetBool("rekor_server.publish_events_protobuf") && !viper.GetBool("rekor_server.publish_events_json") {
+			return nil, fmt.Errorf("%q is configured but neither %q or %q are enabled", "new_entry_publisher", "publish_events_protobuf", "publish_events_json")
+		}
+		newEntryPublisher, err = pubsub.Get(ctx, p)
+		if err != nil {
+			return nil, fmt.Errorf("init event publisher: %w", err)
+		}
+		log.ContextLogger(ctx).Infof("Initialized new entry event publisher: %s", p)
+	}
+
 	return &API{
 		// Transparency Log Stuff
 		logClient: logClient,
@@ -121,6 +139,8 @@ func NewAPI(treeID uint) (*API, error) {
 		pubkey:     string(pubkey),
 		pubkeyHash: hex.EncodeToString(pubkeyHashBytes[:]),
 		signer:     rekorSigner,
+		// Utility functionality not required for operation of the core service
+		newEntryPublisher: newEntryPublisher,
 	}, nil
 }
 
@@ -166,4 +186,8 @@ func ConfigureAPI(treeID uint) {
 
 func StopAPI() {
 	api.checkpointPublishCancel()
+
+	if api.newEntryPublisher != nil {
+		api.newEntryPublisher.Close()
+	}
 }
