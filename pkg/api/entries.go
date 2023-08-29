@@ -403,7 +403,7 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 		if _, ok := (err).(types.ValidationError); ok {
 			return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("incorrectly formatted uuid %s", params.EntryUUID), params.EntryUUID)
 		}
-		return handleRekorAPIError(params, http.StatusInternalServerError, err, "ID %s not found in any known trees", params.EntryUUID)
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianCommunicationError)
 	}
 	return entries.NewGetLogEntryByUUIDOK().WithPayload(logEntry)
 }
@@ -569,7 +569,11 @@ func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, e
 		for _, t := range trees {
 			logEntry, err := retrieveUUIDFromTree(ctx, uuid, t.TreeID)
 			if err != nil {
-				continue
+				if errors.Is(err, ErrNotFound) {
+					continue
+				} else {
+					return nil, err
+				}
 			}
 			return logEntry, nil
 		}
@@ -594,14 +598,18 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 	switch resp.Status {
 	case codes.OK:
 		result := resp.GetLeafAndProofResult
-		leaf := result.Leaf
-		if leaf == nil {
-			return models.LogEntry{}, ErrNotFound
+		if resp.Err != nil {
+			// this shouldn't be possible since GetLeafAndProofByHash verifies the inclusion proof using a computed leaf hash
+			// so this is just a defensive check
+			if result.Leaf == nil {
+				return models.LogEntry{}, ErrNotFound
+			}
+			return models.LogEntry{}, err
 		}
 
-		logEntry, err := logEntryFromLeaf(ctx, api.signer, tc, leaf, result.SignedLogRoot, result.Proof, tid, api.logRanges)
+		logEntry, err := logEntryFromLeaf(ctx, api.signer, tc, result.Leaf, result.SignedLogRoot, result.Proof, tid, api.logRanges)
 		if err != nil {
-			return models.LogEntry{}, errors.New("could not create log entry from leaf")
+			return models.LogEntry{}, fmt.Errorf("could not create log entry from leaf: %w", err)
 		}
 		return logEntry, nil
 
