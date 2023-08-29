@@ -206,8 +206,15 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		case int32(code.Code_OK):
 		case int32(code.Code_ALREADY_EXISTS), int32(code.Code_FAILED_PRECONDITION):
 			existingUUID := hex.EncodeToString(rfc6962.DefaultHasher.HashLeaf(leaf))
-			err := fmt.Errorf("grpc error: %v", insertionStatus.String())
-			return nil, handleRekorAPIError(params, http.StatusConflict, err, fmt.Sprintf(entryAlreadyExists, existingUUID), "entryURL", getEntryURL(*params.HTTPRequest.URL, existingUUID))
+			activeTree := fmt.Sprintf("%x", api.logID)
+			entryIDstruct, err := sharding.CreateEntryIDFromParts(activeTree, existingUUID)
+			if err != nil {
+				err := fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, existingUUID, err)
+				return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, fmt.Sprintf(validationError, err))
+			}
+			existingEntryID := entryIDstruct.ReturnEntryIDString()
+			err = fmt.Errorf("grpc error: %v", insertionStatus.String())
+			return nil, handleRekorAPIError(params, http.StatusConflict, err, fmt.Sprintf(entryAlreadyExists, existingEntryID), "entryURL", getEntryURL(*params.HTTPRequest.URL, existingEntryID))
 		default:
 			err := fmt.Errorf("grpc error: %v", insertionStatus.String())
 			return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)

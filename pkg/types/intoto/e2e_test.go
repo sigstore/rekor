@@ -42,6 +42,7 @@ import (
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 
@@ -161,7 +162,13 @@ func TestIntoto(t *testing.T) {
 
 	out = util.RunCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
 	util.OutputContains(t, out, "Entry already exists")
+	// issue1649 check for full UUID in printed Location value from 409 response header
+	if len(uuid) != sharding.EntryIDHexStringLen {
+		t.Fatal("UUID returned instead of entry ID (includes treeID)")
+	}
+	util.OutputContains(t, out, uuid)
 }
+
 func TestIntotoMultiSig(t *testing.T) {
 	td := t.TempDir()
 	attestationPath := filepath.Join(td, "attestation.json")
