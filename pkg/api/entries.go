@@ -571,9 +571,8 @@ func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, e
 			if err != nil {
 				if errors.Is(err, ErrNotFound) {
 					continue
-				} else {
-					return nil, err
 				}
+				return nil, err
 			}
 			return logEntry, nil
 		}
