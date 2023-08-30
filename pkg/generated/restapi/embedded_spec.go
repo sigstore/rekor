@@ -485,6 +485,7 @@ func init() {
             "additionalProperties": true
           },
           "integratedTime": {
+            "description": "The time the entry was added to the log as a Unix timestamp in seconds",
             "type": "integer"
           },
           "logID": {
@@ -2373,6 +2374,7 @@ func init() {
           "additionalProperties": true
         },
         "integratedTime": {
+          "description": "The time the entry was added to the log as a Unix timestamp in seconds",
           "type": "integer"
         },
         "logID": {

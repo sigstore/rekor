@@ -460,6 +460,7 @@ definitions:
           additionalProperties: true
         integratedTime:
           type: integer
+          description: The time the entry was added to the log as a Unix timestamp in seconds
         attestation:
           type: object
           properties:
