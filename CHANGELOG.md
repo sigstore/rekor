@@ -1,3 +1,36 @@
+# v1.3.0
+
+## New Features
+* feat: Support publishing new log entries to Pub/Sub topics (#1580)
+* Change values of Identity.Raw, add fingerprints (#1628)
+* Extract all subjects from SANs for x509 verifier (#1632)
+* Fix type comment for Identity struct (#1619)
+* Refactor Identities API (#1611)
+* Refactor Verifiers to return multiple keys (#1601)
+
+## Quality Enhancements
+* set min go version to 1.21 (#1651)
+* Upgrade to go1.21 (#1636)
+
+## Bug Fixes
+* Update openapi.yaml (#1655)
+* pass transient errors through retrieveLogEntry (#1653)
+* return full entryID on HTTP 409 responses (#1650)
+* Update checkpoint link (#1597)
+* Use correct log index in inclusion proof (#1599)
+* remove instrumentation library (#1595)
+* pki: clean up fuzzer (#1594)
+* alpine: add max metadata size to fuzzer (#1571)
+
+## Contributors
+* AdamKorcz
+* Appu
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Ceridwen Coghlan
+* Hayden B
+* James Alseth
+
 # v1.2.2
 
 ## Quality Enhancements
