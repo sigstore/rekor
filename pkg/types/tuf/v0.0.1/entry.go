@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -81,11 +82,11 @@ func NewEntry() types.EntryImpl {
 
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
-	keyBytes, err := json.Marshal(v.TufObj.Root.Content)
+	keyBytes, err := v.parseRootContent()
 	if err != nil {
 		return nil, err
 	}
-	sigBytes, err := json.Marshal(v.TufObj.Metadata.Content)
+	sigBytes, err := v.parseMetadataContent()
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +161,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, p
 		var contentBytes []byte
 		if v.TufObj.Metadata.Content != nil {
 			var err error
-			contentBytes, err = json.Marshal(v.TufObj.Metadata.Content)
+			contentBytes, err = v.parseMetadataContent()
 			if err != nil {
 				return closePipesOnError(err)
 			}
@@ -189,7 +190,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, p
 		var contentBytes []byte
 		if v.TufObj.Root.Content != nil {
 			var err error
-			contentBytes, err = json.Marshal(v.TufObj.Root.Content)
+			contentBytes, err = v.parseRootContent()
 			if err != nil {
 				return closePipesOnError(err)
 			}
@@ -373,7 +374,7 @@ func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	if v.TufObj.Root == nil {
 		return nil, errors.New("tuf v0.0.1 entry not initialized")
 	}
-	keyBytes, err := json.Marshal(v.TufObj.Root.Content)
+	keyBytes, err := v.parseRootContent()
 	if err != nil {
 		return nil, err
 	}
@@ -399,4 +400,44 @@ func (v V001Entry) Insertable() (bool, error) {
 		return false, errors.New("missing root content")
 	}
 	return true, nil
+}
+
+func (v V001Entry) parseRootContent() ([]byte, error) {
+	var keyBytes []byte
+	// Root.Content can either be a base64-encoded string or object
+	switch v := v.TufObj.Root.Content.(type) {
+	case string:
+		b, err := base64.StdEncoding.DecodeString(v)
+		if err != nil {
+			return nil, fmt.Errorf("base64 decoding TUF root content: %w", err)
+		}
+		keyBytes = b
+	default:
+		var err error
+		keyBytes, err = json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return keyBytes, nil
+}
+
+func (v V001Entry) parseMetadataContent() ([]byte, error) {
+	var sigBytes []byte
+	// Metadata.Content can either be a base64-encoded string or object
+	switch v := v.TufObj.Metadata.Content.(type) {
+	case string:
+		b, err := base64.StdEncoding.DecodeString(v)
+		if err != nil {
+			return nil, fmt.Errorf("base64 decoding TUF metadata content: %w", err)
+		}
+		sigBytes = b
+	default:
+		var err error
+		sigBytes, err = json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return sigBytes, nil
 }
