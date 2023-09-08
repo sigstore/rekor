@@ -19,6 +19,7 @@ package tuf
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"os"
 	"reflect"
@@ -135,6 +136,22 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 					Metadata: &models.TUFV001SchemaMetadata{
 						Content: dataContent,
+					},
+				},
+			},
+			expectUnmarshalSuccess:    true,
+			expectCanonicalizeSuccess: true,
+			expectVerifierSuccess:     true,
+		},
+		{
+			caseDesc: "root with manifest & content base64-encoded",
+			entry: V001Entry{
+				TufObj: models.TUFV001Schema{
+					Root: &models.TUFV001SchemaRoot{
+						Content: base64.StdEncoding.EncodeToString(keyBytes),
+					},
+					Metadata: &models.TUFV001SchemaMetadata{
+						Content: base64.StdEncoding.EncodeToString(dataBytes),
 					},
 				},
 			},
