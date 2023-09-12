@@ -16,6 +16,7 @@
 package tuf
 
 import (
+	"crypto/ed25519"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
@@ -210,7 +211,7 @@ func (k PublicKey) Identities() ([]identity.Identity, error) {
 			})
 		case data.KeyTypeEd25519:
 			// key is stored as a 32-byte string
-			pub := []byte(verifier.Public())
+			pub := ed25519.PublicKey(verifier.Public())
 			pkixKey, err := cryptoutils.MarshalPublicKeyToDER(pub)
 			if err != nil {
 				return nil, err
