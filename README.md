@@ -55,7 +55,7 @@ Rekor allows customized manifests (which term them as types), [type customizatio
 
 ### API
 
-If you're interesting in integration with Rekor, we have an [OpenAPI swagger editor](https://sigstore.dev/swagger/)
+If you're interested in integration with Rekor, we have an [OpenAPI swagger editor](https://sigstore.dev/swagger/)
 
 ## Security
 
@@ -63,5 +63,4 @@ Should you discover any security issues, please refer to sigstore's [security pr
 
 ## Contributions
 
-We welcome contributions from anyone and are especially interested to hear from
-users of Rekor.
+We welcome contributions from anyone and are especially interested to hear from users of Rekor.
