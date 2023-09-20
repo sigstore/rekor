@@ -24,7 +24,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.16.0
-	github.com/rs/cors v1.9.0
+	github.com/rs/cors v1.10.0
 	github.com/sassoftware/relic v7.2.1+incompatible
 	github.com/secure-systems-lab/go-securesystemslib v0.7.0
 	github.com/sigstore/sigstore v1.7.2
