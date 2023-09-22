@@ -1,3 +1,3 @@
 # gcloud sdk for pubsub emulator with netcat added for the startup health check
-FROM google/cloud-sdk:447.0.0@sha256:a55fcf389b3f28bdb6da8e1dd40517c0d2270f98f2184f4e5f871870bcbd001b
+FROM google/cloud-sdk:447.0.0@sha256:bd87f4fc7668c606ea908a2a2fdcb2a831971bc21b24a7d04f4b06a8fd2e4069
 RUN apt-get install -y netcat
