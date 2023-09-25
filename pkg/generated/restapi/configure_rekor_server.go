@@ -20,6 +20,7 @@ package restapi
 import (
 	"context"
 	"crypto/tls"
+	go_errors "errors"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -64,7 +65,7 @@ type apiToRecord struct {
 	path   *string // Path to record in metrics, if any.
 }
 
-func configureFlags(api *operations.RekorServerAPI) {
+func configureFlags(_ *operations.RekorServerAPI) {
 	// api.CommandLineOptionsGroups = []swag.CommandLineOptionsGroup{ ... }
 }
 
@@ -155,13 +156,15 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.RegisterFormat("signedCheckpoint", &util.SignedNote{}, util.SignedCheckpointValidator)
 
 	api.PreServerShutdown = func() {}
-	api.ServerShutdown = func() {}
+	api.ServerShutdown = func() {
+		pkgapi.StopAPI()
+	}
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
 }
 
 // The TLS configuration before HTTPS server starts.
-func configureTLS(tlsConfig *tls.Config) {
+func configureTLS(_ *tls.Config) {
 	// Make all necessary changes to the TLS configuration here.
 }
 
@@ -169,7 +172,7 @@ func configureTLS(tlsConfig *tls.Config) {
 // If you need to modify a config, store server instance to stop it individually later, this is the place.
 // This function can be called multiple times, depending on the number of serving schemes.
 // scheme value will be set accordingly: "http", "https" or "unix"
-func configureServer(s *http.Server, scheme, addr string) {
+func configureServer(_ *http.Server, _, _ string) {
 }
 
 // The middleware configuration is for the handler executors. These do not apply to the swagger.json document.
@@ -208,7 +211,7 @@ type zapLogEntry struct {
 	r *http.Request
 }
 
-func (z *zapLogEntry) Write(status, bytes int, header http.Header, elapsed time.Duration, extra interface{}) {
+func (z *zapLogEntry) Write(status, bytes int, _ http.Header, elapsed time.Duration, extra interface{}) {
 	var fields []interface{}
 
 	// follows https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry as a convention
@@ -251,6 +254,10 @@ func (l *logFormatter) NewLogEntry(r *http.Request) middleware.LogEntry {
 // So this is a good place to plug in a panic handling middleware, logging and metrics
 func setupGlobalMiddleware(handler http.Handler) http.Handler {
 	returnHandler := recoverer(handler)
+	maxReqBodySize := viper.GetInt64("max_request_body_size")
+	if maxReqBodySize > 0 {
+		returnHandler = maxBodySize(maxReqBodySize, returnHandler)
+	}
 	middleware.DefaultLogger = middleware.RequestLogger(&logFormatter{})
 	returnHandler = middleware.Logger(returnHandler)
 	returnHandler = middleware.Heartbeat("/ping")(returnHandler)
@@ -339,8 +346,18 @@ func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
 	} else {
 		log.ContextLogger(ctx).Error(err)
 	}
+	if compErr, ok := err.(*errors.CompositeError); ok {
+		// iterate over composite error looking for something more specific
+		for _, embeddedErr := range compErr.Errors {
+			var maxBytesError *http.MaxBytesError
+			if parseErr, ok := embeddedErr.(*errors.ParseError); ok && go_errors.As(parseErr.Reason, &maxBytesError) {
+				err = errors.New(http.StatusRequestEntityTooLarge, http.StatusText(http.StatusRequestEntityTooLarge))
+				break
+			}
+		}
+	}
 	requestFields := map[string]interface{}{}
-	if err := mapstructure.Decode(r, &requestFields); err == nil {
+	if decodeErr := mapstructure.Decode(r, &requestFields); decodeErr == nil {
 		log.ContextLogger(ctx).Debug(requestFields)
 	}
 	errors.ServeError(w, r, err)
@@ -381,6 +398,16 @@ func recoverer(next http.Handler) http.Handler {
 			}
 		}()
 
+		next.ServeHTTP(w, r)
+	}
+
+	return http.HandlerFunc(fn)
+}
+
+// maxBodySize limits the request body
+func maxBodySize(maxLength int64, next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxLength)
 		next.ServeHTTP(w, r)
 	}
 

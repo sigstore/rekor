@@ -17,11 +17,15 @@ package tuf
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/x509"
 	"io"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	_ "github.com/theupdateframework/go-tuf/pkg/deprecated/set_ecdsa"
 	"github.com/theupdateframework/go-tuf/verify"
 )
@@ -73,6 +77,29 @@ func TestReadPublicKey(t *testing.T) {
 			}
 			if specVersion != tc.specVersion {
 				t.Errorf("%v: unexpected spec version expected %v, got %v", tc.caseDesc, tc.specVersion, specVersion)
+			}
+
+			identities, err := got.Identities()
+			if err != nil {
+				t.Errorf("%v: error getting identities for %v: %v", tc.caseDesc, tc.inputFile, err)
+			}
+			if len(identities) != 7 {
+				t.Errorf("%v: expected 7 identities, got: %d", tc.caseDesc, len(identities))
+			}
+			for _, i := range identities {
+				if _, ok := i.Crypto.(*ecdsa.PublicKey); !ok {
+					t.Errorf("%v: key was not of type *ecdsa.PublicKey: %v", tc.caseDesc, reflect.TypeOf(i.Crypto))
+				}
+				key, err := x509.ParsePKIXPublicKey(i.Raw)
+				if err != nil {
+					t.Fatalf("%v: Raw is not in PKIX format: %v", tc.caseDesc, err)
+				}
+				if err := cryptoutils.EqualKeys(key, i.Crypto); err != nil {
+					t.Errorf("%v: raw key and crypto key not equal: %v", tc.caseDesc, err)
+				}
+				if len(i.Fingerprint) != 64 {
+					t.Errorf("%v: fingerprint is not expected length of 64 (hex 32-byte sha256): %d", tc.caseDesc, len(i.Fingerprint))
+				}
 			}
 		}
 	}
@@ -151,12 +178,12 @@ func TestCanonicalValue(t *testing.T) {
 
 		outputKey, err := NewPublicKey(outputFile)
 		if err != nil {
-			t.Errorf("%v: Error reading input for TestCanonicalValue: %v", tc.caseDesc, err)
+			t.Fatalf("%v: Error reading input for TestCanonicalValue: %v", tc.caseDesc, err)
 		}
 
 		cvOutput, err := outputKey.CanonicalValue()
 		if err != nil {
-			t.Errorf("%v: Error canonicalizing public key '%v': %v", tc.caseDesc, tc.input, err)
+			t.Fatalf("%v: Error canonicalizing public key '%v': %v", tc.caseDesc, tc.input, err)
 		}
 
 		if bytes.Equal(cvInput, cvOutput) != tc.match {

@@ -17,12 +17,15 @@ package alpine
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/sigstore/rekor/pkg/pki/x509"
+	"github.com/spf13/viper"
 )
 
 func TestAlpinePackage(t *testing.T) {
+
 	inputArchive, err := os.Open("tests/test_alpine.apk")
 	if err != nil {
 		t.Fatalf("could not open archive %v", err)
@@ -46,5 +49,23 @@ func TestAlpinePackage(t *testing.T) {
 
 	if err = p.VerifySignature(pub.CryptoPubKey()); err != nil {
 		t.Fatalf("signature verification failed: %v", err)
+	}
+}
+
+func TestAlpineMetadataSize(t *testing.T) {
+	viper.Set("max_apk_metadata_size", 10)
+
+	inputArchive, err := os.Open("tests/test_alpine.apk")
+	if err != nil {
+		t.Fatalf("could not open archive %v", err)
+	}
+
+	p := Package{}
+	err = p.Unmarshal(inputArchive)
+	if err == nil {
+		t.Fatal("expecting metadata too large err")
+	}
+	if !strings.Contains(err.Error(), "exceeds max allowed size 10") {
+		t.Fatalf("unexpected error %v", err)
 	}
 }

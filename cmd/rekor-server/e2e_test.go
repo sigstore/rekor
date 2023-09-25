@@ -20,6 +20,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/sha256"
@@ -30,7 +31,9 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -121,9 +124,10 @@ func TestMetricsCounts(t *testing.T) {
 		t.Error("rekor_qps_by_api did not increment")
 	}
 }
+
 func getRekorMetricCount(metricLine string, t *testing.T) (int, error) {
 	t.Helper()
-	re, err := regexp.Compile(fmt.Sprintf("^%s.*([0-9]+)$", regexp.QuoteMeta(metricLine)))
+	re, err := regexp.Compile(fmt.Sprintf("^%s\\s*([0-9]+)$", regexp.QuoteMeta(metricLine)))
 	if err != nil {
 		return 0, err
 	}
@@ -143,19 +147,21 @@ func getRekorMetricCount(metricLine string, t *testing.T) (int, error) {
 
 		result, err := strconv.Atoi(match[1])
 		if err != nil {
-			return 0, nil
+			return 0, err
 		}
 		t.Log("Matched metric line: " + scanner.Text())
 		return result, nil
 	}
 	return 0, nil
 }
+
 func TestEnvVariableValidation(t *testing.T) {
 	os.Setenv("REKOR_FORMAT", "bogus")
 	defer os.Unsetenv("REKOR_FORMAT")
 
 	util.RunCliErr(t, "loginfo")
 }
+
 func TestGetCLI(t *testing.T) {
 	// Create something and add it to the log
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
@@ -223,6 +229,7 @@ func TestGetCLI(t *testing.T) {
 	}
 	out = util.RunCli(t, "get", "--format=json", "--uuid", entryID.ReturnEntryIDString())
 }
+
 func getTreeID(t *testing.T) int64 {
 	t.Helper()
 	out := util.RunCli(t, "loginfo")
@@ -234,9 +241,11 @@ func getTreeID(t *testing.T) int64 {
 	t.Log("Tree ID:", tid)
 	return tid
 }
+
 func TestSearchNoEntriesRC1(t *testing.T) {
 	util.RunCliErr(t, "search", "--email", "noone@internetz.com")
 }
+
 func TestHostnameInSTH(t *testing.T) {
 	// get ID of container
 	rekorContainerID := strings.Trim(util.Run(t, "", "docker", "ps", "-q", "-f", "name=rekor-server"), "\n")
@@ -258,12 +267,14 @@ func TestHostnameInSTH(t *testing.T) {
 		t.Errorf("logInfo contains rekor.sigstore.dev which should not be set by default")
 	}
 }
+
 func rekorServer() string {
 	if s := os.Getenv("REKOR_SERVER"); s != "" {
 		return s
 	}
 	return "http://localhost:3000"
 }
+
 func TestSearchSHA512(t *testing.T) {
 	sha512 := "c7694a1112ea1404a3c5852bdda04c2cc224b3567ef6ceb8204dbf2b382daacfc6837ee2ed9d5b82c90b880a3c7289778dbd5a8c2c08193459bcf7bd44581ed0"
 	var out string
@@ -276,6 +287,7 @@ func TestSearchSHA512(t *testing.T) {
 	out = util.RunCli(t, "search", "--sha", fmt.Sprintf("sha512:%s", sha512))
 	util.OutputContains(t, out, uuid)
 }
+
 func TestVerifyNonExistentUUID(t *testing.T) {
 	// this uuid is extremely likely to not exist
 	out := util.RunCliErr(t, "verify", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
@@ -304,6 +316,7 @@ func TestVerifyNonExistentUUID(t *testing.T) {
 		t.Fatalf("expected empty JSON array as response, got %s instead", string(c))
 	}
 }
+
 func TestSearchQueryLimit(t *testing.T) {
 	tests := []struct {
 		description string
@@ -344,6 +357,7 @@ func TestSearchQueryLimit(t *testing.T) {
 		})
 	}
 }
+
 func getBody(t *testing.T, limit int) []byte {
 	t.Helper()
 	s := fmt.Sprintf("{\"logIndexes\": [%d", limit)
@@ -353,6 +367,7 @@ func getBody(t *testing.T, limit int) []byte {
 	s += "]}"
 	return []byte(s)
 }
+
 func TestSearchQueryMalformedEntry(t *testing.T) {
 	wd, err := os.Getwd()
 	if err != nil {
@@ -373,6 +388,7 @@ func TestSearchQueryMalformedEntry(t *testing.T) {
 		t.Fatalf("expected status 400, got %d instead", resp.StatusCode)
 	}
 }
+
 func entryID(t *testing.T, uuid string) string {
 	t.Helper()
 	if sharding.ValidateEntryID(uuid) == nil {
@@ -389,6 +405,7 @@ func entryID(t *testing.T, uuid string) string {
 	}
 	return ts + uuid
 }
+
 func TestHarnessGetAllEntriesUUID(t *testing.T) {
 	if util.RekorCLIIncompatible() {
 		t.Skipf("Skipping getting entries by UUID, old rekor-cli version %s is incompatible with server version %s", os.Getenv("CLI_VERSION"), os.Getenv("SERVER_VERSION"))
@@ -544,7 +561,7 @@ func TestHarnessAddIntoto(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	env, err := signer.SignPayload("application/vnd.in-toto+json", b)
+	env, err := signer.SignPayload(context.Background(), "application/vnd.in-toto+json", b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -634,5 +651,25 @@ func saveEntry(t *testing.T, logIndex int, entry StoredEntry) {
 	}
 	if err := os.WriteFile(file, contents, 0777); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestHTTPMaxRequestBodySize(t *testing.T) {
+	// default value is 32Mb so let's try to propose something bigger
+	pipeR, pipeW := io.Pipe()
+	go func() {
+		_, _ = io.CopyN(base64.NewEncoder(base64.StdEncoding, pipeW), rand.New(rand.NewSource(123)), 33*1024768)
+		pipeW.Close()
+	}()
+	// json parsing will hit first so we need to make sure this is valid JSON
+	bodyReader := io.MultiReader(strings.NewReader("{ \"key\": \""), pipeR, strings.NewReader("\"}"))
+	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
+		"application/json",
+		bodyReader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected status %d, got %d instead", http.StatusRequestEntityTooLarge, resp.StatusCode)
 	}
 }

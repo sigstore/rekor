@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS SequencedLeafData(
 );
 
 
-CREATE INDEX SequencedLeafMerkleIdx
+CREATE INDEX IF NOT EXISTS SequencedLeafMerkleIdx
   ON SequencedLeafData(TreeId, MerkleLeafHash);
 
 CREATE TABLE IF NOT EXISTS Unsequenced(

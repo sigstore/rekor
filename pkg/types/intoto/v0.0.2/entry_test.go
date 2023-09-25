@@ -40,6 +40,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -60,19 +61,18 @@ func TestNewEntryReturnType(t *testing.T) {
 }
 
 func envelope(t *testing.T, k *ecdsa.PrivateKey, payload []byte) *dsse.Envelope {
-
 	s, err := signature.LoadECDSASigner(k, crypto.SHA256)
 	if err != nil {
 		t.Fatal(err)
 	}
-	signer, err := in_toto.NewDSSESigner(
+	signer, err := dsse.NewEnvelopeSigner(
 		&verifier{
 			s: s,
 		})
 	if err != nil {
 		t.Fatal(err)
 	}
-	dsseEnv, err := signer.SignPayload(payload)
+	dsseEnv, err := signer.SignPayload(context.Background(), "application/vnd.in-toto+json", payload)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func multiSignEnvelope(t *testing.T, k []*ecdsa.PrivateKey, payload []byte) *dss
 	if err != nil {
 		t.Fatal(err)
 	}
-	dsseEnv, err := signer.SignPayload(in_toto.PayloadType, payload)
+	dsseEnv, err := signer.SignPayload(context.Background(), in_toto.PayloadType, payload)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,19 +105,21 @@ func multiSignEnvelope(t *testing.T, k []*ecdsa.PrivateKey, payload []byte) *dss
 }
 
 func createRekorEnvelope(dsseEnv *dsse.Envelope, pub [][]byte) *models.IntotoV002SchemaContentEnvelope {
-
 	env := &models.IntotoV002SchemaContentEnvelope{}
 	b64 := strfmt.Base64([]byte(dsseEnv.Payload))
 	env.Payload = b64
 	env.PayloadType = &dsseEnv.PayloadType
 
 	for i, sig := range dsseEnv.Signatures {
+		keyBytes := strfmt.Base64(pub[i])
+		sigBytes := strfmt.Base64([]byte(sig.Sig))
 		env.Signatures = append(env.Signatures, &models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 			Keyid:     sig.KeyID,
-			Sig:       strfmt.Base64([]byte(sig.Sig)),
-			PublicKey: strfmt.Base64(pub[i]),
+			Sig:       &sigBytes,
+			PublicKey: &keyBytes,
 		})
 	}
+
 	return env
 }
 
@@ -126,6 +128,7 @@ func envelopeHash(t *testing.T, dsseEnv *dsse.Envelope) string {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	h := sha256.Sum256(val)
 	return hex.EncodeToString(h[:])
 }
@@ -171,17 +174,21 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 	}
 
 	validPayload := "hellothispayloadisvalid"
+	keyBytes := strfmt.Base64("key")
+	sigBytes := strfmt.Base64("sig")
 
 	tests := []struct {
-		env     *dsse.Envelope
-		name    string
-		it      *models.IntotoV002Schema
-		wantErr bool
+		env             *dsse.Envelope
+		name            string
+		it              *models.IntotoV002Schema
+		wantErr         bool
+		wantVerifierErr bool
 	}{
 		{
-			name:    "empty",
-			it:      &models.IntotoV002Schema{},
-			wantErr: true,
+			name:            "empty",
+			it:              &models.IntotoV002Schema{},
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 		{
 			name: "missing envelope",
@@ -192,7 +199,8 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 		{
 			env:  envelope(t, key, []byte(validPayload)),
@@ -206,7 +214,8 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr:         false,
+			wantVerifierErr: false,
 		},
 		{
 			env:  envelope(t, priv, []byte(validPayload)),
@@ -220,7 +229,8 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr:         false,
+			wantVerifierErr: false,
 		},
 		{
 			env:  &invalid,
@@ -234,7 +244,8 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: false,
 		},
 		{
 			env:  envelope(t, key, []byte(validPayload)),
@@ -248,7 +259,8 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 		{
 			env:  multiSignEnvelope(t, []*ecdsa.PrivateKey{key, priv}, []byte(validPayload)),
@@ -262,7 +274,33 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr:         false,
+			wantVerifierErr: false,
+		},
+		{
+			env:  envelope(t, key, []byte(validPayload)),
+			name: "null array entry",
+			it: &models.IntotoV002Schema{
+				Content: &models.IntotoV002SchemaContent{
+					Envelope: &models.IntotoV002SchemaContentEnvelope{
+						Payload:     strfmt.Base64("cGF5bG9hZAo="),
+						PayloadType: swag.String("payloadType"),
+						Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+							{
+								PublicKey: &keyBytes,
+								Sig:       &sigBytes,
+							},
+							nil,
+						},
+					},
+					Hash: &models.IntotoV002SchemaContentHash{
+						Algorithm: swag.String(models.IntotoV002SchemaContentHashAlgorithmSha256),
+						Value:     swag.String(envelopeHash(t, envelope(t, key, []byte(validPayload)))),
+					},
+				},
+			},
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -277,9 +315,16 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 				if err := v.Unmarshal(it); err != nil {
 					return err
 				}
+
+				if !tt.wantErr {
+					if ok, err := v.Insertable(); !ok || err != nil {
+						t.Errorf("unexpected error calling insertable on valid proposed entry: %v", err)
+					}
+				}
+
 				want := []string{}
 				for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
-					keyHash := sha256.Sum256(sig.PublicKey)
+					keyHash := sha256.Sum256(*sig.PublicKey)
 					want = append(want, "sha256:"+hex.EncodeToString(keyHash[:]))
 				}
 				decodedPayload, err := base64.StdEncoding.DecodeString(tt.env.Payload)
@@ -316,6 +361,9 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 				if err != nil {
 					t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tt.name, err)
 				}
+				if ok, err := canonicalEntry.Insertable(); ok || err == nil {
+					t.Errorf("unexpected success calling Insertable on entry created from canonicalized content")
+				}
 				canonicalV002 := canonicalEntry.(*V002Entry)
 				fmt.Printf("%v", canonicalV002.IntotoObj.Content)
 				if *canonicalV002.IntotoObj.Content.Hash.Value != *tt.it.Content.Hash.Value {
@@ -327,6 +375,23 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 				canonicalIndexKeys, _ := canonicalV002.IndexKeys()
 				if !cmp.Equal(got, canonicalIndexKeys, cmpopts.SortSlices(func(x, y string) bool { return x < y })) {
 					t.Errorf("index keys from hydrated object do not match those generated from canonicalized (and re-hydrated) object: %v %v", got, canonicalIndexKeys)
+				}
+
+				verifiers, err := v.Verifiers()
+				if !tt.wantVerifierErr {
+					if err != nil {
+						t.Errorf("%v: unexpected error, got %v", tt.name, err)
+					} else {
+						pubV, _ := verifiers[0].CanonicalValue()
+						if !reflect.DeepEqual(pubV, pub) && !reflect.DeepEqual(pubV, pemBytes) {
+							t.Errorf("verifier and public keys do not match: %v, %v", string(pubV), string(pub))
+						}
+					}
+				} else {
+					if err == nil {
+						s, _ := verifiers[0].CanonicalValue()
+						t.Errorf("%v: expected error for %v, got %v", tt.name, string(s), err)
+					}
 				}
 
 				return nil
@@ -386,7 +451,7 @@ func TestV002Entry_IndexKeys(t *testing.T) {
 			want: []string{"sha256:bar"},
 			statement: in_toto.Statement{
 				Predicate: slsa.ProvenancePredicate{
-					Materials: []slsa.ProvenanceMaterial{
+					Materials: []common.ProvenanceMaterial{
 						{
 							URI: "foo",
 							Digest: map[string]string{
@@ -411,7 +476,7 @@ func TestV002Entry_IndexKeys(t *testing.T) {
 					},
 				},
 				Predicate: slsa.ProvenancePredicate{
-					Materials: []slsa.ProvenanceMaterial{
+					Materials: []common.ProvenanceMaterial{
 						{
 							URI: "foo",
 							Digest: map[string]string{
@@ -447,7 +512,7 @@ func TestV002Entry_IndexKeys(t *testing.T) {
 			}
 			want := []string{}
 			for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
-				keyHash := sha256.Sum256(sig.PublicKey)
+				keyHash := sha256.Sum256(*sig.PublicKey)
 				want = append(want, "sha256:"+hex.EncodeToString(keyHash[:]))
 			}
 
@@ -459,6 +524,230 @@ func TestV002Entry_IndexKeys(t *testing.T) {
 			sort.Strings(want)
 			if !cmp.Equal(got, want) {
 				t.Errorf("V001Entry.IndexKeys() = %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V002Entry
+		expectSuccess bool
+	}
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	env := envelope(t, key, []byte("payload"))
+	keyBytes := strfmt.Base64([]byte("key"))
+	sigBytes := strfmt.Base64([]byte("sig"))
+
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						Envelope: &models.IntotoV002SchemaContentEnvelope{
+							Payload:     strfmt.Base64("payload"),
+							PayloadType: swag.String("payloadType"),
+							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+								{
+									PublicKey: &keyBytes,
+									Sig:       &sigBytes,
+								},
+							},
+						},
+					},
+				},
+				env: *env,
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "valid entry but hasn't been parsed",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						Envelope: &models.IntotoV002SchemaContentEnvelope{
+							Payload:     strfmt.Base64("payload"),
+							PayloadType: swag.String("payloadType"),
+							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+								{
+									PublicKey: &keyBytes,
+									Sig:       &sigBytes,
+								},
+							},
+						},
+					},
+				},
+				env: dsse.Envelope{},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing sig",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						Envelope: &models.IntotoV002SchemaContentEnvelope{
+							Payload:     strfmt.Base64("payload"),
+							PayloadType: swag.String("payloadType"),
+							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+								{
+									PublicKey: &keyBytes,
+									//Sig:       strfmt.Base64([]byte("sig")),
+								},
+							},
+						},
+					},
+				},
+				env: *env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing key",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						Envelope: &models.IntotoV002SchemaContentEnvelope{
+							Payload:     strfmt.Base64("payload"),
+							PayloadType: swag.String("payloadType"),
+							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+								{
+									//PublicKey: strfmt.Base64([]byte("key")),
+									Sig: &sigBytes,
+								},
+							},
+						},
+					},
+				},
+				env: *env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "empty signatures",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						Envelope: &models.IntotoV002SchemaContentEnvelope{
+							Payload:     strfmt.Base64("payload"),
+							PayloadType: swag.String("payloadType"),
+							Signatures:  []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{},
+							/*
+								Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+									{
+										PublicKey: strfmt.Base64([]byte("key")),
+										Sig:       strfmt.Base64([]byte("sig")),
+									},
+								},
+							*/
+						},
+					},
+				},
+				env: *env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing payloadType",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						Envelope: &models.IntotoV002SchemaContentEnvelope{
+							Payload: strfmt.Base64("payload"),
+							//PayloadType: swag.String("payloadType"),
+							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+								{
+									PublicKey: &keyBytes,
+									Sig:       &sigBytes,
+								},
+							},
+						},
+					},
+				},
+				env: *env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing payload",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						Envelope: &models.IntotoV002SchemaContentEnvelope{
+							//Payload:     strfmt.Base64("payload"),
+							PayloadType: swag.String("payloadType"),
+							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+								{
+									PublicKey: &keyBytes,
+									Sig:       &sigBytes,
+								},
+							},
+						},
+					},
+				},
+				env: *env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing envelope",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					Content: &models.IntotoV002SchemaContent{
+						/*
+							Envelope: &models.IntotoV002SchemaContentEnvelope{
+								Payload:     strfmt.Base64("payload"),
+								PayloadType: swag.String("payloadType"),
+								Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+									{
+										PublicKey: strfmt.Base64([]byte("key")),
+										Sig:       strfmt.Base64([]byte("sig")),
+									},
+								},
+							},
+						*/
+					},
+				},
+				env: *env,
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing content",
+			entry: V002Entry{
+				IntotoObj: models.IntotoV002Schema{
+					/*
+						Content: &models.IntotoV002SchemaContent{
+							Envelope: &models.IntotoV002SchemaContentEnvelope{
+								Payload:     strfmt.Base64("payload"),
+								PayloadType: swag.String("payloadType"),
+								Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+									{
+										PublicKey: strfmt.Base64([]byte("key")),
+										Sig:       strfmt.Base64([]byte("sig")),
+									},
+								},
+							},
+						},
+					*/
+				},
+				env: *env,
+			},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
 			}
 		})
 	}

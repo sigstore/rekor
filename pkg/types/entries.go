@@ -27,6 +27,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/pki"
 )
 
 // EntryImpl specifies the behavior of a versioned type
@@ -36,6 +37,8 @@ type EntryImpl interface {
 	Canonicalize(ctx context.Context) ([]byte, error) // marshal the canonical entry to be put into the tlog
 	Unmarshal(e models.ProposedEntry) error           // unmarshal the abstract entry into the specific struct for this versioned type
 	CreateFromArtifactProperties(context.Context, ArtifactProperties) (models.ProposedEntry, error)
+	Verifiers() ([]pki.PublicKey, error)
+	Insertable() (bool, error) // denotes whether the entry that was unmarshalled has the writeOnly fields required to validate and insert into the log
 }
 
 // EntryWithAttestationImpl specifies the behavior of a versioned type that also stores attestations
@@ -80,6 +83,12 @@ func CreateVersionedEntry(pe models.ProposedEntry) (EntryImpl, error) {
 		if !tf.(func() TypeImpl)().IsSupportedVersion(ei.APIVersion()) {
 			return nil, fmt.Errorf("entry kind '%v' does not support inserting entries of version '%v'", kind, ei.APIVersion())
 		}
+	} else {
+		return nil, fmt.Errorf("unknown kind '%v' specified", kind)
+	}
+
+	if ok, err := ei.Insertable(); !ok {
+		return nil, fmt.Errorf("entry not insertable into log: %w", err)
 	}
 
 	return ei, nil

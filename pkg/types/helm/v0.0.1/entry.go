@@ -32,6 +32,7 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pgp"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/helm"
@@ -116,6 +117,10 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 }
 
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*helm.Provenance, *pgp.PublicKey, *pgp.Signature, error) {
+	if err := v.validate(); err != nil {
+		return nil, nil, nil, types.ValidationError(err)
+	}
+
 	g, ctx := errgroup.WithContext(ctx)
 
 	provenanceR, provenanceW := io.Pipe()
@@ -342,4 +347,35 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	returnVal.Spec = re.HelmObj
 
 	return &returnVal, nil
+}
+
+func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
+	if v.HelmObj.PublicKey == nil || v.HelmObj.PublicKey.Content == nil {
+		return nil, errors.New("helm v0.0.1 entry not initialized")
+	}
+	key, err := pgp.NewPublicKey(bytes.NewReader(*v.HelmObj.PublicKey.Content))
+	if err != nil {
+		return nil, err
+	}
+	return []pki.PublicKey{key}, nil
+}
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.HelmObj.PublicKey == nil {
+		return false, errors.New("missing public key property")
+	}
+	if v.HelmObj.PublicKey.Content == nil || len(*v.HelmObj.PublicKey.Content) == 0 {
+		return false, errors.New("missing public key content")
+	}
+
+	if v.HelmObj.Chart == nil {
+		return false, errors.New("missing chart property")
+	}
+	if v.HelmObj.Chart.Provenance == nil {
+		return false, errors.New("missing provenance property")
+	}
+	if len(v.HelmObj.Chart.Provenance.Content) == 0 {
+		return false, errors.New("missing provenance content")
+	}
+	return true, nil
 }

@@ -20,6 +20,7 @@ import (
 	"context"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/go-openapi/runtime"
@@ -27,6 +28,7 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/spf13/viper"
 	"go.uber.org/goleak"
 )
 
@@ -47,15 +49,32 @@ func TestCrossFieldValidation(t *testing.T) {
 		entry                     V001Entry
 		expectUnmarshalSuccess    bool
 		expectCanonicalizeSuccess bool
+		expectedVerifierSuccess   bool
 	}
 
 	jarBytes, _ := os.ReadFile("tests/test.jar")
+	// extracted from jar
+	certificate := `-----BEGIN CERTIFICATE-----
+MIIB+DCCAX6gAwIBAgITNVkDZoCiofPDsy7dfm6geLbuhzAKBggqhkjOPQQDAzAq
+MRUwEwYDVQQKEwxzaWdzdG9yZS5kZXYxETAPBgNVBAMTCHNpZ3N0b3JlMB4XDTIx
+MDMwNzAzMjAyOVoXDTMxMDIyMzAzMjAyOVowKjEVMBMGA1UEChMMc2lnc3RvcmUu
+ZGV2MREwDwYDVQQDEwhzaWdzdG9yZTB2MBAGByqGSM49AgEGBSuBBAAiA2IABLSy
+A7Ii5k+pNO8ZEWY0ylemWDowOkNa3kL+GZE5Z5GWehL9/A9bRNA3RbrsZ5i0Jcas
+taRL7Sp5fp/jD5dxqc/UdTVnlvS16an+2Yfswe/QuLolRUCrcOE2+2iA5+tzd6Nm
+MGQwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEwHQYDVR0OBBYE
+FMjFHQBBmiQpMlEk6w2uSu1KBtPsMB8GA1UdIwQYMBaAFMjFHQBBmiQpMlEk6w2u
+Su1KBtPsMAoGCCqGSM49BAMDA2gAMGUCMH8liWJfMui6vXXBhjDgY4MwslmN/TJx
+Ve/83WrFomwmNf056y1X48F9c4m3a3ozXAIxAKjRay5/aj/jsKKGIkmQatjI8uup
+Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
+-----END CERTIFICATE-----
+`
 
 	testCases := []TestCase{
 		{
-			caseDesc:               "empty obj",
-			entry:                  V001Entry{},
-			expectUnmarshalSuccess: false,
+			caseDesc:                "empty obj",
+			entry:                   V001Entry{},
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "empty archive",
@@ -64,7 +83,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					Archive: &models.JarV001SchemaArchive{},
 				},
 			},
-			expectUnmarshalSuccess: false,
+			expectUnmarshalSuccess:  false,
+			expectedVerifierSuccess: false,
 		},
 		{
 			caseDesc: "archive with inline content",
@@ -77,6 +97,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
+			expectedVerifierSuccess:   true,
 		},
 	}
 
@@ -95,6 +116,10 @@ func TestCrossFieldValidation(t *testing.T) {
 			continue
 		}
 
+		if ok, err := v.Insertable(); !ok || err != nil {
+			t.Errorf("unexpected error calling Insertable on valid proposed entry: %v", err)
+		}
+
 		b, err := v.Canonicalize(context.TODO())
 		if (err == nil) != tc.expectCanonicalizeSuccess {
 			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
@@ -108,9 +133,115 @@ func TestCrossFieldValidation(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
 			}
-			if _, err := types.UnmarshalEntry(pe); err != nil {
+			ei, err := types.UnmarshalEntry(pe)
+			if err != nil {
 				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
 			}
+			if ok, err := ei.Insertable(); ok || err == nil {
+				t.Errorf("unexpected err from calling Insertable on entry created from canonicalized content")
+			}
 		}
+
+		verifiers, err := v.Verifiers()
+		if tc.expectedVerifierSuccess {
+			if err != nil {
+				t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
+			} else {
+				pub, _ := verifiers[0].CanonicalValue()
+				if !reflect.DeepEqual(pub, []byte(certificate)) {
+					t.Errorf("verifier and public keys do not match: %v, %v", string(pub), certificate)
+				}
+			}
+		} else {
+			if err == nil {
+				s, _ := verifiers[0].CanonicalValue()
+				t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
+			}
+		}
+	}
+}
+
+func TestJarMetadataSize(t *testing.T) {
+	jarBytes, _ := os.ReadFile("tests/test.jar")
+
+	os.Setenv("MAX_JAR_METADATA_SIZE", "10")
+	viper.AutomaticEnv()
+
+	v := V001Entry{
+		JARModel: models.JarV001Schema{
+			Archive: &models.JarV001SchemaArchive{
+				Content: strfmt.Base64(jarBytes),
+			},
+		},
+	}
+
+	r := models.Jar{
+		APIVersion: swag.String(v.APIVersion()),
+		Spec:       v.JARModel,
+	}
+
+	if err := v.Unmarshal(&r); err != nil {
+		t.Errorf("unexpected unmarshal failure: %v", err)
+	}
+
+	_, err := v.Canonicalize(context.TODO())
+	if err == nil {
+		t.Fatal("expecting metadata too large err")
+	}
+	if !strings.Contains(err.Error(), "exceeds max allowed size 10") {
+		t.Fatalf("unexpected error %v", err)
+	}
+}
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V001Entry
+		expectSuccess bool
+	}
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V001Entry{
+				JARModel: models.JarV001Schema{
+					Archive: &models.JarV001SchemaArchive{
+						Content: strfmt.Base64([]byte("content")),
+					},
+				},
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "missing archive content",
+			entry: V001Entry{
+				JARModel: models.JarV001Schema{
+					Archive: &models.JarV001SchemaArchive{
+						//Content: strfmt.Base64([]byte("content")),
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing archive obj",
+			entry: V001Entry{
+				JARModel: models.JarV001Schema{
+					/*
+						Archive: &models.JarV001SchemaArchive{
+							Content: strfmt.Base64([]byte("content")),
+						},
+					*/
+				},
+			},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
+			}
+		})
 	}
 }

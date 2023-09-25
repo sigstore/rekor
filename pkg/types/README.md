@@ -10,12 +10,14 @@ Rekor supports pluggable types (aka different schemas) for entries stored in the
   - Versions: 0.0.1
 - COSE Envelopes [schema](cose/cose_schema.json)
   - Versions: 0.0.1
+- DSSE Envelopes [schema](dsse/dsse_schema.json)
+  - Versions: 0.0.1
 - HashedRekord [schema](hashedrekord/hashedrekord_schema.json)
   - Versions: 0.0.1
 - Helm Provenance Files [schema](helm/helm_schema.json)
   - Versions: 0.0.1
 - In-Toto Attestations [schema](intoto/intoto_schema.json)
-  - Versions: 0.0.1
+  - Versions: 0.0.1, 0.0.2
 - Java Archives (JAR Files) [schema](jar/jar_schema.json)
   - Versions: 0.0.1
 - Rekord *(default type)* [schema](rekord/rekord_schema.json)

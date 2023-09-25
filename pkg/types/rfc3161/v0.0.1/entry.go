@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/types/rfc3161"
 
 	"github.com/go-openapi/strfmt"
@@ -117,7 +118,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return nil
 }
 
-func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	if v.tsrContent == nil {
 		return nil, errors.New("tsr content must be set before canonicalizing")
 	}
@@ -204,4 +205,24 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	returnVal.APIVersion = swag.String(re.APIVersion())
 
 	return &returnVal, nil
+}
+
+func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
+	return nil, errors.New("Verifiers() does not support rfc3161 entry type")
+}
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.Rfc3161Obj.Tsr == nil {
+		return false, errors.New("missing tsr property")
+	}
+
+	if v.Rfc3161Obj.Tsr.Content == nil || len(*v.Rfc3161Obj.Tsr.Content) == 0 {
+		return false, errors.New("missing tsr content")
+	}
+
+	if v.tsrContent == nil || len(*v.tsrContent) == 0 {
+		return false, errors.New("timestamp response has not been parsed")
+	}
+
+	return true, nil
 }

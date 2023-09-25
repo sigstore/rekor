@@ -29,6 +29,11 @@ var (
 		Help: "The total number of new log entries",
 	})
 
+	metricPublishEvents = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "rekor_publish_events",
+		Help: "The status of publishing events to Pub/Sub",
+	}, []string{"event", "content_type", "status"})
+
 	MetricLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "rekor_api_latency",
 		Help: "Api Latency on calls",
@@ -52,6 +57,11 @@ var (
 		Name: "rekor_qps_by_api",
 		Help: "Api QPS by path, method, and response code",
 	}, []string{"path", "method", "code"})
+
+	CheckpointPublishCount = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "rekor_checkpoint_publish",
+		Help: "Checkpoint publishing by shard and code",
+	}, []string{"shard", "code"})
 
 	_ = promauto.NewGaugeFunc(
 		prometheus.GaugeOpts{

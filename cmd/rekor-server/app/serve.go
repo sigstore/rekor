@@ -34,6 +34,8 @@ import (
 	alpine_v001 "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/cose"
 	cose_v001 "github.com/sigstore/rekor/pkg/types/cose/v0.0.1"
+	"github.com/sigstore/rekor/pkg/types/dsse"
+	dsse_v001 "github.com/sigstore/rekor/pkg/types/dsse/v0.0.1"
 	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/helm"
@@ -59,7 +61,6 @@ var serveCmd = &cobra.Command{
 	Short: "start http server with configured api",
 	Long:  `Starts a http server and serves the configured api`,
 	Run: func(cmd *cobra.Command, args []string) {
-
 		// Setup the logger to dev/prod
 		log.ConfigureLogger(viper.GetString("log_type"))
 
@@ -81,7 +82,6 @@ var serveCmd = &cobra.Command{
 				log.Logger.Error(err)
 			}
 		}()
-
 		//TODO: make this a config option for server to load via viper field
 		//TODO: add command line option to print versions supported in binary
 
@@ -97,8 +97,8 @@ var serveCmd = &cobra.Command{
 			helm.KIND:         {helm_v001.APIVERSION},
 			tuf.KIND:          {tuf_v001.APIVERSION},
 			hashedrekord.KIND: {hashedrekord_v001.APIVERSION},
+			dsse.KIND:         {dsse_v001.APIVERSION},
 		}
-
 		for k, v := range pluggableTypeMap {
 			log.Logger.Infof("Loading support for pluggable type '%v'", k)
 			log.Logger.Infof("Loading version '%v' for pluggable type '%v'", v, k)
@@ -122,27 +122,6 @@ var serveCmd = &cobra.Command{
 			}
 			_ = srv.ListenAndServe()
 		}()
-
-		if viper.GetBool("enable_killswitch") {
-			go func() {
-				mux := http.NewServeMux()
-				mux.Handle("/kill", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					if err := server.Shutdown(); err != nil {
-						log.Logger.Error(err)
-					}
-					w.WriteHeader(http.StatusOK)
-				}))
-
-				srv := &http.Server{
-					Addr:         ":2345",
-					ReadTimeout:  10 * time.Second,
-					WriteTimeout: 10 * time.Second,
-					Handler:      mux,
-				}
-
-				_ = srv.ListenAndServe()
-			}()
-		}
 
 		if err := server.Serve(); err != nil {
 			log.Logger.Fatal(err)

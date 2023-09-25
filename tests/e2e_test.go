@@ -21,14 +21,15 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -37,20 +38,22 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/sigstore/rekor/pkg/client"
+	generatedClient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
+	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
 	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
-	"github.com/sigstore/rekor/pkg/util"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -181,30 +184,22 @@ func TestGetCLI(t *testing.T) {
 	runCli(t, "get", "--format=json", "--uuid", entryID.ReturnEntryIDString())
 }
 
-func TestWatch(t *testing.T) {
-	td := t.TempDir()
-	cmd := exec.Command(server, "watch", "--interval=1s")
-	cmd.Env = append(os.Environ(), "REKOR_STH_BUCKET=file://"+td)
-	go func() {
-		b, err := cmd.CombinedOutput()
-		t.Log(string(b))
-		if cmd.ProcessState.Exited() && cmd.ProcessState.ExitCode() != 0 {
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-	}()
-
-	// Wait 3 intervals
-	time.Sleep(3 * time.Second)
-	cmd.Process.Kill()
-
-	// Check for files
-	fi, err := ioutil.ReadDir(td)
-	if err != nil || len(fi) == 0 {
-		t.Error("expected files")
+func publicKeyFromRekorClient(ctx context.Context, c *generatedClient.Rekor) (*ecdsa.PublicKey, error) {
+	resp, err := c.Pubkey.GetPublicKey(&pubkey.GetPublicKeyParams{Context: ctx})
+	if err != nil {
+		return nil, err
 	}
-	fmt.Println(fi[0].Name())
+
+	// marshal the pubkey
+	pubKey, err := cryptoutils.UnmarshalPEMToPublicKey([]byte(resp.GetPayload()))
+	if err != nil {
+		return nil, err
+	}
+	ed, ok := pubKey.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, errors.New("public key retrieved from Rekor is not an ECDSA key")
+	}
+	return ed, nil
 }
 
 func TestSignedEntryTimestamp(t *testing.T) {
@@ -273,7 +268,7 @@ func TestSignedEntryTimestamp(t *testing.T) {
 		t.Fatal(err)
 	}
 	// get rekor's public key
-	rekorPubKey, err := util.PublicKey(ctx, rekorClient)
+	rekorPubKey, err := publicKeyFromRekorClient(ctx, rekorClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,13 +286,18 @@ func TestEntryUpload(t *testing.T) {
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
 	sigPath := filepath.Join(t.TempDir(), "signature.asc")
 
-	createdPGPSignedArtifact(t, artifactPath, sigPath)
-	payload, _ := ioutil.ReadFile(artifactPath)
-	sig, _ := ioutil.ReadFile(sigPath)
-
 	// Create the entry file
-	entryPath := filepath.Join(t.TempDir(), "entry.json")
+	createdPGPSignedArtifact(t, artifactPath, sigPath)
+	payload, err := ioutil.ReadFile(artifactPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sig, err := ioutil.ReadFile(sigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	entryPath := filepath.Join(t.TempDir(), "entry.json")
 	pubKeyBytes := []byte(publicKey)
 
 	re := rekord.V001Entry{
@@ -321,16 +321,66 @@ func TestEntryUpload(t *testing.T) {
 	}
 	entryBytes, err := json.Marshal(returnVal)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(entryPath, entryBytes, 0644); err != nil {
+		t.Fatal(err)
 	}
 
-	if err := ioutil.WriteFile(entryPath, entryBytes, 0644); err != nil {
-		t.Error(err)
+	// Start pubsub client to capture notifications. Values match those in
+	// docker-compose.test.yml.
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	psc, err := pubsub.NewClient(ctx, "test-project")
+	if err != nil {
+		t.Fatalf("Create pubsub client: %v", err)
 	}
+	topic, err := psc.CreateTopic(ctx, "new-entry")
+	if err != nil {
+		// Assume error is AlreadyExists if one occurrs unless it is context timeout.
+		// If the error was not AlreadyExists, it will be caught in later error
+		// checks in this test.
+		if errors.Is(err, os.ErrDeadlineExceeded) {
+			t.Fatalf("Create pubsub topic: %v", err)
+		}
+		topic = psc.Topic("new-entry")
+	}
+	filters := []string{
+		`attributes:rekor_entry_kind`,                          // Ignore any messages that do not have this attribute
+		`attributes.rekor_signing_subjects = "test@rekor.dev"`, // This is the email in the hard-coded PGP test key
+		`attributes.datacontenttype = "application/json"`,      // Only fetch the JSON formatted events
+	}
+	cfg := pubsub.SubscriptionConfig{
+		Topic:  topic,
+		Filter: strings.Join(filters, " AND "),
+	}
+	sub, err := psc.CreateSubscription(ctx, "new-entry-sub", cfg)
+	if err != nil {
+		if errors.Is(err, os.ErrDeadlineExceeded) {
+			t.Fatalf("Create pubsub subscription: %v", err)
+		}
+		sub = psc.Subscription("new-entry-sub")
+	}
+	ch := make(chan []byte, 1)
+	go func() {
+		if err := sub.Receive(ctx, func(_ context.Context, m *pubsub.Message) {
+			ch <- m.Data
+		}); err != nil {
+			t.Errorf("Receive pubusub msg: %v", err)
+		}
+	}()
 
 	// Now upload to rekor!
 	out := runCli(t, "upload", "--entry", entryPath)
 	outputContains(t, out, "Created entry at")
+
+	// Await pubsub
+	select {
+	case msg := <-ch:
+		t.Logf("Got pubsub message!\n%s", string(msg))
+	case <-ctx.Done():
+		t.Errorf("Did not receive pubsub message: %v", ctx.Err())
+	}
 }
 
 // Regression test for https://github.com/sigstore/rekor/pull/956
@@ -396,8 +446,18 @@ func TestInclusionProofRace(t *testing.T) {
 	}
 }
 
+// TestIssue1308 should be run once before any other tests (against an empty log)
+func TestIssue1308(t *testing.T) {
+	// we run this to validate issue 1308 which needs to be tested against an empty log
+	if getTotalTreeSize(t) == 0 {
+		TestSearchQueryNonExistentEntry(t)
+	} else {
+		t.Skip("skipping because log is not empty")
+	}
+}
+
 func TestSearchQueryNonExistentEntry(t *testing.T) {
-	// Nonexistent but well-formed entry results in 404 not found.
+	// Nonexistent but well-formed entry results in 200 with empty array as body
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -407,7 +467,6 @@ func TestSearchQueryNonExistentEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := fmt.Sprintf("{\"entries\":[%s]}", b)
-	t.Log(string(body))
 	resp, err := http.Post(fmt.Sprintf("%s/api/v1/log/entries/retrieve", rekorServer()),
 		"application/json",
 		bytes.NewBuffer([]byte(body)))
@@ -416,7 +475,7 @@ func TestSearchQueryNonExistentEntry(t *testing.T) {
 	}
 	c, _ := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
-		t.Fatalf("expected status 200, got %d instead", resp.StatusCode)
+		t.Fatalf("expected status 200, got %d instead: %v", resp.StatusCode, string(c))
 	}
 	if strings.TrimSpace(string(c)) != "[]" {
 		t.Fatalf("expected empty JSON array as response, got %s instead", string(c))
@@ -432,6 +491,17 @@ func getTreeID(t *testing.T) int64 {
 	}
 	t.Log("Tree ID:", tid)
 	return tid
+}
+
+func getTotalTreeSize(t *testing.T) int64 {
+	out := runCli(t, "loginfo")
+	sizeStr := strings.Fields(strings.Split(out, "Total Tree Size: ")[1])[0]
+	size, err := strconv.ParseInt(sizeStr, 10, 64)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	t.Log("Total Tree Size:", size)
+	return size
 }
 
 // This test confirms that we validate tree ID when using the /api/v1/log/entries/retrieve endpoint

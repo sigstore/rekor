@@ -19,8 +19,10 @@ package pkcs7
 import (
 	"bytes"
 	"crypto"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -28,6 +30,8 @@ import (
 	"strings"
 
 	"github.com/sassoftware/relic/lib/pkcs7"
+	"github.com/sigstore/rekor/pkg/pki/identity"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -105,7 +109,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOption) error {
+func (s Signature) Verify(r io.Reader, _ interface{}, _ ...sigsig.VerifyOption) error {
 	if len(*s.raw) == 0 {
 		return fmt.Errorf("PKCS7 signature has not been initialized")
 	}
@@ -211,5 +215,34 @@ func (k PublicKey) EmailAddresses() []string {
 
 // Subjects implements the pki.PublicKey interface
 func (k PublicKey) Subjects() []string {
-	return k.EmailAddresses()
+	// combine identities in the subject and SANs
+	identities := k.EmailAddresses()
+	cert, err := x509.ParseCertificate(k.certs[0].Raw)
+	if err != nil {
+		// This should not happen from a valid PublicKey, but fail gracefully.
+		return identities
+	}
+	identities = append(identities, cryptoutils.GetSubjectAlternateNames(cert)...)
+	return identities
+}
+
+// Identities implements the pki.PublicKey interface
+func (k PublicKey) Identities() ([]identity.Identity, error) {
+	// pkcs7 structure may contain both a key and certificate chain
+	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(k.key)
+	if err != nil {
+		return nil, err
+	}
+	keyDigest := sha256.Sum256(pkixKey)
+	certDigest := sha256.Sum256(k.certs[0].Raw)
+	return []identity.Identity{{
+		Crypto:      k.certs[0],
+		Raw:         k.certs[0].Raw,
+		Fingerprint: hex.EncodeToString(certDigest[:]),
+	}, {
+		Crypto:      k.key,
+		Raw:         pkixKey,
+		Fingerprint: hex.EncodeToString(keyDigest[:]),
+	},
+	}, nil
 }

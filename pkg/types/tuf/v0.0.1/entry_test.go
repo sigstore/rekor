@@ -19,6 +19,7 @@ package tuf
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"os"
 	"reflect"
@@ -65,6 +66,7 @@ func TestCrossFieldValidation(t *testing.T) {
 		entry                     V001Entry
 		expectUnmarshalSuccess    bool
 		expectCanonicalizeSuccess bool
+		expectVerifierSuccess     bool
 	}
 
 	keyBytes, _ := os.ReadFile("tests/test_root.json")
@@ -94,6 +96,7 @@ func TestCrossFieldValidation(t *testing.T) {
 				},
 			},
 			expectUnmarshalSuccess: false,
+			expectVerifierSuccess:  false,
 		},
 		{
 			caseDesc: "root without manifest",
@@ -106,6 +109,7 @@ func TestCrossFieldValidation(t *testing.T) {
 				},
 			},
 			expectUnmarshalSuccess: false,
+			expectVerifierSuccess:  true,
 		},
 		{
 			caseDesc: "root with invalid manifest & valid metadata",
@@ -121,6 +125,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
+			expectVerifierSuccess:     false,
 		},
 		{
 			caseDesc: "root with manifest & content",
@@ -136,6 +141,23 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
+			expectVerifierSuccess:     true,
+		},
+		{
+			caseDesc: "root with manifest & content base64-encoded",
+			entry: V001Entry{
+				TufObj: models.TUFV001Schema{
+					Root: &models.TUFV001SchemaRoot{
+						Content: base64.StdEncoding.EncodeToString(keyBytes),
+					},
+					Metadata: &models.TUFV001SchemaMetadata{
+						Content: base64.StdEncoding.EncodeToString(dataBytes),
+					},
+				},
+			},
+			expectUnmarshalSuccess:    true,
+			expectCanonicalizeSuccess: true,
+			expectVerifierSuccess:     true,
 		},
 		{
 			caseDesc: "root with invalid key content & with manifest with content",
@@ -151,6 +173,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
+			expectVerifierSuccess:     false,
 		},
 		{
 			caseDesc: "public key with key content & with invalid data with content",
@@ -166,51 +189,180 @@ func TestCrossFieldValidation(t *testing.T) {
 			},
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: false,
+			expectVerifierSuccess:     true,
 		},
 	}
 
 	for _, tc := range testCases {
-		if err := tc.entry.Validate(); (err == nil) != tc.expectUnmarshalSuccess {
-			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
-		}
-		// No need to continue here if we failed at unmarshal
-		if !tc.expectUnmarshalSuccess {
-			continue
-		}
-
-		v := &V001Entry{}
-		r := models.TUF{
-			APIVersion: swag.String(tc.entry.APIVersion()),
-			Spec:       tc.entry.TufObj,
-		}
-
-		unmarshalAndValidate := func() error {
-			if err := v.Unmarshal(&r); err != nil {
-				return err
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if err := tc.entry.Validate(); (err == nil) != tc.expectUnmarshalSuccess {
+				t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
 			}
-			return v.Validate()
-		}
-		if err := unmarshalAndValidate(); (err == nil) != tc.expectUnmarshalSuccess {
-			t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
-		}
+			// No need to continue here if we failed at unmarshal
+			if !tc.expectUnmarshalSuccess {
+				return
+			}
 
-		b, err := v.Canonicalize(context.TODO())
-		if (err == nil) != tc.expectCanonicalizeSuccess {
-			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
-		} else if err != nil {
-			if _, ok := err.(types.ValidationError); !ok {
-				t.Errorf("canonicalize returned an unexpected error that isn't of type types.ValidationError: %v", err)
+			v := &V001Entry{}
+			r := models.TUF{
+				APIVersion: swag.String(tc.entry.APIVersion()),
+				Spec:       tc.entry.TufObj,
 			}
-		}
 
-		if b != nil {
-			pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
-			if err != nil {
-				t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
+			unmarshalAndValidate := func() error {
+				if err := v.Unmarshal(&r); err != nil {
+					return err
+				}
+				return v.Validate()
 			}
-			if _, err := types.UnmarshalEntry(pe); err != nil {
-				t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+			if err := unmarshalAndValidate(); (err == nil) != tc.expectUnmarshalSuccess {
+				t.Errorf("unexpected result in '%v': %v", tc.caseDesc, err)
 			}
-		}
+
+			if tc.expectUnmarshalSuccess {
+				if ok, err := v.Insertable(); !ok || err != nil {
+					t.Errorf("unexpected error calling Insertable on valid proposed entry: %v", err)
+				}
+			}
+
+			b, err := v.Canonicalize(context.TODO())
+			if (err == nil) != tc.expectCanonicalizeSuccess {
+				t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
+			} else if err != nil {
+				if _, ok := err.(types.ValidationError); !ok {
+					t.Errorf("canonicalize returned an unexpected error that isn't of type types.ValidationError: %v", err)
+				}
+			}
+
+			if b != nil {
+				pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
+				if err != nil {
+					t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
+				}
+				if _, err := types.UnmarshalEntry(pe); err != nil {
+					t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
+				}
+				// Insertable on canonicalized content is variable so we skip testing it here
+			}
+
+			verifiers, err := v.Verifiers()
+			if tc.expectVerifierSuccess {
+				if err != nil {
+					t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
+				} else {
+					pub, _ := verifiers[0].CanonicalValue()
+					rootBytes := new(bytes.Buffer)
+					if err := json.Compact(rootBytes, keyBytes); err != nil {
+						t.Fatal(err)
+					}
+					if !reflect.DeepEqual(pub, rootBytes.Bytes()) {
+						t.Errorf("%v: verifier and public keys do not match: %v, %v", tc.caseDesc, string(pub), rootBytes)
+					}
+				}
+			} else {
+				if err == nil {
+					s, _ := verifiers[0].CanonicalValue()
+					t.Errorf("%v: expected error for %v, got %v", tc.caseDesc, string(s), err)
+				}
+			}
+		})
+	}
+}
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V001Entry
+		expectSuccess bool
+	}
+
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V001Entry{
+				TufObj: models.TUFV001Schema{
+					Metadata: &models.TUFV001SchemaMetadata{
+						Content: struct{}{},
+					},
+					Root: &models.TUFV001SchemaRoot{
+						Content: struct{}{},
+					},
+				},
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "missing root content",
+			entry: V001Entry{
+				TufObj: models.TUFV001Schema{
+					Metadata: &models.TUFV001SchemaMetadata{
+						Content: struct{}{},
+					},
+					Root: &models.TUFV001SchemaRoot{
+						//Content: struct{}{},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing root obj",
+			entry: V001Entry{
+				TufObj: models.TUFV001Schema{
+					Metadata: &models.TUFV001SchemaMetadata{
+						Content: struct{}{},
+					},
+					/*
+						Root: &models.TUFV001SchemaRoot{
+							Content: struct{}{},
+						},
+					*/
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing metadata content",
+			entry: V001Entry{
+				TufObj: models.TUFV001Schema{
+					Metadata: &models.TUFV001SchemaMetadata{
+						//Content: struct{}{},
+					},
+					Root: &models.TUFV001SchemaRoot{
+						Content: struct{}{},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing metadata content",
+			entry: V001Entry{
+				TufObj: models.TUFV001Schema{
+					/*
+						Metadata: &models.TUFV001SchemaMetadata{
+							Content: struct{}{},
+						},
+					*/
+					Root: &models.TUFV001SchemaRoot{
+						Content: struct{}{},
+					},
+				},
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc:      "empty obj",
+			entry:         V001Entry{},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
+			}
+		})
 	}
 }

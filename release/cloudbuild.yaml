@@ -32,16 +32,19 @@ steps:
     echo "Checking out ${_GIT_TAG}"
     git checkout ${_GIT_TAG}
 
-- name: 'gcr.io/projectsigstore/cosign:v1.13.1@sha256:fd5b09be23ef1027e1bdd490ce78dcc65d2b15902e1f4ba8e04f3b4019cc1057'
+- name: 'gcr.io/projectsigstore/cosign:v2.2.0@sha256:280b47054876d415f66a279e666e35157cae6881f3538599710290c70bb75369'
   dir: "go/src/sigstore/rekor"
   env:
-  - COSIGN_EXPERIMENTAL=true
   - TUF_ROOT=/tmp
   args:
   - 'verify'
-  - 'ghcr.io/gythialy/golang-cross:v1.19.4-0@sha256:53ee894818ac14377996a6fe7c8fe6156d018a20f82aaf69f2519fc45d897bec'
+  - 'ghcr.io/gythialy/golang-cross:v1.21.1-0@sha256:7864d898e45db9d749f14180051edb46ff61bf42914e3b8ecddec5a36813aa6c'
+  - '--certificate-oidc-issuer'
+  - "https://token.actions.githubusercontent.com"
+  - '--certificate-identity'
+  - "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.21.1-0"
 
-- name: ghcr.io/gythialy/golang-cross:v1.19.4-0@sha256:53ee894818ac14377996a6fe7c8fe6156d018a20f82aaf69f2519fc45d897bec
+- name: ghcr.io/gythialy/golang-cross:v1.21.1-0@sha256:7864d898e45db9d749f14180051edb46ff61bf42914e3b8ecddec5a36813aa6c
   entrypoint: /bin/sh
   dir: "go/src/sigstore/rekor"
   env:
@@ -54,7 +57,7 @@ steps:
   - KEY_VERSION=${_KEY_VERSION}
   - GIT_TAG=${_GIT_TAG}
   - GOOGLE_SERVICE_ACCOUNT_NAME=keyless@${PROJECT_ID}.iam.gserviceaccount.com
-  - COSIGN_EXPERIMENTAL=true
+  - COSIGN_YES=true
   - KO_PREFIX=gcr.io/${PROJECT_ID}
   secretEnv:
   - GITHUB_TOKEN
@@ -64,7 +67,7 @@ steps:
       gcloud auth configure-docker \
       && make release
 
-- name: ghcr.io/gythialy/golang-cross:v1.19.4-0@sha256:53ee894818ac14377996a6fe7c8fe6156d018a20f82aaf69f2519fc45d897bec
+- name: ghcr.io/gythialy/golang-cross:v1.21.1-0@sha256:7864d898e45db9d749f14180051edb46ff61bf42914e3b8ecddec5a36813aa6c
   entrypoint: 'bash'
   dir: "go/src/sigstore/rekor"
   env:

@@ -31,17 +31,18 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/rekor/pkg/util"
 )
 
 // GetLogInfoHandler returns the current size of the tree and the STH
 func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
-	tc := NewTrillianClient(params.HTTPRequest.Context())
+	tc := trillianclient.NewTrillianClient(params.HTTPRequest.Context(), api.logClient, api.logID)
 
 	// for each inactive shard, get the loginfo
 	var inactiveShards []*models.InactiveShardLogInfo
-	for _, shard := range tc.ranges.GetInactive() {
-		if shard.TreeID == tc.ranges.ActiveTreeID() {
+	for _, shard := range api.logRanges.GetInactive() {
+		if shard.TreeID == api.logRanges.ActiveTreeID() {
 			break
 		}
 		// Get details for this inactive shard
@@ -52,11 +53,43 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 		inactiveShards = append(inactiveShards, is)
 	}
 
-	resp := tc.getLatest(0)
-	if resp.status != codes.OK {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianCommunicationError)
+	if swag.BoolValue(params.Stable) && redisClient != nil {
+		// key is treeID/latest
+		key := fmt.Sprintf("%d/latest", api.logRanges.ActiveTreeID())
+		redisResult, err := redisClient.Get(params.HTTPRequest.Context(), key).Result()
+		if err != nil {
+			return handleRekorAPIError(params, http.StatusInternalServerError,
+				fmt.Errorf("error getting checkpoint from redis: %w", err), "error getting checkpoint from redis")
+		}
+		// should not occur, a checkpoint should always be present
+		if redisResult == "" {
+			return handleRekorAPIError(params, http.StatusInternalServerError,
+				fmt.Errorf("no checkpoint found in redis: %w", err), "no checkpoint found in redis")
+		}
+		decoded, err := hex.DecodeString(redisResult)
+		if err != nil {
+			return handleRekorAPIError(params, http.StatusInternalServerError,
+				fmt.Errorf("error decoding checkpoint from redis: %w", err), "error decoding checkpoint from redis")
+		}
+		checkpoint := util.SignedCheckpoint{}
+		if err := checkpoint.UnmarshalText(decoded); err != nil {
+			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("invalid checkpoint: %w", err), "invalid checkpoint")
+		}
+		logInfo := models.LogInfo{
+			RootHash:       stringPointer(hex.EncodeToString(checkpoint.Hash)),
+			TreeSize:       swag.Int64(int64(checkpoint.Size)),
+			SignedTreeHead: stringPointer(string(decoded)),
+			TreeID:         stringPointer(fmt.Sprintf("%d", api.logID)),
+			InactiveShards: inactiveShards,
+		}
+		return tlog.NewGetLogInfoOK().WithPayload(&logInfo)
 	}
-	result := resp.getLatestResult
+
+	resp := tc.GetLatest(0)
+	if resp.Status != codes.OK {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.Err), trillianCommunicationError)
+	}
+	result := resp.GetLatestResult
 
 	root := &types.LogRootV1{}
 	if err := root.UnmarshalBinary(result.SignedLogRoot.LogRoot); err != nil {
@@ -67,7 +100,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	treeSize := int64(root.TreeSize)
 
 	scBytes, err := util.CreateAndSignCheckpoint(params.HTTPRequest.Context(),
-		viper.GetString("rekor_server.hostname"), tc.ranges.ActiveTreeID(), root, api.signer)
+		viper.GetString("rekor_server.hostname"), api.logRanges.ActiveTreeID(), root.TreeSize, root.RootHash, api.signer)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, sthGenerateError)
 	}
@@ -76,7 +109,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 		RootHash:       &hashString,
 		TreeSize:       &treeSize,
 		SignedTreeHead: stringPointer(string(scBytes)),
-		TreeID:         stringPointer(fmt.Sprintf("%d", tc.logID)),
+		TreeID:         stringPointer(fmt.Sprintf("%d", api.logID)),
 		InactiveShards: inactiveShards,
 	}
 
@@ -92,21 +125,21 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	if *params.FirstSize > params.LastSize {
 		return handleRekorAPIError(params, http.StatusBadRequest, nil, fmt.Sprintf(firstSizeLessThanLastSize, *params.FirstSize, params.LastSize))
 	}
-	tc := NewTrillianClient(params.HTTPRequest.Context())
+	tc := trillianclient.NewTrillianClient(params.HTTPRequest.Context(), api.logClient, api.logID)
 	if treeID := swag.StringValue(params.TreeID); treeID != "" {
 		id, err := strconv.Atoi(treeID)
 		if err != nil {
 			log.Logger.Infof("Unable to convert %s to string, skipping initializing client with Tree ID: %v", treeID, err)
 		} else {
-			tc = NewTrillianClientFromTreeID(params.HTTPRequest.Context(), int64(id))
+			tc = trillianclient.NewTrillianClient(params.HTTPRequest.Context(), api.logClient, int64(id))
 		}
 	}
 
-	resp := tc.getConsistencyProof(*params.FirstSize, params.LastSize)
-	if resp.status != codes.OK {
-		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianCommunicationError)
+	resp := tc.GetConsistencyProof(*params.FirstSize, params.LastSize)
+	if resp.Status != codes.OK {
+		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.Err), trillianCommunicationError)
 	}
-	result := resp.getConsistencyProofResult
+	result := resp.GetConsistencyProofResult
 
 	var root types.LogRootV1
 	if err := root.UnmarshalBinary(result.SignedLogRoot.LogRoot); err != nil {
@@ -124,7 +157,8 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 		// The proof field may be empty if the requested tree_size was larger than that available at the server
 		// (e.g. because there is skew between server instances, and an earlier client request was processed by
 		// a more up-to-date instance). root.TreeSize is the maximum size currently observed
-		return handleRekorAPIError(params, http.StatusBadRequest, nil, fmt.Sprintf(lastSizeGreaterThanKnown, params.LastSize, root.TreeSize))
+		err := fmt.Errorf(lastSizeGreaterThanKnown, params.LastSize, root.TreeSize)
+		return handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
 	}
 
 	consistencyProof := models.ConsistencyProof{
@@ -136,12 +170,12 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 }
 
 func inactiveShardLogInfo(ctx context.Context, tid int64) (*models.InactiveShardLogInfo, error) {
-	tc := NewTrillianClientFromTreeID(ctx, tid)
-	resp := tc.getLatest(0)
-	if resp.status != codes.OK {
-		return nil, fmt.Errorf("resp code is %d", resp.status)
+	tc := trillianclient.NewTrillianClient(ctx, api.logClient, tid)
+	resp := tc.GetLatest(0)
+	if resp.Status != codes.OK {
+		return nil, fmt.Errorf("resp code is %d", resp.Status)
 	}
-	result := resp.getLatestResult
+	result := resp.GetLatestResult
 
 	root := &types.LogRootV1{}
 	if err := root.UnmarshalBinary(result.SignedLogRoot.LogRoot); err != nil {
@@ -151,7 +185,7 @@ func inactiveShardLogInfo(ctx context.Context, tid int64) (*models.InactiveShard
 	hashString := hex.EncodeToString(root.RootHash)
 	treeSize := int64(root.TreeSize)
 
-	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tid, root, api.signer)
+	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tid, root.TreeSize, root.RootHash, api.signer)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +201,7 @@ func inactiveShardLogInfo(ctx context.Context, tid int64) (*models.InactiveShard
 
 // handlers for APIs that may be disabled in a given instance
 
-func GetLogInfoNotImplementedHandler(params tlog.GetLogInfoParams) middleware.Responder {
+func GetLogInfoNotImplementedHandler(_ tlog.GetLogInfoParams) middleware.Responder {
 	err := &models.Error{
 		Code:    http.StatusNotImplemented,
 		Message: "Get Log Info API not enabled in this Rekor instance",
@@ -176,7 +210,7 @@ func GetLogInfoNotImplementedHandler(params tlog.GetLogInfoParams) middleware.Re
 	return tlog.NewGetLogInfoDefault(http.StatusNotImplemented).WithPayload(err)
 }
 
-func GetLogProofNotImplementedHandler(params tlog.GetLogProofParams) middleware.Responder {
+func GetLogProofNotImplementedHandler(_ tlog.GetLogProofParams) middleware.Responder {
 	err := &models.Error{
 		Code:    http.StatusNotImplemented,
 		Message: "Get Log Proof API not enabled in this Rekor instance",

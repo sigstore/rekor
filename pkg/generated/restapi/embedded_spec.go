@@ -99,6 +99,15 @@ func init() {
         ],
         "summary": "Get information about the current state of the transparency log",
         "operationId": "getLogInfo",
+        "parameters": [
+          {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to return a stable checkpoint for the active shard",
+            "name": "stable",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "A JSON object with the root hash and tree size as properties",
@@ -476,6 +485,7 @@ func init() {
             "additionalProperties": true
           },
           "integratedTime": {
+            "description": "The time the entry was added to the log as a Unix timestamp in seconds",
             "type": "integer"
           },
           "logID": {
@@ -673,6 +683,32 @@ func init() {
             "spec": {
               "type": "object",
               "$ref": "pkg/types/cose/cose_schema.json"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "dsse": {
+      "description": "DSSE envelope",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "type": "object",
+              "$ref": "pkg/types/dsse/dsse_schema.json"
             }
           },
           "additionalProperties": false
@@ -995,6 +1031,15 @@ func init() {
         ],
         "summary": "Get information about the current state of the transparency log",
         "operationId": "getLogInfo",
+        "parameters": [
+          {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to return a stable checkpoint for the active shard",
+            "name": "stable",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "A JSON object with the root hash and tree size as properties",
@@ -1498,6 +1543,95 @@ func init() {
       },
       "readOnly": true
     },
+    "DSSEV001SchemaEnvelopeHash": {
+      "description": "Specifies the hash algorithm and value encompassing the entire envelope sent to Rekor",
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "The hashing function used to compute the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value": {
+          "description": "The value of the computed digest over the entire envelope",
+          "type": "string"
+        }
+      },
+      "readOnly": true
+    },
+    "DSSEV001SchemaPayloadHash": {
+      "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "The hashing function used to compute the hash value",
+          "type": "string",
+          "enum": [
+            "sha256"
+          ]
+        },
+        "value": {
+          "description": "The value of the computed digest over the payload within the envelope",
+          "type": "string"
+        }
+      },
+      "readOnly": true
+    },
+    "DSSEV001SchemaProposedContent": {
+      "type": "object",
+      "required": [
+        "envelope",
+        "verifiers"
+      ],
+      "properties": {
+        "envelope": {
+          "description": "DSSE envelope specified as a stringified JSON object",
+          "type": "string",
+          "writeOnly": true
+        },
+        "verifiers": {
+          "description": "collection of all verification material (e.g. public keys or certificates) used to verify signatures over envelope's payload, specified as base64-encoded strings",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "format": "byte"
+          },
+          "writeOnly": true
+        }
+      },
+      "writeOnly": true
+    },
+    "DSSEV001SchemaSignaturesItems0": {
+      "description": "a signature of the envelope's payload along with the verification material for the signature",
+      "type": "object",
+      "required": [
+        "signature",
+        "verifier"
+      ],
+      "properties": {
+        "signature": {
+          "description": "base64 encoded signature of the payload",
+          "type": "string",
+          "pattern": "^(?:[A-Za-z0-9+\\/]{4})*(?:[A-Za-z0-9+\\/]{2}==|[A-Za-z0-9+\\/]{3}=|[A-Za-z0-9+\\/]{4})$"
+        },
+        "verifier": {
+          "description": "verification material that was used to verify the corresponding signature, specified as a base64 encoded string",
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
     "Error": {
       "type": "object",
       "properties": {
@@ -1834,7 +1968,7 @@ func init() {
           "writeOnly": true
         },
         "hash": {
-          "description": "Specifies the hash algorithm and value encompassing the entire signed envelope",
+          "description": "Specifies the hash algorithm and value encompassing the entire signed envelope; this is computed by the rekor server, client-provided values are ignored",
           "type": "object",
           "required": [
             "algorithm",
@@ -1856,7 +1990,7 @@ func init() {
           "readOnly": true
         },
         "payloadHash": {
-          "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
+          "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope; this is computed by the rekor server, client-provided values are ignored",
           "type": "object",
           "required": [
             "algorithm",
@@ -1880,7 +2014,7 @@ func init() {
       }
     },
     "IntotoV001SchemaContentHash": {
-      "description": "Specifies the hash algorithm and value encompassing the entire signed envelope",
+      "description": "Specifies the hash algorithm and value encompassing the entire signed envelope; this is computed by the rekor server, client-provided values are ignored",
       "type": "object",
       "required": [
         "algorithm",
@@ -1902,7 +2036,7 @@ func init() {
       "readOnly": true
     },
     "IntotoV001SchemaContentPayloadHash": {
-      "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
+      "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope; this is computed by the rekor server, client-provided values are ignored",
       "type": "object",
       "required": [
         "algorithm",
@@ -1925,6 +2059,9 @@ func init() {
     },
     "IntotoV002SchemaContent": {
       "type": "object",
+      "required": [
+        "envelope"
+      ],
       "properties": {
         "envelope": {
           "description": "dsse envelope",
@@ -2031,6 +2168,10 @@ func init() {
     "IntotoV002SchemaContentEnvelopeSignaturesItems0": {
       "description": "a signature of the envelope's payload along with the public key for the signature",
       "type": "object",
+      "required": [
+        "sig",
+        "publicKey"
+      ],
       "properties": {
         "keyid": {
           "description": "optional id of the key used to create the signature",
@@ -2039,8 +2180,7 @@ func init() {
         "publicKey": {
           "description": "public key that corresponds to this signature",
           "type": "string",
-          "format": "byte",
-          "readOnly": true
+          "format": "byte"
         },
         "sig": {
           "description": "signature of the payload",
@@ -2234,6 +2374,7 @@ func init() {
           "additionalProperties": true
         },
         "integratedTime": {
+          "description": "The time the entry was added to the log as a Unix timestamp in seconds",
           "type": "integer"
         },
         "logID": {
@@ -2662,7 +2803,7 @@ func init() {
       "description": "TUF metadata",
       "type": "object",
       "required": [
-        "metadata"
+        "content"
       ],
       "properties": {
         "content": {
@@ -2920,6 +3061,144 @@ func init() {
       },
       "$schema": "http://json-schema.org/draft-07/schema",
       "$id": "http://rekor.sigstore.dev/types/cose/cose_v0_0_1_schema.json"
+    },
+    "dsse": {
+      "description": "DSSE envelope",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProposedEntry"
+        },
+        {
+          "required": [
+            "apiVersion",
+            "spec"
+          ],
+          "properties": {
+            "apiVersion": {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+            },
+            "spec": {
+              "$ref": "#/definitions/dsseSchema"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "dsseSchema": {
+      "description": "log entry schema for dsse envelopes",
+      "type": "object",
+      "title": "DSSE Schema",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/dsseV001Schema"
+        }
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/dsse/dsse_schema.json"
+    },
+    "dsseV001Schema": {
+      "description": "Schema for DSSE envelopes",
+      "type": "object",
+      "title": "DSSE v0.0.1 Schema",
+      "oneOf": [
+        {
+          "required": [
+            "proposedContent"
+          ]
+        },
+        {
+          "required": [
+            "signatures",
+            "envelopeHash",
+            "payloadHash"
+          ]
+        }
+      ],
+      "properties": {
+        "envelopeHash": {
+          "description": "Specifies the hash algorithm and value encompassing the entire envelope sent to Rekor",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value": {
+              "description": "The value of the computed digest over the entire envelope",
+              "type": "string"
+            }
+          },
+          "readOnly": true
+        },
+        "payloadHash": {
+          "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "description": "The hashing function used to compute the hash value",
+              "type": "string",
+              "enum": [
+                "sha256"
+              ]
+            },
+            "value": {
+              "description": "The value of the computed digest over the payload within the envelope",
+              "type": "string"
+            }
+          },
+          "readOnly": true
+        },
+        "proposedContent": {
+          "type": "object",
+          "required": [
+            "envelope",
+            "verifiers"
+          ],
+          "properties": {
+            "envelope": {
+              "description": "DSSE envelope specified as a stringified JSON object",
+              "type": "string",
+              "writeOnly": true
+            },
+            "verifiers": {
+              "description": "collection of all verification material (e.g. public keys or certificates) used to verify signatures over envelope's payload, specified as base64-encoded strings",
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "format": "byte"
+              },
+              "writeOnly": true
+            }
+          },
+          "writeOnly": true
+        },
+        "signatures": {
+          "description": "extracted collection of all signatures of the envelope's payload; elements will be sorted by lexicographical order of the base64 encoded signature strings",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/DSSEV001SchemaSignaturesItems0"
+          },
+          "readOnly": true
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "$id": "http://rekor.sigstore.dev/types/dsse/dsse_v0_0_1_schema.json"
     },
     "hashedrekord": {
       "description": "Hashed Rekord object",
@@ -3212,7 +3491,7 @@ func init() {
               "writeOnly": true
             },
             "hash": {
-              "description": "Specifies the hash algorithm and value encompassing the entire signed envelope",
+              "description": "Specifies the hash algorithm and value encompassing the entire signed envelope; this is computed by the rekor server, client-provided values are ignored",
               "type": "object",
               "required": [
                 "algorithm",
@@ -3234,7 +3513,7 @@ func init() {
               "readOnly": true
             },
             "payloadHash": {
-              "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope",
+              "description": "Specifies the hash algorithm and value covering the payload within the DSSE envelope; this is computed by the rekor server, client-provided values are ignored",
               "type": "object",
               "required": [
                 "algorithm",
@@ -3276,6 +3555,9 @@ func init() {
       "properties": {
         "content": {
           "type": "object",
+          "required": [
+            "envelope"
+          ],
           "properties": {
             "envelope": {
               "description": "dsse envelope",
@@ -3846,7 +4128,7 @@ func init() {
           "description": "TUF metadata",
           "type": "object",
           "required": [
-            "metadata"
+            "content"
           ],
           "properties": {
             "content": {

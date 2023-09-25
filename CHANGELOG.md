@@ -1,3 +1,210 @@
+# v1.3.0
+
+## New Features
+* feat: Support publishing new log entries to Pub/Sub topics (#1580)
+* Change values of Identity.Raw, add fingerprints (#1628)
+* Extract all subjects from SANs for x509 verifier (#1632)
+* Fix type comment for Identity struct (#1619)
+* Refactor Identities API (#1611)
+* Refactor Verifiers to return multiple keys (#1601)
+
+## Quality Enhancements
+* set min go version to 1.21 (#1651)
+* Upgrade to go1.21 (#1636)
+
+## Bug Fixes
+* Update openapi.yaml (#1655)
+* pass transient errors through retrieveLogEntry (#1653)
+* return full entryID on HTTP 409 responses (#1650)
+* Update checkpoint link (#1597)
+* Use correct log index in inclusion proof (#1599)
+* remove instrumentation library (#1595)
+* pki: clean up fuzzer (#1594)
+* alpine: add max metadata size to fuzzer (#1571)
+
+## Contributors
+* AdamKorcz
+* Appu
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Ceridwen Coghlan
+* Hayden B
+* James Alseth
+
+# v1.2.2
+
+## Quality Enhancements
+* swap killswitch for 'docker-compose restart' (#1562)
+* pass treeSize and rootHash to avoid trillian import (#1513)
+* Move github.com/sigstore/protobuf-specs users into a separate subpackage (#1511)
+
+## Bug Fixes
+* pass down error with message instead of nil (#1560)
+
+## Contributors
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Eng Zer Jun
+* Miloslav Trmač
+
+# v1.2.1
+
+## Bug Fixes
+* run go mod tidy in hack/tools (#1510)
+
+## Contributors
+* Bob Callaway
+
+# v1.2.0
+
+## Functional Enhancements
+* add client method to generate TLE struct (#1498)
+* add dsse type (#1487)
+* support other KMS providers (AWS, Azure, Hashicorp) in addition to GCP (#1488)
+* Add concurrency to backfill-redis (#1504)
+* omit informational message if machine-parseable output has been requested (#1486)
+* Publish stable checkpoint periodically to Redis (#1461)
+* Add intoto v0.0.2 to backfill script (#1500)
+* add new method to test insertability of proposed entries into log (#1410)
+
+## Quality Enhancements
+* use t.Skip() in fuzzers (#1506)
+* improve fuzzing coverage (#1499)
+* Remove watcher script (#1484)
+
+## Bug Fixes
+* Merge pull request from GHSA-frqx-jfcm-6jjr
+* Remove requirement of PayloadHash for intoto 0.0.1 (#1490)
+* fix lint errors, bump linter up to 1.52 (#1485)
+* Remove dependencies from pkg/util (#1469)
+
+## Contributors
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Ceridwen Coghlan
+* Cody Soyland
+* Hayden B
+* Miloslav Trmač
+
+# v1.1.1
+
+## Functional Enhancements
+* Refactor Trillian client with exported methods (#1454)
+* Switch to official redis-go client (#1459)
+* Remove replace in go.mod (#1444)
+* Add Rekor OID info. (#1390)
+
+## Quality Enhancements
+* remove legacy encrypted cosign key (#1446)
+* swap cjson dependency (#1441)
+* Update release readme (#1456)
+
+## Bug Fixes
+* Merge pull request from GHSA-2h5h-59f5-c5x9
+
+## Contributors
+* Billy Lynch
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Ceridwen Coghlan
+* Hayden B
+
+# v1.1.0
+
+## Functional Enhancements
+* improve validation on intoto v0.0.2 type (#1351)
+* add feature to limit HTTP request body length to process (#1334)
+* add information about the file size limit (#1313)
+* Add script to backfill Redis from Rekor (#1163)
+* Feature: add search support for sha512 (#1142)
+
+## Quality Enhancements
+* fuzzing: refactor OSS-Fuzz build script (#1377)
+* Update cloudbuild for cosign 2.0 (#1375)
+* Tests - Additional sharding tests (#1180)
+* jar type: add fuzzer for 3rd-party dep (#1360)
+* update cosign to 2.0.0 and builder image and also cosign flags (#1368)
+* fuzzing: move alpine utils to fuzz utils (#1335)
+* fuzzing: add seed for alpine fuzzer (#1342)
+* jar: add v001 fuzzer (#1327)
+* fuzzing: open writer later in fuzz utils (#1326)
+* fuzzing: remove tar operations in alpine fuzzer (#1322)
+* alpine: add v001 fuzzer (#1316)
+* hashedrekord: add v001 fuzzer (#1315)
+* fuzzing: add call to IndexKeys in multiple fuzzers (#1302)
+* fuzzing: improve cose fuzzer (#1300)
+* fuzzing: improve fuzz utils (#1298)
+* fuzzing: improve alpine fuzzer (#1273)
+* fuzzing: go mod edit go-fuzz-headers (#1272)
+* fuzzing: add .options file (#1271)
+* fuzzing: build helm fuzzer from correct dir (#1264)
+* types: refactor multiple fuzzers (#1258)
+* helm: add fuzzer for provenance unmarshalling (#1243)
+* pki: add fuzzer (#1256)
+* Fuzzing: Add more bug detectors (#1253)
+* Refactor e2e - part 5 (#1236)
+* Removed unused tool/deps (#1244)
+* Fixed the invalid path (#1245)
+* Run latest fuzzers in OSS-Fuzz (#1221)
+* Fuzz tests - hashedrekord (#1224)
+* Update builder (#1228)
+* Revamping rekor e2e - part 4 of N (#1218)
+* types: add fuzzers (#1225)
+* jar type: add fuzzer (#1215)
+* Revamping rekor e2e - part 3 of N (#1177)
+* modify OSS-Fuzz build script (#1214)
+* move over oss-fuzz build script (#1204)
+* wrap redis client errors to aid debugging (#1176)
+* don't test release candidate builds in harness (#1183)
+* types/alpine: add fuzzer (#1200)
+* logging tweaks to improve usability (#1235)
+* Add backfill-redis to the release artifacts (#1174)
+* ensure jobs run on release branches (#1181)
+* update builder image and cosign (#1165)
+* Refactor e2e tests - x509 apk (#1152)
+* Sharding - Additional tests (#1156)
+* Ran gofmt and cleaned up (#1157)
+* Fuzz - Fuzz tests for sharding (#1147)
+* Revamping rekor e2e - part 1 of N (#1089)
+
+## Bug Fixes
+* remove goroutine usage from SearchLogQuery (#1407)
+* drop log messages regarding attestation storage to debug (#1408)
+* fix ko-local build (#1381)
+* disable blocking checks (#1353)
+* fix validation for proposed vs committed log entries for intoto v0.0.1 (#1309)
+* fix: fix regex for multi-digit counts (#1321)
+* return NotFound if treesize is 0 rather than calling trillian (#1311)
+* enumerate slice to get sugared logs (#1312)
+* put a reasonable size limit on ssh key reader (#1288)
+* CLIENT: Fix Custom Host and Path Issue (#1306)
+* do not persist local state if log is empty; fail consistency proofs from 0 size (#1290)
+* correctly handle invalid or missing pki format (#1281)
+* Add Verifier to get public key/cert and identities for entry type (#1210)
+* fix goroutine leak in client; add insecure TLS option (#1238)
+* Fix - Remove the force-recreate flag (#1179)
+* trim whitespace around public keys before parsing (#1175)
+* stop inserting envelope hash for intoto:0.0.2 types into index (#1171)
+* Revert "remove double encoding of payload and signature fields for intoto (#1150)" (#1158)
+* remove double encoding of payload and signature fields for intoto (#1150)
+* fix SearchLogQuery behavior to conform to openapi spec (#1145)
+* Remove pem-certificate-chain from client (#1138)
+* fix flag type for operator in search (#1136)
+* use sigstore/community dep review (#1132)
+
+## Contributors
+* AdamKorcz
+* Batuhan Apaydın
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Fabian Kammel
+* Fredrik Skogman
+* Hayden B
+* Joyce
+* Naveen
+* Noah Kreiger
+* Priya Wadhwa
+
 # v1.0.1
 
 ## Enhancements

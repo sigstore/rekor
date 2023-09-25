@@ -85,10 +85,7 @@ var verifyCmd = &cobra.Command{
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			return fmt.Errorf("error initializing cmd line args: %s", err)
 		}
-		if err := validateArtifactPFlags(true, true); err != nil {
-			return err
-		}
-		return nil
+		return validateArtifactPFlags(true, true)
 	},
 	Run: format.WrapCmd(func(args []string) (interface{}, error) {
 		ctx := context.Background()

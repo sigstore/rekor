@@ -20,7 +20,7 @@
 package tools
 
 import (
-	_ "github.com/AdaLogics/go-fuzz-headers"
+	_ "github.com/AdamKorcz/go-fuzz-headers-1"
 	_ "github.com/go-swagger/go-swagger/cmd/swagger"
 	_ "github.com/wadey/gocovmerge"
 

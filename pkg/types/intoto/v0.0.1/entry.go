@@ -183,10 +183,18 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return v.validate()
 }
 
-func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	if v.keyObj == nil {
-		return nil, errors.New("cannot canonicalze empty key")
+		return nil, errors.New("cannot canonicalize empty key")
 	}
+	if v.IntotoObj.Content == nil {
+		return nil, errors.New("missing content")
+	}
+	if v.IntotoObj.Content.Hash == nil {
+		return nil, errors.New("missing envelope hash")
+	}
+	// PayloadHash is not present for old entries
+
 	pk, err := v.keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err
@@ -200,11 +208,14 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 				Algorithm: v.IntotoObj.Content.Hash.Algorithm,
 				Value:     v.IntotoObj.Content.Hash.Value,
 			},
-			PayloadHash: &models.IntotoV001SchemaContentPayloadHash{
-				Algorithm: v.IntotoObj.Content.PayloadHash.Algorithm,
-				Value:     v.IntotoObj.Content.PayloadHash.Value,
-			},
 		},
+	}
+	// Set PayloadHash if present
+	if v.IntotoObj.Content.PayloadHash != nil {
+		canonicalEntry.Content.PayloadHash = &models.IntotoV001SchemaContentPayloadHash{
+			Algorithm: v.IntotoObj.Content.PayloadHash.Algorithm,
+			Value:     v.IntotoObj.Content.PayloadHash.Value,
+		}
 	}
 
 	itObj := models.Intoto{}
@@ -219,10 +230,25 @@ func (v *V001Entry) validate() error {
 	// TODO handle multiple
 	pk := v.keyObj.(*x509.PublicKey)
 
-	// This also gets called in the CLI, where we won't have this data
+	// one of two cases must be true:
+	// - ProposedEntry: client gives an envelope; (client provided hash/payloadhash are ignored as they are computed server-side) OR
+	// - CommittedEntry: NO envelope and hash/payloadHash must be present
 	if v.IntotoObj.Content.Envelope == "" {
+		if v.IntotoObj.Content.Hash == nil {
+			return fmt.Errorf("missing hash value for envelope")
+		} else if err := v.IntotoObj.Content.Hash.Validate(strfmt.Default); err != nil {
+			return fmt.Errorf("validation error on envelope hash: %w", err)
+		}
+		// PayloadHash is not present for old entries
+		if v.IntotoObj.Content.PayloadHash != nil {
+			if err := v.IntotoObj.Content.PayloadHash.Validate(strfmt.Default); err != nil {
+				return fmt.Errorf("validation error on payload hash: %w", err)
+			}
+		}
+		// if there is no envelope, and hash/payloadHash are valid, then there's nothing else to do here
 		return nil
 	}
+
 	vfr, err := signature.LoadVerifier(pk.CryptoPubKey(), crypto.SHA256)
 	if err != nil {
 		return err
@@ -325,4 +351,36 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	returnVal.APIVersion = swag.String(re.APIVersion())
 
 	return &returnVal, nil
+}
+
+func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
+	if v.IntotoObj.PublicKey == nil {
+		return nil, errors.New("intoto v0.0.1 entry not initialized")
+	}
+	key, err := x509.NewPublicKey(bytes.NewReader(*v.IntotoObj.PublicKey))
+	if err != nil {
+		return nil, err
+	}
+	return []pki.PublicKey{key}, nil
+}
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.IntotoObj.Content == nil {
+		return false, errors.New("missing content property")
+	}
+	if len(v.IntotoObj.Content.Envelope) == 0 {
+		return false, errors.New("missing envelope content")
+	}
+
+	if v.IntotoObj.PublicKey == nil || len(*v.IntotoObj.PublicKey) == 0 {
+		return false, errors.New("missing publicKey content")
+	}
+
+	if v.keyObj == nil {
+		return false, errors.New("failed to parse public key")
+	}
+	if v.env.Payload == "" || v.env.PayloadType == "" || len(v.env.Signatures) == 0 {
+		return false, errors.New("invalid DSSE envelope")
+	}
+	return true, nil
 }

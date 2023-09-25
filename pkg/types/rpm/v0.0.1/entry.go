@@ -37,6 +37,7 @@ import (
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pgp"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/rpm"
@@ -368,4 +369,32 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	returnVal.Spec = re.RPMModel
 
 	return &returnVal, nil
+}
+
+func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
+	if v.RPMModel.PublicKey == nil || v.RPMModel.PublicKey.Content == nil {
+		return nil, errors.New("rpm v0.0.1 entry not initialized")
+	}
+	key, err := pgp.NewPublicKey(bytes.NewReader(*v.RPMModel.PublicKey.Content))
+	if err != nil {
+		return nil, err
+	}
+	return []pki.PublicKey{key}, nil
+}
+
+func (v V001Entry) Insertable() (bool, error) {
+	if v.RPMModel.PublicKey == nil {
+		return false, errors.New("missing publicKey property")
+	}
+	if v.RPMModel.PublicKey.Content == nil || len(*v.RPMModel.PublicKey.Content) == 0 {
+		return false, errors.New("missing publicKey content")
+	}
+
+	if v.RPMModel.Package == nil {
+		return false, errors.New("missing package property")
+	}
+	if len(v.RPMModel.Package.Content) == 0 {
+		return false, errors.New("missing package content")
+	}
+	return true, nil
 }

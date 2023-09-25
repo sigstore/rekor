@@ -94,7 +94,7 @@ func TestReadSignature(t *testing.T) {
 type BadReader struct {
 }
 
-func (br BadReader) Read(p []byte) (n int, err error) {
+func (br BadReader) Read(_ []byte) (n int, err error) {
 	return 0, errors.New("test error")
 }
 
@@ -347,6 +347,9 @@ func TestEmailAddresses(t *testing.T) {
 		caseDesc  string
 		inputFile string
 		subjects  []string
+		// number of keys in key ring
+		// verified with gpg, ignoring DSA/ElGamal keys
+		keys int
 	}
 
 	var k PublicKey
@@ -354,10 +357,10 @@ func TestEmailAddresses(t *testing.T) {
 		t.Errorf("Subjects for unitialized key should give empty slice")
 	}
 	tests := []test{
-		{caseDesc: "Valid armored public key", inputFile: "testdata/valid_armored_public.pgp", subjects: []string{}},
-		{caseDesc: "Valid armored public key with multiple subentries", inputFile: "testdata/valid_armored_complex_public.pgp", subjects: []string{"linux-packages-keymaster@google.com", "linux-packages-keymaster@google.com"}},
-		{caseDesc: "Valid binary public key", inputFile: "testdata/valid_binary_public.pgp", subjects: []string{}},
-		{caseDesc: "Valid binary public key with multiple subentries", inputFile: "testdata/valid_binary_complex_public.pgp", subjects: []string{"linux-packages-keymaster@google.com", "linux-packages-keymaster@google.com"}},
+		{caseDesc: "Valid armored public key", inputFile: "testdata/valid_armored_public.pgp", subjects: []string{}, keys: 2},
+		{caseDesc: "Valid armored public key with multiple subentries", inputFile: "testdata/valid_armored_complex_public.pgp", subjects: []string{"linux-packages-keymaster@google.com", "linux-packages-keymaster@google.com"}, keys: 4},
+		{caseDesc: "Valid binary public key", inputFile: "testdata/valid_binary_public.pgp", subjects: []string{}, keys: 2},
+		{caseDesc: "Valid binary public key with multiple subentries", inputFile: "testdata/valid_binary_complex_public.pgp", subjects: []string{"linux-packages-keymaster@google.com", "linux-packages-keymaster@google.com"}, keys: 4},
 	}
 
 	for _, tc := range tests {
@@ -387,6 +390,13 @@ func TestEmailAddresses(t *testing.T) {
 			t.Errorf("%v: Error getting subjects from keys length, got %v, expected %v", tc.caseDesc, len(subjects), len(tc.subjects))
 		}
 
+		ids, err := inputKey.Identities()
+		if err != nil {
+			t.Fatalf("%v: unexpected error getting identities: %v", tc.caseDesc, err)
+		}
+		if len(ids) != tc.keys {
+			t.Fatalf("%v: expected %d keys, got %d", tc.caseDesc, tc.keys, len(ids))
+		}
 	}
 }
 

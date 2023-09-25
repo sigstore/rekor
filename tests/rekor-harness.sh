@@ -30,7 +30,7 @@ function start_server () {
     else
         echo "turning down rekor and restarting at version $server_version"
         docker stop $(docker ps --filter name=rekor-server --format {{.ID}})
-        
+
         # Replace log in docker-compose.yml with the Tree ID we want
         search="# Uncomment this for production logging"
         replace="\"--trillian_log_server.tlog_id=$TREE_ID\","
@@ -75,7 +75,7 @@ function run_tests () {
     trap "rm -rf $REKORTMPDIR" EXIT
 
     go clean -testcache
-    if ! REKORTMPDIR=$REKORTMPDIR SERVER_VERSION=$1 CLI_VERSION=$2 go test -run TestHarness -v -tags=e2e ./tests/ ; then 
+    if ! REKORTMPDIR=$REKORTMPDIR SERVER_VERSION=$1 CLI_VERSION=$2 go test -run TestHarness -v -tags=e2e ./cmd/rekor-server/ ; then
         docker-compose logs --no-color > /tmp/docker-compose.log
         exit 1
     fi
@@ -104,10 +104,10 @@ echo $VERSIONS
 export REKOR_HARNESS_TMPDIR="$(mktemp -d -t rekor_test_harness.XXXXXX)"
 docker-compose down
 
-for server_version in $VERSIONS 
+for server_version in $VERSIONS
 do
     start_server $server_version
-    for cli_version in $VERSIONS 
+    for cli_version in $VERSIONS
     do
         echo "======================================================="
         echo "Running tests with server version $server_version and CLI version $cli_version"

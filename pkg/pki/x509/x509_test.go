@@ -19,12 +19,18 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
+	"net"
 	"net/url"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/sigstore/rekor/pkg/pki/identity"
 	"github.com/sigstore/rekor/pkg/pki/x509/testutils"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -42,14 +48,16 @@ dKtM6YKBKSo47oTKQHsCIQDDKZgal50Cd3W+lOWpNO23QGZgBhJrJ70TpcPWGEsS
 DQIhAIDIMLnq1G1Z4B2IbRRPUP3icMtscbRlmNZ2xovsM8oLAiBluZh+w+gjEQFe
 hV3wBJajnf2+r2uKTvxO8WhSf/chQQIhAKzYjX2chfvPN6hRqeGeoPpRLXS8cdxC
 A4hZJRvZgkO3
------END PRIVATE KEY-----`
+-----END PRIVATE KEY-----
+`
 
 // Extracted from above with:
 // openssl rsa -in myprivate.pem -pubout
 const pkcs1v15Pub = `-----BEGIN PUBLIC KEY-----
 MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAKCxC+eynecPG+SwpUjPuZiW1WI+BqBV
 z/xsp35Opg4+2gDWFgJFO+MZI89AV9jatCE/Q8sViPGl2fAekWLW7D8CAwEAAQ==
------END PUBLIC KEY-----`
+-----END PUBLIC KEY-----
+`
 
 // Generated with:
 // openssl ecparam -genkey -name prime256v1 > ec_private.pem
@@ -58,7 +66,8 @@ const priv = `-----BEGIN PRIVATE KEY-----
 MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgmrLtCpBdXgXLUr7o
 nSUPfo3oXMjmvuwTOjpTulIBKlKhRANCAATH6KSpTFe6uXFmW1qNEFXaO7fWPfZt
 pPZrHZ1cFykidZoURKoYXfkohJ+U/USYy8Sd8b4DMd5xDRZCnlDM0h37
------END PRIVATE KEY-----`
+-----END PRIVATE KEY-----
+`
 
 // Extracted from above with:
 // openssl ec -in ec_private.pem -pubout
@@ -72,13 +81,15 @@ baT2ax2dXBcpInWaFESqGF35KISflP1EmMvEnfG+AzHecQ0WQp5QzNId+w==
 // openssl genpkey -algorithm ED25519 -out edprivate.pem
 const ed25519Priv = `-----BEGIN PRIVATE KEY-----
 MC4CAQAwBQYDK2VwBCIEIKjlXfR/VFvO9qM9+CG2qbuSM54k8ciKWHhgNwKTgqpG
------END PRIVATE KEY-----`
+-----END PRIVATE KEY-----
+`
 
 // Extracted from above with:
 // openssl pkey -in edprivate.pem -pubout
 const ed25519Pub = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAizWek2gKgMM+bad4rVJ5nc9NsbNOba0A0BNfzOgklRs=
------END PUBLIC KEY-----`
+-----END PUBLIC KEY-----
+`
 
 const pubWithTrailingNewLine = `-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEx+ikqUxXurlxZltajRBV2ju31j32
@@ -157,6 +168,43 @@ func TestSignature_Verify(t *testing.T) {
 			if err := canonicalSig.Verify(bytes.NewReader(data), pub); err != nil {
 				t.Errorf("Signature.Verify() error = %v", err)
 			}
+
+			pubKey, _ := cryptoutils.UnmarshalPEMToPublicKey([]byte(tt.pub))
+			derKey, _ := cryptoutils.MarshalPublicKeyToDER(pubKey)
+			digest := sha256.Sum256(derKey)
+			expectedID := identity.Identity{Crypto: pubKey, Raw: derKey, Fingerprint: hex.EncodeToString(digest[:])}
+			ids, err := pub.Identities()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(ids) != 1 {
+				t.Errorf("%v: too many identities, expected 1, got %v", tt.name, len(ids))
+			}
+			switch v := ids[0].Crypto.(type) {
+			case *rsa.PublicKey:
+				if tt.name != "rsa" {
+					t.Fatalf("unexpected key, expected RSA, got %v", reflect.TypeOf(v))
+				}
+			case *ecdsa.PublicKey:
+				if tt.name != "ec" {
+					t.Fatalf("unexpected key, expected RSA, got %v", reflect.TypeOf(v))
+				}
+			case ed25519.PublicKey:
+				if tt.name != "ed25519" {
+					t.Fatalf("unexpected key, expected RSA, got %v", reflect.TypeOf(v))
+				}
+			default:
+				t.Fatalf("unexpected key type, got %v", reflect.TypeOf(v))
+			}
+			if err := cryptoutils.EqualKeys(expectedID.Crypto, ids[0].Crypto); err != nil {
+				t.Errorf("%v: public keys did not match: %v", tt.name, err)
+			}
+			if !reflect.DeepEqual(expectedID.Raw, ids[0].Raw) {
+				t.Errorf("%v: raw identities did not match, expected %v, got %v", tt.name, expectedID.Raw, ids[0].Raw)
+			}
+			if expectedID.Fingerprint != ids[0].Fingerprint {
+				t.Errorf("%v: fingerprints did not match, expected %v, got %v", tt.name, expectedID.Fingerprint, ids[0].Fingerprint)
+			}
 		})
 	}
 }
@@ -209,8 +257,9 @@ func TestSignature_VerifyFail(t *testing.T) {
 func TestPublicKeyWithCertChain(t *testing.T) {
 	rootCert, rootKey, _ := testutils.GenerateRootCa()
 	subCert, subKey, _ := testutils.GenerateSubordinateCa(rootCert, rootKey)
-	url, _ := url.Parse("https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1")
-	leafCert, leafKey, _ := testutils.GenerateLeafCert("subject@example.com", "oidc-issuer", url, subCert, subKey)
+	subjectURL, _ := url.Parse("https://github.com/slsa-framework/slsa-github-generator/.github/workflows/builder_go_slsa3.yml@refs/tags/v1.1.1")
+	leafCert, leafKey, _ := testutils.GenerateLeafCertWithSubjectAlternateNames(
+		[]string{"example.com"}, []string{"subject@example.com"}, []net.IP{{1, 1, 1, 1}}, []*url.URL{subjectURL}, "oidc-issuer", subCert, subKey)
 
 	pemCertChain, err := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, subCert, rootCert})
 	if err != nil {
@@ -233,10 +282,32 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 		t.Fatalf("expected matching subjects, expected %v, got %v", leafCert.EmailAddresses, pub.EmailAddresses())
 	}
 
-	expectedSubjects := leafCert.EmailAddresses
+	var expectedSubjects []string
+	expectedSubjects = append(expectedSubjects, leafCert.DNSNames...)
+	expectedSubjects = append(expectedSubjects, leafCert.EmailAddresses...)
+	expectedSubjects = append(expectedSubjects, leafCert.IPAddresses[0].String())
 	expectedSubjects = append(expectedSubjects, leafCert.URIs[0].String())
 	if !reflect.DeepEqual(pub.Subjects(), expectedSubjects) {
 		t.Fatalf("expected matching subjects, expected %v, got %v", expectedSubjects, pub.Subjects())
+	}
+
+	digest := sha256.Sum256(leafCert.Raw)
+	expectedID := identity.Identity{Crypto: leafCert, Raw: leafCert.Raw, Fingerprint: hex.EncodeToString((digest[:]))}
+	ids, err := pub.Identities()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ids) != 1 {
+		t.Errorf("too many identities, expected 1, got %v", len(ids))
+	}
+	if !ids[0].Crypto.(*x509.Certificate).Equal(expectedID.Crypto.(*x509.Certificate)) {
+		t.Errorf("certificates did not match")
+	}
+	if !reflect.DeepEqual(expectedID.Raw, ids[0].Raw) {
+		t.Errorf("raw identities did not match, expected %v, got %v", expectedID.Raw, ids[0].Raw)
+	}
+	if expectedID.Fingerprint != ids[0].Fingerprint {
+		t.Errorf("fingerprints did not match, expected %v, got %v", expectedID.Fingerprint, ids[0].Fingerprint)
 	}
 
 	canonicalValue, err := pub.CanonicalValue()

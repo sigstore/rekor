@@ -72,13 +72,14 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rekor-server.yaml)")
 	rootCmd.PersistentFlags().StringVar(&logType, "log_type", "dev", "logger type to use (dev/prod)")
 	rootCmd.PersistentFlags().BoolVar(&enablePprof, "enable_pprof", false, "enable pprof for profiling on port 6060")
-	rootCmd.PersistentFlags().Bool("enable_killswitch", false, "enable killswitch for TESTING ONLY on port 2345")
-	_ = rootCmd.PersistentFlags().MarkHidden("enable_killswitch")
 
 	rootCmd.PersistentFlags().String("trillian_log_server.address", "127.0.0.1", "Trillian log server address")
 	rootCmd.PersistentFlags().Uint16("trillian_log_server.port", 8090, "Trillian log server port")
 	rootCmd.PersistentFlags().Uint("trillian_log_server.tlog_id", 0, "Trillian tree id")
 	rootCmd.PersistentFlags().String("trillian_log_server.sharding_config", "", "path to config file for inactive shards, in JSON or YAML")
+
+	rootCmd.PersistentFlags().Bool("enable_stable_checkpoint", true, "publish stable checkpoints to Redis. When disabled, gossiping may not be possible if the log checkpoint updates too frequently")
+	rootCmd.PersistentFlags().Uint("publish_frequency", 5, "how often to publish a new checkpoint, in minutes")
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -92,6 +93,10 @@ func init() {
 Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().String("rekor_server.signer-passwd", "", "Password to decrypt signer private key")
 
+	rootCmd.PersistentFlags().String("rekor_server.new_entry_publisher", "", "URL for pub/sub queue to send messages to when new entries are added to the log. Ignored if not set. Supported providers: [gcppubsub]")
+	rootCmd.PersistentFlags().Bool("rekor_server.publish_events_protobuf", false, "Whether to publish events in Protobuf wire format. Applies to all enabled event types.")
+	rootCmd.PersistentFlags().Bool("rekor_server.publish_events_json", false, "Whether to publish events in CloudEvents JSON format. Applies to all enabled event types.")
+
 	rootCmd.PersistentFlags().Uint16("port", 3000, "Port to bind to")
 
 	rootCmd.PersistentFlags().Bool("enable_retrieve_api", true, "enables Redis-based index API endpoint")
@@ -104,6 +109,10 @@ Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().Int("max_attestation_size", 100*1024, "max size for attestation storage, in bytes")
 
 	rootCmd.PersistentFlags().StringSlice("enabled_api_endpoints", operationIds, "list of API endpoints to enable using operationId from openapi.yaml")
+
+	rootCmd.PersistentFlags().Uint64("max_request_body_size", 0, "maximum size for HTTP request body, in bytes; set to 0 for unlimited")
+	rootCmd.PersistentFlags().Uint64("max_jar_metadata_size", 1048576, "maximum permitted size for jar META-INF/ files, in bytes; set to 0 for unlimited")
+	rootCmd.PersistentFlags().Uint64("max_apk_metadata_size", 1048576, "maximum permitted size for apk .SIGN and .PKGINFO files, in bytes; set to 0 for unlimited")
 
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)

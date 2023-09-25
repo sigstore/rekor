@@ -18,7 +18,11 @@ package ssh
 import (
 	"fmt"
 	"io"
+	"net/http"
 
+	"github.com/asaskevich/govalidator"
+	"github.com/sigstore/rekor/pkg/pki/identity"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/crypto/ssh"
 )
@@ -48,7 +52,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOption) error {
+func (s Signature) Verify(r io.Reader, k interface{}, _ ...sigsig.VerifyOption) error {
 	if s.signature == nil {
 		return fmt.Errorf("ssh signature has not been initialized")
 	}
@@ -71,22 +75,28 @@ func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOptio
 
 // PublicKey contains an ssh PublicKey
 type PublicKey struct {
-	key ssh.PublicKey
+	key     ssh.PublicKey
+	comment string
 }
 
 // NewPublicKey implements the pki.PublicKey interface
 func NewPublicKey(r io.Reader) (*PublicKey, error) {
-	rawPub, err := io.ReadAll(r)
+	// 64K seems generous as a limit for valid SSH keys
+	// we use http.MaxBytesReader and pass nil for ResponseWriter to reuse stdlib
+	// and not reimplement this; There is a proposal for this to be fixed in 1.20
+	// https://github.com/golang/go/issues/51115
+	// TODO: switch this to stdlib once golang 1.20 comes out
+	rawPub, err := io.ReadAll(http.MaxBytesReader(nil, io.NopCloser(r), 65536))
 	if err != nil {
 		return nil, err
 	}
 
-	key, _, _, _, err := ssh.ParseAuthorizedKey(rawPub)
+	key, comment, _, _, err := ssh.ParseAuthorizedKey(rawPub)
 	if err != nil {
 		return nil, err
 	}
 
-	return &PublicKey{key: key}, nil
+	return &PublicKey{key: key, comment: comment}, nil
 }
 
 // CanonicalValue implements the pki.PublicKey interface
@@ -99,10 +109,28 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 
 // EmailAddresses implements the pki.PublicKey interface
 func (k PublicKey) EmailAddresses() []string {
+	if govalidator.IsEmail(k.comment) {
+		return []string{k.comment}
+	}
 	return nil
 }
 
 // Subjects implements the pki.PublicKey interface
 func (k PublicKey) Subjects() []string {
-	return nil
+	return k.EmailAddresses()
+}
+
+// Identities implements the pki.PublicKey interface
+func (k PublicKey) Identities() ([]identity.Identity, error) {
+	key := k.key.(ssh.CryptoPublicKey).CryptoPublicKey()
+	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(key)
+	if err != nil {
+		return nil, err
+	}
+	fp := ssh.FingerprintSHA256(k.key)
+	return []identity.Identity{{
+		Crypto:      k.key,
+		Raw:         pkixKey,
+		Fingerprint: fp,
+	}}, nil
 }

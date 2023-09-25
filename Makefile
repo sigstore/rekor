@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: all test clean clean-gen lint gosec ko ko-local sign-container cross-cli gocovmerge
+.PHONY: all test clean clean-gen lint gosec ko ko-local cross-cli gocovmerge
 
 all: rekor-cli rekor-server
 
@@ -65,8 +65,8 @@ SERVER_LDFLAGS=$(REKOR_LDFLAGS)
 
 Makefile.swagger: $(SWAGGER) $(OPENAPIDEPS)
 	$(SWAGGER) validate openapi.yaml
-	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --additional-initialism=TUF
-	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A rekor_server --flag-strategy=pflag --default-produces application/json --additional-initialism=TUF
+	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --additional-initialism=TUF --additional-initialism=DSSE
+	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A rekor_server --flag-strategy=pflag --default-produces application/json --additional-initialism=TUF --additional-initialism=DSSE
 	@echo "# This file is generated after swagger runs as part of the build; do not edit!" > Makefile.swagger
 	@echo "SWAGGER_GEN=`find pkg/generated/client pkg/generated/models pkg/generated/restapi -iname '*.go' | grep -v 'configure_rekor_server' | sort -d | tr '\n' ' ' | sed 's/ $$//'`" >> Makefile.swagger;
 
@@ -83,7 +83,7 @@ rekor-server: $(SRCS)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o rekor-server ./cmd/rekor-server
 
 backfill-redis: $(SRCS)
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o rekor-server ./cmd/backfill-redis
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o backfill-redis ./cmd/backfill-redis
 
 test:
 	go test ./...
@@ -135,30 +135,26 @@ e2e:
 	go test -c -tags=e2e ./pkg/pki/tuf
 	go test -c -tags=e2e ./pkg/types/rekord
 
-sign-container: ko
-	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
-	cosign sign --key .github/workflows/cosign.key -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-cli:$(GIT_HASH)
-
 .PHONY: sign-keyless-ci
 sign-keyless-ci: ko
-	cosign sign --force -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
-	cosign sign --force -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-cli:$(GIT_HASH)
+	cosign sign --yes -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
+	cosign sign --yes -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-cli:$(GIT_HASH)
 
 .PHONY: ko-local
 ko-local:
-	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local --image-refs rekorImagerefs \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs rekorImagerefs \
 		github.com/sigstore/rekor/cmd/rekor-server
 
-	LDFLAGS="$(CLI_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=ko.local LDFLAGS="$(CLI_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local --image-refs cliImagerefs \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs cliImagerefs \
 		github.com/sigstore/rekor/cmd/rekor-cli
 
-	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --local --image-refs redisImagerefs \
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs redisImagerefs \
 		github.com/sigstore/rekor/cmd/backfill-redis
 
 # This builds the trillian containers we rely on using ko for cross platform support

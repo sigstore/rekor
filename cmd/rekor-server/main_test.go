@@ -21,6 +21,6 @@ import (
 	"github.com/sigstore/rekor/cmd/rekor-server/app"
 )
 
-func TestCover(t *testing.T) {
+func TestCover(_ *testing.T) {
 	app.Execute()
 }

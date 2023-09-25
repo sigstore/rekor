@@ -38,11 +38,11 @@ func (e InvalidEntry) Kind() string {
 
 func (e InvalidEntry) SetKind(string) {}
 
-func (e InvalidEntry) Validate(formats strfmt.Registry) error {
+func (e InvalidEntry) Validate(_ strfmt.Registry) error {
 	return nil
 }
 
-func (e InvalidEntry) ContextValidate(context context.Context, formats strfmt.Registry) error {
+func (e InvalidEntry) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -57,11 +57,11 @@ func (e UnmarshalErrorValidEntry) Kind() string {
 
 func (e UnmarshalErrorValidEntry) SetKind(string) {}
 
-func (e UnmarshalErrorValidEntry) Validate(formats strfmt.Registry) error {
+func (e UnmarshalErrorValidEntry) Validate(_ strfmt.Registry) error {
 	return errors.New("invalid content")
 }
 
-func (e UnmarshalErrorValidEntry) ContextValidate(context context.Context, formats strfmt.Registry) error {
+func (e UnmarshalErrorValidEntry) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

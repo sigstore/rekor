@@ -33,14 +33,18 @@ import (
 	ttypes "github.com/google/trillian/types"
 	"github.com/spf13/viper"
 	"github.com/transparency-dev/merkle/rfc6962"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/grpc/codes"
 
+	"github.com/sigstore/rekor/pkg/events"
+	"github.com/sigstore/rekor/pkg/events/newentry"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pubsub"
 	"github.com/sigstore/rekor/pkg/sharding"
+	"github.com/sigstore/rekor/pkg/tle"
+	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/util"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -68,7 +72,7 @@ func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEnt
 }
 
 // logEntryFromLeaf creates a signed LogEntry struct from trillian structs
-func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianClient, leaf *trillian.LogLeaf,
+func logEntryFromLeaf(ctx context.Context, signer signature.Signer, _ trillianclient.TrillianClient, leaf *trillian.LogLeaf,
 	signedLogRoot *trillian.SignedLogRoot, proof *trillian.Proof, tid int64, ranges sharding.LogRanges) (models.LogEntry, error) {
 
 	log.ContextLogger(ctx).Debugf("log entry from leaf %d", leaf.GetLeafIndex())
@@ -94,7 +98,7 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, tc TrillianC
 		return nil, fmt.Errorf("signing entry error: %w", err)
 	}
 
-	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tc.logID, root, api.signer)
+	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tid, root.TreeSize, root.RootHash, api.signer)
 	if err != nil {
 		return nil, err
 	}
@@ -187,23 +191,30 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalEntry)
 	}
 
-	tc := NewTrillianClient(ctx)
+	tc := trillianclient.NewTrillianClient(ctx, api.logClient, api.logID)
 
-	resp := tc.addLeaf(leaf)
+	resp := tc.AddLeaf(leaf)
 	// this represents overall GRPC response state (not the results of insertion into the log)
-	if resp.status != codes.OK {
-		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.err), trillianUnexpectedResult)
+	if resp.Status != codes.OK {
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.Err), trillianUnexpectedResult)
 	}
 
 	// this represents the results of inserting the proposed leaf into the log; status is nil in success path
-	insertionStatus := resp.getAddResult.QueuedLeaf.Status
+	insertionStatus := resp.GetAddResult.QueuedLeaf.Status
 	if insertionStatus != nil {
 		switch insertionStatus.Code {
 		case int32(code.Code_OK):
 		case int32(code.Code_ALREADY_EXISTS), int32(code.Code_FAILED_PRECONDITION):
 			existingUUID := hex.EncodeToString(rfc6962.DefaultHasher.HashLeaf(leaf))
-			err := fmt.Errorf("grpc error: %v", insertionStatus.String())
-			return nil, handleRekorAPIError(params, http.StatusConflict, err, fmt.Sprintf(entryAlreadyExists, existingUUID), "entryURL", getEntryURL(*params.HTTPRequest.URL, existingUUID))
+			activeTree := fmt.Sprintf("%x", api.logID)
+			entryIDstruct, err := sharding.CreateEntryIDFromParts(activeTree, existingUUID)
+			if err != nil {
+				err := fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, existingUUID, err)
+				return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, fmt.Sprintf(validationError, err))
+			}
+			existingEntryID := entryIDstruct.ReturnEntryIDString()
+			err = fmt.Errorf("grpc error: %v", insertionStatus.String())
+			return nil, handleRekorAPIError(params, http.StatusConflict, err, fmt.Sprintf(entryAlreadyExists, existingEntryID), "entryURL", getEntryURL(*params.HTTPRequest.URL, existingEntryID))
 		default:
 			err := fmt.Errorf("grpc error: %v", insertionStatus.String())
 			return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
@@ -213,10 +224,10 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	// We made it this far, that means the entry was successfully added.
 	metricNewEntries.Inc()
 
-	queuedLeaf := resp.getAddResult.QueuedLeaf.Leaf
+	queuedLeaf := resp.GetAddResult.QueuedLeaf.Leaf
 
 	uuid := hex.EncodeToString(queuedLeaf.GetMerkleLeafHash())
-	activeTree := fmt.Sprintf("%x", tc.logID)
+	activeTree := fmt.Sprintf("%x", api.logID)
 	entryIDstruct, err := sharding.CreateEntryIDFromParts(activeTree, uuid)
 	if err != nil {
 		err := fmt.Errorf("error creating EntryID from active treeID %v and uuid %v: %w", activeTree, uuid, err)
@@ -255,9 +266,9 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 				go func() {
 					if err := storeAttestation(context.Background(), attKey, attVal); err != nil {
 						// entryIDstruct.UUID
-						log.ContextLogger(ctx).Errorf("error storing attestation: %s", err)
+						log.ContextLogger(ctx).Debugf("error storing attestation: %s", err)
 					} else {
-						log.ContextLogger(ctx).Infof("stored attestation for uuid %s with filename %s", entryIDstruct.UUID, attKey)
+						log.ContextLogger(ctx).Debugf("stored attestation for uuid %s with filename %s", entryIDstruct.UUID, attKey)
 					}
 				}()
 			} else {
@@ -272,15 +283,15 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	}
 
 	root := &ttypes.LogRootV1{}
-	if err := root.UnmarshalBinary(resp.getLeafAndProofResult.SignedLogRoot.LogRoot); err != nil {
+	if err := root.UnmarshalBinary(resp.GetLeafAndProofResult.SignedLogRoot.LogRoot); err != nil {
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("error unmarshalling log root: %v", err), sthGenerateError)
 	}
 	hashes := []string{}
-	for _, hash := range resp.getLeafAndProofResult.Proof.Hashes {
+	for _, hash := range resp.GetLeafAndProofResult.Proof.Hashes {
 		hashes = append(hashes, hex.EncodeToString(hash))
 	}
 
-	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tc.logID, root, api.signer)
+	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), api.logID, root.TreeSize, root.RootHash, api.signer)
 	if err != nil {
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, sthGenerateError)
 	}
@@ -290,7 +301,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		RootHash:   swag.String(hex.EncodeToString(root.RootHash)),
 		LogIndex:   swag.Int64(queuedLeaf.LeafIndex),
 		Hashes:     hashes,
-		Checkpoint: stringPointer(string(scBytes)),
+		Checkpoint: swag.String(string(scBytes)),
 	}
 
 	logEntryAnon.Verification = &models.LogEntryAnonVerification{
@@ -301,7 +312,64 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	logEntry := models.LogEntry{
 		entryID: logEntryAnon,
 	}
+
+	if api.newEntryPublisher != nil {
+		// Publishing notifications should not block the API response.
+		go func() {
+			verifiers, err := entry.Verifiers()
+			if err != nil {
+				incPublishEvent(newentry.Name, "", false)
+				log.ContextLogger(ctx).Errorf("Could not get verifiers for log entry %s: %v", entryID, err)
+				return
+			}
+			var subjects []string
+			for _, v := range verifiers {
+				subjects = append(subjects, v.Subjects()...)
+			}
+
+			pbEntry, err := tle.GenerateTransparencyLogEntry(logEntryAnon)
+			if err != nil {
+				incPublishEvent(newentry.Name, "", false)
+				log.ContextLogger(ctx).Error(err)
+				return
+			}
+			event, err := newentry.New(entryID, pbEntry, subjects)
+			if err != nil {
+				incPublishEvent(newentry.Name, "", false)
+				log.ContextLogger(ctx).Error(err)
+				return
+			}
+			if viper.GetBool("rekor_server.publish_events_protobuf") {
+				go publishEvent(ctx, api.newEntryPublisher, event, events.ContentTypeProtobuf)
+			}
+			if viper.GetBool("rekor_server.publish_events_json") {
+				go publishEvent(ctx, api.newEntryPublisher, event, events.ContentTypeJSON)
+			}
+		}()
+	}
+
 	return logEntry, nil
+}
+
+func publishEvent(ctx context.Context, publisher pubsub.Publisher, event *events.Event, contentType events.EventContentType) {
+	err := publisher.Publish(context.WithoutCancel(ctx), event, contentType)
+	incPublishEvent(event.Type().Name(), contentType, err == nil)
+	if err != nil {
+		log.ContextLogger(ctx).Error(err)
+	}
+}
+
+func incPublishEvent(event string, contentType events.EventContentType, ok bool) {
+	status := "SUCCESS"
+	if !ok {
+		status = "ERROR"
+	}
+	labels := map[string]string{
+		"event":        event,
+		"status":       status,
+		"content_type": string(contentType),
+	}
+	metricPublishEvents.With(labels).Inc()
 }
 
 // CreateLogEntryHandler creates new entry into log
@@ -342,7 +410,7 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 		if _, ok := (err).(types.ValidationError); ok {
 			return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("incorrectly formatted uuid %s", params.EntryUUID), params.EntryUUID)
 		}
-		return handleRekorAPIError(params, http.StatusInternalServerError, err, "ID %s not found in any known trees", params.EntryUUID)
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianCommunicationError)
 	}
 	return entries.NewGetLogEntryByUUIDOK().WithPayload(logEntry)
 }
@@ -358,8 +426,6 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	}
 
 	if len(params.Entry.EntryUUIDs) > 0 || len(params.Entry.Entries()) > 0 {
-		g, _ := errgroup.WithContext(httpReqCtx)
-
 		var searchHashes [][]byte
 		for _, entryID := range params.Entry.EntryUUIDs {
 			// if we got this far, then entryID is either a 64 or 80 character hex string
@@ -389,67 +455,44 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		}
 
 		entries := params.Entry.Entries()
-		searchHashesChan := make(chan []byte, len(entries))
 		for _, e := range entries {
-			e := e // https://golang.org/doc/faq#closures_and_goroutines
-			g.Go(func() error {
-				entry, err := types.UnmarshalEntry(e)
-				if err != nil {
-					return fmt.Errorf("unmarshalling entry: %w", err)
-				}
+			entry, err := types.UnmarshalEntry(e)
+			if err != nil {
+				return handleRekorAPIError(params, http.StatusBadRequest, fmt.Errorf("unmarshalling entry: %w", err), err.Error())
+			}
 
-				leaf, err := types.CanonicalizeEntry(httpReqCtx, entry)
-				if err != nil {
-					return fmt.Errorf("canonicalizing entry: %w", err)
-				}
-				hasher := rfc6962.DefaultHasher
-				leafHash := hasher.HashLeaf(leaf)
-				searchHashesChan <- leafHash
-				return nil
-			})
-		}
-
-		if err := g.Wait(); err != nil {
-			return handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
-		}
-		close(searchHashesChan)
-		for hash := range searchHashesChan {
-			searchHashes = append(searchHashes, hash)
+			leaf, err := types.CanonicalizeEntry(httpReqCtx, entry)
+			if err != nil {
+				return handleRekorAPIError(params, http.StatusBadRequest, fmt.Errorf("canonicalizing entry: %w", err), err.Error())
+			}
+			hasher := rfc6962.DefaultHasher
+			leafHash := hasher.HashLeaf(leaf)
+			searchHashes = append(searchHashes, leafHash)
 		}
 
 		searchByHashResults := make([]map[int64]*trillian.GetEntryAndProofResponse, len(searchHashes))
-		g, _ = errgroup.WithContext(httpReqCtx)
 		for i, hash := range searchHashes {
-			i, hash := i, hash // https://golang.org/doc/faq#closures_and_goroutines
-			g.Go(func() error {
-				var results map[int64]*trillian.GetEntryAndProofResponse
-				for _, shard := range api.logRanges.AllShards() {
-					tcs := NewTrillianClientFromTreeID(httpReqCtx, shard)
-					resp := tcs.getLeafAndProofByHash(hash)
-					switch resp.status {
-					case codes.OK:
-						leafResult := resp.getLeafAndProofResult
-						if leafResult != nil && leafResult.Leaf != nil {
-							if results == nil {
-								results = map[int64]*trillian.GetEntryAndProofResponse{}
-							}
-							results[shard] = resp.getLeafAndProofResult
+			var results map[int64]*trillian.GetEntryAndProofResponse
+			for _, shard := range api.logRanges.AllShards() {
+				tcs := trillianclient.NewTrillianClient(httpReqCtx, api.logClient, shard)
+				resp := tcs.GetLeafAndProofByHash(hash)
+				switch resp.Status {
+				case codes.OK:
+					leafResult := resp.GetLeafAndProofResult
+					if leafResult != nil && leafResult.Leaf != nil {
+						if results == nil {
+							results = map[int64]*trillian.GetEntryAndProofResponse{}
 						}
-					case codes.NotFound:
-						// do nothing here, do not throw 404 error
-						continue
-					default:
-						log.ContextLogger(httpReqCtx).Errorf("error getLeafAndProofByHash(%s): code: %v, msg %v", hex.EncodeToString(hash), resp.status, resp.err)
-						return fmt.Errorf(trillianCommunicationError)
+						results[shard] = resp.GetLeafAndProofResult
 					}
+				case codes.NotFound:
+					// do nothing here, do not throw 404 error
+					continue
+				default:
+					return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("error getLeafAndProofByHash(%s): code: %v, msg %v", hex.EncodeToString(hash), resp.Status, resp.Err), trillianCommunicationError)
 				}
-				searchByHashResults[i] = results
-				return nil
-			})
-		}
-
-		if err := g.Wait(); err != nil {
-			return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
+			}
+			searchByHashResults[i] = results
 		}
 
 		for _, hashMap := range searchByHashResults {
@@ -457,7 +500,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 				if leafResp == nil {
 					continue
 				}
-				tcs := NewTrillianClientFromTreeID(httpReqCtx, shard)
+				tcs := trillianclient.NewTrillianClient(httpReqCtx, api.logClient, shard)
 				logEntry, err := logEntryFromLeaf(httpReqCtx, api.signer, tcs, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof, shard, api.logRanges)
 				if err != nil {
 					return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
@@ -468,28 +511,13 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 	}
 
 	if len(params.Entry.LogIndexes) > 0 {
-		g, _ := errgroup.WithContext(httpReqCtx)
-		resultPayloadChan := make(chan models.LogEntry, len(params.Entry.LogIndexes))
-
 		for _, logIndex := range params.Entry.LogIndexes {
-			logIndex := logIndex // https://golang.org/doc/faq#closures_and_goroutines
-			g.Go(func() error {
-				logEntry, err := retrieveLogEntryByIndex(httpReqCtx, int(swag.Int64Value(logIndex)))
-				if err != nil && !errors.Is(err, ErrNotFound) {
-					return err
-				} else if err == nil {
-					resultPayloadChan <- logEntry
-				}
-				return nil
-			})
-		}
-
-		if err := g.Wait(); err != nil {
-			return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
-		}
-		close(resultPayloadChan)
-		for result := range resultPayloadChan {
-			resultPayload = append(resultPayload, result)
+			logEntry, err := retrieveLogEntryByIndex(httpReqCtx, int(swag.Int64Value(logIndex)))
+			if err != nil && !errors.Is(err, ErrNotFound) {
+				return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
+			} else if err == nil {
+				resultPayload = append(resultPayload, logEntry)
+			}
 		}
 	}
 
@@ -502,19 +530,19 @@ func retrieveLogEntryByIndex(ctx context.Context, logIndex int) (models.LogEntry
 	log.ContextLogger(ctx).Infof("Retrieving log entry by index %d", logIndex)
 
 	tid, resolvedIndex := api.logRanges.ResolveVirtualIndex(logIndex)
-	tc := NewTrillianClientFromTreeID(ctx, tid)
+	tc := trillianclient.NewTrillianClient(ctx, api.logClient, tid)
 	log.ContextLogger(ctx).Debugf("Retrieving resolved index %v from TreeID %v", resolvedIndex, tid)
 
-	resp := tc.getLeafAndProofByIndex(resolvedIndex)
-	switch resp.status {
+	resp := tc.GetLeafAndProofByIndex(resolvedIndex)
+	switch resp.Status {
 	case codes.OK:
 	case codes.NotFound, codes.OutOfRange, codes.InvalidArgument:
 		return models.LogEntry{}, ErrNotFound
 	default:
-		return models.LogEntry{}, fmt.Errorf("grpc err: %w: %s", resp.err, trillianCommunicationError)
+		return models.LogEntry{}, fmt.Errorf("grpc err: %w: %s", resp.Err, trillianCommunicationError)
 	}
 
-	result := resp.getLeafAndProofResult
+	result := resp.GetLeafAndProofResult
 	leaf := result.Leaf
 	if leaf == nil {
 		return models.LogEntry{}, ErrNotFound
@@ -548,7 +576,10 @@ func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, e
 		for _, t := range trees {
 			logEntry, err := retrieveUUIDFromTree(ctx, uuid, t.TreeID)
 			if err != nil {
-				continue
+				if errors.Is(err, ErrNotFound) {
+					continue
+				}
+				return nil, err
 			}
 			return logEntry, nil
 		}
@@ -566,35 +597,39 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 		return models.LogEntry{}, types.ValidationError(err)
 	}
 
-	tc := NewTrillianClientFromTreeID(ctx, tid)
+	tc := trillianclient.NewTrillianClient(ctx, api.logClient, tid)
 	log.ContextLogger(ctx).Debugf("Attempting to retrieve UUID %v from TreeID %v", uuid, tid)
 
-	resp := tc.getLeafAndProofByHash(hashValue)
-	switch resp.status {
+	resp := tc.GetLeafAndProofByHash(hashValue)
+	switch resp.Status {
 	case codes.OK:
-		result := resp.getLeafAndProofResult
-		leaf := result.Leaf
-		if leaf == nil {
-			return models.LogEntry{}, ErrNotFound
+		result := resp.GetLeafAndProofResult
+		if resp.Err != nil {
+			// this shouldn't be possible since GetLeafAndProofByHash verifies the inclusion proof using a computed leaf hash
+			// so this is just a defensive check
+			if result.Leaf == nil {
+				return models.LogEntry{}, ErrNotFound
+			}
+			return models.LogEntry{}, err
 		}
 
-		logEntry, err := logEntryFromLeaf(ctx, api.signer, tc, leaf, result.SignedLogRoot, result.Proof, tid, api.logRanges)
+		logEntry, err := logEntryFromLeaf(ctx, api.signer, tc, result.Leaf, result.SignedLogRoot, result.Proof, tid, api.logRanges)
 		if err != nil {
-			return models.LogEntry{}, errors.New("could not create log entry from leaf")
+			return models.LogEntry{}, fmt.Errorf("could not create log entry from leaf: %w", err)
 		}
 		return logEntry, nil
 
 	case codes.NotFound:
 		return models.LogEntry{}, ErrNotFound
 	default:
-		log.ContextLogger(ctx).Errorf("Unexpected response code while attempting to retrieve UUID %v from TreeID %v: %v", uuid, tid, resp.status)
+		log.ContextLogger(ctx).Errorf("Unexpected response code while attempting to retrieve UUID %v from TreeID %v: %v", uuid, tid, resp.Status)
 		return models.LogEntry{}, errors.New("unexpected error")
 	}
 }
 
 // handlers for APIs that may be disabled in a given instance
 
-func CreateLogEntryNotImplementedHandler(params entries.CreateLogEntryParams) middleware.Responder {
+func CreateLogEntryNotImplementedHandler(_ entries.CreateLogEntryParams) middleware.Responder {
 	err := &models.Error{
 		Code:    http.StatusNotImplemented,
 		Message: "Create Entry API not enabled in this Rekor instance",
@@ -603,7 +638,7 @@ func CreateLogEntryNotImplementedHandler(params entries.CreateLogEntryParams) mi
 	return entries.NewCreateLogEntryDefault(http.StatusNotImplemented).WithPayload(err)
 }
 
-func GetLogEntryByIndexNotImplementedHandler(params entries.GetLogEntryByIndexParams) middleware.Responder {
+func GetLogEntryByIndexNotImplementedHandler(_ entries.GetLogEntryByIndexParams) middleware.Responder {
 	err := &models.Error{
 		Code:    http.StatusNotImplemented,
 		Message: "Get Log Entry by Index API not enabled in this Rekor instance",
@@ -612,7 +647,7 @@ func GetLogEntryByIndexNotImplementedHandler(params entries.GetLogEntryByIndexPa
 	return entries.NewGetLogEntryByIndexDefault(http.StatusNotImplemented).WithPayload(err)
 }
 
-func GetLogEntryByUUIDNotImplementedHandler(params entries.GetLogEntryByUUIDParams) middleware.Responder {
+func GetLogEntryByUUIDNotImplementedHandler(_ entries.GetLogEntryByUUIDParams) middleware.Responder {
 	err := &models.Error{
 		Code:    http.StatusNotImplemented,
 		Message: "Get Log Entry by UUID API not enabled in this Rekor instance",
@@ -621,7 +656,7 @@ func GetLogEntryByUUIDNotImplementedHandler(params entries.GetLogEntryByUUIDPara
 	return entries.NewGetLogEntryByUUIDDefault(http.StatusNotImplemented).WithPayload(err)
 }
 
-func SearchLogQueryNotImplementedHandler(params entries.SearchLogQueryParams) middleware.Responder {
+func SearchLogQueryNotImplementedHandler(_ entries.SearchLogQueryParams) middleware.Responder {
 	err := &models.Error{
 		Code:    http.StatusNotImplemented,
 		Message: "Search Log Query API not enabled in this Rekor instance",

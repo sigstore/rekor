@@ -17,12 +17,17 @@ package minisign
 
 import (
 	"bytes"
+	"crypto/ed25519"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strings"
 
 	minisign "github.com/jedisct1/go-minisign"
+	"github.com/sigstore/rekor/pkg/pki/identity"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/crypto/blake2b"
 )
@@ -114,7 +119,7 @@ func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOptio
 		r = bytes.NewReader(h.Sum(nil))
 	}
 
-	return verifier.VerifySignature(bytes.NewReader(s.signature.Signature[:]), r)
+	return verifier.VerifySignature(bytes.NewReader(s.signature.Signature[:]), r, opts...)
 }
 
 // PublicKey Public Key that follows the minisign standard; supports signify and minisign public keys
@@ -181,4 +186,19 @@ func (k PublicKey) EmailAddresses() []string {
 // Subjects implements the pki.PublicKey interface
 func (k PublicKey) Subjects() []string {
 	return nil
+}
+
+// Identities implements the pki.PublicKey interface
+func (k PublicKey) Identities() ([]identity.Identity, error) {
+	// PKIX encode ed25519 public key
+	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(ed25519.PublicKey(k.key.PublicKey[:]))
+	if err != nil {
+		return nil, err
+	}
+	digest := sha256.Sum256(pkixKey)
+	return []identity.Identity{{
+		Crypto:      k.key,
+		Raw:         pkixKey,
+		Fingerprint: hex.EncodeToString(digest[:]),
+	}}, nil
 }

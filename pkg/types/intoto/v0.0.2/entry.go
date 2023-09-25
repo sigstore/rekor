@@ -32,12 +32,14 @@ import (
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/spf13/viper"
+	"golang.org/x/exp/slices"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/intoto"
@@ -77,7 +79,10 @@ func (v V002Entry) IndexKeys() ([]string, error) {
 	}
 
 	for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
-		keyObj, err := x509.NewPublicKey(bytes.NewReader(sig.PublicKey))
+		if sig == nil || sig.PublicKey == nil {
+			return result, errors.New("malformed or missing signature")
+		}
+		keyObj, err := x509.NewPublicKey(bytes.NewReader(*sig.PublicKey))
 		if err != nil {
 			return result, err
 		}
@@ -181,13 +186,17 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	allPubKeyBytes := make([][]byte, 0)
-	for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
+	for i, sig := range v.IntotoObj.Content.Envelope.Signatures {
+		if sig == nil {
+			v.IntotoObj.Content.Envelope.Signatures = slices.Delete(v.IntotoObj.Content.Envelope.Signatures, i, i)
+			continue
+		}
 		env.Signatures = append(env.Signatures, dsse.Signature{
 			KeyID: sig.Keyid,
-			Sig:   string(sig.Sig),
+			Sig:   string(*sig.Sig),
 		})
 
-		allPubKeyBytes = append(allPubKeyBytes, sig.PublicKey)
+		allPubKeyBytes = append(allPubKeyBytes, *sig.PublicKey)
 	}
 
 	if _, err := verifyEnvelope(allPubKeyBytes, env); err != nil {
@@ -210,7 +219,30 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 	return nil
 }
 
-func (v *V002Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+func (v *V002Entry) Canonicalize(_ context.Context) ([]byte, error) {
+	if err := v.IntotoObj.Validate(strfmt.Default); err != nil {
+		return nil, err
+	}
+
+	if v.IntotoObj.Content.Hash == nil {
+		return nil, errors.New("missing envelope digest")
+	}
+
+	if err := v.IntotoObj.Content.Hash.Validate(strfmt.Default); err != nil {
+		return nil, fmt.Errorf("error validating envelope digest: %w", err)
+	}
+
+	if v.IntotoObj.Content.PayloadHash == nil {
+		return nil, errors.New("missing payload digest")
+	}
+
+	if err := v.IntotoObj.Content.PayloadHash.Validate(strfmt.Default); err != nil {
+		return nil, fmt.Errorf("error validating payload digest: %w", err)
+	}
+
+	if len(v.IntotoObj.Content.Envelope.Signatures) == 0 {
+		return nil, errors.New("missing signatures")
+	}
 
 	canonicalEntry := models.IntotoV002Schema{
 		Content: &models.IntotoV002SchemaContent{
@@ -270,7 +302,7 @@ func (v *verifier) Public() crypto.PublicKey {
 	return nil
 }
 
-func (v *verifier) Sign(data []byte) (sig []byte, err error) {
+func (v *verifier) Sign(_ context.Context, data []byte) (sig []byte, err error) {
 	if v.s == nil {
 		return nil, errors.New("nil signer")
 	}
@@ -281,7 +313,7 @@ func (v *verifier) Sign(data []byte) (sig []byte, err error) {
 	return sig, nil
 }
 
-func (v *verifier) Verify(data, sig []byte) error {
+func (v *verifier) Verify(_ context.Context, data, sig []byte) error {
 	if v.v == nil {
 		return errors.New("nil verifier")
 	}
@@ -357,10 +389,11 @@ func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		}
 
 		keyBytes := strfmt.Base64(canonKey)
+		sigBytes := strfmt.Base64([]byte(sig.Sig))
 		re.IntotoObj.Content.Envelope.Signatures = append(re.IntotoObj.Content.Envelope.Signatures, &models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 			Keyid:     sig.KeyID,
-			Sig:       strfmt.Base64([]byte(sig.Sig)),
-			PublicKey: keyBytes,
+			Sig:       &sigBytes,
+			PublicKey: &keyBytes,
 		})
 	}
 
@@ -406,7 +439,7 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 			return nil, fmt.Errorf("could not use public key as a dsse verifier: %w", err)
 		}
 
-		accepted, err := dsseVfr.Verify(env)
+		accepted, err := dsseVfr.Verify(context.Background(), env)
 		if err != nil {
 			return nil, fmt.Errorf("could not verify envelope: %w", err)
 		}
@@ -422,4 +455,62 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 	}
 
 	return verifierBySig, nil
+}
+
+func (v V002Entry) Verifiers() ([]pki.PublicKey, error) {
+	if v.IntotoObj.Content == nil || v.IntotoObj.Content.Envelope == nil {
+		return nil, errors.New("intoto v0.0.2 entry not initialized")
+	}
+
+	sigs := v.IntotoObj.Content.Envelope.Signatures
+	if len(sigs) == 0 {
+		return nil, errors.New("no signatures found on intoto entry")
+	}
+
+	var keys []pki.PublicKey
+	for _, s := range v.IntotoObj.Content.Envelope.Signatures {
+		key, err := x509.NewPublicKey(bytes.NewReader(*s.PublicKey))
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, key)
+	}
+	return keys, nil
+}
+
+func (v V002Entry) Insertable() (bool, error) {
+	if v.IntotoObj.Content == nil {
+		return false, errors.New("missing content property")
+	}
+	if v.IntotoObj.Content.Envelope == nil {
+		return false, errors.New("missing envelope property")
+	}
+	if len(v.IntotoObj.Content.Envelope.Payload) == 0 {
+		return false, errors.New("missing envelope content")
+	}
+
+	if v.IntotoObj.Content.Envelope.PayloadType == nil || len(*v.IntotoObj.Content.Envelope.PayloadType) == 0 {
+		return false, errors.New("missing payloadType content")
+	}
+
+	if len(v.IntotoObj.Content.Envelope.Signatures) == 0 {
+		return false, errors.New("missing signatures content")
+	}
+	for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
+		if sig == nil {
+			return false, errors.New("missing signature entry")
+		}
+		if sig.Sig == nil || len(*sig.Sig) == 0 {
+			return false, errors.New("missing signature content")
+		}
+		if sig.PublicKey == nil || len(*sig.PublicKey) == 0 {
+			return false, errors.New("missing publicKey content")
+		}
+	}
+
+	if v.env.Payload == "" || v.env.PayloadType == "" || len(v.env.Signatures) == 0 {
+		return false, errors.New("invalid DSSE envelope")
+	}
+
+	return true, nil
 }

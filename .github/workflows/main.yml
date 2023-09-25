@@ -30,13 +30,13 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+      - uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
           go-version: ${{ env.GOVERSION }}
 
@@ -47,23 +47,23 @@ jobs:
       - name: Test
         run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
       - name: Upload Coverage Report
-        uses: codecov/codecov-action@d9f34f8cd5cb3b3eb79b3e4b5dae3a16df499a70 # v3.1.1
+        uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d # v3.1.4
         with:
           flags: unittests
       - name: Ensure no files were modified as a result of the build
         run: git update-index --refresh && git diff-index --quiet HEAD -- || git diff --exit-code
 
   container-build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+      - uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
           go-version: ${{ env.GOVERSION }}
 
-      - uses: imjasonh/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
+      - uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
 
       - name: container
         run: |
@@ -73,16 +73,18 @@ jobs:
           docker run --rm $(cat redisImagerefs) --version
 
   e2e:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: build
 
     steps:
       - name: download minisign
-        run: sudo add-apt-repository ppa:dysfunctionalprogramming/minisign && sudo apt-get update && sudo apt-get install minisign
-      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+        # run: sudo add-apt-repository ppa:dysfunctionalprogramming/minisign && sudo apt-get update && sudo apt-get install minisign
+        run: sudo add-apt-repository ppa:savoury1/minisign && sudo apt-get update && sudo apt-get install minisign
+
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+      - uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
           go-version: ${{ env.GOVERSION }}
       - name: install gocovmerge
@@ -93,82 +95,83 @@ jobs:
       - name: Refactor-e2e # this will a WIP to move all the tests to respective packages
         run: ./e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3.1.1
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         if: failure()
         with:
           name: E2E Docker Compose logs
           path: /tmp/docker-compose.log
       - name: Upload Coverage Report
-        uses: codecov/codecov-action@81cd2dc8148241f03f5839d295e000b8f761e378 # v3.1.1
+        uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d # v3.1.4
         with:
           files: /tmp/rekor-merged.cov,/tmp/pkg-rekor-merged.cov
           flags: e2etests
 
   sharding-e2e:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: build
 
     steps:
       - name: download minisign
-        run: sudo add-apt-repository ppa:dysfunctionalprogramming/minisign && sudo apt-get update && sudo apt-get install minisign
-      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+        # run: sudo add-apt-repository ppa:dysfunctionalprogramming/minisign && sudo apt-get update && sudo apt-get install minisign
+        run: sudo add-apt-repository ppa:savoury1/minisign && sudo apt-get update && sudo apt-get install minisign
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
       - name: Docker Build
         run: docker-compose build
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+      - uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
           go-version: ${{ env.GOVERSION }}
 
       - name: Sharding Test
         run: ./tests/sharding-e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3.1.1
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         if: failure()
         with:
           name: Sharding E2E Docker Compose logs
           path: /tmp/docker-compose.log
 
   issue-872-e2e:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: build
 
     steps:
-      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
       - name: Docker Build
         run: docker-compose build
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+      - uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
           go-version: ${{ env.GOVERSION }}
 
       - name: Test for Attestation begin returned that was previously persisted in tlog
         run: ./tests/issue-872-e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3.1.1
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         if: failure()
         with:
           name: Docker Compose logs
           path: /tmp/*docker-compose.log
 
   harness:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: build
     steps:
-      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
       - name: Create git branch
         run: git switch -c harness-test-branch
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
-      - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+      - uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
           go-version: ${{ env.GOVERSION }}
 
       - name: Run test harness
         run: ./tests/rekor-harness.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@83fd05a356d7e2593de66fc9913b3002723633cb # v3.1.1
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         if: failure()
         with:
           name: E2E Docker Compose logs

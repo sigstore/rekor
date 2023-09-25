@@ -25,7 +25,6 @@ import (
 
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/sharding"
-	"github.com/sigstore/rekor/pkg/util"
 
 	"github.com/spf13/pflag"
 
@@ -112,7 +111,7 @@ func initializePFlagMap() {
 		},
 		formatFlag: func() pflag.Value {
 			// this validates the output format requested
-			return valueFactory(formatFlag, validateString("required,oneof=json default"), "")
+			return valueFactory(formatFlag, validateString("required,oneof=json default tle"), "")
 		},
 		timeoutFlag: func() pflag.Value {
 			// this validates the timeout is >= 0
@@ -224,17 +223,17 @@ func isURL(v string) bool {
 // [sha1:]<40 hexadecimal characters>
 // where [sha256:] and [sha1:] are optional
 func validateSHAValue(v string) error {
-	err := util.ValidateSHA1Value(v)
+	err := validateSHA1Value(v)
 	if err == nil {
 		return nil
 	}
 
-	err = util.ValidateSHA256Value(v)
+	err = validateSHA256Value(v)
 	if err == nil {
 		return nil
 	}
 
-	err = util.ValidateSHA512Value(v)
+	err = validateSHA512Value(v)
 	if err == nil {
 		return nil
 	}

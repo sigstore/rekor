@@ -67,6 +67,12 @@ paths:
       operationId: getLogInfo
       tags:
         - tlog
+      parameters:
+        - in: query
+          name: stable
+          type: boolean
+          default: false
+          description: Whether to return a stable checkpoint for the active shard
       responses:
         200:
           description: A JSON object with the root hash and tree size as properties
@@ -420,6 +426,23 @@ definitions:
         - spec
       additionalProperties: false
 
+  dsse:
+    type: object
+    description: DSSE envelope
+    allOf:
+    - $ref: '#/definitions/ProposedEntry'
+    - properties:
+        apiVersion:
+          type: string
+          pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
+        spec:
+          type: object
+          $ref: 'pkg/types/dsse/dsse_schema.json'
+      required:
+        - apiVersion
+        - spec
+      additionalProperties: false
+
   LogEntry:
     type: object
     additionalProperties:
@@ -437,6 +460,7 @@ definitions:
           additionalProperties: true
         integratedTime:
           type: integer
+          description: The time the entry was added to the log as a Unix timestamp in seconds
         attestation:
           type: object
           properties:

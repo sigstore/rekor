@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-openapi/swag"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/types"
 )
 
@@ -37,8 +38,12 @@ func (u UnmarshalFailsTester) NewEntry() types.EntryImpl {
 	return &UnmarshalFailsTester{}
 }
 
-func (u UnmarshalFailsTester) Unmarshal(pe models.ProposedEntry) error {
+func (u UnmarshalFailsTester) Unmarshal(_ models.ProposedEntry) error {
 	return errors.New("error")
+}
+
+func (u UnmarshalFailsTester) Verifiers() ([]pki.PublicKey, error) {
+	return nil, nil
 }
 
 func TestJARType(t *testing.T) {

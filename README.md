@@ -36,6 +36,8 @@ For uptime data on the Rekor public instance, see [https://status.sigstore.dev](
 
 More details on the public instance can be found at [docs.sigstore.dev](https://docs.sigstore.dev/rekor/public-instance).
 
+The attestation size limit for uploads to the public instance is [100KB](https://github.com/sigstore/rekor/blob/18c81d9f4def67c72f630c5406e26d5e568bc83b/cmd/rekor-server/app/root.go#L104). If you need to upload larger files, please run your own instance of Rekor. You can find instructions for doing so in the [installation](https://docs.sigstore.dev/rekor/overview#usage-and-installation) documentation.
+
 ### Installation
 
 Please see the [installation](https://docs.sigstore.dev/rekor/overview#usage-and-installation) page for details on how to install the rekor CLI and set up / run
@@ -53,7 +55,7 @@ Rekor allows customized manifests (which term them as types), [type customizatio
 
 ### API
 
-If you're interesting in integration with Rekor, we have an [OpenAPI swagger editor](https://sigstore.dev/swagger/)
+If you're interested in integration with Rekor, we have an [OpenAPI swagger editor](https://sigstore.dev/swagger/)
 
 ## Security
 
@@ -61,5 +63,4 @@ Should you discover any security issues, please refer to sigstore's [security pr
 
 ## Contributions
 
-We welcome contributions from anyone and are especially interested to hear from
-users of Rekor.
+We welcome contributions from anyone and are especially interested to hear from users of Rekor.

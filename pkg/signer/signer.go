@@ -1,5 +1,5 @@
 /*
-Copyright The Rekor Authors.
+Copyright 2021 The Sigstore Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,16 +18,27 @@ package signer
 
 import (
 	"context"
+	"crypto"
 	"strings"
 
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
+	"github.com/sigstore/sigstore/pkg/signature/kms"
+	"golang.org/x/exp/slices"
+
+	// these are imported to load the providers via init() calls
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
+	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
 func New(ctx context.Context, signer string, pass string) (signature.Signer, error) {
 	switch {
-	case strings.HasPrefix(signer, gcp.ReferenceScheme):
-		return gcp.LoadSignerVerifier(ctx, signer)
+	case slices.ContainsFunc(kms.SupportedProviders(),
+		func(s string) bool {
+			return strings.HasPrefix(signer, s)
+		}):
+		return kms.Get(ctx, signer, crypto.SHA256)
 	case signer == MemoryScheme:
 		return NewMemory()
 	default:

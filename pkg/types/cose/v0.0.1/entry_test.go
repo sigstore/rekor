@@ -17,6 +17,7 @@ package cose
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -30,8 +31,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/pki/identity"
 	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/spf13/viper"
@@ -86,6 +89,10 @@ func (t testPublicKey) EmailAddresses() []string {
 
 func (t testPublicKey) Subjects() []string {
 	return nil
+}
+
+func (t testPublicKey) Identities() ([]identity.Identity, error) {
+	return nil, nil
 }
 
 func TestMain(m *testing.M) {
@@ -159,22 +166,25 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 	msgWithAAD := makeSignedCose(t, priv, []byte("hello"), []byte("external aad"), "")
 
 	tests := []struct {
-		name    string
-		want    models.CoseV001Schema
-		it      *models.CoseV001Schema
-		wantErr bool
+		name            string
+		want            models.CoseV001Schema
+		it              *models.CoseV001Schema
+		wantErr         bool
+		wantVerifierErr bool
 	}{
 		{
-			name:    "empty",
-			it:      &models.CoseV001Schema{},
-			wantErr: true,
+			name:            "empty",
+			it:              &models.CoseV001Schema{},
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 		{
 			name: "missing data",
 			it: &models.CoseV001Schema{
 				PublicKey: p(pub),
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: false,
 		},
 		{
 			name: "missing envelope",
@@ -182,7 +192,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				Data:      &models.CoseV001SchemaData{},
 				PublicKey: p([]byte("hello")),
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 		{
 			name: "valid",
@@ -191,7 +202,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p(pub),
 				Message:   msg,
 			},
-			wantErr: false,
+			wantErr:         false,
+			wantVerifierErr: false,
 		},
 		{
 			name: "valid with aad",
@@ -202,7 +214,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p(pub),
 				Message:   msgWithAAD,
 			},
-			wantErr: false,
+			wantErr:         false,
+			wantVerifierErr: false,
 		},
 		{
 			name: "extra aad",
@@ -213,7 +226,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p(pub),
 				Message:   msg,
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: false,
 		},
 		{
 			name: "invalid envelope",
@@ -222,7 +236,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p([]byte(pemBytes)),
 				Message:   []byte("hello"),
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: false,
 		},
 		{
 			name: "cert",
@@ -231,7 +246,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p([]byte(pemBytes)),
 				Message:   msg,
 			},
-			wantErr: false,
+			wantErr:         false,
+			wantVerifierErr: false,
 		},
 		{
 			name: "invalid key",
@@ -240,7 +256,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				PublicKey: p([]byte("notavalidkey")),
 				Message:   []byte("hello"),
 			},
-			wantErr: true,
+			wantErr:         true,
+			wantVerifierErr: true,
 		},
 	}
 
@@ -254,6 +271,48 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 			}
 			if err := v.Unmarshal(it); (err != nil) != tt.wantErr {
 				t.Errorf("V001Entry.Unmarshal() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !tt.wantErr {
+				if ok, err := v.Insertable(); !ok || err != nil {
+					t.Errorf("unexpected error calling Insertable on valid proposed entry: %v", err)
+				}
+			}
+
+			verifiers, err := v.Verifiers()
+			if !tt.wantVerifierErr {
+				if err != nil {
+					s, _ := verifiers[0].CanonicalValue()
+					t.Errorf("%v: unexpected error for %v, got %v", tt.name, string(s), err)
+				}
+
+				if !tt.wantErr {
+					b, err := v.Canonicalize(context.Background())
+					if err != nil {
+						t.Errorf("unexpected error canonicalizing %v", tt.name)
+					}
+					if len(b) != 0 {
+						pe, err := models.UnmarshalProposedEntry(bytes.NewReader(b), runtime.JSONConsumer())
+						if err != nil {
+							t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tt.name, err)
+						}
+						ei, err := types.UnmarshalEntry(pe)
+						if err != nil {
+							t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tt.name, err)
+						}
+						if ok, err := ei.Insertable(); ok || err == nil {
+							t.Errorf("entry created from canonicalized entry should not also be insertable")
+						}
+					}
+				}
+
+				pubV, _ := verifiers[0].CanonicalValue()
+				if !reflect.DeepEqual(pubV, pub) && !reflect.DeepEqual(pubV, pemBytes) {
+					t.Errorf("verifier and public keys do not match: %v, %v", string(pubV), string(pub))
+				}
+			} else if err == nil {
+				s, _ := verifiers[0].CanonicalValue()
+				t.Errorf("%v: expected error for %v, got %v", tt.name, string(s), err)
 			}
 		})
 	}
@@ -660,4 +719,203 @@ func mustContain(t *testing.T, want string, l []string) {
 		}
 	}
 	t.Fatalf("list %v does not contain %s", l, want)
+}
+
+func TestInsertable(t *testing.T) {
+	type TestCase struct {
+		caseDesc      string
+		entry         V001Entry
+		expectSuccess bool
+	}
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	der, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pub := pem.EncodeToMemory(&pem.Block{
+		Bytes: der,
+		Type:  "PUBLIC KEY",
+	})
+	keyObj, err := sigx509.NewPublicKey(bytes.NewReader(pub))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKey := strfmt.Base64(pub)
+
+	testCases := []TestCase{
+		{
+			caseDesc: "valid entry",
+			entry: V001Entry{
+				CoseObj: models.CoseV001Schema{
+					Data: &models.CoseV001SchemaData{
+						Aad: strfmt.Base64([]byte("aad")),
+					},
+					Message:   strfmt.Base64([]byte("message")),
+					PublicKey: &pubKey,
+				},
+				keyObj:       keyObj,
+				sign1Msg:     &gocose.Sign1Message{},
+				envelopeHash: []byte("hash"),
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "no aad",
+			entry: V001Entry{
+				CoseObj: models.CoseV001Schema{
+					Data:      &models.CoseV001SchemaData{},
+					Message:   strfmt.Base64([]byte("message")),
+					PublicKey: &pubKey,
+				},
+				keyObj:       keyObj,
+				sign1Msg:     &gocose.Sign1Message{},
+				envelopeHash: []byte("hash"),
+			},
+			expectSuccess: true,
+		},
+		{
+			caseDesc: "missing hash",
+			entry: V001Entry{
+				CoseObj: models.CoseV001Schema{
+					Data:      &models.CoseV001SchemaData{},
+					Message:   strfmt.Base64([]byte("message")),
+					PublicKey: &pubKey,
+				},
+				keyObj:   keyObj,
+				sign1Msg: &gocose.Sign1Message{},
+				//envelopeHash: []byte("hash"),
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "unparsed message",
+			entry: V001Entry{
+				CoseObj: models.CoseV001Schema{
+					Data: &models.CoseV001SchemaData{
+						Aad: strfmt.Base64([]byte("aad")),
+					},
+					Message:   strfmt.Base64([]byte("message")),
+					PublicKey: &pubKey,
+				},
+				keyObj: keyObj,
+				//sign1Msg:     &gocose.Sign1Message{},
+				envelopeHash: []byte("hash"),
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "unparsed public key",
+			entry: V001Entry{
+				CoseObj: models.CoseV001Schema{
+					Data: &models.CoseV001SchemaData{
+						Aad: strfmt.Base64([]byte("aad")),
+					},
+					Message:   strfmt.Base64([]byte("message")),
+					PublicKey: &pubKey,
+				},
+				//keyObj:       keyObj,
+				sign1Msg:     &gocose.Sign1Message{},
+				envelopeHash: []byte("hash"),
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing public key",
+			entry: V001Entry{
+				CoseObj: models.CoseV001Schema{
+					Data: &models.CoseV001SchemaData{
+						Aad: strfmt.Base64([]byte("aad")),
+					},
+					Message: strfmt.Base64([]byte("message")),
+					//PublicKey: &pubKey,
+				},
+				keyObj:       keyObj,
+				sign1Msg:     &gocose.Sign1Message{},
+				envelopeHash: []byte("hash"),
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing unparsed message",
+			entry: V001Entry{
+				CoseObj: models.CoseV001Schema{
+					Data: &models.CoseV001SchemaData{
+						Aad: strfmt.Base64([]byte("aad")),
+					},
+					//Message:   strfmt.Base64([]byte("message")),
+					PublicKey: &pubKey,
+				},
+				keyObj:       keyObj,
+				sign1Msg:     &gocose.Sign1Message{},
+				envelopeHash: []byte("hash"),
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing data",
+			entry: V001Entry{
+				CoseObj: models.CoseV001Schema{
+					/*
+						Data: &models.CoseV001SchemaData{
+							Aad: strfmt.Base64([]byte("aad")),
+						},
+					*/
+					Message:   strfmt.Base64([]byte("message")),
+					PublicKey: &pubKey,
+				},
+				keyObj:       keyObj,
+				sign1Msg:     &gocose.Sign1Message{},
+				envelopeHash: []byte("hash"),
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "missing cose obj",
+			entry: V001Entry{
+				/*
+					CoseObj: models.CoseV001Schema{
+						Data: &models.CoseV001SchemaData{
+							Aad: strfmt.Base64([]byte("aad")),
+						},
+						Message:   strfmt.Base64([]byte("message")),
+						PublicKey: &pubKey,
+					},
+				*/
+				keyObj:       keyObj,
+				sign1Msg:     &gocose.Sign1Message{},
+				envelopeHash: []byte("hash"),
+			},
+			expectSuccess: false,
+		},
+		{
+			caseDesc: "empty obj",
+			entry:    V001Entry{
+				/*
+					CoseObj: models.CoseV001Schema{
+						Data: &models.CoseV001SchemaData{
+							Aad: strfmt.Base64([]byte("aad")),
+						},
+						Message:   strfmt.Base64([]byte("message")),
+						PublicKey: &pubKey,
+					},
+					keyObj:       keyObj,
+					sign1Msg:     &gocose.Sign1Message{},
+					envelopeHash: []byte("hash"),
+				*/
+			},
+			expectSuccess: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
+				t.Errorf("unexpected result calling Insertable: %v", err)
+			}
+		})
+	}
 }

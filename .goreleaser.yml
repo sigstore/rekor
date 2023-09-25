@@ -4,7 +4,7 @@ env:
   - GO111MODULE=on
   - CGO_ENABLED=0
   - DOCKER_CLI_EXPERIMENTAL=enabled
-  - COSIGN_EXPERIMENTAL=true
+  - COSIGN_YES=true
 
 # Prevents parallel builds from stepping on eachothers toes downloading modules
 before:
@@ -20,7 +20,7 @@ gomod:
   proxy: true
 
 sboms:
-- artifacts: binary
+  - artifacts: binary
 
 builds:
   - id: rekor-server-linux
