@@ -16,6 +16,12 @@
 package ssh
 
 import (
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/elliptic"
+	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -122,8 +128,73 @@ func (k PublicKey) Subjects() []string {
 
 // Identities implements the pki.PublicKey interface
 func (k PublicKey) Identities() ([]identity.Identity, error) {
-	key := k.key.(ssh.CryptoPublicKey).CryptoPublicKey()
-	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(key)
+	// extract key from SSH certificate if present
+	var sshKey ssh.PublicKey
+	switch v := k.key.(type) {
+	case *ssh.Certificate:
+		sshKey = v.Key
+	default:
+		sshKey = k.key
+	}
+
+	// Extract crypto.PublicKey from SSH key
+	// Handle sk public keys which do not implement ssh.CryptoPublicKey
+	// Inspired by x/ssh/keys.go
+	// TODO: Simplify after https://github.com/golang/go/issues/62518
+	var cryptoPubKey crypto.PublicKey
+	if v, ok := sshKey.(ssh.CryptoPublicKey); ok {
+		cryptoPubKey = v.CryptoPublicKey()
+	} else {
+		switch sshKey.Type() {
+		case ssh.KeyAlgoSKECDSA256:
+			var w struct {
+				Curve       string
+				KeyBytes    []byte
+				Application string
+				Rest        []byte `ssh:"rest"`
+			}
+			_, k, ok := parseString(sshKey.Marshal())
+			if !ok {
+				return nil, fmt.Errorf("error parsing ssh.KeyAlgoSKED25519 key")
+			}
+			if err := ssh.Unmarshal(k, &w); err != nil {
+				return nil, err
+			}
+			if w.Curve != "nistp256" {
+				return nil, errors.New("ssh: unsupported curve")
+			}
+			ecdsaPubKey := new(ecdsa.PublicKey)
+			ecdsaPubKey.Curve = elliptic.P256()
+			//nolint:staticcheck // ignore SA1019 for old code
+			ecdsaPubKey.X, ecdsaPubKey.Y = elliptic.Unmarshal(ecdsaPubKey.Curve, w.KeyBytes)
+			if ecdsaPubKey.X == nil || ecdsaPubKey.Y == nil {
+				return nil, errors.New("ssh: invalid curve point")
+			}
+			cryptoPubKey = ecdsaPubKey
+		case ssh.KeyAlgoSKED25519:
+			var w struct {
+				KeyBytes    []byte
+				Application string
+				Rest        []byte `ssh:"rest"`
+			}
+			_, k, ok := parseString(sshKey.Marshal())
+			if !ok {
+				return nil, fmt.Errorf("error parsing ssh.KeyAlgoSKED25519 key")
+			}
+			if err := ssh.Unmarshal(k, &w); err != nil {
+				return nil, err
+			}
+			if l := len(w.KeyBytes); l != ed25519.PublicKeySize {
+				return nil, fmt.Errorf("invalid size %d for Ed25519 public key", l)
+			}
+			cryptoPubKey = ed25519.PublicKey(w.KeyBytes)
+		default:
+			// Should not occur, as rsa, dsa, ecdsa, and ed25519 all implement ssh.CryptoPublicKey
+			return nil, fmt.Errorf("unknown key type: %T", sshKey)
+		}
+	}
+
+	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(cryptoPubKey)
 	if err != nil {
 		return nil, err
 	}
@@ -133,4 +204,21 @@ func (k PublicKey) Identities() ([]identity.Identity, error) {
 		Raw:         pkixKey,
 		Fingerprint: fp,
 	}}, nil
+}
+
+// Copied by x/ssh/keys.go
+// TODO: Remove after https://github.com/golang/go/issues/62518
+func parseString(in []byte) (out, rest []byte, ok bool) {
+	if len(in) < 4 {
+		return
+	}
+	length := binary.BigEndian.Uint32(in)
+	in = in[4:]
+	if uint32(len(in)) < length {
+		return
+	}
+	out = in[:length]
+	rest = in[length:]
+	ok = true
+	return
 }
