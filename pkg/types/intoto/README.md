@@ -2,7 +2,7 @@
 
 This document provides a definition for each field that is not otherwise described in the [in-toto schema](https://github.com/sigstore/rekor/blob/main/pkg/types/intoto/v0.0.1/intoto_v0_0_1_schema.json). This document also notes any additional information about the values associated with each field such as the format in which the data is stored and any necessary transformations.
 
-**Attestation:** authenticated, machine-readable metadata about one or more software artifacts. [SLSA definiton](https://github.com/slsa-framework/slsa/blob/main/controls/attestations.md)
+**Attestation:** authenticated, machine-readable metadata about one or more software artifacts. [SLSA definition](https://github.com/slsa-framework/slsa/blob/main/controls/attestations.md)
 - The Attestation value ought to be a Base64-encoded JSON object.
 - The [in-toto Attestation specification](https://github.com/in-toto/attestation/blob/main/spec/README.md#statement) provides detailed guidance on understanding and parsing this JSON object.
 
