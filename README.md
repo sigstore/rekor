@@ -68,5 +68,5 @@ We welcome contributions from anyone and are especially interested to hear from 
 ## Additional Documentation
 
 In addition to this README file, this folder contains the additional documentation:
-
+- **oid-info.md**. Rekor OID values.
 - **types.md**. Information about how to sign and upload data in different pluggable types.  
