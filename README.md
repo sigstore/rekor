@@ -64,3 +64,9 @@ Should you discover any security issues, please refer to sigstore's [security pr
 ## Contributions
 
 We welcome contributions from anyone and are especially interested to hear from users of Rekor.
+
+## Additional Documentation
+
+In addition to this README file, this folder contains the additional documentation:
+
+- **types.md**. Information about how to sign and upload data in different pluggable types.  
