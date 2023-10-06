@@ -38,9 +38,9 @@ require (
 	go.uber.org/goleak v1.2.1
 	go.uber.org/zap v1.26.0
 	gocloud.dev v0.34.0
-	golang.org/x/crypto v0.13.0
+	golang.org/x/crypto v0.14.0
 	golang.org/x/mod v0.12.0
-	golang.org/x/net v0.15.0
+	golang.org/x/net v0.16.0
 	golang.org/x/sync v0.4.0
 	google.golang.org/genproto v0.0.0-20230913181813-007df8e322eb // indirect
 	google.golang.org/grpc v1.58.2
@@ -180,8 +180,8 @@ require (
 	go.step.sm/crypto v0.35.1
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/oauth2 v0.12.0 // indirect
-	golang.org/x/sys v0.12.0 // indirect
-	golang.org/x/term v0.12.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/term v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.144.0
