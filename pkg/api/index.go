@@ -45,7 +45,7 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 	if params.Query.Hash != "" {
 		// This must be a valid hash
 		sha := util.PrefixSHA(params.Query.Hash)
-		resultUUIDs, err := redisClient.LRange(httpReqCtx, strings.ToLower(sha), 0, -1).Result()
+		resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, strings.ToLower(sha))
 		if err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("redis client: %w", err), redisUnexpectedResult)
 		}
@@ -72,14 +72,14 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 		}
 
 		keyHash := sha256.Sum256(canonicalKey)
-		resultUUIDs, err := redisClient.LRange(httpReqCtx, strings.ToLower(hex.EncodeToString(keyHash[:])), 0, -1).Result()
+		resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, strings.ToLower(hex.EncodeToString(keyHash[:])))
 		if err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("redis client: %w", err), redisUnexpectedResult)
 		}
 		result.Add(resultUUIDs)
 	}
 	if params.Query.Email != "" {
-		resultUUIDs, err := redisClient.LRange(httpReqCtx, strings.ToLower(params.Query.Email.String()), 0, -1).Result()
+		resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, strings.ToLower(params.Query.Email.String()))
 		if err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("redis client: %w", err), redisUnexpectedResult)
 		}
@@ -100,7 +100,7 @@ func SearchIndexNotImplementedHandler(_ index.SearchIndexParams) middleware.Resp
 }
 
 func addToIndex(ctx context.Context, key, value string) error {
-	_, err := redisClient.LPush(ctx, key, value).Result()
+	err := indexStorageClient.WriteIndex(ctx, key, value)
 	if err != nil {
 		return fmt.Errorf("redis client: %w", err)
 	}
@@ -108,7 +108,7 @@ func addToIndex(ctx context.Context, key, value string) error {
 }
 
 func storeAttestation(ctx context.Context, uuid string, attestation []byte) error {
-	return storageClient.StoreAttestation(ctx, uuid, attestation)
+	return attestationStorageClient.StoreAttestation(ctx, uuid, attestation)
 }
 
 // Uniq is a collection of unique elements.

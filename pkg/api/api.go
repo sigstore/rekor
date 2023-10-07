@@ -30,6 +30,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/sigstore/rekor/pkg/indexstorage"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pubsub"
 	"github.com/sigstore/rekor/pkg/sharding"
@@ -145,9 +146,10 @@ func NewAPI(treeID uint) (*API, error) {
 }
 
 var (
-	api           *API
-	storageClient storage.AttestationStorage
-	redisClient   *redis.Client
+	api                      *API
+	attestationStorageClient storage.AttestationStorage
+	indexStorageClient       indexstorage.IndexStorage
+	redisClient              *redis.Client
 )
 
 func ConfigureAPI(treeID uint) {
@@ -159,21 +161,25 @@ func ConfigureAPI(treeID uint) {
 	}
 	if viper.GetBool("enable_retrieve_api") || viper.GetBool("enable_stable_checkpoint") ||
 		slices.Contains(viper.GetStringSlice("enabled_api_endpoints"), "searchIndex") {
-		redisClient = redis.NewClient(&redis.Options{
-			Addr:    fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")),
-			Network: "tcp",
-			DB:      0, // default DB
-		})
+		indexStorageClient, err = indexstorage.NewIndexStorage(viper.GetString("search_index.storage_provider"))
+		if err != nil {
+			log.Logger.Panic(err)
+		}
 	}
 
 	if viper.GetBool("enable_attestation_storage") {
-		storageClient, err = storage.NewAttestationStorage()
+		attestationStorageClient, err = storage.NewAttestationStorage()
 		if err != nil {
 			log.Logger.Panic(err)
 		}
 	}
 
 	if viper.GetBool("enable_stable_checkpoint") {
+		redisClient = redis.NewClient(&redis.Options{
+			Addr:    fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")),
+			Network: "tcp",
+			DB:      0, // default DB
+		})
 		checkpointPublisher := witness.NewCheckpointPublisher(context.Background(), api.logClient, api.logRanges.ActiveTreeID(),
 			viper.GetString("rekor_server.hostname"), api.signer, redisClient, viper.GetUint("publish_frequency"), CheckpointPublishCount)
 
