@@ -42,7 +42,7 @@ const (
 	malformedUUID                  = "UUID must be a 64-character hexadecimal string"
 	malformedPublicKey             = "public key provided could not be parsed"
 	failedToGenerateCanonicalKey   = "error generating canonicalized public key"
-	redisUnexpectedResult          = "unexpected result from searching index"
+	indexStorageUnexpectedResult   = "unexpected result from searching index"
 	lastSizeGreaterThanKnown       = "the tree size requested(%d) was greater than what is currently observable(%d)"
 	signingError                   = "error signing"
 	sthGenerateError               = "error generating signed tree head"

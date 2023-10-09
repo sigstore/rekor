@@ -135,14 +135,14 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, _ trilliancl
 			attKey := entryWithAtt.AttestationKey()
 			// if we're given a key by the type logic, let's try that first
 			if attKey != "" {
-				att, fetchErr = storageClient.FetchAttestation(ctx, attKey)
+				att, fetchErr = attestationStorageClient.FetchAttestation(ctx, attKey)
 				if fetchErr != nil {
 					log.ContextLogger(ctx).Debugf("error fetching attestation by key, trying by UUID: %s %v", attKey, fetchErr)
 				}
 			}
 			// if looking up by key failed or we weren't able to generate a key, try looking up by uuid
 			if attKey == "" || fetchErr != nil {
-				att, fetchErr = storageClient.FetchAttestation(ctx, entryIDstruct.UUID)
+				att, fetchErr = attestationStorageClient.FetchAttestation(ctx, entryIDstruct.UUID)
 				if fetchErr != nil {
 					log.ContextLogger(ctx).Debugf("error fetching attestation by uuid: %s %v", entryIDstruct.UUID, fetchErr)
 				}
@@ -244,7 +244,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		IntegratedTime: swag.Int64(queuedLeaf.IntegrateTimestamp.AsTime().Unix()),
 	}
 
-	if redisClient != nil {
+	if indexStorageClient != nil {
 		go func() {
 			keys, err := entry.IndexKeys()
 			if err != nil {
