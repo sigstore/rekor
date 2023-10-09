@@ -1,3 +1,35 @@
+# v1.3.1
+
+## New Features
+* enable GCP cloud profiling on rekor-server (#1746)
+* move index storage into interface (#1741)
+* add info to readme to denote additional documentation sources (#1722)
+* Add type of ed25519 key for TUF (#1677)
+* Allow parsing base64-encoded TUF metadata and root content (#1671)
+
+## Quality Enhancements
+* disable quota in trillian in test harness (#1680)
+
+## Bug Fixes
+* Update contact for code of conduct (#1720)
+* fix: typo (#1711)
+* Fix panic when parsing SSH SK pubkeys (#1712)
+* Correct index creation (#1708)
+* Update .ko.yaml (#1682)
+* docs: fixzes a small typo on the readme (#1686)
+* chore: fix `backfill-redis` Makefile target (#1685)
+
+## Contributors
+* Andres Galante
+* Andrew Block
+* Appu
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* guangwu
+* Hayden B
+* jonvnadelberg
+* Lance Ball
+
 # v1.3.0
 
 ## New Features
