@@ -25,6 +25,7 @@ import (
 
 const ProviderType = "redis"
 
+// IndexStorageProvider implements indexstorage.IndexStorage
 type IndexStorageProvider struct {
 	client *redis.Client
 }
@@ -39,6 +40,8 @@ func NewProvider(address, port string) (*IndexStorageProvider, error) {
 	return provider, nil
 }
 
+// LookupIndices looks up and returns all indices for the specified key. The key value will be canonicalized
+// by converting all characters into a lowercase value before looking up in Redis
 func (isp *IndexStorageProvider) LookupIndices(ctx context.Context, key string) ([]string, error) {
 	if isp.client == nil {
 		return []string{}, errors.New("redis client has not been initialized")
@@ -46,12 +49,13 @@ func (isp *IndexStorageProvider) LookupIndices(ctx context.Context, key string) 
 	return isp.client.LRange(ctx, strings.ToLower(key), 0, -1).Result()
 }
 
-func (isp *IndexStorageProvider) WriteIndex(ctx context.Context, key, value string) error {
+// WriteIndex adds the index for the specified key. The key value will be canonicalized
+// by converting all characters into a lowercase value before appending the index in Redis
+func (isp *IndexStorageProvider) WriteIndex(ctx context.Context, key, index string) error {
 	if isp.client == nil {
 		return errors.New("redis client has not been initialized")
 	}
-	_, err := isp.client.LPush(ctx, strings.ToLower(key), value).Result()
-	if err != nil {
+	if _, err := isp.client.LPush(ctx, strings.ToLower(key), index).Result(); err != nil {
 		return fmt.Errorf("redis client: %w", err)
 	}
 	return nil

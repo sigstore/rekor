@@ -47,7 +47,7 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 		sha := util.PrefixSHA(params.Query.Hash)
 		resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, strings.ToLower(sha))
 		if err != nil {
-			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("redis client: %w", err), redisUnexpectedResult)
+			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("index storage error: %w", err), indexStorageUnexpectedResult)
 		}
 		result.Add(resultUUIDs)
 	}
@@ -74,14 +74,14 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 		keyHash := sha256.Sum256(canonicalKey)
 		resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, strings.ToLower(hex.EncodeToString(keyHash[:])))
 		if err != nil {
-			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("redis client: %w", err), redisUnexpectedResult)
+			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("index storage error: %w", err), indexStorageUnexpectedResult)
 		}
 		result.Add(resultUUIDs)
 	}
 	if params.Query.Email != "" {
 		resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, strings.ToLower(params.Query.Email.String()))
 		if err != nil {
-			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("redis client: %w", err), redisUnexpectedResult)
+			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("index storage error: %w", err), indexStorageUnexpectedResult)
 		}
 		result.Add(resultUUIDs)
 	}
