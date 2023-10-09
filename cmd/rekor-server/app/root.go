@@ -22,10 +22,14 @@ import (
 	"os"
 	"time"
 
+	"cloud.google.com/go/profiler"
+
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"sigs.k8s.io/release-utils/version"
 )
 
 var (
@@ -72,6 +76,12 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.rekor-server.yaml)")
 	rootCmd.PersistentFlags().StringVar(&logType, "log_type", "dev", "logger type to use (dev/prod)")
 	rootCmd.PersistentFlags().BoolVar(&enablePprof, "enable_pprof", false, "enable pprof for profiling on port 6060")
+
+	rootCmd.PersistentFlags().Bool("gcp_cloud_profiling.enabled", false, "enable GCP Cloud Profiling")
+	rootCmd.PersistentFlags().String("gcp_cloud_profiling.service", "rekor-server", "a name for the service being profiled")
+	rootCmd.PersistentFlags().String("gcp_cloud_profiling.service_version", version.GetVersionInfo().GitVersion, "the version of the service being profiled")
+	rootCmd.PersistentFlags().String("gcp_cloud_profiling.project_id", "", "GCP project ID")
+	rootCmd.PersistentFlags().Bool("gcp_cloud_profiling.enable_oc_telemetry", false, "enable Profiler spans in Cloud Tracing & Cloud Monitoring")
 
 	rootCmd.PersistentFlags().String("trillian_log_server.address", "127.0.0.1", "Trillian log server address")
 	rootCmd.PersistentFlags().Uint16("trillian_log_server.port", 8090, "Trillian log server port")
@@ -141,6 +151,19 @@ Memory and file-based signers should only be used for testing.`)
 				log.Logger.Fatalf("Error when starting or running http server: %v", err)
 			}
 		}()
+	}
+
+	if viper.GetBool("gcp_cloud_profiling.enabled") {
+		cfg := profiler.Config{
+			Service:           viper.GetString("gcp_cloud_profiling.service"),
+			ServiceVersion:    viper.GetString("gcp_cloud_profiling.service_version"),
+			ProjectID:         viper.GetString("gcp_cloud_profiling.project_id"),
+			EnableOCTelemetry: viper.GetBool("gcp_cloud_profiling.enable_oc_telemetry"),
+		}
+
+		if err := profiler.Start(cfg); err != nil {
+			log.Logger.Warnf("Error configuring GCP Cloud Profiling: %v", err)
+		}
 	}
 }
 
