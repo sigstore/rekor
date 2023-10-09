@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"time"
 
+	"cloud.google.com/go/profiler"
 	"github.com/go-openapi/loads"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
@@ -74,6 +75,19 @@ var serveCmd = &cobra.Command{
 			viStr = vi.String()
 		}
 		log.Logger.Infof("starting rekor-server @ %v", viStr)
+
+		if viper.GetBool("gcp_cloud_profiling.enabled") {
+			cfg := profiler.Config{
+				Service:           viper.GetString("gcp_cloud_profiling.service"),
+				ServiceVersion:    viper.GetString("gcp_cloud_profiling.service_version"),
+				ProjectID:         viper.GetString("gcp_cloud_profiling.project_id"),
+				EnableOCTelemetry: viper.GetBool("gcp_cloud_profiling.enable_oc_telemetry"),
+			}
+
+			if err := profiler.Start(cfg); err != nil {
+				log.Logger.Warnf("Error configuring GCP Cloud Profiling: %v", err)
+			}
+		}
 
 		doc, _ := loads.Embedded(restapi.SwaggerJSON, restapi.FlatSwaggerJSON)
 		server := restapi.NewServer(operations.NewRekorServerAPI(doc))
