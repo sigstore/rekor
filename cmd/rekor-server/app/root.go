@@ -22,8 +22,6 @@ import (
 	"os"
 	"time"
 
-	"cloud.google.com/go/profiler"
-
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/spf13/cobra"
@@ -153,18 +151,6 @@ Memory and file-based signers should only be used for testing.`)
 		}()
 	}
 
-	if viper.GetBool("gcp_cloud_profiling.enabled") {
-		cfg := profiler.Config{
-			Service:           viper.GetString("gcp_cloud_profiling.service"),
-			ServiceVersion:    viper.GetString("gcp_cloud_profiling.service_version"),
-			ProjectID:         viper.GetString("gcp_cloud_profiling.project_id"),
-			EnableOCTelemetry: viper.GetBool("gcp_cloud_profiling.enable_oc_telemetry"),
-		}
-
-		if err := profiler.Start(cfg); err != nil {
-			log.Logger.Warnf("Error configuring GCP Cloud Profiling: %v", err)
-		}
-	}
 }
 
 // initConfig reads in config file and ENV variables if set.
