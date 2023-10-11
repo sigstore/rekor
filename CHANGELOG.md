@@ -1,3 +1,18 @@
+# v1.3.2
+
+* move to go 1.21.3 to pick up fixes for CVE-2023-39325
+
+## Bug Fixes
+* build(deps): Bump golang.org/x/net from 0.16.0 to 0.17.0 (#1753)
+* build(deps): Bump github.com/google/go-cmp from 0.5.9 to 0.6.0 (#1755)
+* build(deps): Bump google/cloud-sdk from 449.0.0 to 450.0.0 (#1757)
+* build(deps): Bump google.golang.org/grpc from 1.58.2 to 1.58.3 (#1754)
+* update Dockerfile for go 1.21.3 (#1752)
+* update builder image to use go1.21.3 (#1751)
+
+## Contributors
+* Carlos Tadeu Panato Junior
+
 # v1.3.1
 
 ## New Features
