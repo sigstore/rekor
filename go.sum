@@ -409,8 +409,8 @@ github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/hcl v1.0.0 h1:0Anlzjpi4vEasTeNFn2mLJgTSwt0+6sfsiTG8qcWGx4=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
-github.com/hashicorp/vault/api v1.9.2 h1:YjkZLJ7K3inKgMZ0wzCU9OHqc+UqMQyXsPXnf3Cl2as=
-github.com/hashicorp/vault/api v1.9.2/go.mod h1:jo5Y/ET+hNyz+JnKDt8XLAdKs+AM0G5W0Vp1IrFI8N8=
+github.com/hashicorp/vault/api v1.10.0 h1:/US7sIjWN6Imp4o/Rj1Ce2Nr5bki/AXi9vAW3p2tOJQ=
+github.com/hashicorp/vault/api v1.10.0/go.mod h1:jo5Y/ET+hNyz+JnKDt8XLAdKs+AM0G5W0Vp1IrFI8N8=
 github.com/honeycombio/beeline-go v1.10.0 h1:cUDe555oqvw8oD76BQJ8alk7FP0JZ/M/zXpNvOEDLDc=
 github.com/honeycombio/beeline-go v1.10.0/go.mod h1:Zz5WMeQCJzFt2Mvf8t6HC1X8RLskLVR/e8rvcmXB1G8=
 github.com/honeycombio/libhoney-go v1.16.0 h1:kPpqoz6vbOzgp7jC6SR7SkNj7rua7rgxvznI6M3KdHc=
@@ -562,8 +562,8 @@ github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.4 h1:2xI6GX+tQMF0L+DlQ
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.4/go.mod h1:+O0uMOHhBmaVtiuR6QjO+Firh3lNWDAdFC80EYZxvZs=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.4 h1:1xpfNzVhTKOlyfcR618l7Ew1GmnUcMHMQ/fxW1IG/Yw=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.4/go.mod h1:7oUJ9Uv9KdYsXHDNBWnIfT5vP7ClztoRAi3zMTLC6X8=
-github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.3 h1:IVPaj3NCCc037V2gtFISnSeebmBq1vnkKoPpNjHL3yM=
-github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.3/go.mod h1:prbSgDAfwNix71ZKDll1Pp1EucXP7r0UGnAqQ1hcrHo=
+github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.4 h1:g+iL3HbRnxKtc/w/J4AJTht/AEiexX/A8XxRyqYw81M=
+github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.4/go.mod h1:nBhqVRNE46SEFuv6ihan78RV60Z8crcZr2IJSFC74iA=
 github.com/sirupsen/logrus v1.4.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.1/go.mod h1:ni0Sbl8bgC9z8RoU9G6nDWqqs/fq4eDPysMBDgk/93Q=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
