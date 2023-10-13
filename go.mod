@@ -63,7 +63,7 @@ require (
 	github.com/sassoftware/relic/v7 v7.6.1
 	github.com/sigstore/protobuf-specs v0.2.1
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.3
-	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.3
+	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.4
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.3
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.3
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
@@ -73,8 +73,8 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	filippo.io/edwards25519 v1.0.0 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.7.2 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.3.1 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.8.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.4.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.3.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azkeys v1.0.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.0.0 // indirect
