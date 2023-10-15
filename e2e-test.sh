@@ -17,12 +17,21 @@
 set -e
 testdir=$(dirname "$0")
 
+docker_compose="docker compose -f docker-compose.yml -f docker-compose.test.yml"
+if ! ${docker_compose} version 2&>1 >/dev/null; then
+    docker_compose="docker-compose -f docker-compose.yml -f docker-compose.test.yml"
+fi
+
 rm -f /tmp/pkg-rekor-*.cov
 echo "installing gocovmerge"
 make gocovmerge
+
+echo "building test-only containers"
+docker build -t gcp-pubsub-emulator -f Dockerfile.pubsub-emulator .
 docker kill $(docker ps -q) || true
+
 echo "starting services"
-docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d --build
+${docker_compose} up -d --build
 
 echo "building CLI and server"
 # set the path to the root of the repo
@@ -32,7 +41,7 @@ go test -c ./cmd/rekor-server -o rekor-server -covermode=count -coverpkg=./...
 
 count=0
 echo -n "waiting up to 120 sec for system to start"
-until [ $(docker-compose ps | grep -c "(healthy)") == 3 ];
+until [ $(${docker_compose} ps | grep -c "(healthy)") == 4 ];
 do
     if [ $count -eq 12 ]; then
        echo "! timeout reached"
@@ -51,23 +60,23 @@ cp $dir/rekor-cli $REKORTMPDIR/rekor-cli
 touch $REKORTMPDIR.rekor.yaml
 trap "rm -rf $REKORTMPDIR" EXIT
 if ! REKORTMPDIR=$REKORTMPDIR go test  -tags=e2e $(go list ./... | grep -v ./tests) ; then
-   docker-compose logs --no-color > /tmp/docker-compose.log
+   ${docker_compose} logs --no-color > /tmp/docker-compose.log
    exit 1
 fi
-if docker-compose logs --no-color | grep -q "panic: runtime error:" ; then
+if ${docker_compose} logs --no-color | grep -q "panic: runtime error:" ; then
    # if we're here, we found a panic
    echo "Failing due to panics detected in logs"
-   docker-compose logs --no-color > /tmp/docker-compose.log
+   ${docker_compose} logs --no-color > /tmp/docker-compose.log
    exit 1
 fi
 
 echo "generating code coverage"
-docker-compose restart rekor-server
+${docker_compose} restart rekor-server
 
-if ! docker cp $(docker ps -aqf "name=rekor_rekor-server"):go/rekor-server.cov /tmp/pkg-rekor-server.cov ; then
+if ! docker cp $(docker ps -aqf "name=rekor_rekor-server" -f "name=rekor-rekor-server"):go/rekor-server.cov /tmp/pkg-rekor-server.cov ; then
    # failed to copy code coverage report from server
    echo "Failed to retrieve server code coverage report"
-   docker-compose logs --no-color > /tmp/docker-compose.log
+   ${docker_compose} logs --no-color > /tmp/docker-compose.log
    exit 1
 fi
 
