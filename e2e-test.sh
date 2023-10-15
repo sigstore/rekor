@@ -25,7 +25,11 @@ fi
 rm -f /tmp/pkg-rekor-*.cov
 echo "installing gocovmerge"
 make gocovmerge
+
+echo "building test-only containers"
+docker build -t gcp-pubsub-emulator -f Dockerfile.pubsub-emulator .
 docker kill $(docker ps -q) || true
+
 echo "starting services"
 ${docker_compose} up -d --build
 
