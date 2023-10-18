@@ -377,6 +377,14 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					t.Errorf("index keys from hydrated object do not match those generated from canonicalized (and re-hydrated) object: %v %v", got, canonicalIndexKeys)
 				}
 
+				hash, err := canonicalV002.ArtifactHash()
+				expectedHash := sha256.Sum256([]byte(validPayload))
+				if err != nil {
+					t.Errorf("unexpected failure with ArtifactHash: %v", err)
+				} else if hash != "sha256:"+hex.EncodeToString(expectedHash[:]) {
+					t.Errorf("unexpected match with ArtifactHash: %s", hash)
+				}
+
 				verifiers, err := v.Verifiers()
 				if !tt.wantVerifierErr {
 					if err != nil {

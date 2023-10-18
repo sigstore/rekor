@@ -478,6 +478,13 @@ func (v V002Entry) Verifiers() ([]pki.PublicKey, error) {
 	return keys, nil
 }
 
+func (v V002Entry) ArtifactHash() (string, error) {
+	if v.IntotoObj.Content == nil || v.IntotoObj.Content.PayloadHash == nil || v.IntotoObj.Content.PayloadHash.Algorithm == nil || v.IntotoObj.Content.PayloadHash.Value == nil {
+		return "", errors.New("intoto v0.0.2 entry not initialized")
+	}
+	return strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.PayloadHash.Algorithm, *v.IntotoObj.Content.PayloadHash.Value)), nil
+}
+
 func (v V002Entry) Insertable() (bool, error) {
 	if v.IntotoObj.Content == nil {
 		return false, errors.New("missing content property")

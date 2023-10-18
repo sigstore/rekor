@@ -140,6 +140,12 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 			if ok, err := ei.Insertable(); ok || err == nil {
 				t.Errorf("unexpected err from calling Insertable on entry created from canonicalized content")
 			}
+			hash, err := ei.ArtifactHash()
+			if err != nil {
+				t.Errorf("unexpected failure with ArtifactHash: %v", err)
+			} else if hash != "sha256:4a9d0ab4e10597497ed6c4617c983c35fa9e964e75cdd6f9fae3a0da1929acc6" {
+				t.Errorf("unexpected match with ArtifactHash: %s", hash)
+			}
 		}
 
 		verifiers, err := v.Verifiers()

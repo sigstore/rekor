@@ -359,6 +359,13 @@ func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	return []pki.PublicKey{key}, nil
 }
 
+func (v V001Entry) ArtifactHash() (string, error) {
+	if v.CoseObj.Data == nil || v.CoseObj.Data.PayloadHash == nil || v.CoseObj.Data.PayloadHash.Value == nil || v.CoseObj.Data.PayloadHash.Algorithm == nil {
+		return "", errors.New("cose v0.0.1 entry not initialized")
+	}
+	return strings.ToLower(fmt.Sprintf("%s:%s", *v.CoseObj.Data.PayloadHash.Algorithm, *v.CoseObj.Data.PayloadHash.Value)), nil
+}
+
 func (v V001Entry) Insertable() (bool, error) {
 	if len(v.CoseObj.Message) == 0 {
 		return false, errors.New("missing COSE Sign1 message")

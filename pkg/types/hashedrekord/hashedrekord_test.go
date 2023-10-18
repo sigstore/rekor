@@ -47,6 +47,10 @@ func (u UnmarshalFailsTester) Verifiers() ([]pki.PublicKey, error) {
 	return nil, nil
 }
 
+func (u UnmarshalFailsTester) ArtifactHash() (string, error) {
+	return "", nil
+}
+
 func TestRekordType(t *testing.T) {
 	// empty to start
 	if VersionMap.Count() != 0 {

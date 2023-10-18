@@ -364,6 +364,13 @@ func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	return []pki.PublicKey{key}, nil
 }
 
+func (v V001Entry) ArtifactHash() (string, error) {
+	if v.IntotoObj.Content == nil || v.IntotoObj.Content.PayloadHash == nil || v.IntotoObj.Content.PayloadHash.Algorithm == nil || v.IntotoObj.Content.PayloadHash.Value == nil {
+		return "", errors.New("hashedrekord v0.0.1 entry not initialized")
+	}
+	return strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.PayloadHash.Algorithm, *v.IntotoObj.Content.PayloadHash.Value)), nil
+}
+
 func (v V001Entry) Insertable() (bool, error) {
 	if v.IntotoObj.Content == nil {
 		return false, errors.New("missing content property")

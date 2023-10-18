@@ -303,6 +303,13 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 						if ok, err := ei.Insertable(); ok || err == nil {
 							t.Errorf("entry created from canonicalized entry should not also be insertable")
 						}
+						hash, err := ei.ArtifactHash()
+						expectedHash := sha256.Sum256([]byte("hello"))
+						if err != nil {
+							t.Errorf("unexpected failure with ArtifactHash: %v", err)
+						} else if hash != "sha256:"+hex.EncodeToString(expectedHash[:]) {
+							t.Errorf("unexpected match with ArtifactHash: %s", hash)
+						}
 					}
 				}
 

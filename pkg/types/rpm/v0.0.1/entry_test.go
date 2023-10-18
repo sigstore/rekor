@@ -194,6 +194,12 @@ func TestCrossFieldValidation(t *testing.T) {
 			if ok, err := ei.Insertable(); ok || err == nil {
 				t.Errorf("unexpected success calling Insertable on entry created from canonicalized content")
 			}
+			hash, err := ei.ArtifactHash()
+			if err != nil {
+				t.Errorf("unexpected failure with ArtifactHash: %v", err)
+			} else if hash != "sha256:c8b0bc59708d74f53aab0089ac587d5c348d6ead143dab9f6d9c4b48c973bfd8" {
+				t.Errorf("unexpected match with ArtifactHash: %s", hash)
+			}
 		}
 
 		verifiers, err := v.Verifiers()
