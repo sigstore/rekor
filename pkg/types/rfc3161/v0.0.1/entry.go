@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/types/rfc3161"
@@ -209,6 +210,18 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 
 func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	return nil, errors.New("Verifiers() does not support rfc3161 entry type")
+}
+
+func (v V001Entry) ArtifactHash() (string, error) {
+	if v.Rfc3161Obj.Tsr == nil || v.Rfc3161Obj.Tsr.Content == nil {
+		return "", errors.New("rfc3161 v0.0.1 entry not initialized")
+	}
+	tsrDecoded, err := base64.StdEncoding.DecodeString(v.Rfc3161Obj.Tsr.Content.String())
+	if err != nil {
+		return "", err
+	}
+	h := sha256.Sum256(tsrDecoded)
+	return strings.ToLower(fmt.Sprintf("sha256:%s", hex.EncodeToString(h[:]))), nil
 }
 
 func (v V001Entry) Insertable() (bool, error) {

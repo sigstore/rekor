@@ -349,6 +349,13 @@ func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	return []pki.PublicKey{key}, nil
 }
 
+func (v V001Entry) ArtifactHash() (string, error) {
+	if v.JARModel.Archive == nil || v.JARModel.Archive.Hash == nil || v.JARModel.Archive.Hash.Value == nil || v.JARModel.Archive.Hash.Algorithm == nil {
+		return "", errors.New("jar v0.0.1 entry not initialized")
+	}
+	return strings.ToLower(fmt.Sprintf("%s:%s", *v.JARModel.Archive.Hash.Algorithm, *v.JARModel.Archive.Hash.Value)), nil
+}
+
 func (v V001Entry) Insertable() (bool, error) {
 	if v.JARModel.Archive == nil {
 		return false, errors.New("missing archive property")

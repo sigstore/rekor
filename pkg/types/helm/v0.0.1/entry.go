@@ -360,6 +360,13 @@ func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	return []pki.PublicKey{key}, nil
 }
 
+func (v V001Entry) ArtifactHash() (string, error) {
+	if v.HelmObj.Chart == nil || v.HelmObj.Chart.Hash == nil || v.HelmObj.Chart.Hash.Algorithm == nil || v.HelmObj.Chart.Hash.Value == nil {
+		return "", errors.New("helm v0.0.1 entry not initialized")
+	}
+	return strings.ToLower(fmt.Sprintf("%s:%s", *v.HelmObj.Chart.Hash.Algorithm, *v.HelmObj.Chart.Hash.Value)), nil
+}
+
 func (v V001Entry) Insertable() (bool, error) {
 	if v.HelmObj.PublicKey == nil {
 		return false, errors.New("missing public key property")

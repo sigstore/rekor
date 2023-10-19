@@ -385,6 +385,26 @@ func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	return []pki.PublicKey{key}, nil
 }
 
+func (v V001Entry) ArtifactHash() (string, error) {
+	if v.TufObj.Metadata == nil || v.TufObj.Metadata.Content == nil {
+		return "", errors.New("tuf v0.0.1 entry not initialized")
+	}
+	sigBytes, err := v.parseMetadataContent()
+	if err != nil {
+		return "", err
+	}
+	sig, err := ptuf.NewSignature(bytes.NewReader(sigBytes))
+	if err != nil {
+		return "", err
+	}
+	metadata, err := sig.CanonicalValue()
+	if err != nil {
+		return "", err
+	}
+	metadataHash := sha256.Sum256(metadata)
+	return strings.ToLower(fmt.Sprintf("sha256:%s", hex.EncodeToString(metadataHash[:]))), nil
+}
+
 func (v V001Entry) Insertable() (bool, error) {
 	if v.TufObj.Metadata == nil {
 		return false, errors.New("missing metadata property")

@@ -239,10 +239,17 @@ func TestCrossFieldValidation(t *testing.T) {
 				if err != nil {
 					t.Errorf("unexpected err from Unmarshalling canonicalized entry for '%v': %v", tc.caseDesc, err)
 				}
-				if _, err := types.UnmarshalEntry(pe); err != nil {
+				ei, err := types.UnmarshalEntry(pe)
+				if err != nil {
 					t.Errorf("unexpected err from type-specific unmarshalling for '%v': %v", tc.caseDesc, err)
 				}
 				// Insertable on canonicalized content is variable so we skip testing it here
+				hash, err := ei.ArtifactHash()
+				if err != nil {
+					t.Errorf("unexpected failure with ArtifactHash: %v", err)
+				} else if hash != "sha256:c170ae288c93f56031639bac1ad085fc47918346f733b3d76b07a8124ebd24f9" {
+					t.Errorf("unexpected match with ArtifactHash: %s", hash)
+				}
 			}
 
 			verifiers, err := v.Verifiers()

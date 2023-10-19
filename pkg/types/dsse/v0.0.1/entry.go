@@ -419,6 +419,13 @@ func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	return keys, nil
 }
 
+func (v V001Entry) ArtifactHash() (string, error) {
+	if v.DSSEObj.PayloadHash == nil || v.DSSEObj.PayloadHash.Algorithm == nil || v.DSSEObj.PayloadHash.Value == nil {
+		return "", errors.New("dsse v0.0.1 entry not initialized")
+	}
+	return strings.ToLower(fmt.Sprintf("%s:%s", *v.DSSEObj.PayloadHash.Algorithm, *v.DSSEObj.PayloadHash.Value)), nil
+}
+
 func (v V001Entry) Insertable() (bool, error) {
 	if v.DSSEObj.ProposedContent == nil {
 		return false, errors.New("missing proposed content")
