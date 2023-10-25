@@ -47,7 +47,7 @@ require (
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/ini.v1 v1.67.0
 	sigs.k8s.io/release-utils v0.7.5
-	sigs.k8s.io/yaml v1.3.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
