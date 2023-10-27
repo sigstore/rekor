@@ -113,6 +113,7 @@ Memory and file-based signers should only be used for testing.`)
 		`Index Storage provider to use. Valid options are: [redis].`)
 	rootCmd.PersistentFlags().String("redis_server.address", "127.0.0.1", "Redis server address")
 	rootCmd.PersistentFlags().Uint16("redis_server.port", 6379, "Redis server port")
+	rootCmd.PersistentFlags().String("redis_server.password", "", "Redis server password")
 
 	rootCmd.PersistentFlags().Bool("enable_attestation_storage", false, "enables rich attestation storage")
 	rootCmd.PersistentFlags().String("attestation_storage_bucket", "", "url for attestation storage bucket")

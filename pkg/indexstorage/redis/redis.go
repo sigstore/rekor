@@ -30,12 +30,13 @@ type IndexStorageProvider struct {
 	client *redis.Client
 }
 
-func NewProvider(address, port string) (*IndexStorageProvider, error) {
+func NewProvider(address, port, password string) (*IndexStorageProvider, error) {
 	provider := &IndexStorageProvider{}
 	provider.client = redis.NewClient(&redis.Options{
-		Addr:    fmt.Sprintf("%v:%v", address, port),
-		Network: "tcp",
-		DB:      0, // default DB
+		Addr:     fmt.Sprintf("%v:%v", address, port),
+		Network:  "tcp",
+		Password: password,
+		DB:       0, // default DB
 	})
 	return provider, nil
 }
