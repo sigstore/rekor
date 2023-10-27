@@ -65,7 +65,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.7.4
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.7.5
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.7.5
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.4
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.7.5
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231012201019-e917dd12ba7a
 )
