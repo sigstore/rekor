@@ -36,13 +36,15 @@ services:
       "--bind",
       "0.0.0.0",
       "--appendonly",
-      "yes"
+      "yes",
+      "--requirepass",
+      "test"
     ]
     ports:
       - "6379:6379"
     restart: always # keep the redis server running
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "test", "ping"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -91,6 +93,7 @@ services:
       "--trillian_log_server.address=trillian-log-server",
       "--trillian_log_server.port=8090",
       "--redis_server.address=redis-server",
+      "--redis_server.password=test",
       "--redis_server.port=6379",
       "--rekor_server.address=0.0.0.0",
       "--rekor_server.signer=memory",

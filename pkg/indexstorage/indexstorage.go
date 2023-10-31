@@ -31,7 +31,7 @@ type IndexStorage interface {
 func NewIndexStorage(providerType string) (IndexStorage, error) {
 	switch providerType {
 	case redis.ProviderType:
-		return redis.NewProvider(viper.GetString("redis_server.address"), viper.GetString("redis_server.port"))
+		return redis.NewProvider(viper.GetString("redis_server.address"), viper.GetString("redis_server.port"), viper.GetString("redis_server.password"))
 	default:
 		return nil, fmt.Errorf("invalid index storage provider type: %v", providerType)
 	}

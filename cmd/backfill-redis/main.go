@@ -66,6 +66,7 @@ import (
 var (
 	redisHostname = flag.String("hostname", "", "Hostname for Redis application")
 	redisPort     = flag.String("port", "", "Port to Redis application")
+	redisPassword = flag.String("password", "", "Password for Redis authentication")
 	startIndex    = flag.Int("start", -1, "First index to backfill")
 	endIndex      = flag.Int("end", -1, "Last index to backfill")
 	rekorAddress  = flag.String("rekor-address", "", "Address for Rekor, e.g. https://rekor.sigstore.dev")
@@ -102,9 +103,10 @@ func main() {
 	log.Printf("running backfill redis Version: %s GitCommit: %s BuildDate: %s", versionInfo.GitVersion, versionInfo.GitCommit, versionInfo.BuildDate)
 
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:    fmt.Sprintf("%s:%s", *redisHostname, *redisPort),
-		Network: "tcp",
-		DB:      0, // default DB
+		Addr:     fmt.Sprintf("%s:%s", *redisHostname, *redisPort),
+		Password: *redisPassword,
+		Network:  "tcp",
+		DB:       0, // default DB
 	})
 
 	rekorClient, err := client.GetRekorClient(*rekorAddress)

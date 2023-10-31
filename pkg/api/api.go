@@ -176,9 +176,10 @@ func ConfigureAPI(treeID uint) {
 
 	if viper.GetBool("enable_stable_checkpoint") {
 		redisClient = redis.NewClient(&redis.Options{
-			Addr:    fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")),
-			Network: "tcp",
-			DB:      0, // default DB
+			Addr:     fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")),
+			Password: viper.GetString("redis_server.password"),
+			Network:  "tcp",
+			DB:       0, // default DB
 		})
 		checkpointPublisher := witness.NewCheckpointPublisher(context.Background(), api.logClient, api.logRanges.ActiveTreeID(),
 			viper.GetString("rekor_server.hostname"), api.signer, redisClient, viper.GetUint("publish_frequency"), CheckpointPublishCount)
