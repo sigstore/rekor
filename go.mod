@@ -102,6 +102,7 @@ require (
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.0.0 // indirect
+	github.com/google/certificate-transparency-go v1.1.7 // indirect
 	github.com/google/pprof v0.0.0-20231023181126-ff6d637d2a7b // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
