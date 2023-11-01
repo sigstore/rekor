@@ -1,3 +1,24 @@
+# v1.3.3
+
+## New Features
+* update trillian to 1.5.3 (#1803)
+* adds redis_auth (#1627)
+* Add method to get artifact hash for an entry (#1777)
+
+## Bug Fixes
+* Update signer flag description (#1804)
+* install go at correct version for codeql (#1762)
+
+## Quality Enhancements
+* make e2e tests more usable with docker-compose (#1770)
+
+## Contributors
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Hayden B
+* ian hundere
+* Kenny Leung
+
 # v1.3.2
 
 * move to go 1.21.3 to pick up fixes for CVE-2023-39325
