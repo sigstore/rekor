@@ -28,7 +28,7 @@ import (
 	"io"
 	"strings"
 
-	validator "github.com/go-playground/validator/v10"
+	"github.com/asaskevich/govalidator"
 	"github.com/sigstore/rekor/pkg/pki/identity"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
@@ -184,10 +184,8 @@ func (k PublicKey) EmailAddresses() []string {
 		cert = k.certs[0]
 	}
 	if cert != nil {
-		validate := validator.New()
 		for _, name := range cert.EmailAddresses {
-			errs := validate.Var(name, "required,email")
-			if errs == nil {
+			if govalidator.IsEmail(name) {
 				names = append(names, strings.ToLower(name))
 			}
 		}
