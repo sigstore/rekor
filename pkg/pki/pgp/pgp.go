@@ -28,7 +28,7 @@ import (
 	"io"
 	"net/http"
 
-	validator "github.com/go-playground/validator/v10"
+	"github.com/asaskevich/govalidator"
 
 	//TODO: https://github.com/sigstore/rekor/issues/286
 	"golang.org/x/crypto/openpgp"        //nolint:staticcheck
@@ -295,9 +295,7 @@ func (k PublicKey) EmailAddresses() []string {
 	// Extract from cert
 	for _, entity := range k.key {
 		for _, identity := range entity.Identities {
-			validate := validator.New()
-			errs := validate.Var(identity.UserId.Email, "required,email")
-			if errs == nil {
+			if govalidator.IsEmail(identity.UserId.Email) {
 				names = append(names, identity.UserId.Email)
 			}
 		}
