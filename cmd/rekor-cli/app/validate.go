@@ -16,9 +16,11 @@
 package app
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
-	validator "github.com/go-playground/validator/v10"
+	validator "github.com/asaskevich/govalidator"
 )
 
 // validateSHA512Value ensures that the supplied string matches the
@@ -36,13 +38,14 @@ func validateSHA512Value(v string) error {
 		hash = split[1]
 	}
 
-	s := struct {
-		Prefix string `validate:"omitempty,oneof=sha512"`
-		Hash   string `validate:"required,len=128,hexadecimal"`
-	}{prefix, hash}
+	if strings.TrimSpace(prefix) != "" && prefix != "sha512" {
+		return fmt.Errorf("invalid prefix '%v'", prefix)
+	}
 
-	validate := validator.New()
-	return validate.Struct(s)
+	if !validator.IsSHA512(strings.ToLower(hash)) {
+		return errors.New("invalid SHA512 value")
+	}
+	return nil
 }
 
 // validateSHA256Value ensures that the supplied string matches the following format:
@@ -60,13 +63,14 @@ func validateSHA256Value(v string) error {
 		hash = split[1]
 	}
 
-	s := struct {
-		Prefix string `validate:"omitempty,oneof=sha256"`
-		Hash   string `validate:"required,len=64,hexadecimal"`
-	}{prefix, hash}
+	if strings.TrimSpace(prefix) != "" && prefix != "sha256" {
+		return fmt.Errorf("invalid prefix '%v'", prefix)
+	}
 
-	validate := validator.New()
-	return validate.Struct(s)
+	if !validator.IsSHA256(strings.ToLower(hash)) {
+		return errors.New("invalid SHA256 value")
+	}
+	return nil
 }
 
 func validateSHA1Value(v string) error {
@@ -81,12 +85,12 @@ func validateSHA1Value(v string) error {
 		hash = split[1]
 	}
 
-	s := struct {
-		Prefix string `validate:"omitempty,oneof=sha1"`
-		Hash   string `validate:"required,len=40,hexadecimal"`
-	}{prefix, hash}
+	if strings.TrimSpace(prefix) != "" && prefix != "sha1" {
+		return fmt.Errorf("invalid prefix '%v'", prefix)
+	}
 
-	validate := validator.New()
-	return validate.Struct(s)
-
+	if !validator.IsSHA1(strings.ToLower(hash)) {
+		return errors.New("invalid SHA1 value")
+	}
+	return nil
 }
