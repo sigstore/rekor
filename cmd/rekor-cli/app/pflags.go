@@ -76,7 +76,7 @@ func initializePFlagMap() {
 			// this validates a valid operator name
 			operatorFlagValidator := func(val string) error {
 				o := struct {
-					Value string `valid:in(and|or)`
+					Value string `valid:"in(and|or)"`
 				}{val}
 				_, err := validator.ValidateStruct(o)
 				return err
@@ -117,7 +117,7 @@ func initializePFlagMap() {
 		},
 		urlFlag: func() pflag.Value {
 			// this validates that the string is a valid http/https URL
-			httpHttpsValidator := func(val string) error {
+			httpHTTPSValidator := func(val string) error {
 				if !validator.IsURL(val) {
 					return fmt.Errorf("'%v' is not a valid url", val)
 				}
@@ -126,7 +126,7 @@ func initializePFlagMap() {
 				}
 				return nil
 			}
-			return valueFactory(urlFlag, httpHttpsValidator, "")
+			return valueFactory(urlFlag, httpHTTPSValidator, "")
 		},
 		fileOrURLFlag: func() pflag.Value {
 			// applies logic of fileFlag OR urlFlag validators from above
@@ -362,4 +362,3 @@ func validateFile(v string) error {
 	}
 	return nil
 }
-
