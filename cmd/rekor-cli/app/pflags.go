@@ -17,8 +17,11 @@ package app
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -28,7 +31,7 @@ import (
 
 	"github.com/spf13/pflag"
 
-	validator "github.com/go-playground/validator/v10"
+	validator "github.com/asaskevich/govalidator"
 )
 
 type FlagType string
@@ -71,19 +74,38 @@ func initializePFlagMap() {
 		},
 		operatorFlag: func() pflag.Value {
 			// this validates a valid operator name
-			return valueFactory(operatorFlag, validateString("oneof=and or"), "")
+			operatorFlagValidator := func(val string) error {
+				o := struct {
+					Value string `valid:in(and|or)`
+				}{val}
+				_, err := validator.ValidateStruct(o)
+				return err
+			}
+			return valueFactory(operatorFlag, operatorFlagValidator, "")
 		},
 		emailFlag: func() pflag.Value {
 			// this validates an email address
-			return valueFactory(emailFlag, validateString("required,email"), "")
+			emailValidator := func(val string) error {
+				if !validator.IsEmail(val) {
+					return fmt.Errorf("'%v' is not a valid email address", val)
+				}
+				return nil
+			}
+			return valueFactory(emailFlag, emailValidator, "")
 		},
 		logIndexFlag: func() pflag.Value {
 			// this checks for a valid integer >= 0
-			return valueFactory(logIndexFlag, validateLogIndex, "")
+			return valueFactory(logIndexFlag, validateUint, "")
 		},
 		pkiFormatFlag: func() pflag.Value {
 			// this ensures a PKI implementation exists for the requested format
-			return valueFactory(pkiFormatFlag, validateString(fmt.Sprintf("required,oneof=%v", strings.Join(pki.SupportedFormats(), " "))), "pgp")
+			pkiFormatValidator := func(val string) error {
+				if !validator.IsIn(val, pki.SupportedFormats()...) {
+					return fmt.Errorf("'%v' is not a valid pki format", val)
+				}
+				return nil
+			}
+			return valueFactory(pkiFormatFlag, pkiFormatValidator, "pgp")
 		},
 		typeFlag: func() pflag.Value {
 			// this ensures the type of the log entry matches a type supported in the CLI
@@ -91,11 +113,20 @@ func initializePFlagMap() {
 		},
 		fileFlag: func() pflag.Value {
 			// this validates that the file exists and can be opened by the current uid
-			return valueFactory(fileFlag, validateString("required,file"), "")
+			return valueFactory(fileFlag, validateFile, "")
 		},
 		urlFlag: func() pflag.Value {
 			// this validates that the string is a valid http/https URL
-			return valueFactory(urlFlag, validateString("required,url,startswith=http|startswith=https"), "")
+			httpHttpsValidator := func(val string) error {
+				if !validator.IsURL(val) {
+					return fmt.Errorf("'%v' is not a valid url", val)
+				}
+				if !(strings.HasPrefix(val, "http") || strings.HasPrefix(val, "https")) {
+					return errors.New("URL must be for http or https scheme")
+				}
+				return nil
+			}
+			return valueFactory(urlFlag, httpHttpsValidator, "")
 		},
 		fileOrURLFlag: func() pflag.Value {
 			// applies logic of fileFlag OR urlFlag validators from above
@@ -111,7 +142,13 @@ func initializePFlagMap() {
 		},
 		formatFlag: func() pflag.Value {
 			// this validates the output format requested
-			return valueFactory(formatFlag, validateString("required,oneof=json default tle"), "")
+			formatValidator := func(val string) error {
+				if !validator.IsIn(val, "json", "default", "tle") {
+					return fmt.Errorf("'%v' is not a valid output format", val)
+				}
+				return nil
+			}
+			return valueFactory(formatFlag, formatValidator, "")
 		},
 		timeoutFlag: func() pflag.Value {
 			// this validates the timeout is >= 0
@@ -257,33 +294,23 @@ func validateID(v string) error {
 		return fmt.Errorf("ID len error, expected %v (EntryID) or %v (UUID) but got len %v for ID %v", sharding.EntryIDHexStringLen, sharding.UUIDHexStringLen, len(v), v)
 	}
 
-	if err := validateString("required,hexadecimal")(v); err != nil {
+	if !validator.IsHexadecimal(v) {
 		return fmt.Errorf("invalid uuid: %v", v)
 	}
 
 	return nil
 }
 
-// validateLogIndex ensures that the supplied string is a valid log index (integer >= 0)
-func validateLogIndex(v string) error {
-	i, err := strconv.Atoi(v)
-	if err != nil {
-		return err
-	}
-	l := struct {
-		Index int `validate:"gte=0"`
-	}{i}
-
-	return useValidator(logIndexFlag, l)
-}
-
 // validateOID ensures that the supplied string is a valid ASN.1 object identifier
 func validateOID(v string) error {
-	o := struct {
-		Oid []string `validate:"dive,numeric"`
-	}{strings.Split(v, ".")}
+	values := strings.Split(v, ".")
+	for _, value := range values {
+		if !validator.IsNumeric(value) {
+			return fmt.Errorf("field '%v' is not a valid number", value)
+		}
+	}
 
-	return useValidator(oidFlag, o)
+	return nil
 }
 
 // validateTimeout ensures that the supplied string is a valid time.Duration value >= 0
@@ -292,10 +319,10 @@ func validateTimeout(v string) error {
 	if err != nil {
 		return err
 	}
-	d := struct {
-		Duration time.Duration `validate:"min=0"`
-	}{duration}
-	return useValidator(timeoutFlag, d)
+	if duration < 0 {
+		return errors.New("timeout must be a positive value")
+	}
+	return nil
 }
 
 // validateBase64 ensures that the supplied string is valid base64 encoded data
@@ -312,26 +339,6 @@ func validateTypeFlag(v string) error {
 	return err
 }
 
-// validateString returns a function that validates an input string against the specified tag,
-// as defined in the format supported by go-playground/validator
-func validateString(tag string) validationFunc {
-	return func(v string) error {
-		validator := validator.New()
-		return validator.Var(v, tag)
-	}
-}
-
-// useValidator performs struct level validation on s as defined in the struct's tags using
-// the go-playground/validator library
-func useValidator(flagType FlagType, s interface{}) error {
-	validate := validator.New()
-	if err := validate.Struct(s); err != nil {
-		return fmt.Errorf("error parsing %v flag: %w", flagType, err)
-	}
-
-	return nil
-}
-
 // validateUint ensures that the supplied string is a valid unsigned integer >= 0
 func validateUint(v string) error {
 	i, err := strconv.Atoi(v)
@@ -341,9 +348,18 @@ func validateUint(v string) error {
 	if i < 0 {
 		return fmt.Errorf("invalid unsigned int: %v", v)
 	}
-	u := struct {
-		Uint uint `validate:"gte=0"`
-	}{uint(i)}
-
-	return useValidator(uintFlag, u)
+	return nil
 }
+
+// validateFile ensures that the supplied string is a valid path to a file that exists
+func validateFile(v string) error {
+	fileInfo, err := os.Stat(filepath.Clean(v))
+	if err != nil {
+		return err
+	}
+	if fileInfo.IsDir() {
+		return errors.New("path to a directory was provided")
+	}
+	return nil
+}
+
