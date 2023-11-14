@@ -17,7 +17,7 @@ version: '3.4'
 services:
   mysql:
     platform: linux/amd64
-    image: gcr.io/trillian-opensource-ci/db_server:v1.4.0
+    image: gcr.io/trillian-opensource-ci/db_server:v1.5.3
     environment:
       - MYSQL_ROOT_PASSWORD=zaphod
       - MYSQL_DATABASE=test
@@ -31,7 +31,7 @@ services:
       retries: 3
       start_period: 10s
   redis-server:
-    image: docker.io/redis:6.2
+    image: docker.io/redis:7.2
     command: [
       "--bind",
       "0.0.0.0",
@@ -50,7 +50,7 @@ services:
       retries: 3
       start_period: 5s
   trillian-log-server:
-    image: gcr.io/projectsigstore/trillian_log_server@sha256:f850a0defd089ea844822030c67ae05bc93c91168a7dd4aceb0b6648c39f696b
+    image: gcr.io/projectsigstore/trillian_log_server@sha256:0570f8561677e6140a73cb2d7e04e19cf52eb955efe40297e23402694d19489b # v1.5.3
     command: [
       "--quota_system=noop",
       "--storage_system=mysql",
@@ -66,7 +66,7 @@ services:
     depends_on:
       - mysql
   trillian-log-signer:
-    image: gcr.io/projectsigstore/trillian_log_signer@sha256:fe90d523f6617974f70878918e4b31d49b2b46a86024bb2d6b01d2bbfed8edbf
+    image: gcr.io/projectsigstore/trillian_log_signer@sha256:948291659bb9910708900aad33dd18669d001ea5e93b85404634bab8e38c83d7 # v1.5.3
     command: [
       "--quota_system=noop",
       "--storage_system=mysql",
