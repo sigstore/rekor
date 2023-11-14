@@ -31,7 +31,7 @@ services:
       retries: 3
       start_period: 10s
   redis-server:
-    image: docker.io/redis:7.2
+    image: docker.io/redis:6.2
     command: [
       "--bind",
       "0.0.0.0",
