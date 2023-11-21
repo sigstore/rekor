@@ -197,4 +197,10 @@ func StopAPI() {
 	if api.newEntryPublisher != nil {
 		api.newEntryPublisher.Close()
 	}
+
+	if indexStorageClient != nil {
+		if err := indexStorageClient.Shutdown(); err != nil {
+			log.Logger.Errorf("shutting down indexStorageClient: %v", err)
+		}
+	}
 }

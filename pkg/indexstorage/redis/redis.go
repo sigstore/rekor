@@ -41,23 +41,50 @@ func NewProvider(address, port, password string) (*IndexStorageProvider, error) 
 	return provider, nil
 }
 
-// LookupIndices looks up and returns all indices for the specified key. The key value will be canonicalized
+// LookupIndices looks up and returns all indices for the specified key(s). The key value(s) will be canonicalized
 // by converting all characters into a lowercase value before looking up in Redis
-func (isp *IndexStorageProvider) LookupIndices(ctx context.Context, key string) ([]string, error) {
+func (isp *IndexStorageProvider) LookupIndices(ctx context.Context, keys []string) ([]string, error) {
 	if isp.client == nil {
 		return []string{}, errors.New("redis client has not been initialized")
 	}
-	return isp.client.LRange(ctx, strings.ToLower(key), 0, -1).Result()
+	cmds, err := isp.client.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+		for _, key := range keys {
+			pipe.LRange(ctx, strings.ToLower(key), 0, -1)
+		}
+		return nil
+	})
+	if err != nil {
+		return []string{}, fmt.Errorf("redis client: %w", err)
+	}
+	var result []string
+	for _, cmd := range cmds {
+		result = append(result, cmd.(*redis.StringSliceCmd).Val()...)
+	}
+	return result, nil
 }
 
-// WriteIndex adds the index for the specified key. The key value will be canonicalized
+// WriteIndex adds the index for the specified keys. The key value(s) will be canonicalized
 // by converting all characters into a lowercase value before appending the index in Redis
-func (isp *IndexStorageProvider) WriteIndex(ctx context.Context, key, index string) error {
+func (isp *IndexStorageProvider) WriteIndex(ctx context.Context, keys []string, index string) error {
 	if isp.client == nil {
 		return errors.New("redis client has not been initialized")
 	}
-	if _, err := isp.client.LPush(ctx, strings.ToLower(key), index).Result(); err != nil {
+	_, err := isp.client.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+		for _, key := range keys {
+			pipe.LPush(ctx, strings.ToLower(key), index)
+		}
+		return nil
+	})
+	if err != nil {
 		return fmt.Errorf("redis client: %w", err)
 	}
 	return nil
+}
+
+// Shutdown cleans up any client resources that may be held by the provider
+func (isp *IndexStorageProvider) Shutdown() error {
+	if isp.client == nil {
+		return nil
+	}
+	return isp.client.Close()
 }

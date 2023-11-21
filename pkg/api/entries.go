@@ -251,10 +251,8 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 				log.ContextLogger(ctx).Errorf("getting entry index keys: %v", err)
 				return
 			}
-			for _, key := range keys {
-				if err := addToIndex(context.Background(), key, entryID); err != nil {
-					log.ContextLogger(ctx).Errorf("adding keys to index: %v", err)
-				}
+			if err := addToIndex(context.Background(), keys, entryID); err != nil {
+				log.ContextLogger(ctx).Errorf("adding keys to index: %v", err)
 			}
 		}()
 	}

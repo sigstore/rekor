@@ -18,7 +18,7 @@ set -e
 testdir=$(dirname "$0")
 
 docker_compose="docker compose -f docker-compose.yml -f docker-compose.test.yml"
-if ! ${docker_compose} version 2&>1 >/dev/null; then
+if ! ${docker_compose} version >/dev/null 2>&1; then
     docker_compose="docker-compose -f docker-compose.yml -f docker-compose.test.yml"
 fi
 

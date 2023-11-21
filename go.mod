@@ -53,11 +53,14 @@ require (
 	cloud.google.com/go/profiler v0.4.0
 	cloud.google.com/go/pubsub v1.33.0
 	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230618160516-e936619f9f18
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7
 	github.com/go-redis/redismock/v9 v9.2.0
+	github.com/go-sql-driver/mysql v1.7.1
 	github.com/golang/mock v1.6.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.5
+	github.com/jmoiron/sqlx v1.3.5
 	github.com/redis/go-redis/v9 v9.3.0
 	github.com/sassoftware/relic/v7 v7.6.1
 	github.com/sigstore/protobuf-specs v0.2.1

@@ -12,44 +12,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package redis
+package mysql
 
 import (
 	"context"
 	"errors"
+	"regexp"
 	"testing"
 
-	"github.com/go-redis/redismock/v9"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/jmoiron/sqlx"
+
 	"go.uber.org/goleak"
 )
 
 func TestLookupIndices(t *testing.T) {
 	keys := []string{"87c1b129fbadd7b6e9abc0a9ef7695436d767aece042bec198a97e949fcbe14c"}
 	value := []string{"1e1f2c881ae0608ec77ebf88a75c66d3099113a7343238f2f7a0ebb91a4ed335"}
-	redisClient, mock := redismock.NewClientMock()
-	mock.Regexp().ExpectLRange(keys[0], 0, -1).SetVal(value)
-
-	isp := IndexStorageProvider{redisClient}
-
-	indices, err := isp.LookupIndices(context.Background(), keys)
+	db, mock, err := sqlmock.New()
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("unexpected error creating mock db: %v", err)
 	}
 
-	less := func(a, b string) bool { return a < b }
-	if cmp.Diff(value, indices, cmpopts.SortSlices(less)) != "" {
-		t.Errorf("expected %s, got %s", value, indices)
+	isp := IndexStorageProvider{sqlx.NewDb(db, "mysql")}
+	defer isp.Shutdown()
+
+	mock.ExpectQuery(lookupStmt).WithArgs(keys[0]).WillReturnRows(sqlmock.NewRows(value))
+
+	_, err = isp.LookupIndices(context.Background(), keys)
+	if err != nil {
+		t.Error(err)
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Error(err)
 	}
 
-	mock.ClearExpect()
-	errRedis := errors.New("redis error")
-	mock.Regexp().ExpectLRange(keys[0], 0, -1).SetErr(errRedis)
+	expectedErr := errors.New("badness")
+	mock.ExpectQuery(lookupStmt).WillReturnError(expectedErr)
 	if _, err := isp.LookupIndices(context.Background(), keys); err == nil {
 		t.Error("unexpected success")
 	}
@@ -60,23 +60,33 @@ func TestLookupIndices(t *testing.T) {
 
 func TestWriteIndex(t *testing.T) {
 	keys := []string{"87c1b129fbadd7b6e9abc0a9ef7695436d767aece042bec198a97e949fcbe14c"}
-	value := []string{"1e1f2c881ae0608ec77ebf88a75c66d3099113a7343238f2f7a0ebb91a4ed335"}
-	redisClient, mock := redismock.NewClientMock()
-	mock.Regexp().ExpectLPush(keys[0], value).SetVal(1)
+	value := "1e1f2c881ae0608ec77ebf88a75c66d3099113a7343238f2f7a0ebb91a4ed335"
+	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+	if err != nil {
+		t.Fatalf("unexpected error creating mock db: %v", err)
+	}
 
-	isp := IndexStorageProvider{redisClient}
-	if err := isp.WriteIndex(context.Background(), keys, value[0]); err != nil {
-		t.Error(err)
+	re := regexp.MustCompile(`:[a-z]*`)
+	expectedStmt := string(re.ReplaceAll([]byte(writeStmt), []byte("?")))
+
+	isp := IndexStorageProvider{sqlx.NewDb(db, "mysql")}
+	defer isp.Shutdown()
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("expectations not met: %v", err)
+	}
+
+	mock.ExpectExec(expectedStmt).WithArgs(keys[0], value).WillReturnResult(sqlmock.NewResult(1, 1))
+	if err := isp.WriteIndex(context.Background(), keys, value); err != nil {
+		t.Errorf("%v, %v", expectedStmt, err)
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Error(err)
 	}
 
-	mock.ClearExpect()
-	errRedis := errors.New("redis error")
-	mock.Regexp().ExpectLPush(keys[0], value).SetErr(errRedis)
-	if err := isp.WriteIndex(context.Background(), keys, value[0]); err == nil {
+	expectedErr := errors.New("badness")
+	mock.ExpectExec(expectedStmt).WillReturnError(expectedErr)
+	if err := isp.WriteIndex(context.Background(), keys, value); err == nil {
 		t.Error("unexpected success")
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
@@ -85,7 +95,7 @@ func TestWriteIndex(t *testing.T) {
 }
 
 func TestUninitializedClient(t *testing.T) {
-	// this is not initialized with a real Redis client
+	// this is not initialized with a real mysql client
 	isp := IndexStorageProvider{}
 	if _, err := isp.LookupIndices(context.Background(), []string{"key"}); err == nil {
 		t.Error("unexpected success")

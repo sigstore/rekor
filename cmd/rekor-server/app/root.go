@@ -110,7 +110,7 @@ Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().Bool("enable_retrieve_api", true, "enables Redis-based index API endpoint")
 	_ = rootCmd.PersistentFlags().MarkDeprecated("enable_retrieve_api", "this flag is deprecated in favor of enabled_api_endpoints (searchIndex)")
 	rootCmd.PersistentFlags().String("search_index.storage_provider", "redis",
-		`Index Storage provider to use. Valid options are: [redis].`)
+		`Index Storage provider to use. Valid options are: [redis, mysql].`)
 	rootCmd.PersistentFlags().String("redis_server.address", "127.0.0.1", "Redis server address")
 	rootCmd.PersistentFlags().Uint16("redis_server.port", 6379, "Redis server port")
 	rootCmd.PersistentFlags().String("redis_server.password", "", "Redis server password")
@@ -124,6 +124,12 @@ Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().Uint64("max_request_body_size", 0, "maximum size for HTTP request body, in bytes; set to 0 for unlimited")
 	rootCmd.PersistentFlags().Uint64("max_jar_metadata_size", 1048576, "maximum permitted size for jar META-INF/ files, in bytes; set to 0 for unlimited")
 	rootCmd.PersistentFlags().Uint64("max_apk_metadata_size", 1048576, "maximum permitted size for apk .SIGN and .PKGINFO files, in bytes; set to 0 for unlimited")
+
+	rootCmd.PersistentFlags().String("search_index.mysql.dsn", "", "DSN for index storage using MySQL")
+	rootCmd.PersistentFlags().Duration("search_index.mysql.conn_max_idletime", 0*time.Second, "maximum connection idle time")
+	rootCmd.PersistentFlags().Duration("search_index.mysql.conn_max_lifetime", 0*time.Second, "maximum connection lifetime")
+	rootCmd.PersistentFlags().Int("search_index.mysql.max_open_connections", 0, "maximum open connections")
+	rootCmd.PersistentFlags().Int("search_index.mysql.max_idle_connections", 0, "maximum idle connections")
 
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)
