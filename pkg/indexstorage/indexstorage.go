@@ -18,13 +18,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sigstore/rekor/pkg/indexstorage/mysql"
 	"github.com/sigstore/rekor/pkg/indexstorage/redis"
 	"github.com/spf13/viper"
 )
 
 type IndexStorage interface {
-	LookupIndices(context.Context, string) ([]string, error) // Returns indices for specified key
-	WriteIndex(context.Context, string, string) error        // Writes index for specified key
+	LookupIndices(context.Context, []string) ([]string, error) // Returns indices for specified keys
+	WriteIndex(context.Context, []string, string) error        // Writes index for specified keys
+	Shutdown() error                                           // Method to run on shutdown
 }
 
 // NewIndexStorage instantiates a new IndexStorage provider based on the requested type
@@ -32,6 +34,8 @@ func NewIndexStorage(providerType string) (IndexStorage, error) {
 	switch providerType {
 	case redis.ProviderType:
 		return redis.NewProvider(viper.GetString("redis_server.address"), viper.GetString("redis_server.port"), viper.GetString("redis_server.password"))
+	case mysql.ProviderType:
+		return mysql.NewProvider(viper.GetString("search_index.mysql.dsn"))
 	default:
 		return nil, fmt.Errorf("invalid index storage provider type: %v", providerType)
 	}

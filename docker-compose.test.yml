@@ -38,12 +38,15 @@ services:
       "--max_request_body_size=32792576",
       "--rekor_server.new_entry_publisher=gcppubsub://projects/test-project/topics/new-entry",
       "--rekor_server.publish_events_json=true",
+      "--search_index.storage_provider=mysql",
+      "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test",
       ]
     ports:
       - "3000:3000"
       - "2112:2112"
     depends_on:
       - gcp-pubsub-emulator
+      - mysql
   gcp-pubsub-emulator:
     image: gcp-pubsub-emulator
     ports:

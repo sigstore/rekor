@@ -42,14 +42,20 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 	}
 	var result = NewCollection(queryOperator)
 
+	var lookupKeys []string
+
 	if params.Query.Hash != "" {
 		// This must be a valid hash
-		sha := util.PrefixSHA(params.Query.Hash)
-		resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, strings.ToLower(sha))
-		if err != nil {
-			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("index storage error: %w", err), indexStorageUnexpectedResult)
+		sha := strings.ToLower(util.PrefixSHA(params.Query.Hash))
+		if queryOperator == "or" {
+			lookupKeys = append(lookupKeys, sha)
+		} else {
+			resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, []string{sha})
+			if err != nil {
+				return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("index storage error: %w", err), indexStorageUnexpectedResult)
+			}
+			result.Add(resultUUIDs)
 		}
-		result.Add(resultUUIDs)
 	}
 	if params.Query.PublicKey != nil {
 		af, err := pki.NewArtifactFactory(pki.Format(swag.StringValue(params.Query.PublicKey.Format)))
@@ -72,14 +78,31 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 		}
 
 		keyHash := sha256.Sum256(canonicalKey)
-		resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, strings.ToLower(hex.EncodeToString(keyHash[:])))
-		if err != nil {
-			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("index storage error: %w", err), indexStorageUnexpectedResult)
+		keyHashStr := strings.ToLower(hex.EncodeToString(keyHash[:]))
+		if queryOperator == "or" {
+			lookupKeys = append(lookupKeys, keyHashStr)
+		} else {
+			resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, []string{keyHashStr})
+			if err != nil {
+				return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("index storage error: %w", err), indexStorageUnexpectedResult)
+			}
+			result.Add(resultUUIDs)
 		}
-		result.Add(resultUUIDs)
 	}
 	if params.Query.Email != "" {
-		resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, strings.ToLower(params.Query.Email.String()))
+		emailStr := strings.ToLower(params.Query.Email.String())
+		if queryOperator == "or" {
+			lookupKeys = append(lookupKeys, emailStr)
+		} else {
+			resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, []string{emailStr})
+			if err != nil {
+				return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("index storage error: %w", err), indexStorageUnexpectedResult)
+			}
+			result.Add(resultUUIDs)
+		}
+	}
+	if len(lookupKeys) > 0 {
+		resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, lookupKeys)
 		if err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("index storage error: %w", err), indexStorageUnexpectedResult)
 		}
@@ -99,8 +122,8 @@ func SearchIndexNotImplementedHandler(_ index.SearchIndexParams) middleware.Resp
 
 }
 
-func addToIndex(ctx context.Context, key, value string) error {
-	err := indexStorageClient.WriteIndex(ctx, key, value)
+func addToIndex(ctx context.Context, keys []string, value string) error {
+	err := indexStorageClient.WriteIndex(ctx, keys, value)
 	if err != nil {
 		return fmt.Errorf("redis client: %w", err)
 	}
