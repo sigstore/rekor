@@ -2987,8 +2987,7 @@ func init() {
       "type": "object",
       "title": "cose v0.0.1 Schema",
       "required": [
-        "publicKey",
-        "data"
+        "publicKey"
       ],
       "properties": {
         "data": {

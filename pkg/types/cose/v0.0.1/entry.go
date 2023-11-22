@@ -171,10 +171,13 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	// Store the envelope hash.
 	// The CoseObj.Message is only populated during entry creation.
 	// When marshalling from the database (retrieval) the envelope
-	// hash must be decoded fromt he stored hex string.
+	// hash must be decoded from the stored hex string.
 	// The envelope hash is used to create the attestation key during
 	// retrieval of a record.
 	if len(v.CoseObj.Message) == 0 {
+		if v.CoseObj.Data == nil || v.CoseObj.Data.EnvelopeHash == nil || v.CoseObj.Data.EnvelopeHash.Value == nil {
+			return errors.New("envelope hash should have been previously computed")
+		}
 		b, err := hex.DecodeString(*v.CoseObj.Data.EnvelopeHash.Value)
 		if err != nil {
 			return err
