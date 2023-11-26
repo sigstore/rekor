@@ -30,14 +30,14 @@ import (
 const (
 	ProviderType = "mysql"
 
-	lookupStmt      = "SELECT EntryUUIDs FROM EntryIndex WHERE EntryKey IN (?)"
-	writeStmt       = "INSERT IGNORE INTO EntryIndex (EntryKey, EntryUUIDs) VALUES (:key, :uuid)"
+	lookupStmt      = "SELECT EntryUUID FROM EntryIndex WHERE EntryKey IN (?)"
+	writeStmt       = "INSERT IGNORE INTO EntryIndex (EntryKey, EntryUUID) VALUES (:key, :uuid)"
 	createTableStmt = `CREATE TABLE IF NOT EXISTS EntryIndex (
 		PK BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 		EntryKey varchar(512) NOT NULL,
-		EntryUUIDs char(80) NOT NULL,
+		EntryUUID char(80) NOT NULL,
 		PRIMARY KEY(PK),
-		UNIQUE(EntryKey, EntryUUIDs)
+		UNIQUE(EntryKey, EntryUUID)
 	)`
 )
 
