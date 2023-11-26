@@ -35,7 +35,11 @@ func NewIndexStorage(providerType string) (IndexStorage, error) {
 	case redis.ProviderType:
 		return redis.NewProvider(viper.GetString("redis_server.address"), viper.GetString("redis_server.port"), viper.GetString("redis_server.password"))
 	case mysql.ProviderType:
-		return mysql.NewProvider(viper.GetString("search_index.mysql.dsn"))
+		return mysql.NewProvider(viper.GetString("search_index.mysql.dsn"),
+			mysql.WithConnMaxIdleTime(viper.GetDuration("search_index.mysql.conn_max_idletime")),
+			mysql.WithConnMaxLifetime(viper.GetDuration("search_index.mysql.conn_max_lifetime")),
+			mysql.WithMaxIdleConns(viper.GetInt("search_index.mysql.max_idle_connections")),
+			mysql.WithMaxOpenConns(viper.GetInt("search_index.mysql.max_open_connections")))
 	default:
 		return nil, fmt.Errorf("invalid index storage provider type: %v", providerType)
 	}
