@@ -21,7 +21,6 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/sigstore/rekor/pkg/log"
-	"github.com/spf13/viper"
 
 	// this imports the mysql driver for go
 	_ "github.com/go-sql-driver/mysql"
@@ -46,7 +45,7 @@ type IndexStorageProvider struct {
 	db *sqlx.DB
 }
 
-func NewProvider(dsn string) (*IndexStorageProvider, error) {
+func NewProvider(dsn string, opts ...Options) (*IndexStorageProvider, error) {
 	var err error
 	provider := &IndexStorageProvider{}
 	provider.db, err = sqlx.Open(ProviderType, dsn)
@@ -57,10 +56,12 @@ func NewProvider(dsn string) (*IndexStorageProvider, error) {
 		return nil, err
 	}
 
-	provider.db.SetConnMaxIdleTime(viper.GetDuration("search_index.mysql.conn_max_idletime"))
-	provider.db.SetConnMaxLifetime(viper.GetDuration("search_index.mysql.conn_max_lifetime"))
-	provider.db.SetMaxOpenConns(viper.GetInt("search_index.mysql.max_open_connections"))
-	provider.db.SetMaxIdleConns(viper.GetInt("search_index.mysql.max_idle_connections"))
+	for _, o := range opts {
+		o.applyConnMaxIdleTime(provider.db)
+		o.applyConnMaxLifetime(provider.db)
+		o.applyMaxIdleConns(provider.db)
+		o.applyMaxOpenConns(provider.db)
+	}
 
 	if _, err := provider.db.Exec(createTableStmt); err != nil {
 		return nil, fmt.Errorf("create table if not exists failed: %w", err)
