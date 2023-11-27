@@ -195,7 +195,9 @@ func StopAPI() {
 	api.checkpointPublishCancel()
 
 	if api.newEntryPublisher != nil {
-		api.newEntryPublisher.Close()
+		if err := api.newEntryPublisher.Close(); err != nil {
+			log.Logger.Errorf("shutting down newEntryPublisher: %v", err)
+		}
 	}
 
 	if indexStorageClient != nil {
