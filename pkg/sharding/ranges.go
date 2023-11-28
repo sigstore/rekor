@@ -39,9 +39,9 @@ type LogRanges struct {
 type Ranges []LogRange
 
 type LogRange struct {
-	TreeID           int64  `json:"treeID"`
-	TreeLength       int64  `json:"treeLength"`
-	EncodedPublicKey string `json:"encodedPublicKey"`
+	TreeID           int64  `json:"treeID" yaml:"treeID"`
+	TreeLength       int64  `json:"treeLength" yaml:"treeLength"`
+	EncodedPublicKey string `json:"encodedPublicKey" yaml:"encodedPublicKey"`
 	decodedPublicKey string
 }
 
