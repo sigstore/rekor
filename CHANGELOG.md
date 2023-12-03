@@ -15,6 +15,7 @@
 * Remove go-playground/validator dependency from pkg/pki (#1817)
 
 ## Contributors
+* Bob Callaway
 * Carlos Tadeu Panato Junior
 * Hayden B
 * James Alseth
