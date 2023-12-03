@@ -1,3 +1,27 @@
+# v1.3.4
+
+## New Features
+* add mysql indexstorage backend
+* add s3 storage for attestations
+
+## Bug Fixes
+* fix: Do not check for pubsub.topics.get on initialization (#1853)
+* fix optional field in cose schema
+
+## Quality Enhancements
+* Update ranges.go (#1852)
+* update indexstorage interface to reduce roundtrips (#1838)
+* use a single validator library in rekor-cli (#1818)
+* Remove go-playground/validator dependency from pkg/pki (#1817)
+
+## Contributors
+* Carlos Tadeu Panato Junior
+* Hayden B
+* James Alseth
+* Kenny Leung
+* Noah Kreiger
+* Zach Steindler
+
 # v1.3.3
 
 ## New Features
