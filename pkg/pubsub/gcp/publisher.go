@@ -45,7 +45,6 @@ var (
 	// Minimal set of permissions needed to check if the server can publish to the configured topic.
 	// https://cloud.google.com/pubsub/docs/access-control#required_permissions
 	requiredIAMPermissions = []string{
-		"pubsub.topics.get",
 		"pubsub.topics.publish",
 	}
 )
