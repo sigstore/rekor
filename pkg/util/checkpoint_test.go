@@ -310,8 +310,6 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 			if err != nil {
 				t.Fatalf("error creating signed checkpoint")
 			}
-			// time := uint64(time.Now().UnixNano())
-			// sth.SetTimestamp(time)
 			signer, _ := signature.LoadSigner(test.signer, crypto.SHA256)
 			if _, ok := test.signer.(*rsa.PrivateKey); ok {
 				signer, _ = signature.LoadRSAPSSSigner(test.signer.(*rsa.PrivateKey), crypto.SHA256, test.opts.(*rsa.PSSOptions))
