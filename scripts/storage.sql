@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS TreeHead(
   FOREIGN KEY(TreeId) REFERENCES Trees(TreeId) ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX TreeHeadRevisionIdx
+CREATE UNIQUE INDEX IF NOT EXISTS TreeHeadRevisionIdx
   ON TreeHead(TreeId, TreeRevision);
 
 -- ---------------------------------------------
