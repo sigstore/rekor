@@ -27,7 +27,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -227,6 +226,34 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 		},
 		{
 			c: Checkpoint{
+				Origin:       "Log Checkpoint With Timestamp",
+				Size:         123,
+				Hash:         []byte("bananas"),
+				OtherContent: []string{"Timestamp: 12345"},
+			},
+			identity:      "someone",
+			signer:        edPrivKey,
+			pubKey:        edPubKey,
+			opts:          crypto.Hash(0),
+			wantSignErr:   false,
+			wantVerifyErr: false,
+		},
+		{
+			c: Checkpoint{
+				Origin:       "Log Checkpoint With Multiple Other Contents",
+				Size:         123,
+				Hash:         []byte("bananas"),
+				OtherContent: []string{"Timestamp: 12345", "Extra: Foo Bar"},
+			},
+			identity:      "someone",
+			signer:        edPrivKey,
+			pubKey:        edPubKey,
+			opts:          crypto.Hash(0),
+			wantSignErr:   false,
+			wantVerifyErr: false,
+		},
+		{
+			c: Checkpoint{
 				Origin: "Log Checkpoint Mismatch v0",
 				Size:   123,
 				Hash:   []byte("bananas"),
@@ -283,8 +310,8 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 			if err != nil {
 				t.Fatalf("error creating signed checkpoint")
 			}
-			time := uint64(time.Now().UnixNano())
-			sth.SetTimestamp(time)
+			// time := uint64(time.Now().UnixNano())
+			// sth.SetTimestamp(time)
 			signer, _ := signature.LoadSigner(test.signer, crypto.SHA256)
 			if _, ok := test.signer.(*rsa.PrivateKey); ok {
 				signer, _ = signature.LoadRSAPSSSigner(test.signer.(*rsa.PrivateKey), crypto.SHA256, test.opts.(*rsa.PSSOptions))

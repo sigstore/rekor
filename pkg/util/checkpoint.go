@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -145,27 +144,6 @@ func (r *SignedCheckpoint) UnmarshalText(data []byte) error {
 	return nil
 }
 
-func (r *SignedCheckpoint) SetTimestamp(timestamp uint64) {
-	var ts uint64
-	for i, val := range r.OtherContent {
-		if n, _ := fmt.Fscanf(strings.NewReader(val), "Timestamp: %d", &ts); n == 1 {
-			r.OtherContent = append(r.OtherContent[:i], r.OtherContent[i+1:]...)
-		}
-	}
-	r.OtherContent = append(r.OtherContent, fmt.Sprintf("Timestamp: %d", timestamp))
-	r.SignedNote = SignedNote{Note: string(r.Checkpoint.String())}
-}
-
-func (r *SignedCheckpoint) GetTimestamp() uint64 {
-	var ts uint64
-	for _, val := range r.OtherContent {
-		if n, _ := fmt.Fscanf(strings.NewReader(val), "Timestamp: %d", &ts); n == 1 {
-			break
-		}
-	}
-	return ts
-}
-
 // CreateAndSignCheckpoint creates a signed checkpoint as a commitment to the current root hash
 func CreateAndSignCheckpoint(ctx context.Context, hostname string, treeID int64, treeSize uint64, rootHash []byte, signer signature.Signer) ([]byte, error) {
 	sth, err := CreateSignedCheckpoint(Checkpoint{
@@ -176,7 +154,6 @@ func CreateAndSignCheckpoint(ctx context.Context, hostname string, treeID int64,
 	if err != nil {
 		return nil, fmt.Errorf("error creating checkpoint: %v", err)
 	}
-	sth.SetTimestamp(uint64(time.Now().UnixNano()))
 	if _, err := sth.Sign(hostname, signer, options.WithContext(ctx)); err != nil {
 		return nil, fmt.Errorf("error signing checkpoint: %v", err)
 	}

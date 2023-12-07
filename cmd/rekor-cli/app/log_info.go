@@ -22,7 +22,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/go-openapi/swag"
 	rclient "github.com/sigstore/rekor/pkg/generated/client"
@@ -45,21 +44,17 @@ type logInfoCmdOutput struct {
 	ActiveTreeSize int64
 	TotalTreeSize  int64
 	RootHash       string
-	TimestampNanos uint64
 	TreeID         string
 }
 
 func (l *logInfoCmdOutput) String() string {
 	// Verification is always successful if we return an object.
-	ts := time.Unix(0, int64(l.TimestampNanos)).UTC().Format(time.RFC3339)
-
 	return fmt.Sprintf(`Verification Successful!
 Active Tree Size:       %v
 Total Tree Size:        %v
 Root Hash:              %s
-Timestamp:              %s
 TreeID:                 %s
-`, l.ActiveTreeSize, l.TotalTreeSize, l.RootHash, ts, l.TreeID)
+`, l.ActiveTreeSize, l.TotalTreeSize, l.RootHash, l.TreeID)
 }
 
 // logInfoCmd represents the current information about the transparency log
@@ -105,7 +100,6 @@ var logInfoCmd = &cobra.Command{
 			ActiveTreeSize: swag.Int64Value(logInfo.TreeSize),
 			TotalTreeSize:  totalTreeSize(logInfo, logInfo.InactiveShards),
 			RootHash:       swag.StringValue(logInfo.RootHash),
-			TimestampNanos: sth.GetTimestamp(),
 			TreeID:         swag.StringValue(logInfo.TreeID),
 		}
 		return cmdOutput, nil
