@@ -29,7 +29,7 @@ require (
 	github.com/sigstore/sigstore v1.7.6
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.18.0
+	github.com/spf13/viper v1.18.1
 	github.com/theupdateframework/go-tuf v0.7.0
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/veraison/go-cose v1.2.0
