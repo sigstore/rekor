@@ -12,7 +12,7 @@ require (
 	github.com/go-openapi/runtime v0.26.2
 	github.com/go-openapi/spec v0.20.11
 	github.com/go-openapi/strfmt v0.21.9
-	github.com/go-openapi/swag v0.22.4
+	github.com/go-openapi/swag v0.22.5
 	github.com/go-openapi/validate v0.22.3
 	github.com/google/go-cmp v0.6.0
 	github.com/google/rpmpack v0.5.0
