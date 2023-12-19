@@ -220,13 +220,9 @@ func VerifyLogEntry(ctx context.Context, e *models.LogEntryAnon, verifier signat
 		return err
 	}
 
-	// TODO: Add support for verifying consistency against an optional provided checkpoint.
-	// See https://github.com/sigstore/rekor/issues/988
-	// TODO: Remove conditional once checkpoint is always returned by server.
-	if e.Verification.InclusionProof.Checkpoint != nil {
-		if err := VerifyCheckpointSignature(e, verifier); err != nil {
-			return err
-		}
+	// Verify checkpoint, which includes a signed root hash.
+	if err := VerifyCheckpointSignature(e, verifier); err != nil {
+		return err
 	}
 
 	// Verify the Signed Entry Timestamp.
