@@ -276,6 +276,12 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 		ProposedContent: nil, // this is explicitly done as we don't want to canonicalize the envelope
 	}
 
+	for _, s := range canonicalEntry.Signatures {
+		if s.Signature == nil {
+			return nil, errors.New("canonical entry missing required signature")
+		}
+	}
+
 	sort.Slice(canonicalEntry.Signatures, func(i, j int) bool {
 		return *canonicalEntry.Signatures[i].Signature < *canonicalEntry.Signatures[j].Signature
 	})
