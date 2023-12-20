@@ -529,3 +529,12 @@ func TestInsertable(t *testing.T) {
 		})
 	}
 }
+
+func TestCanonicalizeHandlesInvalidInput(t *testing.T) {
+	v := &V001Entry{}
+	v.DSSEObj.Signatures = []*models.DSSEV001SchemaSignaturesItems0{{Signature: nil}, {Signature: nil}}
+	_, err := v.Canonicalize(context.TODO())
+	if err == nil {
+		t.Fatalf("expected error canonicalizing invalid input")
+	}
+}
