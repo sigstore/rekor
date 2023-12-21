@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -31,6 +32,7 @@ import (
 
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
+	"github.com/spf13/viper"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -287,8 +289,6 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	return json.Marshal(&itObj)
 }
 
-// AttestationKey and AttestationKeyValue are not implemented so the envelopes will not be persisted in Rekor
-
 func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	returnVal := models.DSSE{}
 	re := V001Entry{
@@ -438,4 +438,23 @@ func (v V001Entry) Insertable() (bool, error) {
 	}
 
 	return true, nil
+}
+
+// AttestationKey returns the digest of the attestation that was uploaded, to be used to lookup the attestation from storage
+func (v *V001Entry) AttestationKey() string {
+	if v.DSSEObj.PayloadHash != nil {
+		return fmt.Sprintf("%s:%s", *v.DSSEObj.PayloadHash.Algorithm, *v.DSSEObj.PayloadHash.Value)
+	}
+	return ""
+}
+
+// AttestationKeyValue returns both the key and value to be persisted into attestation storage
+func (v *V001Entry) AttestationKeyValue() (string, []byte) {
+	storageSize := base64.StdEncoding.DecodedLen(len(v.env.Payload))
+	if storageSize > viper.GetInt("max_attestation_size") {
+		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, viper.GetInt("max_attestation_size"))
+		return "", nil
+	}
+	attBytes, _ := base64.StdEncoding.DecodeString(v.env.Payload)
+	return v.AttestationKey(), attBytes
 }
