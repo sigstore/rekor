@@ -187,7 +187,7 @@ func GenerateDoubleSignedDSSE(t *testing.T) ([]byte, []byte) {
 		S: signRSA,
 	})
 
-	signer, err := dsse.NewMultiEnvelopeSigner(2, evps[0], evps[1])
+	signer, err := dsse.NewEnvelopeSigner(evps[0], evps[1])
 	if err != nil {
 		t.Fatal(err)
 	}
