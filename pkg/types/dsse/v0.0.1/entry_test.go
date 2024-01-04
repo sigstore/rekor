@@ -94,7 +94,7 @@ func multiSignEnvelope(t *testing.T, k []*ecdsa.PrivateKey, payload []byte) *dss
 		})
 	}
 
-	signer, err := dsse.NewMultiEnvelopeSigner(2, evps[0], evps[1])
+	signer, err := dsse.NewEnvelopeSigner(evps[0], evps[1])
 	if err != nil {
 		t.Fatal(err)
 	}
