@@ -8,12 +8,12 @@ require (
 	github.com/cavaliercoder/go-rpm v0.0.0-20200122174316-8cb9fd9c31a8
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-openapi/errors v0.21.0
-	github.com/go-openapi/loads v0.21.3
+	github.com/go-openapi/loads v0.21.5
 	github.com/go-openapi/runtime v0.26.2
 	github.com/go-openapi/spec v0.20.13
 	github.com/go-openapi/strfmt v0.21.10
 	github.com/go-openapi/swag v0.22.7
-	github.com/go-openapi/validate v0.22.4
+	github.com/go-openapi/validate v0.22.6
 	github.com/google/go-cmp v0.6.0
 	github.com/google/rpmpack v0.5.0
 	github.com/google/trillian v1.5.3
@@ -158,7 +158,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
-	github.com/go-openapi/analysis v0.21.5 // indirect
+	github.com/go-openapi/analysis v0.22.0 // indirect
 	github.com/go-openapi/jsonpointer v0.20.2 // indirect
 	github.com/go-openapi/jsonreference v0.20.4 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
