@@ -16,7 +16,7 @@ require (
 	github.com/go-openapi/validate v0.22.6
 	github.com/google/go-cmp v0.6.0
 	github.com/google/rpmpack v0.5.0
-	github.com/google/trillian v1.5.3
+	github.com/google/trillian v1.6.0
 	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b
 	github.com/mitchellh/go-homedir v1.1.0
@@ -109,7 +109,7 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.1 // indirect
-	github.com/go-logr/logr v1.3.0 // indirect
+	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.1.0 // indirect
 	github.com/google/pprof v0.0.0-20231023181126-ff6d637d2a7b // indirect
@@ -138,9 +138,9 @@ require (
 	go.opentelemetry.io/otel/metric v1.21.0 // indirect
 	go.opentelemetry.io/otel/trace v1.21.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20231212172506-995d672761c0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.1 // indirect
-	k8s.io/klog/v2 v2.100.1 // indirect
+	k8s.io/klog/v2 v2.120.0 // indirect
 	software.sslmate.com/src/go-pkcs12 v0.2.0 // indirect
 )
 
