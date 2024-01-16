@@ -310,20 +310,22 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 			if err != nil {
 				t.Fatalf("error creating signed checkpoint")
 			}
-			signer, _ := signature.LoadSigner(test.signer, crypto.SHA256)
-			if _, ok := test.signer.(*rsa.PrivateKey); ok {
-				signer, _ = signature.LoadRSAPSSSigner(test.signer.(*rsa.PrivateKey), crypto.SHA256, test.opts.(*rsa.PSSOptions))
+			signerOpts := []signature.LoadOption{options.WithHash(crypto.SHA256)}
+			if rsaTestOpts, ok := test.opts.(*rsa.PSSOptions); ok && rsaTestOpts != nil {
+				signerOpts = append(signerOpts, options.WithRSAPSS(rsaTestOpts))
 			}
+			signer, _ := signature.LoadSignerWithOpts(test.signer, signerOpts...)
 
 			_, err = sth.Sign(test.identity, signer, options.WithCryptoSignerOpts(test.opts))
 			if (err != nil) != test.wantSignErr {
 				t.Fatalf("signing test failed: wantSignErr %v, err %v", test.wantSignErr, err)
 			}
 			if !test.wantSignErr {
-				verifier, _ := signature.LoadVerifier(test.pubKey, crypto.SHA256)
-				if _, ok := test.pubKey.(*rsa.PublicKey); ok {
-					verifier, _ = signature.LoadRSAPSSVerifier(test.pubKey.(*rsa.PublicKey), crypto.SHA256, test.opts.(*rsa.PSSOptions))
+				verifierOpts := []signature.LoadOption{options.WithHash(crypto.SHA256)}
+				if rsaTestOpts, ok := test.opts.(*rsa.PSSOptions); ok && rsaTestOpts != nil {
+					verifierOpts = append(verifierOpts, options.WithRSAPSS(rsaTestOpts))
 				}
+				verifier, _ := signature.LoadVerifierWithOpts(test.pubKey, verifierOpts...)
 
 				if !sth.Verify(verifier) != test.wantVerifyErr {
 					t.Fatalf("verification test failed %v", sth.Verify(verifier))
