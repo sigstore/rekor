@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -148,7 +147,7 @@ func (v *V001Entry) validate() (pki.Signature, pki.PublicKey, error) {
 		return nil, nil, types.ValidationError(errors.New("missing signature"))
 	}
 	// Hashed rekord type only works for x509 signature types
-	sigObj, err := x509.NewSignature(bytes.NewReader(sig.Content))
+	sigObj, err := x509.NewSignatureWithOpts(bytes.NewReader(sig.Content), options.WithED25519ph())
 	if err != nil {
 		return nil, nil, types.ValidationError(err)
 	}
@@ -160,11 +159,6 @@ func (v *V001Entry) validate() (pki.Signature, pki.PublicKey, error) {
 	keyObj, err := x509.NewPublicKey(bytes.NewReader(key.Content))
 	if err != nil {
 		return nil, nil, types.ValidationError(err)
-	}
-
-	_, isEd25519 := keyObj.CryptoPubKey().(ed25519.PublicKey)
-	if isEd25519 {
-		return nil, nil, types.ValidationError(errors.New("ed25519 unsupported for hashedrekord"))
 	}
 
 	data := v.HashedRekordObj.Data

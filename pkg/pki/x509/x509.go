@@ -38,17 +38,23 @@ import (
 var EmailAddressOID asn1.ObjectIdentifier = []int{1, 2, 840, 113549, 1, 9, 1}
 
 type Signature struct {
-	signature []byte
+	signature        []byte
+	verifierLoadOpts []sigsig.LoadOption
 }
 
 // NewSignature creates and validates an x509 signature object
 func NewSignature(r io.Reader) (*Signature, error) {
+	return NewSignatureWithOpts(r)
+}
+
+func NewSignatureWithOpts(r io.Reader, opts ...sigsig.LoadOption) (*Signature, error) {
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
 	return &Signature{
-		signature: b,
+		signature:        b,
+		verifierLoadOpts: opts,
 	}, nil
 }
 
@@ -84,7 +90,7 @@ func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOptio
 		}
 	}
 
-	verifier, err := sigsig.LoadVerifier(p, crypto.SHA256)
+	verifier, err := sigsig.LoadVerifierWithOpts(p, s.verifierLoadOpts...)
 	if err != nil {
 		return err
 	}
