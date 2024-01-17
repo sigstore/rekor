@@ -64,7 +64,7 @@ func TestPublishCheckpoint(t *testing.T) {
 
 	redisClient, mock := redismock.NewClientMock()
 	ts := time.Now().Truncate(time.Duration(freq) * time.Minute).UnixNano()
-	mock.Regexp().ExpectSetNX(fmt.Sprintf("%d/%d", treeID, ts), "[0-9a-fA-F]+", 0).SetVal(true)
+	mock.Regexp().ExpectSetNX(fmt.Sprintf("%d/%d", treeID, ts), true, 0).SetVal(true)
 	mock.Regexp().ExpectSet(fmt.Sprintf("%d/latest", treeID), "[0-9a-fA-F]+", 0).SetVal("OK")
 
 	publisher := NewCheckpointPublisher(context.Background(), mockTrillianLogClient, int64(treeID), hostname, signer, redisClient, uint(freq), counter)
@@ -119,7 +119,7 @@ func TestPublishCheckpointMultiple(t *testing.T) {
 
 	redisClient, mock := redismock.NewClientMock()
 	ts := time.Now().Truncate(time.Duration(freq) * time.Minute).UnixNano()
-	mock.Regexp().ExpectSetNX(fmt.Sprintf("%d/%d", treeID, ts), "[0-9a-fA-F]+", 0).SetVal(true)
+	mock.Regexp().ExpectSetNX(fmt.Sprintf("%d/%d", treeID, ts), true, 0).SetVal(true)
 	mock.Regexp().ExpectSet(fmt.Sprintf("%d/latest", treeID), "[0-9a-fA-F]+", 0).SetVal("OK")
 
 	publisher := NewCheckpointPublisher(context.Background(), mockTrillianLogClient, int64(treeID), hostname, signer, redisClient, uint(freq), counter)
@@ -128,7 +128,7 @@ func TestPublishCheckpointMultiple(t *testing.T) {
 	defer cancel()
 
 	redisClientEx, mockEx := redismock.NewClientMock()
-	mockEx.Regexp().ExpectSetNX(fmt.Sprintf("%d/%d", treeID, ts), "[0-9a-fA-F]+", 0).SetVal(false)
+	mockEx.Regexp().ExpectSetNX(fmt.Sprintf("%d/%d", treeID, ts), true, 0).SetVal(false)
 	publisherEx := NewCheckpointPublisher(context.Background(), mockTrillianLogClient, int64(treeID), hostname, signer, redisClientEx, uint(freq), counter)
 	ctxEx, cancelEx := context.WithCancel(context.Background())
 	publisherEx.StartPublisher(ctxEx)
@@ -255,7 +255,7 @@ func TestPublishCheckpointRedisFailure(t *testing.T) {
 
 	redisClient, mock := redismock.NewClientMock()
 	// error on first redis call
-	mock.Regexp().ExpectSetNX(".+", "[0-9a-fA-F]+", 0).SetErr(errors.New("redis error"))
+	mock.Regexp().ExpectSetNX(".+", true, 0).SetErr(errors.New("redis error"))
 
 	publisher := NewCheckpointPublisher(context.Background(), mockTrillianLogClient, int64(treeID), hostname, signer, redisClient, uint(freq), counter)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -298,7 +298,7 @@ func TestPublishCheckpointRedisLatestFailure(t *testing.T) {
 		Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: &trillian.SignedLogRoot{LogRoot: mRoot}}, nil)
 
 	redisClient, mock := redismock.NewClientMock()
-	mock.Regexp().ExpectSetNX(".+", "[0-9a-fA-F]+", 0).SetVal(true)
+	mock.Regexp().ExpectSetNX(".+", true, 0).SetVal(true)
 	// error on second redis call
 	mock.Regexp().ExpectSet(".*", "[0-9a-fA-F]+", 0).SetErr(errors.New("error"))
 

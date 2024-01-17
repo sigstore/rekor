@@ -151,7 +151,9 @@ func (c *CheckpointPublisher) publish(tc *trillianclient.TrillianClient, sTreeID
 
 	// return value ignored, which is whether or not the entry was set
 	// no error is thrown if the key already exists
-	successNX, err := c.redisClient.SetNX(ctx, key, hexCP, 0).Result()
+	// use smallest value as it's unused
+	value := true
+	successNX, err := c.redisClient.SetNX(ctx, key, value, 0).Result()
 	if err != nil {
 		c.reqCounter.With(
 			map[string]string{
