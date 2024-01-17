@@ -1659,11 +1659,13 @@ func init() {
               "description": "The hashing function used to compute the hash value",
               "type": "string",
               "enum": [
-                "sha256"
+                "sha256",
+                "sha384",
+                "sha512"
               ]
             },
             "value": {
-              "description": "The hash value for the content",
+              "description": "The hash value for the content, as represented by a lower case hexadecimal string",
               "type": "string"
             }
           }
@@ -1682,11 +1684,13 @@ func init() {
           "description": "The hashing function used to compute the hash value",
           "type": "string",
           "enum": [
-            "sha256"
+            "sha256",
+            "sha384",
+            "sha512"
           ]
         },
         "value": {
-          "description": "The hash value for the content",
+          "description": "The hash value for the content, as represented by a lower case hexadecimal string",
           "type": "string"
         }
       }
@@ -3261,11 +3265,13 @@ func init() {
                   "description": "The hashing function used to compute the hash value",
                   "type": "string",
                   "enum": [
-                    "sha256"
+                    "sha256",
+                    "sha384",
+                    "sha512"
                   ]
                 },
                 "value": {
-                  "description": "The hash value for the content",
+                  "description": "The hash value for the content, as represented by a lower case hexadecimal string",
                   "type": "string"
                 }
               }

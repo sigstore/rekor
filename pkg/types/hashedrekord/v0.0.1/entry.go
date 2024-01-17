@@ -18,6 +18,7 @@ package hashedrekord
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
@@ -178,11 +179,21 @@ func (v *V001Entry) validate() (pki.Signature, pki.PublicKey, error) {
 		return nil, nil, types.ValidationError(errors.New("invalid value for hash"))
 	}
 
+	var alg crypto.Hash
+	switch swag.StringValue(hash.Algorithm) {
+	case models.HashedrekordV001SchemaDataHashAlgorithmSha384:
+		alg = crypto.SHA384
+	case models.HashedrekordV001SchemaDataHashAlgorithmSha512:
+		alg = crypto.SHA512
+	default:
+		alg = crypto.SHA256
+	}
+
 	decoded, err := hex.DecodeString(*hash.Value)
 	if err != nil {
 		return nil, nil, err
 	}
-	if err := sigObj.Verify(nil, keyObj, options.WithDigest(decoded)); err != nil {
+	if err := sigObj.Verify(nil, keyObj, options.WithDigest(decoded), options.WithCryptoSignerOpts(alg)); err != nil {
 		return nil, nil, types.ValidationError(fmt.Errorf("verifying signature: %w", err))
 	}
 
