@@ -25,15 +25,11 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
 	"github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
-	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -94,72 +90,5 @@ func TestSHA256HashedRekordEntry(t *testing.T) {
 
 	if _, err = rc.Entries.CreateLogEntry(params); err != nil {
 		t.Fatalf("expected no errors when submitting hashedrekord entry with sha256 to rekor %s", err)
-	}
-}
-
-// TestSHA1HashedRekordEntry tests sending a proposed hashedrekord entry with
-// sha1 digests that should not be accepted by Rekor as SHA1 is considered
-// insecure.
-func TestSHA1HashedRekordEntry(t *testing.T) {
-	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatalf("error generating key: %v", err)
-	}
-	pubBytes, err := cryptoutils.MarshalPublicKeyToPEM(privKey.Public())
-	if err != nil {
-		t.Fatalf("error marshaling public key: %v", err)
-	}
-
-	data := []byte("data")
-	signer, err := signature.LoadSigner(privKey, crypto.SHA256)
-	if err != nil {
-		t.Fatalf("error loading verifier: %v", err)
-	}
-	signature, err := signer.SignMessage(bytes.NewReader(data))
-	if err != nil {
-		t.Fatalf("error signing message: %v", err)
-	}
-
-	re := V001Entry{}
-
-	// we will need artifact, public-key, signature
-	re.HashedRekordObj.Data = &models.HashedrekordV001SchemaData{}
-
-	re.HashedRekordObj.Signature = &models.HashedrekordV001SchemaSignature{}
-	re.HashedRekordObj.Signature.Content = strfmt.Base64(signature)
-
-	re.HashedRekordObj.Signature.PublicKey = &models.HashedrekordV001SchemaSignaturePublicKey{}
-	publicKeyBytes := [][]byte{pubBytes}
-
-	re.HashedRekordObj.Signature.PublicKey.Content = strfmt.Base64(publicKeyBytes[0])
-	re.HashedRekordObj.Data.Hash = &models.HashedrekordV001SchemaDataHash{
-		Algorithm: swag.String("sha1"),
-		Value:     swag.String("a17c9aaa61e80a1bf71d0d850af4e5baa9800bbd"),
-	}
-
-	hr := models.Hashedrekord{}
-	hr.APIVersion = swag.String("0.0.1")
-	hr.Spec = re.HashedRekordObj
-
-	rc, err := client.GetRekorClient(rekorServer())
-	if err != nil {
-		t.Errorf("error getting client: %v", err)
-	}
-
-	params := &entries.CreateLogEntryParams{}
-	params.SetProposedEntry(&hr)
-	params.SetContext(context.Background())
-	params.SetTimeout(5 * time.Second)
-
-	if _, err = rc.Entries.CreateLogEntry(params); err == nil {
-		t.Fatalf("expected a failure when trying to add a hashedrekord with sha1")
-	}
-
-	e, ok := err.(*entries.CreateLogEntryBadRequest)
-	if !ok {
-		t.Errorf("unexpected error returned from rekor: %v", err.Error())
-	}
-	if !strings.Contains(e.Payload.Message, "validation failure") {
-		t.Errorf("expected error message to include 'validation failure': %v", e.Payload.Message)
 	}
 }

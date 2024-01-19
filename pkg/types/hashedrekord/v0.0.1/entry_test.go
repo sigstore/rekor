@@ -39,6 +39,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	x509r "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"go.uber.org/goleak"
 )
@@ -51,6 +52,41 @@ func TestNewEntryReturnType(t *testing.T) {
 	entry := NewEntry()
 	if reflect.TypeOf(entry) != reflect.ValueOf(&V001Entry{}).Type() {
 		t.Errorf("invalid type returned from NewEntry: %T", entry)
+	}
+}
+
+func TestRejectsSHA1(t *testing.T) {
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("error generating key: %v", err)
+	}
+	pubBytes, err := cryptoutils.MarshalPublicKeyToPEM(privKey.Public())
+	if err != nil {
+		t.Fatalf("error marshaling public key: %v", err)
+	}
+
+	data := []byte("data")
+	signer, err := signature.LoadSigner(privKey, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("error loading verifier: %v", err)
+	}
+	signature, err := signer.SignMessage(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("error signing message: %v", err)
+	}
+
+	ap := types.ArtifactProperties{
+		ArtifactBytes:  data,
+		ArtifactHash:   "sha1:a17c9aaa61e80a1bf71d0d850af4e5baa9800bbd",
+		PublicKeyBytes: [][]byte{pubBytes},
+		PKIFormat:      "x509",
+		SignatureBytes: signature,
+	}
+
+	ei := NewEntry()
+	_, err = ei.CreateFromArtifactProperties(context.Background(), ap)
+	if err == nil {
+		t.Fatalf("expected error creating entry")
 	}
 }
 
