@@ -20,15 +20,34 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    groups:
+      all:
+        update-types:
+          - "patch"
   - package-ecosystem: "gomod"
     directory: "hack/tools"
     schedule:
       interval: "weekly"
+    groups:
+      all:
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      all:
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      all:
+        update-types:
+          - "minor"
+          - "patch"
