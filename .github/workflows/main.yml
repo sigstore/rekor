@@ -95,7 +95,7 @@ jobs:
       - name: Refactor-e2e # this will a WIP to move all the tests to respective packages
         run: ./e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
+        uses: actions/upload-artifact@694cdabd8bdb0f10b2cea11669e1bf5453eed0a6 # v4.2.0
         if: failure()
         with:
           name: E2E Docker Compose logs
@@ -126,7 +126,7 @@ jobs:
       - name: Sharding Test
         run: ./tests/sharding-e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
+        uses: actions/upload-artifact@694cdabd8bdb0f10b2cea11669e1bf5453eed0a6 # v4.2.0
         if: failure()
         with:
           name: Sharding E2E Docker Compose logs
@@ -149,7 +149,7 @@ jobs:
       - name: Test for Attestation begin returned that was previously persisted in tlog
         run: ./tests/issue-872-e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
+        uses: actions/upload-artifact@694cdabd8bdb0f10b2cea11669e1bf5453eed0a6 # v4.2.0
         if: failure()
         with:
           name: Docker Compose logs
@@ -171,7 +171,7 @@ jobs:
       - name: Run test harness
         run: ./tests/rekor-harness.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
+        uses: actions/upload-artifact@694cdabd8bdb0f10b2cea11669e1bf5453eed0a6 # v4.2.0
         if: failure()
         with:
           name: E2E Docker Compose logs
