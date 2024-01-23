@@ -24,6 +24,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/sha512"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
@@ -38,6 +39,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	x509r "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"go.uber.org/goleak"
 )
@@ -53,10 +55,46 @@ func TestNewEntryReturnType(t *testing.T) {
 	}
 }
 
+func TestRejectsSHA1(t *testing.T) {
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("error generating key: %v", err)
+	}
+	pubBytes, err := cryptoutils.MarshalPublicKeyToPEM(privKey.Public())
+	if err != nil {
+		t.Fatalf("error marshaling public key: %v", err)
+	}
+
+	data := []byte("data")
+	signer, err := signature.LoadSigner(privKey, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("error loading verifier: %v", err)
+	}
+	signature, err := signer.SignMessage(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("error signing message: %v", err)
+	}
+
+	ap := types.ArtifactProperties{
+		ArtifactBytes:  data,
+		ArtifactHash:   "sha1:a17c9aaa61e80a1bf71d0d850af4e5baa9800bbd",
+		PublicKeyBytes: [][]byte{pubBytes},
+		PKIFormat:      "x509",
+		SignatureBytes: signature,
+	}
+
+	ei := NewEntry()
+	_, err = ei.CreateFromArtifactProperties(context.Background(), ap)
+	if err == nil {
+		t.Fatalf("expected error creating entry")
+	}
+}
+
 func TestCrossFieldValidation(t *testing.T) {
 	type TestCase struct {
 		caseDesc                  string
 		entry                     V001Entry
+		expectedHashValue         string
 		expectUnmarshalSuccess    bool
 		expectCanonicalizeSuccess bool
 		expectedVerifierSuccess   bool
@@ -90,11 +128,19 @@ func TestCrossFieldValidation(t *testing.T) {
 	})
 
 	dataBytes := []byte("sign me!")
-	h := sha256.Sum256(dataBytes)
-	dataSHA := hex.EncodeToString(h[:])
+	sha256Sum := sha256.Sum256(dataBytes)
+	sha384Sum := sha512.Sum384(dataBytes)
+	sha512Sum := sha512.Sum512(dataBytes)
+	dataSHA256 := hex.EncodeToString(sha256Sum[:])
+	dataSHA384 := hex.EncodeToString(sha384Sum[:])
+	dataSHA512 := hex.EncodeToString(sha512Sum[:])
 
-	signer, _ := signature.LoadSigner(key, crypto.SHA256)
-	sigBytes, _ := signer.SignMessage(bytes.NewReader(dataBytes))
+	sha256Signer, _ := signature.LoadSigner(key, crypto.SHA256)
+	sha256SigBytes, _ := sha256Signer.SignMessage(bytes.NewReader(dataBytes))
+	sha384Signer, _ := signature.LoadSigner(key, crypto.SHA384)
+	sha384SigBytes, _ := sha384Signer.SignMessage(bytes.NewReader(dataBytes))
+	sha512Signer, _ := signature.LoadSigner(key, crypto.SHA512)
+	sha512SigBytes, _ := sha512Signer.SignMessage(bytes.NewReader(dataBytes))
 
 	incorrectLengthHash := sha256.Sum224(dataBytes)
 	incorrectLengthSHA := hex.EncodeToString(incorrectLengthHash[:])
@@ -124,10 +170,11 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Signature: &models.HashedrekordV001SchemaSignature{
-						Content: sigBytes,
+						Content: sha256SigBytes,
 					},
 				},
 			},
+			expectedHashValue:       "sha256:" + dataSHA256,
 			expectUnmarshalSuccess:  false,
 			expectedVerifierSuccess: false,
 		},
@@ -136,11 +183,12 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Signature: &models.HashedrekordV001SchemaSignature{
-						Content:   sigBytes,
+						Content:   sha256SigBytes,
 						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{},
 					},
 				},
 			},
+			expectedHashValue:       "sha256:" + dataSHA256,
 			expectUnmarshalSuccess:  false,
 			expectedVerifierSuccess: false,
 		},
@@ -149,13 +197,14 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Signature: &models.HashedrekordV001SchemaSignature{
-						Content: sigBytes,
+						Content: sha256SigBytes,
 						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
 							Content: invalidKeyBytes,
 						},
 					},
 				},
 			},
+			expectedHashValue:      "sha256:" + dataSHA256,
 			expectUnmarshalSuccess: false,
 			// successful even if unmarshalling fails, because the ed25519 key is valid
 			expectedVerifierSuccess: true,
@@ -165,13 +214,14 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Signature: &models.HashedrekordV001SchemaSignature{
-						Content: sigBytes,
+						Content: sha256SigBytes,
 						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
 							Content: keyBytes,
 						},
 					},
 				},
 			},
+			expectedHashValue:       "sha256:" + dataSHA256,
 			expectUnmarshalSuccess:  false,
 			expectedVerifierSuccess: true,
 		},
@@ -180,7 +230,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Signature: &models.HashedrekordV001SchemaSignature{
-						Content: sigBytes,
+						Content: sha256SigBytes,
 						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
 							Content: keyBytes,
 						},
@@ -188,27 +238,75 @@ func TestCrossFieldValidation(t *testing.T) {
 					Data: &models.HashedrekordV001SchemaData{},
 				},
 			},
+			expectedHashValue:       "sha256:" + dataSHA256,
 			expectUnmarshalSuccess:  false,
 			expectedVerifierSuccess: true,
 		},
 		{
-			caseDesc: "signature with hash",
+			caseDesc: "signature with sha256 hash",
 			entry: V001Entry{
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Signature: &models.HashedrekordV001SchemaSignature{
-						Content: sigBytes,
+						Content: sha256SigBytes,
 						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
 							Content: keyBytes,
 						},
 					},
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Value:     swag.String(dataSHA),
+							Value:     swag.String(dataSHA256),
 							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
 						},
 					},
 				},
 			},
+			expectedHashValue:         "sha256:" + dataSHA256,
+			expectUnmarshalSuccess:    true,
+			expectCanonicalizeSuccess: true,
+			expectedVerifierSuccess:   true,
+		},
+		{
+			caseDesc: "signature with sha384 hash",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content: sha384SigBytes,
+						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
+							Content: keyBytes,
+						},
+					},
+					Data: &models.HashedrekordV001SchemaData{
+						Hash: &models.HashedrekordV001SchemaDataHash{
+							Value:     swag.String(dataSHA384),
+							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha384),
+						},
+					},
+				},
+			},
+			expectedHashValue:         "sha384:" + dataSHA384,
+			expectUnmarshalSuccess:    true,
+			expectCanonicalizeSuccess: true,
+			expectedVerifierSuccess:   true,
+		},
+		{
+			caseDesc: "signature with sha512 hash",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content: sha512SigBytes,
+						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
+							Content: keyBytes,
+						},
+					},
+					Data: &models.HashedrekordV001SchemaData{
+						Hash: &models.HashedrekordV001SchemaDataHash{
+							Value:     swag.String(dataSHA512),
+							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha512),
+						},
+					},
+				},
+			},
+			expectedHashValue:         "sha512:" + dataSHA512,
 			expectUnmarshalSuccess:    true,
 			expectCanonicalizeSuccess: true,
 			expectedVerifierSuccess:   true,
@@ -218,7 +316,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Signature: &models.HashedrekordV001SchemaSignature{
-						Content: sigBytes,
+						Content: sha256SigBytes,
 						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
 							Content: keyBytes,
 						},
@@ -231,6 +329,7 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
+			expectedHashValue:         "sha256:" + dataSHA256,
 			expectUnmarshalSuccess:    false,
 			expectCanonicalizeSuccess: false,
 			expectedVerifierSuccess:   true,
@@ -240,7 +339,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Signature: &models.HashedrekordV001SchemaSignature{
-						Content: sigBytes,
+						Content: sha256SigBytes,
 						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
 							Content: keyBytes,
 						},
@@ -253,6 +352,30 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 				},
 			},
+			expectedHashValue:         "sha256:" + dataSHA256,
+			expectUnmarshalSuccess:    false,
+			expectCanonicalizeSuccess: false,
+			expectedVerifierSuccess:   true,
+		},
+		{
+			caseDesc: "signature with mismatched hash & invalid signature",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content: sha512SigBytes,
+						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
+							Content: keyBytes,
+						},
+					},
+					Data: &models.HashedrekordV001SchemaData{
+						Hash: &models.HashedrekordV001SchemaDataHash{
+							Value:     swag.String(dataSHA256),
+							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+						},
+					},
+				},
+			},
+			expectedHashValue:         "sha256:" + dataSHA256,
 			expectUnmarshalSuccess:    false,
 			expectCanonicalizeSuccess: false,
 			expectedVerifierSuccess:   true,
@@ -293,7 +416,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			hash, err := v.ArtifactHash()
 			if err != nil {
 				t.Errorf("unexpected failure with ArtifactHash: %v", err)
-			} else if hash != "sha256:"+dataSHA {
+			} else if hash != tc.expectedHashValue {
 				t.Errorf("unexpected match with ArtifactHash: %s", hash)
 			}
 		}
@@ -323,7 +446,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			hash, err := ei.ArtifactHash()
 			if err != nil {
 				t.Errorf("unexpected failure with ArtifactHash: %v", err)
-			} else if hash != "sha256:"+dataSHA {
+			} else if hash != tc.expectedHashValue {
 				t.Errorf("unexpected match with ArtifactHash: %s", hash)
 			}
 		}
