@@ -157,23 +157,6 @@ ko-local:
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs redisImagerefs \
 		github.com/sigstore/rekor/cmd/backfill-redis
 
-# This builds the trillian containers we rely on using ko for cross platform support
-.PHONY: ko-trillian
-ko-trillian:
-	cd hack/tools \
-	&& ko publish --base-import-paths \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs trillianSignerImagerefs github.com/google/trillian/cmd/trillian_log_signer \
-	&& mv trillianSignerImagerefs ../.. \
-	&& cd -
-
-	cd hack/tools && \
-	ko publish --base-import-paths \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs trillianServerImagerefs github.com/google/trillian/cmd/trillian_log_server \
-	&& mv trillianServerImagerefs ../.. \
-	&& cd -
-
 .PHONY: fuzz
 # This runs the fuzz tests for a short period of time to ensure they don't crash.
 fuzz:
