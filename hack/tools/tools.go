@@ -23,8 +23,4 @@ import (
 	_ "github.com/AdamKorcz/go-fuzz-headers-1"
 	_ "github.com/go-swagger/go-swagger/cmd/swagger"
 	_ "github.com/wadey/gocovmerge"
-
-	// These are so we can build these two binaries into containers with ko
-	_ "github.com/google/trillian/cmd/trillian_log_server"
-	_ "github.com/google/trillian/cmd/trillian_log_signer"
 )
