@@ -50,7 +50,7 @@ services:
       retries: 3
       start_period: 5s
   trillian-log-server:
-    image: gcr.io/projectsigstore/trillian_log_server@sha256:f850a0defd089ea844822030c67ae05bc93c91168a7dd4aceb0b6648c39f696b
+    image: ghcr.io/sigstore/scaffolding/trillian_log_server@sha256:beffee16bb07b5cb051dc4e476d3a1063521ed5ae0b670efc7fe6f3507d94d2b # v1.6.0
     command: [
       "--quota_system=noop",
       "--storage_system=mysql",
@@ -66,7 +66,7 @@ services:
     depends_on:
       - mysql
   trillian-log-signer:
-    image: gcr.io/projectsigstore/trillian_log_signer@sha256:fe90d523f6617974f70878918e4b31d49b2b46a86024bb2d6b01d2bbfed8edbf
+    image: ghcr.io/sigstore/scaffolding/trillian_log_signer@sha256:79d57af375cfa997ed5452cc0c02c0396d909fcc91d11065586f119490aa9214 # v1.6.0
     command: [
       "--quota_system=noop",
       "--storage_system=mysql",
