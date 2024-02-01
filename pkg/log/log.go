@@ -39,7 +39,7 @@ func ConfigureLogger(logType string) {
 		cfg.EncoderConfig.MessageKey = "message"
 		cfg.EncoderConfig.TimeKey = "time"
 		cfg.EncoderConfig.EncodeLevel = encodeLevel()
-		cfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
+		cfg.EncoderConfig.EncodeTime = zapcore.RFC3339NanoTimeEncoder
 		cfg.EncoderConfig.EncodeDuration = zapcore.SecondsDurationEncoder
 		cfg.EncoderConfig.EncodeCaller = zapcore.FullCallerEncoder
 	} else {
