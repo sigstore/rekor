@@ -1,3 +1,29 @@
+# v1.3.5
+
+## New Features
+* output trace in slog and override correlation header name (#1986)
+* give log timestamps nanosecond precision (#1985)
+* Added support for sha384/sha512 hash algorithms in hashedrekords (#1959)
+* Change Redis value for locking mechanism (#1957)
+
+## Bug Fixes
+* Fix panic for DSSE canonicalization (#1923)
+* Drop conditional when verifying entry checkpoint (#1917)
+* Remove timestamp from checkpoint (#1888)
+* Additional unique index correction (#1885)
+
+## Quality Enhancements
+* bump trillian images to v1.6.0 (#1984)
+* remove trillian images from release process (#1983)
+* update builder to use go1.21
+
+## Contributors
+* Andrew Block
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Hayden Blauzvern
+* Riccardo Schirone
+
 # v1.3.4
 
 ## New Features
