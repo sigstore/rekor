@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/profiler"
+	"github.com/go-chi/chi/middleware"
 	"github.com/go-openapi/loads"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
@@ -63,7 +64,7 @@ var serveCmd = &cobra.Command{
 	Long:  `Starts a http server and serves the configured api`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Setup the logger to dev/prod
-		log.ConfigureLogger(viper.GetString("log_type"))
+		log.ConfigureLogger(viper.GetString("log_type"), viper.GetString("trace-string-prefix"))
 
 		// workaround for https://github.com/sigstore/rekor/issues/68
 		// from https://github.com/golang/glog/commit/fca8c8854093a154ff1eb580aae10276ad6b1b5f
@@ -75,6 +76,9 @@ var serveCmd = &cobra.Command{
 			viStr = vi.String()
 		}
 		log.Logger.Infof("starting rekor-server @ %v", viStr)
+
+		// overrides the correlation ID printed in logs, if config is set
+		middleware.RequestIDHeader = viper.GetString("http-request-id-header-name")
 
 		if viper.GetBool("gcp_cloud_profiling.enabled") {
 			cfg := profiler.Config{

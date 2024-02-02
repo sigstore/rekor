@@ -22,6 +22,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-chi/chi/middleware"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/spf13/cobra"
@@ -130,6 +131,9 @@ Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().Duration("search_index.mysql.conn_max_lifetime", 0*time.Second, "maximum connection lifetime")
 	rootCmd.PersistentFlags().Int("search_index.mysql.max_open_connections", 0, "maximum open connections")
 	rootCmd.PersistentFlags().Int("search_index.mysql.max_idle_connections", 0, "maximum idle connections")
+
+	rootCmd.PersistentFlags().String("http-request-id-header-name", middleware.RequestIDHeader, "name of HTTP Request Header to use as request correlation ID")
+	rootCmd.PersistentFlags().String("trace-string-prefix", "", "if set, this will be used to prefix the 'trace' field when outputting structured logs")
 
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)
