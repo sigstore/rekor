@@ -188,7 +188,7 @@ type httpRequestFields struct {
 	status        int
 	responseSize  int
 	userAgent     string
-	remoteIP      string
+	remoteIp      string
 	latency       time.Duration
 	protocol      string
 }
@@ -200,7 +200,7 @@ func (h *httpRequestFields) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddInt("status", h.status)
 	enc.AddString("responseSize", fmt.Sprintf("%d", h.responseSize))
 	enc.AddString("userAgent", h.userAgent)
-	enc.AddString("remoteIP", h.remoteIP)
+	enc.AddString("remoteIp", h.remoteIp)
 	enc.AddString("latency", fmt.Sprintf("%.9fs", h.latency.Seconds())) // formatted per GCP expectations
 	enc.AddString("protocol", h.protocol)
 	return nil
@@ -227,7 +227,7 @@ func (z *zapLogEntry) Write(status, bytes int, _ http.Header, elapsed time.Durat
 		status:        status,
 		responseSize:  bytes,
 		userAgent:     z.r.Header.Get("User-Agent"),
-		remoteIP:      z.r.RemoteAddr,
+		remoteIp:      z.r.RemoteAddr,
 		latency:       elapsed,
 		protocol:      z.r.Proto,
 	}
