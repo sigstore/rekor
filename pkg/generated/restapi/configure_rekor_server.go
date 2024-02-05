@@ -188,7 +188,7 @@ type httpRequestFields struct {
 	status        int
 	responseSize  int
 	userAgent     string
-	remoteIp      string
+	remoteIp      string //revive:disable:var-naming
 	latency       time.Duration
 	protocol      string
 }
