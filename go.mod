@@ -51,7 +51,7 @@ require (
 
 require (
 	cloud.google.com/go/profiler v0.4.0
-	cloud.google.com/go/pubsub v1.36.0
+	cloud.google.com/go/pubsub v1.36.1
 	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230919221257-8b5d3ce2d11d
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7
@@ -138,7 +138,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.22.0 // indirect
 	go.opentelemetry.io/otel/trace v1.22.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240122161410-6c6643bf1457 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.1 // indirect
 	k8s.io/klog/v2 v2.120.0 // indirect
 	software.sslmate.com/src/go-pkcs12 v0.2.0 // indirect
@@ -199,7 +199,7 @@ require (
 	golang.org/x/term v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
-	google.golang.org/api v0.159.0
+	google.golang.org/api v0.160.0
 	google.golang.org/appengine v1.6.8 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
