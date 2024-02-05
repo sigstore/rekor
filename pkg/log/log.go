@@ -117,7 +117,7 @@ func ContextLogger(ctx context.Context) *zap.SugaredLogger {
 			requestID := operation{ctxRequestID}
 			proposedLogger = proposedLogger.With(zap.Object("operation", requestID))
 			if traceStringPrefix != "" {
-				proposedLogger = proposedLogger.With(zap.String("trace", fmt.Sprintf("%s/%s", traceStringPrefix, ctxRequestID)))
+				proposedLogger = proposedLogger.With(zap.String("logging.googleapis.com/trace", fmt.Sprintf("%s/%s", traceStringPrefix, ctxRequestID)))
 			}
 		}
 	}
