@@ -41,6 +41,7 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	"go.uber.org/goleak"
 )
 
@@ -113,17 +114,17 @@ func TestCrossFieldValidation(t *testing.T) {
 		Type:  "PUBLIC KEY",
 	})
 
-	// testing lack of support for ed25519
-	invalidEdPubKey, _, err := ed25519.GenerateKey(rand.Reader)
+	// testing support ed25519
+	edPubKey, edPrivKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
-	invalidDer, err := x509.MarshalPKIXPublicKey(invalidEdPubKey)
+	edDer, err := x509.MarshalPKIXPublicKey(edPubKey)
 	if err != nil {
 		t.Fatal(err)
 	}
-	invalidKeyBytes := pem.EncodeToMemory(&pem.Block{
-		Bytes: invalidDer,
+	edPubKeyBytes := pem.EncodeToMemory(&pem.Block{
+		Bytes: edDer,
 		Type:  "PUBLIC KEY",
 	})
 
@@ -141,6 +142,9 @@ func TestCrossFieldValidation(t *testing.T) {
 	sha384SigBytes, _ := sha384Signer.SignMessage(bytes.NewReader(dataBytes))
 	sha512Signer, _ := signature.LoadSigner(key, crypto.SHA512)
 	sha512SigBytes, _ := sha512Signer.SignMessage(bytes.NewReader(dataBytes))
+
+	edsha512Signer, _ := signature.LoadSignerWithOpts(edPrivKey, options.WithHash(crypto.SHA512), options.WithED25519ph())
+	edsha512SigBytes, _ := edsha512Signer.SignMessage(bytes.NewReader(dataBytes))
 
 	incorrectLengthHash := sha256.Sum224(dataBytes)
 	incorrectLengthSHA := hex.EncodeToString(incorrectLengthHash[:])
@@ -197,16 +201,15 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Signature: &models.HashedrekordV001SchemaSignature{
-						Content: sha256SigBytes,
+						Content: edsha512SigBytes,
 						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
-							Content: invalidKeyBytes,
+							Content: edPubKeyBytes,
 						},
 					},
 				},
 			},
-			expectedHashValue:      "sha256:" + dataSHA256,
-			expectUnmarshalSuccess: false,
-			// successful even if unmarshalling fails, because the ed25519 key is valid
+			expectedHashValue:       "sha512:" + dataSHA512,
+			expectUnmarshalSuccess:  false,
 			expectedVerifierSuccess: true,
 		},
 		{
@@ -241,6 +244,29 @@ func TestCrossFieldValidation(t *testing.T) {
 			expectedHashValue:       "sha256:" + dataSHA256,
 			expectUnmarshalSuccess:  false,
 			expectedVerifierSuccess: true,
+		},
+		{
+			caseDesc: "signature with ed25519 public key (with data)",
+			entry: V001Entry{
+				HashedRekordObj: models.HashedrekordV001Schema{
+					Signature: &models.HashedrekordV001SchemaSignature{
+						Content: edsha512SigBytes,
+						PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
+							Content: edPubKeyBytes,
+						},
+					},
+					Data: &models.HashedrekordV001SchemaData{
+						Hash: &models.HashedrekordV001SchemaDataHash{
+							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha512),
+							Value:     swag.String(dataSHA512),
+						},
+					},
+				},
+			},
+			expectedHashValue:         "sha512:" + dataSHA512,
+			expectUnmarshalSuccess:    true,
+			expectCanonicalizeSuccess: true,
+			expectedVerifierSuccess:   true,
 		},
 		{
 			caseDesc: "signature with sha256 hash",
@@ -457,8 +483,7 @@ func TestCrossFieldValidation(t *testing.T) {
 				t.Errorf("%v: unexpected error, got %v", tc.caseDesc, err)
 			} else {
 				pub, _ := verifiers[0].CanonicalValue()
-				// invalidKeyBytes is a valid ed25519 key
-				if !reflect.DeepEqual(pub, keyBytes) && !reflect.DeepEqual(pub, invalidKeyBytes) {
+				if !reflect.DeepEqual(pub, keyBytes) && !reflect.DeepEqual(pub, edPubKeyBytes) {
 					t.Errorf("verifier and public keys do not match: %v, %v", string(pub), string(keyBytes))
 				}
 			}
