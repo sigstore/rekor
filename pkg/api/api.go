@@ -181,6 +181,7 @@ func ConfigureAPI(treeID uint) {
 			Password: viper.GetString("redis_server.password"),
 			Network:  "tcp",
 			TLSConfig: &tls.Config{
+				// #nosec G402
 				InsecureSkipVerify: viper.GetBool("redis_server.insecure-skip-verify"),
 			},
 			DB: 0, // default DB

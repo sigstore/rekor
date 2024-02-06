@@ -103,7 +103,7 @@ func main() {
 	}
 
 	log.Printf("running backfill redis Version: %s GitCommit: %s BuildDate: %s", versionInfo.GitVersion, versionInfo.GitCommit, versionInfo.BuildDate)
-
+	// #nosec G402
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: *insecureSkipVerify,
 	}
