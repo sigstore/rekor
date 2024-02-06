@@ -29,6 +29,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"flag"
@@ -64,15 +65,16 @@ import (
 )
 
 var (
-	redisHostname = flag.String("hostname", "", "Hostname for Redis application")
-	redisPort     = flag.String("port", "", "Port to Redis application")
-	redisPassword = flag.String("password", "", "Password for Redis authentication")
-	startIndex    = flag.Int("start", -1, "First index to backfill")
-	endIndex      = flag.Int("end", -1, "Last index to backfill")
-	rekorAddress  = flag.String("rekor-address", "", "Address for Rekor, e.g. https://rekor.sigstore.dev")
-	versionFlag   = flag.Bool("version", false, "Print the current version of Backfill Redis")
-	concurrency   = flag.Int("concurrency", 1, "Number of workers to use for backfill")
-	dryRun        = flag.Bool("dry-run", false, "Dry run - don't actually insert into Redis")
+	redisHostname      = flag.String("hostname", "", "Hostname for Redis application")
+	redisPort          = flag.String("port", "", "Port to Redis application")
+	redisPassword      = flag.String("password", "", "Password for Redis authentication")
+	startIndex         = flag.Int("start", -1, "First index to backfill")
+	endIndex           = flag.Int("end", -1, "Last index to backfill")
+	insecureSkipVerify = flag.Bool("insecure-skip-verify", false, "Whether to skip TLS verification or not")
+	rekorAddress       = flag.String("rekor-address", "", "Address for Rekor, e.g. https://rekor.sigstore.dev")
+	versionFlag        = flag.Bool("version", false, "Print the current version of Backfill Redis")
+	concurrency        = flag.Int("concurrency", 1, "Number of workers to use for backfill")
+	dryRun             = flag.Bool("dry-run", false, "Dry run - don't actually insert into Redis")
 )
 
 func main() {
@@ -102,11 +104,16 @@ func main() {
 
 	log.Printf("running backfill redis Version: %s GitCommit: %s BuildDate: %s", versionInfo.GitVersion, versionInfo.GitCommit, versionInfo.BuildDate)
 
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: *insecureSkipVerify,
+	}
+
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", *redisHostname, *redisPort),
-		Password: *redisPassword,
-		Network:  "tcp",
-		DB:       0, // default DB
+		Addr:      fmt.Sprintf("%s:%s", *redisHostname, *redisPort),
+		Password:  *redisPassword,
+		Network:   "tcp",
+		TLSConfig: tlsConfig,
+		DB:        0, // default DB
 	})
 
 	rekorClient, err := client.GetRekorClient(*rekorAddress)

@@ -18,6 +18,7 @@ package api
 import (
 	"context"
 	"crypto/sha256"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
@@ -179,7 +180,10 @@ func ConfigureAPI(treeID uint) {
 			Addr:     fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")),
 			Password: viper.GetString("redis_server.password"),
 			Network:  "tcp",
-			DB:       0, // default DB
+			TLSConfig: &tls.Config{
+				InsecureSkipVerify: viper.GetBool("redis_server.insecure-skip-verify"),
+			},
+			DB: 0, // default DB
 		})
 		checkpointPublisher := witness.NewCheckpointPublisher(context.Background(), api.logClient, api.logRanges.ActiveTreeID(),
 			viper.GetString("rekor_server.hostname"), api.signer, redisClient, viper.GetUint("publish_frequency"), CheckpointPublishCount)
