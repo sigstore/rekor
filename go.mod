@@ -38,7 +38,7 @@ require (
 	go.uber.org/zap v1.26.0
 	gocloud.dev v0.36.0
 	golang.org/x/crypto v0.19.0
-	golang.org/x/mod v0.14.0
+	golang.org/x/mod v0.15.0
 	golang.org/x/net v0.21.0
 	golang.org/x/sync v0.6.0
 	google.golang.org/genproto v0.0.0-20240205150955-31a09d347014 // indirect
