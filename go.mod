@@ -33,7 +33,7 @@ require (
 	github.com/theupdateframework/go-tuf v0.7.0
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/veraison/go-cose v1.2.0
-	github.com/zalando/go-keyring v0.2.2 // indirect
+	github.com/zalando/go-keyring v0.2.3 // indirect
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.26.0
 	gocloud.dev v0.36.0
@@ -41,7 +41,7 @@ require (
 	golang.org/x/mod v0.14.0
 	golang.org/x/net v0.20.0
 	golang.org/x/sync v0.6.0
-	google.golang.org/genproto v0.0.0-20240116215550-a9fa1716bcac // indirect
+	google.golang.org/genproto v0.0.0-20240205150955-31a09d347014 // indirect
 	google.golang.org/grpc v1.61.0
 	google.golang.org/protobuf v1.32.0
 	gopkg.in/ini.v1 v1.67.0
@@ -62,14 +62,14 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.5
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/redis/go-redis/v9 v9.4.0
-	github.com/sassoftware/relic/v7 v7.6.1
+	github.com/sassoftware/relic/v7 v7.6.2
 	github.com/sigstore/protobuf-specs v0.2.1
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.1
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.1
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.1
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.1
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240116215550-a9fa1716bcac
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240125205218-1f4bbc51befe
 )
 
 require (
@@ -123,7 +123,7 @@ require (
 	github.com/hashicorp/vault/api v1.10.0 // indirect
 	github.com/jellydator/ttlcache/v3 v3.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/klauspost/compress v1.17.0 // indirect
+	github.com/klauspost/compress v1.17.4 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
@@ -141,20 +141,20 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.1 // indirect
 	k8s.io/klog/v2 v2.120.0 // indirect
-	software.sslmate.com/src/go-pkcs12 v0.2.0 // indirect
+	software.sslmate.com/src/go-pkcs12 v0.4.0 // indirect
 )
 
 require (
 	cloud.google.com/go v0.112.0 // indirect
-	cloud.google.com/go/compute v1.23.3 // indirect
-	cloud.google.com/go/iam v1.1.5 // indirect
-	cloud.google.com/go/kms v1.15.5 // indirect
+	cloud.google.com/go/compute v1.23.4 // indirect
+	cloud.google.com/go/iam v1.1.6 // indirect
+	cloud.google.com/go/kms v1.15.6 // indirect
 	cloud.google.com/go/storage v1.36.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cavaliercoder/badio v0.0.0-20160213150051-ce5280129e9e // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
-	github.com/danieljoos/wincred v1.1.2 // indirect
+	github.com/danieljoos/wincred v1.2.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
@@ -165,7 +165,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-containerregistry v0.17.0 // indirect
-	github.com/google/uuid v1.5.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/google/wire v0.5.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
