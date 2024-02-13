@@ -70,7 +70,7 @@ var (
 	redisPassword      = flag.String("password", "", "Password for Redis authentication")
 	startIndex         = flag.Int("start", -1, "First index to backfill")
 	endIndex           = flag.Int("end", -1, "Last index to backfill")
-	enableTls          = flag.Bool("enable-tls", false, "Enable TLS for Redis client")
+	enableTLS          = flag.Bool("enable-tls", false, "Enable TLS for Redis client")
 	insecureSkipVerify = flag.Bool("insecure-skip-verify", false, "Whether to skip TLS verification for Redis client or not")
 	rekorAddress       = flag.String("rekor-address", "", "Address for Rekor, e.g. https://rekor.sigstore.dev")
 	versionFlag        = flag.Bool("version", false, "Print the current version of Backfill Redis")
@@ -215,7 +215,7 @@ func redisClient() *redis.Client {
 		InsecureSkipVerify: *insecureSkipVerify,
 	}
 
-	if *enableTls == true {
+	if *enableTLS {
 		return redis.NewClient(&redis.Options{
 			Addr:      fmt.Sprintf("%s:%s", *redisHostname, *redisPort),
 			Password:  *redisPassword,
@@ -223,14 +223,13 @@ func redisClient() *redis.Client {
 			TLSConfig: tlsConfig,
 			DB:        0, // default DB
 		})
-	} else {
-		return redis.NewClient(&redis.Options{
-			Addr:     fmt.Sprintf("%s:%s", *redisHostname, *redisPort),
-			Password: *redisPassword,
-			Network:  "tcp",
-			DB:       0, // default DB
-		})
 	}
+	return redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", *redisHostname, *redisPort),
+		Password: *redisPassword,
+		Network:  "tcp",
+		DB:       0, // default DB
+	})
 }
 
 // unmarshalEntryImpl decodes the base64-encoded entry to a specific entry type (types.EntryImpl).

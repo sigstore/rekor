@@ -188,7 +188,7 @@ func ConfigureAPI(treeID uint) {
 }
 
 func NewRedisClient() *redis.Client {
-	if viper.GetBool("redis_server.enable-tls") == true {
+	if viper.GetBool("redis_server.enable-tls") {
 		return redis.NewClient(&redis.Options{
 			Addr:     fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")),
 			Password: viper.GetString("redis_server.password"),
@@ -199,14 +199,13 @@ func NewRedisClient() *redis.Client {
 			},
 			DB: 0, // default DB
 		})
-	} else {
-		return redis.NewClient(&redis.Options{
-			Addr:     fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")),
-			Password: viper.GetString("redis_server.password"),
-			Network:  "tcp",
-			DB:       0, // default DB
-		})
 	}
+	return redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%v:%v", viper.GetString("redis_server.address"), viper.GetUint64("redis_server.port")),
+		Password: viper.GetString("redis_server.password"),
+		Network:  "tcp",
+		DB:       0, // default DB
+	})
 }
 
 func StopAPI() {
