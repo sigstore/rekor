@@ -210,26 +210,21 @@ func main() {
 
 func redisClient() *redis.Client {
 
-	// #nosec G402
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: *insecureSkipVerify,
-	}
-
-	if *enableTLS {
-		return redis.NewClient(&redis.Options{
-			Addr:      fmt.Sprintf("%s:%s", *redisHostname, *redisPort),
-			Password:  *redisPassword,
-			Network:   "tcp",
-			TLSConfig: tlsConfig,
-			DB:        0, // default DB
-		})
-	}
-	return redis.NewClient(&redis.Options{
+	opts := &redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", *redisHostname, *redisPort),
 		Password: *redisPassword,
 		Network:  "tcp",
 		DB:       0, // default DB
-	})
+	}
+
+	// #nosec G402
+	if *enableTLS {
+		opts.TLSConfig = &tls.Config{
+			InsecureSkipVerify: *insecureSkipVerify,
+		}
+	}
+
+	return redis.NewClient(opts)
 }
 
 // unmarshalEntryImpl decodes the base64-encoded entry to a specific entry type (types.EntryImpl).
