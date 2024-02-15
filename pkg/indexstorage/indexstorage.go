@@ -33,7 +33,7 @@ type IndexStorage interface {
 func NewIndexStorage(providerType string) (IndexStorage, error) {
 	switch providerType {
 	case redis.ProviderType:
-		return redis.NewProvider(viper.GetString("redis_server.address"), viper.GetString("redis_server.port"), viper.GetString("redis_server.password"))
+		return redis.NewProvider(viper.GetString("redis_server.address"), viper.GetString("redis_server.port"), viper.GetString("redis_server.password"), viper.GetBool("redis_server.enable-tls"), viper.GetBool("redis_server.insecure-skip-verify"))
 	case mysql.ProviderType:
 		return mysql.NewProvider(viper.GetString("search_index.mysql.dsn"),
 			mysql.WithConnMaxIdleTime(viper.GetDuration("search_index.mysql.conn_max_idletime")),

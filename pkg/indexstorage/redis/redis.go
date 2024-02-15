@@ -16,6 +16,7 @@ package redis
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"strings"
@@ -30,7 +31,7 @@ type IndexStorageProvider struct {
 	client *redis.Client
 }
 
-func NewProvider(address, port, password string) (*IndexStorageProvider, error) {
+func NewProvider(address, port, password string, enableTLS bool, insecureSkipVerify bool) (*IndexStorageProvider, error) {
 	provider := &IndexStorageProvider{}
 	provider.client = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%v:%v", address, port),
@@ -38,6 +39,13 @@ func NewProvider(address, port, password string) (*IndexStorageProvider, error) 
 		Password: password,
 		DB:       0, // default DB
 	})
+
+	// #nosec G402
+	if enableTLS {
+		provider.client.Options().TLSConfig = &tls.Config{
+			InsecureSkipVerify: insecureSkipVerify,
+		}
+	}
 	return provider, nil
 }
 
