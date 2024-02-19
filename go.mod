@@ -15,7 +15,7 @@ require (
 	github.com/go-openapi/swag v0.22.9
 	github.com/go-openapi/validate v0.23.0
 	github.com/google/go-cmp v0.6.0
-	github.com/google/rpmpack v0.5.0
+	github.com/google/rpmpack v0.6.0
 	github.com/google/trillian v1.6.0
 	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b
