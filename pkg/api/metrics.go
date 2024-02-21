@@ -34,6 +34,11 @@ var (
 		Help: "The status of publishing events to Pub/Sub",
 	}, []string{"event", "content_type", "status"})
 
+	metricIndexStorageLatency = promauto.NewSummaryVec(prometheus.SummaryOpts{
+		Name: "rekor_index_storage_latency_summary",
+		Help: "Latency of backend index insertion by success/failure",
+	}, []string{"success"})
+
 	MetricLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "rekor_api_latency",
 		Help: "Api Latency on calls",
