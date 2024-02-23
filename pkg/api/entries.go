@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
+	"time"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/runtime"
@@ -246,6 +248,14 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 
 	if indexStorageClient != nil {
 		go func() {
+			start := time.Now()
+			var err error
+			defer func() {
+				labels := map[string]string{
+					"success": strconv.FormatBool(err == nil),
+				}
+				metricIndexStorageLatency.With(labels).Observe(float64(time.Since(start)))
+			}()
 			keys, err := entry.IndexKeys()
 			if err != nil {
 				log.ContextLogger(ctx).Errorf("getting entry index keys: %v", err)
