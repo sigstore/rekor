@@ -33,8 +33,8 @@ CREATE TABLE IF NOT EXISTS Trees(
   CreateTimeMillis      BIGINT NOT NULL,
   UpdateTimeMillis      BIGINT NOT NULL,
   MaxRootDurationMillis BIGINT NOT NULL,
-  PrivateKey            MEDIUMBLOB NOT NULL,
-  PublicKey             MEDIUMBLOB NOT NULL,
+  PrivateKey            MEDIUMBLOB NOT NULL, -- Unused.
+  PublicKey             MEDIUMBLOB NOT NULL, -- This is now used to store settings.
   Deleted               BOOLEAN,
   DeleteTimeMillis      BIGINT,
   PRIMARY KEY(TreeId)
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS TreeHead(
   FOREIGN KEY(TreeId) REFERENCES Trees(TreeId) ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS TreeHeadRevisionIdx
+CREATE UNIQUE INDEX TreeHeadRevisionIdx
   ON TreeHead(TreeId, TreeRevision);
 
 -- ---------------------------------------------
@@ -128,8 +128,7 @@ CREATE TABLE IF NOT EXISTS SequencedLeafData(
   FOREIGN KEY(TreeId, LeafIdentityHash) REFERENCES LeafData(TreeId, LeafIdentityHash) ON DELETE CASCADE
 );
 
-
-CREATE INDEX IF NOT EXISTS SequencedLeafMerkleIdx
+CREATE INDEX SequencedLeafMerkleIdx
   ON SequencedLeafData(TreeId, MerkleLeafHash);
 
 CREATE TABLE IF NOT EXISTS Unsequenced(
