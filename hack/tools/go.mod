@@ -1,6 +1,6 @@
 module github.com/sigstore/rekor/hack/tools
 
-go 1.20
+go 1.21
 
 require (
 	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230329111138-12e09aba5ebd
