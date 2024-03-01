@@ -155,21 +155,21 @@ func main() {
 				// uuid is the global UUID - tree ID and entry UUID
 				e, _, _, err := unmarshalEntryImpl(entry.Body.(string))
 				if err != nil {
-					parseErrs = append(parseErrs, fmt.Errorf("error unmarshalling entry for %s: %v", uuid, err))
+					parseErrs = append(parseErrs, fmt.Errorf("error unmarshalling entry for %s: %w", uuid, err))
 					continue
 				}
 				keys, err := e.IndexKeys()
 				if err != nil {
-					parseErrs = append(parseErrs, fmt.Errorf("error building index keys for %s: %v", uuid, err))
+					parseErrs = append(parseErrs, fmt.Errorf("error building index keys for %s: %w", uuid, err))
 					continue
 				}
 				for _, key := range keys {
 					// remove the key-value pair from the index in case it already exists
 					if err := removeFromIndex(ctx, redisClient, key, uuid); err != nil {
-						insertErrs = append(insertErrs, fmt.Errorf("error removing UUID %s with key %s: %v", uuid, key, err))
+						insertErrs = append(insertErrs, fmt.Errorf("error removing UUID %s with key %s: %w", uuid, key, err))
 					}
 					if err := addToIndex(ctx, redisClient, key, uuid); err != nil {
-						insertErrs = append(insertErrs, fmt.Errorf("error inserting UUID %s with key %s: %v", uuid, key, err))
+						insertErrs = append(insertErrs, fmt.Errorf("error inserting UUID %s with key %s: %w", uuid, key, err))
 					}
 					fmt.Printf("Uploaded Redis entry %s, index %d, key %s\n", uuid, index, key)
 				}
@@ -220,7 +220,7 @@ func redisClient() *redis.Client {
 	// #nosec G402
 	if *enableTLS {
 		opts.TLSConfig = &tls.Config{
-			InsecureSkipVerify: *insecureSkipVerify,
+			InsecureSkipVerify: *insecureSkipVerify, //nolint: gosec
 		}
 	}
 

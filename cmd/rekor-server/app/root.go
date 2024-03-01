@@ -36,7 +36,7 @@ var (
 	logType     string
 	enablePprof bool
 	// these map to the operationId as defined in openapi.yaml file
-	operationIds = []string{
+	operationIDs = []string{
 		"searchIndex",
 		"getLogInfo",
 		"getPublicKey",
@@ -122,7 +122,7 @@ Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().String("attestation_storage_bucket", "", "url for attestation storage bucket")
 	rootCmd.PersistentFlags().Int("max_attestation_size", 100*1024, "max size for attestation storage, in bytes")
 
-	rootCmd.PersistentFlags().StringSlice("enabled_api_endpoints", operationIds, "list of API endpoints to enable using operationId from openapi.yaml")
+	rootCmd.PersistentFlags().StringSlice("enabled_api_endpoints", operationIDs, "list of API endpoints to enable using operationId from openapi.yaml")
 
 	rootCmd.PersistentFlags().Uint64("max_request_body_size", 0, "maximum size for HTTP request body, in bytes; set to 0 for unlimited")
 	rootCmd.PersistentFlags().Uint64("max_jar_metadata_size", 1048576, "maximum permitted size for jar META-INF/ files, in bytes; set to 0 for unlimited")

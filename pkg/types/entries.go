@@ -135,7 +135,7 @@ func DecodeEntry(input, output interface{}) error {
 
 			bytes, err := base64.StdEncoding.DecodeString(data.(string))
 			if err != nil {
-				return []byte{}, fmt.Errorf("failed parsing base64 data: %v", err)
+				return []byte{}, fmt.Errorf("failed parsing base64 data: %w", err)
 			}
 			return bytes, nil
 		},

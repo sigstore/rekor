@@ -62,7 +62,7 @@ func NewSignature(r io.Reader) (*Signature, error) {
 	if err == nil {
 		s.isArmored = true
 		if sigBlock.Type != openpgp.SignatureType {
-			return nil, fmt.Errorf("invalid PGP signature provided")
+			return nil, errors.New("invalid PGP signature provided")
 		}
 		sigReader = sigBlock.Body
 	} else {
@@ -81,7 +81,7 @@ func NewSignature(r io.Reader) (*Signature, error) {
 
 	if _, ok := sigPkt.(*packet.Signature); !ok {
 		if _, ok := sigPkt.(*packet.SignatureV3); !ok {
-			return nil, fmt.Errorf("valid PGP signature was not detected")
+			return nil, errors.New("valid PGP signature was not detected")
 		}
 	}
 
@@ -112,7 +112,7 @@ func FetchSignature(ctx context.Context, url string) (*Signature, error) {
 // CanonicalValue implements the pki.Signature interface
 func (s Signature) CanonicalValue() ([]byte, error) {
 	if len(s.signature) == 0 {
-		return nil, fmt.Errorf("PGP signature has not been initialized")
+		return nil, errors.New("PGP signature has not been initialized")
 	}
 
 	if s.isArmored {
@@ -142,15 +142,15 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 // Verify implements the pki.Signature interface
 func (s Signature) Verify(r io.Reader, k interface{}, _ ...sigsig.VerifyOption) error {
 	if len(s.signature) == 0 {
-		return fmt.Errorf("PGP signature has not been initialized")
+		return errors.New("PGP signature has not been initialized")
 	}
 
 	key, ok := k.(*PublicKey)
 	if !ok {
-		return fmt.Errorf("cannot use Verify with a non-PGP signature")
+		return errors.New("cannot use Verify with a non-PGP signature")
 	}
 	if len(key.key) == 0 {
-		return fmt.Errorf("PGP public key has not been initialized")
+		return errors.New("PGP public key has not been initialized")
 	}
 
 	verifyFn := openpgp.CheckDetachedSignature
@@ -198,7 +198,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 				keyBlock, err := armor.Decode(&inputBuffer)
 				if err == nil {
 					if keyBlock.Type != openpgp.PublicKeyType && keyBlock.Type != openpgp.PrivateKeyType {
-						return nil, fmt.Errorf("invalid PGP type detected")
+						return nil, errors.New("invalid PGP type detected")
 					}
 					keys, err := openpgp.ReadKeyRing(keyBlock.Body)
 					if err != nil {
@@ -224,7 +224,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	}
 
 	if len(k.key) == len(k.key.DecryptionKeys()) {
-		return nil, fmt.Errorf("no PGP public keys could be read")
+		return nil, errors.New("no PGP public keys could be read")
 	}
 
 	return &k, nil
@@ -255,7 +255,7 @@ func FetchPublicKey(ctx context.Context, url string) (*PublicKey, error) {
 // CanonicalValue implements the pki.PublicKey interface
 func (k PublicKey) CanonicalValue() ([]byte, error) {
 	if k.key == nil {
-		return nil, fmt.Errorf("PGP public key has not been initialized")
+		return nil, errors.New("PGP public key has not been initialized")
 	}
 
 	var canonicalBuffer bytes.Buffer

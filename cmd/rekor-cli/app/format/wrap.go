@@ -32,7 +32,7 @@ type CobraCmd func(cmd *cobra.Command, args []string)
 type formatCmd func(args []string) (interface{}, error)
 
 func WrapCmd(f formatCmd) CobraCmd {
-	return func(cmd *cobra.Command, args []string) {
+	return func(_ *cobra.Command, args []string) {
 		obj, err := f(args)
 		if err != nil {
 			log.CliLogger.Fatal(err)

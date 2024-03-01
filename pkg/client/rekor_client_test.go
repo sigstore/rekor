@@ -86,7 +86,7 @@ func TestGetRekorClientWithRetryCount(t *testing.T) {
 	expectedCount := 2
 	actualCount := 0
 	testServer := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
+		func(w http.ResponseWriter, _ *http.Request) {
 			actualCount++
 			file := []byte{}
 
@@ -111,7 +111,7 @@ func TestGetRekorClientWithRetryCount(t *testing.T) {
 
 func TestRekorLeakedGoroutine_SearchByHash(t *testing.T) {
 	testServer := httptest.NewUnstartedServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
+		func(w http.ResponseWriter, _ *http.Request) {
 			file := []byte("ok")
 
 			w.WriteHeader(http.StatusOK)

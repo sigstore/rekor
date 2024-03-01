@@ -169,7 +169,7 @@ func (v V001Entry) validate() error {
 	}
 	_, err = tsr.TimeStampToken.Content.Verify(nil, false)
 	if err != nil {
-		return fmt.Errorf("tsr verification error: %v", err)
+		return fmt.Errorf("tsr verification error: %w", err)
 	}
 
 	return nil

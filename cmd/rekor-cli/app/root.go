@@ -46,7 +46,7 @@ var rootCmd = &cobra.Command{
 	Use:   "rekor-cli",
 	Short: "Rekor CLI",
 	Long:  `Rekor command line interface tool`,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		return initConfig(cmd)
 	},
 }

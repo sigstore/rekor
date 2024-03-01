@@ -85,10 +85,10 @@ var searchCmd = &cobra.Command{
 	Use:   "search",
 	Short: "Rekor search command",
 	Long:  `Searches the Rekor index to find entries by sha, artifact,  public key, or e-mail`,
-	PreRun: func(cmd *cobra.Command, args []string) {
+	PreRun: func(cmd *cobra.Command, _ []string) {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
+			log.CliLogger.Fatalf("Error initializing cmd line args: %w", err)
 		}
 		if err := validateSearchPFlags(); err != nil {
 			log.CliLogger.Error(err)
@@ -96,7 +96,7 @@ var searchCmd = &cobra.Command{
 			os.Exit(1)
 		}
 	},
-	Run: format.WrapCmd(func(args []string) (interface{}, error) {
+	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
 		log := log.CliLogger
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log))
 		if err != nil {

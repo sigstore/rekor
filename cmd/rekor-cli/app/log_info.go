@@ -62,7 +62,7 @@ var logInfoCmd = &cobra.Command{
 	Use:   "loginfo",
 	Short: "Rekor loginfo command",
 	Long:  `Prints info about the transparency log`,
-	Run: format.WrapCmd(func(args []string) (interface{}, error) {
+	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
 		serverURL := viper.GetString("rekor_server")
 		ctx := context.Background()
 		rekorClient, err := client.GetRekorClient(serverURL, client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))

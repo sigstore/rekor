@@ -54,7 +54,7 @@ func newSHA1Reader(b *bufio.Reader) *sha1Reader {
 	// #nosec G401
 	c := sha1Reader{
 		r:      b,
-		hasher: sha1.New(),
+		hasher: sha1.New(), //nolint: gosec
 	}
 	return &c
 }
@@ -107,9 +107,14 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 	// GZIP headers/footers are left unmodified; Tar footers are removed on first two archives
 	// signature.tar.gz | control.tar.gz | data.tar.gz
 	sigBuf := bytes.Buffer{}
-	// #nosec G110
-	if _, err := io.Copy(&sigBuf, gzipReader); err != nil {
-		return fmt.Errorf("reading signature.tar.gz: %w", err)
+	for {
+		_, err := io.CopyN(&sigBuf, gzipReader, 1024)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return fmt.Errorf("reading signature.tar.gz: %w", err)
+		}
 	}
 
 	// the SHA1 sum used in the signature is over the entire file control.tar.gz so we need to
@@ -125,9 +130,14 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 	gzipReader.Multistream(false)
 
 	controlTar := bytes.Buffer{}
-	// #nosec G110
-	if _, err = io.Copy(&controlTar, gzipReader); err != nil {
-		return fmt.Errorf("reading control.tar.gz: %w", err)
+	for {
+		_, err := io.CopyN(&controlTar, gzipReader, 1024)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return fmt.Errorf("reading control.tar.gz: %w", err)
+		}
 	}
 
 	// signature uses sha1 digest hardcoded in abuild-sign tool

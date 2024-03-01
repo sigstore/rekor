@@ -20,12 +20,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/spf13/viper"
+
+	"github.com/sigstore/rekor/pkg/pki/x509"
 )
 
 func TestAlpinePackage(t *testing.T) {
-
 	inputArchive, err := os.Open("tests/test_alpine.apk")
 	if err != nil {
 		t.Fatalf("could not open archive %v", err)

@@ -43,7 +43,7 @@ func NewProvider(address, port, password string, enableTLS bool, insecureSkipVer
 	// #nosec G402
 	if enableTLS {
 		provider.client.Options().TLSConfig = &tls.Config{
-			InsecureSkipVerify: insecureSkipVerify,
+			InsecureSkipVerify: insecureSkipVerify, //nolint: gosec
 		}
 	}
 	return provider, nil

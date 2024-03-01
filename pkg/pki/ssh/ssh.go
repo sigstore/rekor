@@ -60,7 +60,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 // Verify implements the pki.Signature interface
 func (s Signature) Verify(r io.Reader, k interface{}, _ ...sigsig.VerifyOption) error {
 	if s.signature == nil {
-		return fmt.Errorf("ssh signature has not been initialized")
+		return errors.New("ssh signature has not been initialized")
 	}
 
 	key, ok := k.(*PublicKey)
@@ -108,7 +108,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 // CanonicalValue implements the pki.PublicKey interface
 func (k PublicKey) CanonicalValue() ([]byte, error) {
 	if k.key == nil {
-		return nil, fmt.Errorf("ssh public key has not been initialized")
+		return nil, errors.New("ssh public key has not been initialized")
 	}
 	return ssh.MarshalAuthorizedKey(k.key), nil
 }

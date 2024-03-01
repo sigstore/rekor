@@ -174,10 +174,10 @@ func VerifyInclusion(ctx context.Context, e *models.LogEntryAnon) error {
 // nolint
 func VerifySignedEntryTimestamp(ctx context.Context, e *models.LogEntryAnon, verifier signature.Verifier) error {
 	if e.Verification == nil {
-		return fmt.Errorf("missing verification")
+		return errors.New("missing verification")
 	}
 	if e.Verification.SignedEntryTimestamp == nil {
-		return fmt.Errorf("signature missing")
+		return errors.New("signature missing")
 	}
 
 	type bundle struct {

@@ -17,6 +17,7 @@ package events
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -88,10 +89,10 @@ func (e Event) Message() protoreflect.ProtoMessage {
 //   - time.Time
 func (t *EventType) New(id string, msg protoreflect.ProtoMessage, attributes map[string]any) (*Event, error) {
 	if id == "" {
-		return nil, fmt.Errorf("id must be set")
+		return nil, errors.New("id must be set")
 	}
 	if msg == nil {
-		return nil, fmt.Errorf("msg must be set")
+		return nil, errors.New("msg must be set")
 	}
 	ty := msg.ProtoReflect().Descriptor().FullName()
 	if tty := t.Descriptor().FullName(); ty != tty {

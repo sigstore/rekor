@@ -342,7 +342,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	}
 
 	if _, _, err := re.fetchExternalEntities(ctx); err != nil {
-		return nil, fmt.Errorf("error retrieving external entities: %v", err)
+		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
 	returnVal.APIVersion = swag.String(re.APIVersion())
@@ -371,16 +371,16 @@ func (v V001Entry) ArtifactHash() (string, error) {
 
 func (v V001Entry) Insertable() (bool, error) {
 	if v.AlpineModel.Package == nil {
-		return false, fmt.Errorf("missing package entry")
+		return false, errors.New("missing package entry")
 	}
 	if len(v.AlpineModel.Package.Content) == 0 {
-		return false, fmt.Errorf("missing package content")
+		return false, errors.New("missing package content")
 	}
 	if v.AlpineModel.PublicKey == nil {
-		return false, fmt.Errorf("missing public key")
+		return false, errors.New("missing public key")
 	}
 	if v.AlpineModel.PublicKey.Content == nil || len(*v.AlpineModel.PublicKey.Content) == 0 {
-		return false, fmt.Errorf("missing public key content")
+		return false, errors.New("missing public key content")
 	}
 	return true, nil
 }

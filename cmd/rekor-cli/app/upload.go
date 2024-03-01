@@ -56,7 +56,7 @@ func (u *uploadCmdOutput) String() string {
 var uploadCmd = &cobra.Command{
 	Use:   "upload",
 	Short: "Upload an artifact to Rekor",
-	PreRunE: func(cmd *cobra.Command, args []string) error {
+	PreRunE: func(cmd *cobra.Command, _ []string) error {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
 			return err
@@ -64,7 +64,7 @@ var uploadCmd = &cobra.Command{
 		return validateArtifactPFlags(false, false)
 	},
 	Long: `This command takes the public key, signature and URL of the release artifact and uploads it to the rekor server.`,
-	Run: format.WrapCmd(func(args []string) (interface{}, error) {
+	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
 		ctx := context.Background()
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {

@@ -117,7 +117,7 @@ func (t *TrillianClient) AddLeaf(byteValue []byte) *Response {
 	v := client.NewLogVerifier(rfc6962.DefaultHasher)
 	logClient := client.New(t.logID, t.client, v, root)
 
-	waitForInclusion := func(ctx context.Context, leafHash []byte) *Response {
+	waitForInclusion := func(ctx context.Context, _ []byte) *Response {
 		if logClient.MinMergeDelay > 0 {
 			select {
 			case <-ctx.Done():

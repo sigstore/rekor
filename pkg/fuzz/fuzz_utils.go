@@ -18,6 +18,7 @@ package fuzz
 import (
 	"archive/zip"
 	"bytes"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -182,7 +183,7 @@ func createDefaultArtifactFiles(ff *fuzz.ConsumeFuzzer) ([]*fuzz.TarFile, error)
 	}
 	for _, file := range files {
 		if len(file.Body) == 0 {
-			return files, fmt.Errorf("Created an empty file")
+			return files, errors.New("Created an empty file")
 		}
 	}
 	return files, nil
@@ -206,34 +207,34 @@ func CreateProps(ff *fuzz.ConsumeFuzzer, fuzzType string) (types.ArtifactPropert
 
 	err = setAdditionalAuthenticatedData(ff, props)
 	if err != nil {
-		return *props, cleanups, fmt.Errorf("Failed setting AdditionalAuthenticatedData")
+		return *props, cleanups, errors.New("Failed setting AdditionalAuthenticatedData")
 	}
 
 	cleanupSignatureFile, err := setSignatureFields(ff, props)
 	if err != nil {
-		return *props, cleanups, fmt.Errorf("failed setting signature fields: %v", err)
+		return *props, cleanups, fmt.Errorf("failed setting signature fields: %w", err)
 	}
 	cleanups = append(cleanups, cleanupSignatureFile)
 
 	cleanupPublicKeyFile, err := setPublicKeyFields(ff, props)
 	if err != nil {
-		return *props, cleanups, fmt.Errorf("failed setting public key fields: %v", err)
+		return *props, cleanups, fmt.Errorf("failed setting public key fields: %w", err)
 	}
 	cleanups = append(cleanups, cleanupPublicKeyFile)
 
 	err = setPKIFormat(ff, props)
 	if err != nil {
-		return *props, cleanups, fmt.Errorf("failed setting PKI Format: %v", err)
+		return *props, cleanups, fmt.Errorf("failed setting PKI Format: %w", err)
 	}
 
 	artifactBytes, err := tarFilesToBytes(artifactFiles, fuzzType)
 	if err != nil {
-		return *props, cleanups, fmt.Errorf("failed converting artifact bytes: %v", err)
+		return *props, cleanups, fmt.Errorf("failed converting artifact bytes: %w", err)
 	}
 
 	setArtifactBytes, err := ff.GetBool()
 	if err != nil {
-		return *props, cleanups, fmt.Errorf("failed converting artifact bytes: %v", err)
+		return *props, cleanups, fmt.Errorf("failed converting artifact bytes: %w", err)
 	}
 	if setArtifactBytes {
 		props.ArtifactBytes = artifactBytes
@@ -241,7 +242,7 @@ func CreateProps(ff *fuzz.ConsumeFuzzer, fuzzType string) (types.ArtifactPropert
 		artifactFile, err := createAbsFile(ff, "ArtifactFile", artifactBytes)
 		cleanups = append(cleanups, func() { os.Remove("ArtifactFile") })
 		if err != nil {
-			return *props, cleanups, fmt.Errorf("failed converting artifact bytes: %v", err)
+			return *props, cleanups, fmt.Errorf("failed converting artifact bytes: %w", err)
 		}
 		props.ArtifactPath = artifactFile
 	}

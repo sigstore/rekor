@@ -60,15 +60,15 @@ const (
 func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEntryAnon) ([]byte, error) {
 	payload, err := entry.MarshalBinary()
 	if err != nil {
-		return nil, fmt.Errorf("marshalling error: %v", err)
+		return nil, fmt.Errorf("marshalling error: %w", err)
 	}
 	canonicalized, err := jsoncanonicalizer.Transform(payload)
 	if err != nil {
-		return nil, fmt.Errorf("canonicalizing error: %v", err)
+		return nil, fmt.Errorf("canonicalizing error: %w", err)
 	}
 	signature, err := signer.SignMessage(bytes.NewReader(canonicalized), options.WithContext(ctx))
 	if err != nil {
-		return nil, fmt.Errorf("signing error: %v", err)
+		return nil, fmt.Errorf("signing error: %w", err)
 	}
 	return signature, nil
 }
@@ -287,12 +287,12 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 
 	signature, err := signEntry(ctx, api.signer, logEntryAnon)
 	if err != nil {
-		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing entry error: %v", err), signingError)
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("signing entry error: %w", err), signingError)
 	}
 
 	root := &ttypes.LogRootV1{}
 	if err := root.UnmarshalBinary(resp.GetLeafAndProofResult.SignedLogRoot.LogRoot); err != nil {
-		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("error unmarshalling log root: %v", err), sthGenerateError)
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("error unmarshalling log root: %w", err), sthGenerateError)
 	}
 	hashes := []string{}
 	for _, hash := range resp.GetLeafAndProofResult.Proof.Hashes {
