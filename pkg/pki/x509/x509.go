@@ -61,7 +61,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOption) error {
 	if len(s.signature) == 0 {
 		//lint:ignore ST1005 X509 is proper use of term
-		return fmt.Errorf("X509 signature has not been initialized")
+		return errors.New("X509 signature has not been initialized")
 	}
 
 	key, ok := k.(*PublicKey)
@@ -158,7 +158,7 @@ func (k PublicKey) CanonicalValue() (encoded []byte, err error) {
 	case k.certs != nil:
 		encoded, err = cryptoutils.MarshalCertificatesToPEM(k.certs)
 	default:
-		err = fmt.Errorf("x509 public key has not been initialized")
+		err = errors.New("x509 public key has not been initialized")
 	}
 
 	return

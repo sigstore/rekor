@@ -19,6 +19,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -306,12 +307,12 @@ func CreateAlpineProps(ff *fuzz.ConsumeFuzzer) (types.ArtifactProperties, func()
 		return *props, cleanupArtifactFile, err
 	}
 	if props.ArtifactPath == nil && props.ArtifactBytes == nil {
-		return *props, cleanupArtifactFile, fmt.Errorf("ArtifactPath and ArtifactBytes cannot both be nil")
+		return *props, cleanupArtifactFile, errors.New("ArtifactPath and ArtifactBytes cannot both be nil")
 	}
 
 	err = setAdditionalAuthenticatedData(ff, props)
 	if err != nil {
-		return *props, cleanupArtifactFile, fmt.Errorf("Failed setting AdditionalAuthenticatedData")
+		return *props, cleanupArtifactFile, errors.New("Failed setting AdditionalAuthenticatedData")
 	}
 
 	cleanupSignatureFile, err := setSignatureFields(ff, props)
@@ -319,7 +320,7 @@ func CreateAlpineProps(ff *fuzz.ConsumeFuzzer) (types.ArtifactProperties, func()
 		return *props, func() {
 			cleanupArtifactFile()
 			cleanupSignatureFile()
-		}, fmt.Errorf("failed setting signature fields: %v", err)
+		}, fmt.Errorf("failed setting signature fields: %w", err)
 	}
 
 	cleanupPublicKeyFile, err := setPublicKeyFields(ff, props)
@@ -328,7 +329,7 @@ func CreateAlpineProps(ff *fuzz.ConsumeFuzzer) (types.ArtifactProperties, func()
 			cleanupArtifactFile()
 			cleanupSignatureFile()
 			cleanupPublicKeyFile()
-		}, fmt.Errorf("failed setting public key fields: %v", err)
+		}, fmt.Errorf("failed setting public key fields: %w", err)
 	}
 
 	err = setPKIFormat(ff, props)
@@ -337,7 +338,7 @@ func CreateAlpineProps(ff *fuzz.ConsumeFuzzer) (types.ArtifactProperties, func()
 			cleanupArtifactFile()
 			cleanupSignatureFile()
 			cleanupPublicKeyFile()
-		}, fmt.Errorf("failed setting PKI Format: %v", err)
+		}, fmt.Errorf("failed setting PKI Format: %w", err)
 	}
 
 	return *props, func() {

@@ -93,7 +93,7 @@ func NewSignature(r io.Reader) (*Signature, error) {
 // CanonicalValue implements the pki.Signature interface
 func (s Signature) CanonicalValue() ([]byte, error) {
 	if s.raw == nil {
-		return nil, fmt.Errorf("PKCS7 signature has not been initialized")
+		return nil, errors.New("PKCS7 signature has not been initialized")
 	}
 
 	p := pem.Block{
@@ -111,7 +111,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 // Verify implements the pki.Signature interface
 func (s Signature) Verify(r io.Reader, _ interface{}, _ ...sigsig.VerifyOption) error {
 	if len(*s.raw) == 0 {
-		return fmt.Errorf("PKCS7 signature has not been initialized")
+		return errors.New("PKCS7 signature has not been initialized")
 	}
 
 	// if content was passed to this, verify signature as if it were detached
@@ -179,7 +179,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 // CanonicalValue implements the pki.PublicKey interface
 func (k PublicKey) CanonicalValue() ([]byte, error) {
 	if k.rawCert == nil {
-		return nil, fmt.Errorf("PKCS7 public key has not been initialized")
+		return nil, errors.New("PKCS7 public key has not been initialized")
 	}
 	//TODO: should we export the entire cert chain, not just the first one?
 	p := pem.Block{

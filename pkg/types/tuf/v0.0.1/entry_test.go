@@ -39,7 +39,7 @@ import (
 func patchIsExpired() func() {
 	// Patch out the IsExpired to make the tests stable :)
 	old := verify.IsExpired
-	verify.IsExpired = func(t time.Time) bool {
+	verify.IsExpired = func(_ time.Time) bool {
 		return false
 	}
 	return func() {

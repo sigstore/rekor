@@ -62,7 +62,7 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "start http server with configured api",
 	Long:  `Starts a http server and serves the configured api`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// Setup the logger to dev/prod
 		log.ConfigureLogger(viper.GetString("log_type"), viper.GetString("trace-string-prefix"))
 

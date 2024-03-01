@@ -429,7 +429,7 @@ func TestInclusionProofRace(t *testing.T) {
 		out := runCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 
 		if strings.Contains(out, "calculated root") || strings.Contains(out, "wrong") {
-			return fmt.Errorf(out)
+			return errors.New(out)
 		}
 
 		return nil

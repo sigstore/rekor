@@ -329,7 +329,7 @@ func (v *V001Entry) CreateFromArtifactProperties(ctx context.Context, props type
 	}
 
 	if _, _, err := re.fetchExternalEntities(ctx); err != nil {
-		return nil, fmt.Errorf("error retrieving external entities: %v", err)
+		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
 	returnVal.APIVersion = swag.String(re.APIVersion())

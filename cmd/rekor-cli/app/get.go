@@ -74,13 +74,13 @@ var getCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Rekor get command",
 	Long:  `Get information regarding entries in the transparency log`,
-	PreRun: func(cmd *cobra.Command, args []string) {
+	PreRun: func(cmd *cobra.Command, _ []string) {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			log.CliLogger.Fatal("Error initializing cmd line args: ", err)
+			log.CliLogger.Fatalf("Error initializing cmd line args: %w", err)
 		}
 	},
-	Run: format.WrapCmd(func(args []string) (interface{}, error) {
+	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
 		ctx := context.Background()
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {

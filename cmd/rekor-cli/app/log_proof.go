@@ -53,10 +53,10 @@ var logProofCmd = &cobra.Command{
 	Use:   "logproof",
 	Short: "Rekor logproof command",
 	Long:  `Prints information required to compute the consistency proof of the transparency log`,
-	PreRunE: func(cmd *cobra.Command, args []string) error {
+	PreRunE: func(cmd *cobra.Command, _ []string) error {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			return fmt.Errorf("error initializing cmd line args: %s", err)
+			return fmt.Errorf("error initializing cmd line args: %w", err)
 		}
 		if viper.GetUint64("first-size") == 0 {
 			return errors.New("first-size must be > 0")
@@ -72,7 +72,7 @@ var logProofCmd = &cobra.Command{
 		}
 		return nil
 	},
-	Run: format.WrapCmd(func(args []string) (interface{}, error) {
+	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {
 			return nil, err

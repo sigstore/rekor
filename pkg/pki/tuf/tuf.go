@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -75,7 +76,7 @@ func NewSignature(r io.Reader) (*Signature, error) {
 // CanonicalValue implements the pki.Signature interface
 func (s Signature) CanonicalValue() ([]byte, error) {
 	if s.signed == nil {
-		return nil, fmt.Errorf("tuf manifest has not been initialized")
+		return nil, errors.New("tuf manifest has not been initialized")
 	}
 	marshalledBytes, err := json.Marshal(s.signed)
 	if err != nil {
@@ -92,7 +93,7 @@ func (s Signature) Verify(_ io.Reader, k interface{}, _ ...sigsig.VerifyOption) 
 	}
 
 	if key.db == nil {
-		return fmt.Errorf("tuf root has not been initialized")
+		return errors.New("tuf root has not been initialized")
 	}
 
 	return key.db.Verify(s.signed, s.Role, 0)
@@ -146,7 +147,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 // CanonicalValue implements the pki.PublicKey interface
 func (k PublicKey) CanonicalValue() (encoded []byte, err error) {
 	if k.root == nil {
-		return nil, fmt.Errorf("tuf root has not been initialized")
+		return nil, errors.New("tuf root has not been initialized")
 	}
 	marshalledBytes, err := json.Marshal(k.root)
 	if err != nil {

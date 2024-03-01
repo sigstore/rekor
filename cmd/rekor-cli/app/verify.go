@@ -80,14 +80,14 @@ var verifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Rekor verify command",
 	Long:  `Verifies an entry exists in the transparency log through an inclusion proof`,
-	PreRunE: func(cmd *cobra.Command, args []string) error {
+	PreRunE: func(cmd *cobra.Command, _ []string) error {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			return fmt.Errorf("error initializing cmd line args: %s", err)
+			return fmt.Errorf("error initializing cmd line args: %w", err)
 		}
 		return validateArtifactPFlags(true, true)
 	},
-	Run: format.WrapCmd(func(args []string) (interface{}, error) {
+	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
 		ctx := context.Background()
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {

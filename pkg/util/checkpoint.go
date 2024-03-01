@@ -152,14 +152,14 @@ func CreateAndSignCheckpoint(ctx context.Context, hostname string, treeID int64,
 		Hash:   rootHash,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error creating checkpoint: %v", err)
+		return nil, fmt.Errorf("error creating checkpoint: %w", err)
 	}
 	if _, err := sth.Sign(hostname, signer, options.WithContext(ctx)); err != nil {
-		return nil, fmt.Errorf("error signing checkpoint: %v", err)
+		return nil, fmt.Errorf("error signing checkpoint: %w", err)
 	}
 	scBytes, err := sth.SignedNote.MarshalText()
 	if err != nil {
-		return nil, fmt.Errorf("error marshalling checkpoint: %v", err)
+		return nil, fmt.Errorf("error marshalling checkpoint: %w", err)
 	}
 	return scBytes, nil
 }

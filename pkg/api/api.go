@@ -199,7 +199,7 @@ func NewRedisClient() *redis.Client {
 	// #nosec G402
 	if viper.GetBool("redis_server.enable-tls") {
 		opts.TLSConfig = &tls.Config{
-			InsecureSkipVerify: viper.GetBool("redis_server.insecure-skip-verify"),
+			InsecureSkipVerify: viper.GetBool("redis_server.insecure-skip-verify"), //nolint: gosec
 		}
 	}
 

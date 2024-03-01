@@ -129,7 +129,7 @@ func ValidateUUID(u string) error {
 		return nil
 	case UUIDHexStringLen:
 		if _, err := hex.DecodeString(u); err != nil {
-			return fmt.Errorf("id %v is not a valid hex string: %v", u, err)
+			return fmt.Errorf("id %v is not a valid hex string: %w", u, err)
 		}
 		return nil
 	default:
@@ -152,13 +152,13 @@ func ValidateTreeID(t string) error {
 		// Check that it's a valid int64 in hex (base 16)
 		i, err := strconv.ParseInt(t, 16, 64)
 		if err != nil {
-			return fmt.Errorf("could not convert treeID %v to int64: %v", t, err)
+			return fmt.Errorf("could not convert treeID %v to int64: %w", t, err)
 		}
 
 		// Check for invalid TreeID values
 		// TODO: test for more of these
 		if i == 0 {
-			return fmt.Errorf("0 is not a valid TreeID")
+			return errors.New("0 is not a valid TreeID")
 		}
 
 		return nil
