@@ -32,7 +32,7 @@ require (
 	github.com/spf13/viper v1.18.2
 	github.com/theupdateframework/go-tuf v0.7.0
 	github.com/transparency-dev/merkle v0.0.2
-	github.com/veraison/go-cose v1.2.0
+	github.com/veraison/go-cose v1.2.1
 	github.com/zalando/go-keyring v0.2.3 // indirect
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.0
