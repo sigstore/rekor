@@ -44,3 +44,4 @@ services:
       - mysql
       - redis-server
       - trillian-log-server
+      - trillian-log-signer
