@@ -138,7 +138,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.23.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240221002015-b0ce06bbee7c // indirect
-	gopkg.in/go-jose/go-jose.v2 v2.6.1 // indirect
+	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 	k8s.io/klog/v2 v2.120.0 // indirect
 	software.sslmate.com/src/go-pkcs12 v0.4.0 // indirect
 )
