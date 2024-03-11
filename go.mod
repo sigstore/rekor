@@ -10,9 +10,9 @@ require (
 	github.com/go-openapi/errors v0.21.1
 	github.com/go-openapi/loads v0.21.6
 	github.com/go-openapi/runtime v0.27.1
-	github.com/go-openapi/spec v0.20.15
+	github.com/go-openapi/spec v0.21.0
 	github.com/go-openapi/strfmt v0.22.2
-	github.com/go-openapi/swag v0.22.10
+	github.com/go-openapi/swag v0.23.0
 	github.com/go-openapi/validate v0.23.1
 	github.com/google/go-cmp v0.6.0
 	github.com/google/rpmpack v0.6.0
@@ -158,8 +158,8 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
 	github.com/go-openapi/analysis v0.22.3 // indirect
-	github.com/go-openapi/jsonpointer v0.20.3 // indirect
-	github.com/go-openapi/jsonreference v0.20.5 // indirect
+	github.com/go-openapi/jsonpointer v0.21.0 // indirect
+	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
