@@ -7,7 +7,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cavaliercoder/go-rpm v0.0.0-20200122174316-8cb9fd9c31a8
 	github.com/go-chi/chi v4.1.2+incompatible
-	github.com/go-openapi/errors v0.21.1
+	github.com/go-openapi/errors v0.22.0
 	github.com/go-openapi/loads v0.21.6
 	github.com/go-openapi/runtime v0.27.1
 	github.com/go-openapi/spec v0.20.15
