@@ -21,7 +21,7 @@ jobs:
       security-events: write
       # Needed to publish results and get a badge (see publish_results below).
       id-token: write
-    uses: sigstore/community/.github/workflows/reusable-scorecard.yml@d0c95c8803672313d0bf72e1a44021be5b583c24 # main
+    uses: sigstore/community/.github/workflows/reusable-scorecard.yml@main
     # (Optional) Disable publish results:
     # with:
     #   publish_results: false
