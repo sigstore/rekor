@@ -69,7 +69,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.2
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.2
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240311173647-c811ad7063a7
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240314234333-6e1732d8331c
 )
 
 require (
@@ -167,7 +167,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/google/wire v0.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
-	github.com/googleapis/gax-go/v2 v2.12.2 // indirect
+	github.com/googleapis/gax-go/v2 v2.12.3 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/howeyc/gopass v0.0.0-20210920133722-c8aef6fb66ef // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -198,7 +198,7 @@ require (
 	golang.org/x/term v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
-	google.golang.org/api v0.170.0
+	google.golang.org/api v0.171.0
 	google.golang.org/appengine v1.6.8 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
