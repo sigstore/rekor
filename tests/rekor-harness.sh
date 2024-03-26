@@ -75,7 +75,7 @@ function run_tests () {
     trap "rm -rf $REKORTMPDIR" EXIT
 
     go clean -testcache
-    if ! REKORTMPDIR=$REKORTMPDIR SERVER_VERSION=$1 CLI_VERSION=$2 go test -run TestHarness -v -tags=e2e ./tests/ ; then
+    if ! REKORTMPDIR=$REKORTMPDIR SERVER_VERSION=$1 CLI_VERSION=$2 go test -run TestHarness -v -tags=e2e ./cmd/rekor-server/ ; then
         docker-compose logs --no-color > /tmp/docker-compose.log
         exit 1
     fi

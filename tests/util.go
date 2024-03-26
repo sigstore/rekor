@@ -14,7 +14,6 @@
 // limitations under the License.
 
 //go:build e2e
-// +build e2e
 
 package e2e
 
@@ -33,9 +32,8 @@ import (
 )
 
 const (
-	cli         = "../rekor-cli"
-	server      = "../rekor-server"
-	nodeDataDir = "node"
+	cli    = "../rekor-cli"
+	server = "../rekor-server"
 )
 
 func outputContains(t *testing.T, output, sub string) {
@@ -76,26 +74,6 @@ func runCli(t *testing.T, arg ...string) string {
 	return run(t, "", cli, arg...)
 }
 
-func runCliStdout(t *testing.T, arg ...string) string {
-	t.Helper()
-	// Coverage flag must be the first arg passed to coverage binary
-	// No impact when running with regular binary
-	arg = append([]string{coverageFlag()}, arg...)
-	arg = append(arg, rekorServerFlag())
-	c := exec.Command(cli, arg...)
-
-	if os.Getenv("REKORTMPDIR") != "" {
-		// ensure that we use a clean state.json file for each run
-		c.Env = append(c.Env, "HOME="+os.Getenv("REKORTMPDIR"))
-	}
-	b, err := c.Output()
-	if err != nil {
-		t.Log(string(b))
-		t.Fatal(err)
-	}
-	return stripCoverageOutput(string(b))
-}
-
 func runCliErr(t *testing.T, arg ...string) string {
 	t.Helper()
 	// Coverage flag must be the first arg passed to coverage binary
@@ -134,20 +112,12 @@ func stripCoverageOutput(out string) string {
 	return strings.Split(strings.Split(out, "PASS")[0], "FAIL")[0]
 }
 
-func readFile(t *testing.T, p string) string {
-	b, err := ioutil.ReadFile(p)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return strings.TrimSpace(string(b))
-}
-
 func randomSuffix(n int) string {
 	const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 	b := make([]byte, n)
 	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+		b[i] = letterBytes[rand.Intn(len(letterBytes))] //nolint:gosec
 	}
 	return string(b)
 }
@@ -156,7 +126,7 @@ func randomData(t *testing.T, n int) []byte {
 	t.Helper()
 	rand.Seed(time.Now().UnixNano())
 	data := make([]byte, n)
-	if _, err := rand.Read(data[:]); err != nil {
+	if _, err := rand.Read(data[:]); err != nil { //nolint:gosec
 		t.Fatal(err)
 	}
 	return data
@@ -188,7 +158,7 @@ func extractLogEntry(t *testing.T, le models.LogEntry) models.LogEntryAnon {
 
 func write(t *testing.T, data string, path string) {
 	t.Helper()
-	if err := ioutil.WriteFile(path, []byte(data), 0644); err != nil {
+	if err := ioutil.WriteFile(path, []byte(data), 0644); err != nil { //nolint:gosec
 		t.Fatal(err)
 	}
 }
