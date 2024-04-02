@@ -24,6 +24,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -60,6 +61,52 @@ func TestNewEntryReturnType(t *testing.T) {
 	if reflect.TypeOf(entry) != reflect.ValueOf(&V001Entry{}).Type() {
 		t.Errorf("invalid type returned from NewEntry: %T", entry)
 	}
+}
+
+type ecdsaSignature struct {
+	R, S *big.Int
+}
+
+// From https://github.com/tink-crypto/tink/blob/43c17d490a6c8391bb5384278963cb59f4b65495/go/signature/subtle/encoding.go#L62
+func ieeeSignatureSize(curveName string) (int, error) {
+	switch curveName {
+	case elliptic.P256().Params().Name:
+		return 64, nil
+	case elliptic.P384().Params().Name:
+		return 96, nil
+	case elliptic.P521().Params().Name:
+		return 132, nil
+	default:
+		return 0, fmt.Errorf("ieeeP1363 unsupported curve name: %q", curveName)
+	}
+}
+
+// From https://github.com/tink-crypto/tink/blob/43c17d490a6c8391bb5384278963cb59f4b65495/go/signature/subtle/encoding.go#L75
+func ieeeP1363Encode(sig *ecdsaSignature, curveName string) ([]byte, error) {
+	sigSize, err := ieeeSignatureSize(curveName)
+	if err != nil {
+		return nil, err
+	}
+
+	enc := make([]byte, sigSize)
+
+	// sigR and sigS must be half the size of the signature. If not, we need to pad them with zeros.
+	offset := 0
+	if len(sig.R.Bytes()) < (sigSize / 2) {
+		offset += (sigSize / 2) - len(sig.R.Bytes())
+	}
+	// Copy sigR after any zero-padding.
+	copy(enc[offset:], sig.R.Bytes())
+
+	// Skip the bytes of sigR.
+	offset = sigSize / 2
+	if len(sig.S.Bytes()) < (sigSize / 2) {
+		offset += (sigSize / 2) - len(sig.S.Bytes())
+	}
+	// Copy sigS after sigR and any zero-padding.
+	copy(enc[offset:], sig.S.Bytes())
+
+	return enc, nil
 }
 
 func envelope(t *testing.T, k *ecdsa.PrivateKey, payload []byte) *dsse.Envelope {
@@ -116,6 +163,30 @@ func createRekorEnvelope(dsseEnv *dsse.Envelope, pub [][]byte) *models.DSSEV001S
 		proposedContent.Verifiers = append(proposedContent.Verifiers, strfmt.Base64(key))
 	}
 	return proposedContent
+}
+
+// transformECDSASignatures converts ASN.1 encoded ECDSA signatures (SEQ{r, s})
+// to IEEE P1363 encoding (r||s)
+func transformECDSASignatures(t *testing.T, k *ecdsa.PrivateKey, dsseEnv *dsse.Envelope) *dsse.Envelope {
+	sigs := dsseEnv.Signatures
+	var newSigs []dsse.Signature
+	for _, b64sig := range sigs {
+		sig, err := base64.StdEncoding.DecodeString(b64sig.Sig)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ecdsaSig := ecdsaSignature{}
+		if _, err := asn1.Unmarshal(sig, &ecdsaSig); err != nil {
+			t.Fatal(err)
+		}
+		ieeeP1363Sig, err := ieeeP1363Encode(&ecdsaSig, k.Params().Name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		newSigs = append(newSigs, dsse.Signature{KeyID: b64sig.KeyID, Sig: base64.StdEncoding.EncodeToString(ieeeP1363Sig)})
+	}
+	dsseEnv.Signatures = newSigs
+	return dsseEnv
 }
 
 func TestV001Entry_Unmarshal(t *testing.T) {
@@ -194,6 +265,22 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 			name: "cert",
 			it: &models.DSSEV001Schema{
 				ProposedContent: createRekorEnvelope(envelope(t, priv, []byte(validPayload)), [][]byte{pemBytes}),
+			},
+			wantErr: false,
+		},
+		{
+			env:  envelope(t, key, []byte(validPayload)),
+			name: "key with IEEE P1361 sig",
+			it: &models.DSSEV001Schema{
+				ProposedContent: createRekorEnvelope(transformECDSASignatures(t, key, envelope(t, key, []byte(validPayload))), [][]byte{pub}),
+			},
+			wantErr: false,
+		},
+		{
+			env:  envelope(t, priv, []byte(validPayload)),
+			name: "cert with IEEE P1361 sig",
+			it: &models.DSSEV001Schema{
+				ProposedContent: createRekorEnvelope(transformECDSASignatures(t, priv, envelope(t, priv, []byte(validPayload))), [][]byte{pemBytes}),
 			},
 			wantErr: false,
 		},

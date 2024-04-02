@@ -1,3 +1,26 @@
+# v1.3.6
+
+## New Features
+
+* Add support for IEEE P1363 encoded ECDSA signatures
+* Add index performance script (#2042)
+* Add support for ed25519ph user keys in hashedrekord (#1945)
+* Add metrics for index insertion (#2015)
+* Add TLS support for Redis Client implementation (#1998)
+
+## Bug Fixes
+
+* fix typo in remoteIp and set full name for trace field
+
+## Contributors
+
+* Bob Callaway
+* Colleen Murphy
+* cpanato
+* Hayden B
+* Mihkel Pärna
+* Riccardo Schirone
+
 # v1.3.5
 
 ## New Features
