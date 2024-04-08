@@ -22,7 +22,6 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
-	"time"
 
 	"github.com/google/trillian"
 	"github.com/redis/go-redis/v9"
@@ -46,16 +45,14 @@ import (
 	_ "github.com/sigstore/rekor/pkg/pubsub/gcp" // Load GCP pubsub implementation
 )
 
-func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
+func dial(rpcServer string) (*grpc.ClientConn, error) {
 	// Set up and test connection to rpc server
 	creds := insecure.NewCredentials()
 	conn, err := grpc.NewClient(rpcServer, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		log.Logger.Fatalf("Failed to connect to RPC server:", err)
 	}
+
 	return conn, nil
 }
 
@@ -78,7 +75,7 @@ func NewAPI(treeID uint) (*API, error) {
 		viper.GetString("trillian_log_server.address"),
 		viper.GetUint("trillian_log_server.port"))
 	ctx := context.Background()
-	tConn, err := dial(ctx, logRPCServer)
+	tConn, err := dial(logRPCServer)
 	if err != nil {
 		return nil, fmt.Errorf("dial: %w", err)
 	}
