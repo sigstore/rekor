@@ -52,7 +52,7 @@ func dial(ctx context.Context, rpcServer string) (*grpc.ClientConn, error) {
 
 	// Set up and test connection to rpc server
 	creds := insecure.NewCredentials()
-	conn, err := grpc.DialContext(ctx, rpcServer, grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient(rpcServer, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		log.Logger.Fatalf("Failed to connect to RPC server:", err)
 	}
