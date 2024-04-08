@@ -45,7 +45,7 @@ require (
 	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/ini.v1 v1.67.0
-	sigs.k8s.io/release-utils v0.7.7
+	sigs.k8s.io/release-utils v0.8.1
 	sigs.k8s.io/yaml v1.4.0
 )
 
