@@ -90,10 +90,22 @@ jobs:
       - name: install gocovmerge
         run: make gocovmerge
 
-      - name: CLI
+      - name: CLI mysql index
         run: ./tests/e2e-test.sh
-      - name: Refactor-e2e # this will a WIP to move all the tests to respective packages
+        env:
+          INDEX_BACKEND: mysql
+      - name: CLI redis index
+        run: ./tests/e2e-test.sh
+        env:
+          INDEX_BACKEND: redis
+      - name: Refactor-e2e mysql index # this will a WIP to move all the tests to respective packages
         run: ./e2e-test.sh
+        env:
+          INDEX_BACKEND: mysql
+      - name: Refactor-e2e redis index # this will a WIP to move all the tests to respective packages
+        run: ./e2e-test.sh
+        env:
+          INDEX_BACKEND: redis
       - name: Upload logs if they exist
         uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
         if: failure()

@@ -38,7 +38,7 @@ services:
       "--max_request_body_size=32792576",
       "--rekor_server.new_entry_publisher=gcppubsub://projects/test-project/topics/new-entry",
       "--rekor_server.publish_events_json=true",
-      "--search_index.storage_provider=mysql",
+      "--search_index.storage_provider=${INDEX_BACKEND:-mysql}",
       "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test",
       ]
     ports:
