@@ -46,9 +46,9 @@ builds:
   - -extldflags "-static"
   - "{{ .Env.LDFLAGS }}"
 
-- id: backfill-redis
+- id: backfill-index
   dir: .
-  main: ./cmd/backfill-redis
+  main: ./cmd/backfill-index
   env:
   - CGO_ENABLED=0
   flags:

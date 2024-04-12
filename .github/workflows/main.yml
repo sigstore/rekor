@@ -70,7 +70,7 @@ jobs:
           make ko-local
           docker run --rm $(cat rekorImagerefs) version
           docker run --rm $(cat cliImagerefs) version
-          docker run --rm $(cat redisImagerefs) --version
+          docker run --rm $(cat indexImagerefs) --version
 
   e2e:
     runs-on: ubuntu-latest

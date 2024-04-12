@@ -33,12 +33,12 @@ copy-rekor-server-signed-release-to-ghcr:
 copy-rekor-cli-signed-release-to-ghcr:
 	cosign copy $(KO_PREFIX)/rekor-cli:$(GIT_VERSION) $(GHCR_PREFIX)/rekor-cli:$(GIT_VERSION)
 
-.PHONY: copy-backfill-redis-signed-release-to-ghcr
-copy-backfill-redis-signed-release-to-ghcr:
-	cosign copy $(KO_PREFIX)/backfill-redis:$(GIT_VERSION) $(GHCR_PREFIX)/backfill-redis:$(GIT_VERSION)
+.PHONY: copy-backfill-index-signed-release-to-ghcr
+copy-backfill-index-signed-release-to-ghcr:
+	cosign copy $(KO_PREFIX)/backfill-index:$(GIT_VERSION) $(GHCR_PREFIX)/backfill-index:$(GIT_VERSION)
 
 .PHONY: copy-signed-release-to-ghcr
-copy-signed-release-to-ghcr: copy-rekor-server-signed-release-to-ghcr copy-rekor-cli-signed-release-to-ghcr copy-backfill-redis-signed-release-to-ghcr
+copy-signed-release-to-ghcr: copy-rekor-server-signed-release-to-ghcr copy-rekor-cli-signed-release-to-ghcr copy-backfill-index-signed-release-to-ghcr
 
 ## --------------------------------------
 ## Dist / maybe we can deprecate

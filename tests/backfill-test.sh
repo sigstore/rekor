@@ -194,8 +194,8 @@ check_all_entries() {
 run_backfill() {
     set -e
     local end_index=$1
-    go run cmd/backfill-redis/main.go --rekor-address $REKOR_ADDRESS \
-        --hostname $REDIS_HOST --port $REDIS_PORT --password $REDIS_PASSWORD \
+    go run cmd/backfill-index/main.go --rekor-address $REKOR_ADDRESS \
+        --redis-hostname $REDIS_HOST --redis-port $REDIS_PORT --redis-password $REDIS_PASSWORD \
         --concurrency 5 --start 0 --end $end_index
     set +e
 }
