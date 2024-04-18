@@ -458,6 +458,7 @@ definitions:
         body:
           type: object
           additionalProperties: true
+          format: byte
         integratedTime:
           type: integer
           description: The time the entry was added to the log as a Unix timestamp in seconds
