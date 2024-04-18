@@ -482,6 +482,7 @@ func init() {
           },
           "body": {
             "type": "object",
+            "format": "byte",
             "additionalProperties": true
           },
           "integratedTime": {
@@ -2375,6 +2376,7 @@ func init() {
         },
         "body": {
           "type": "object",
+          "format": "byte",
           "additionalProperties": true
         },
         "integratedTime": {
