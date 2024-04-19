@@ -172,7 +172,7 @@ func TestGenerateTransparencyLogEntry(t *testing.T) {
 			description:   "body is valid base64 but not valid entry",
 			expectSuccess: false,
 			proposedEntry: models.LogEntryAnon{
-				Body:           swag.String("aW52YWxpZF9lbnRyeQo=", // "invalid_entry)"
+				Body:           swag.String("aW52YWxpZF9lbnRyeQo="), // "invalid_entry"
 				IntegratedTime: swag.Int64(123),
 				LogID:          swag.String("deadbeef"),
 				LogIndex:       swag.Int64(1),
