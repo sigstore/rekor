@@ -481,8 +481,7 @@ func init() {
           },
           "body": {
             "description": "The base64-encoded proposed log entry",
-            "type": "string",
-            "additionalProperties": true
+            "type": "string"
           },
           "integratedTime": {
             "description": "The time the entry was added to the log as a Unix timestamp in seconds",
@@ -2374,8 +2373,7 @@ func init() {
         },
         "body": {
           "description": "The base64-encoded proposed log entry",
-          "type": "string",
-          "additionalProperties": true
+          "type": "string"
         },
         "integratedTime": {
           "description": "The time the entry was added to the log as a Unix timestamp in seconds",

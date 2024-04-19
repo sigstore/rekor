@@ -93,7 +93,7 @@ type LogEntryAnon struct {
 
 	// The base64-encoded proposed log entry
 	// Required: true
-	Body string `json:"body"`
+	Body *string `json:"body"`
 
 	// The time the entry was added to the log as a Unix timestamp in seconds
 	// Required: true
@@ -168,23 +168,8 @@ func (m *LogEntryAnon) validateAttestation(formats strfmt.Registry) error {
 
 func (m *LogEntryAnon) validateBody(formats strfmt.Registry) error {
 
-	if err := validate.Required("body", "body", m.Body.BodyAdditionalProperties); err != nil {
+	if err := validate.Required("body", "body", m.Body); err != nil {
 		return err
-	}
-
-	if err := validate.Required("body", "body", m.Body.BodyAdditionalProperties); err != nil {
-		return err
-	}
-
-	if m.Body.BodyAdditionalProperties != nil {
-		if err := m.Body.BodyAdditionalProperties.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("body")
-			} else if ce, ok := err.(*errors.CompositeError); ok {
-				return ce.ValidateName("body")
-			}
-			return err
-		}
 	}
 
 	return nil

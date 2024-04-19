@@ -457,7 +457,6 @@ definitions:
           minimum: 0
         body:
           type: string
-          additionalProperties: true
           description: The base64-encoded proposed log entry
         integratedTime:
           type: integer
