@@ -3302,7 +3302,7 @@ func init() {
         }
       },
       "$schema": "http://json-schema.org/draft-07/schema",
-      "$id": "http://rekor.sigstore.dev/types/rekord/rekord_v0_0_1_schema.json"
+      "$id": "http://rekor.sigstore.dev/types/rekord/hashedrekord_v0_0_1_schema.json"
     },
     "helm": {
       "description": "Helm chart",
