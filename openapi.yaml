@@ -456,9 +456,9 @@ definitions:
           type: integer
           minimum: 0
         body:
-          type: object
+          type: string
           additionalProperties: true
-          format: byte
+          description: The base64-encoded proposed log entry
         integratedTime:
           type: integer
           description: The time the entry was added to the log as a Unix timestamp in seconds
@@ -467,8 +467,6 @@ definitions:
           properties:
             data:
               format: byte
-
-          format: byte
         verification:
           type: object
           properties:
