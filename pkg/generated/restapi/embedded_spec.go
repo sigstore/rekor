@@ -3229,9 +3229,9 @@ func init() {
       ]
     },
     "hashedrekordSchema": {
-      "description": "Schema for Rekord objects",
+      "description": "Schema for Hashedrekord objects",
       "type": "object",
-      "title": "Rekor Schema",
+      "title": "Hashedrekord Schema",
       "oneOf": [
         {
           "$ref": "#/definitions/hashedrekordV001Schema"
