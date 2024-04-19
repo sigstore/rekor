@@ -155,7 +155,7 @@ func VerifyInclusion(ctx context.Context, e *models.LogEntryAnon) error {
 	}
 
 	// Verify the inclusion proof.
-	entryBytes, err := base64.StdEncoding.DecodeString(e.Body.(string))
+	entryBytes, err := base64.StdEncoding.DecodeString(*e.Body)
 	if err != nil {
 		return err
 	}
