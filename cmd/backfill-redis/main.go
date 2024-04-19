@@ -153,7 +153,7 @@ func main() {
 			var insertErrs []error
 			for uuid, entry := range resp.Payload {
 				// uuid is the global UUID - tree ID and entry UUID
-				e, _, _, err := unmarshalEntryImpl(entry.Body.(string))
+				e, _, _, err := unmarshalEntryImpl(*entry.Body)
 				if err != nil {
 					parseErrs = append(parseErrs, fmt.Errorf("error unmarshalling entry for %s: %w", uuid, err))
 					continue
