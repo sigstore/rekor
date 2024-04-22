@@ -91,9 +91,9 @@ type LogEntryAnon struct {
 	// attestation
 	Attestation *LogEntryAnonAttestation `json:"attestation,omitempty"`
 
-	// body
+	// The base64-encoded proposed log entry
 	// Required: true
-	Body interface{} `json:"body"`
+	Body *string `json:"body"`
 
 	// The time the entry was added to the log as a Unix timestamp in seconds
 	// Required: true
@@ -168,8 +168,8 @@ func (m *LogEntryAnon) validateAttestation(formats strfmt.Registry) error {
 
 func (m *LogEntryAnon) validateBody(formats strfmt.Registry) error {
 
-	if m.Body == nil {
-		return errors.Required("body", "body", nil)
+	if err := validate.Required("body", "body", m.Body); err != nil {
+		return err
 	}
 
 	return nil

@@ -50,20 +50,12 @@ func GenerateTransparencyLogEntry(anon models.LogEntryAnon) (*rekor_pb.Transpare
 		inclusionProofHashes[i] = hashBytes
 	}
 
-	// Different call paths may supply string or []byte. If string, it is base64 encoded.
 	var body []byte
-	switch v := anon.Body.(type) {
-	case string:
-		b, err := base64.StdEncoding.DecodeString(v)
-		if err != nil {
-			return nil, fmt.Errorf("base64 decoding body: %w", err)
-		}
-		body = b
-	case []byte:
-		body = v
-	default:
-		return nil, fmt.Errorf("body is not string or []byte: (%T)%v", v, v)
+	b, err := base64.StdEncoding.DecodeString(*anon.Body)
+	if err != nil {
+		return nil, fmt.Errorf("base64 decoding body: %w", err)
 	}
+	body = b
 
 	pe, err := models.UnmarshalProposedEntry(bytes.NewReader(body), runtime.JSONConsumer())
 	if err != nil {

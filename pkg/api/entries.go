@@ -18,6 +18,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -88,10 +89,11 @@ func logEntryFromLeaf(ctx context.Context, signer signature.Signer, _ trilliancl
 	}
 
 	virtualIndex := sharding.VirtualLogIndex(leaf.GetLeafIndex(), tid, ranges)
+	leafValue := base64.StdEncoding.EncodeToString(leaf.LeafValue)
 	logEntryAnon := models.LogEntryAnon{
 		LogID:          swag.String(api.pubkeyHash),
 		LogIndex:       &virtualIndex,
-		Body:           leaf.LeafValue,
+		Body:           &leafValue,
 		IntegratedTime: swag.Int64(leaf.IntegrateTimestamp.AsTime().Unix()),
 	}
 
@@ -239,10 +241,11 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 
 	// The log index should be the virtual log index across all shards
 	virtualIndex := sharding.VirtualLogIndex(queuedLeaf.LeafIndex, api.logRanges.ActiveTreeID(), api.logRanges)
+	leafValue := base64.StdEncoding.EncodeToString(queuedLeaf.GetLeafValue())
 	logEntryAnon := models.LogEntryAnon{
 		LogID:          swag.String(api.pubkeyHash),
 		LogIndex:       swag.Int64(virtualIndex),
-		Body:           queuedLeaf.GetLeafValue(),
+		Body:           &leafValue,
 		IntegratedTime: swag.Int64(queuedLeaf.IntegrateTimestamp.AsTime().Unix()),
 	}
 

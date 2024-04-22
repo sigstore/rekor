@@ -473,7 +473,6 @@ func init() {
         "properties": {
           "attestation": {
             "type": "object",
-            "format": "byte",
             "properties": {
               "data": {
                 "format": "byte"
@@ -481,8 +480,8 @@ func init() {
             }
           },
           "body": {
-            "type": "object",
-            "additionalProperties": true
+            "description": "The base64-encoded proposed log entry",
+            "type": "string"
           },
           "integratedTime": {
             "description": "The time the entry was added to the log as a Unix timestamp in seconds",
@@ -2366,7 +2365,6 @@ func init() {
       "properties": {
         "attestation": {
           "type": "object",
-          "format": "byte",
           "properties": {
             "data": {
               "format": "byte"
@@ -2374,8 +2372,8 @@ func init() {
           }
         },
         "body": {
-          "type": "object",
-          "additionalProperties": true
+          "description": "The base64-encoded proposed log entry",
+          "type": "string"
         },
         "integratedTime": {
           "description": "The time the entry was added to the log as a Unix timestamp in seconds",
@@ -2407,7 +2405,6 @@ func init() {
     },
     "LogEntryAnonAttestation": {
       "type": "object",
-      "format": "byte",
       "properties": {
         "data": {
           "format": "byte"

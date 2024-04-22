@@ -208,7 +208,7 @@ func parseEntry(uuid string, e models.LogEntryAnon) (interface{}, error) {
 		return tle.GenerateTransparencyLogEntry(e)
 	}
 
-	b, err := base64.StdEncoding.DecodeString(e.Body.(string))
+	b, err := base64.StdEncoding.DecodeString(*e.Body)
 	if err != nil {
 		return nil, err
 	}

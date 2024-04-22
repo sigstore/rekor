@@ -341,7 +341,7 @@ func DecodeV001FromRekorResponse(t *testing.T, resp *entries.CreateLogEntryCreat
 	t.Helper()
 
 	for _, e := range resp.Payload {
-		b, err := base64.StdEncoding.DecodeString(e.Body.(string))
+		b, err := base64.StdEncoding.DecodeString(*e.Body)
 		if err != nil {
 			t.Errorf("could not decode body into dsse type: %v", err)
 		}
@@ -700,7 +700,7 @@ func TestThreePublicKeysTwoSignatures(t *testing.T) {
 	}
 
 	for _, k := range resp.Payload {
-		b, err := base64.StdEncoding.DecodeString(k.Body.(string))
+		b, err := base64.StdEncoding.DecodeString(*k.Body)
 		if err != nil {
 			t.Errorf("unexpected error returned from rekor: %v", err.Error())
 		}
