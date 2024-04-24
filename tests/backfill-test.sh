@@ -18,6 +18,11 @@ REKOR_ADDRESS=http://localhost:3000
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=test
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=test
+MYSQL_PASSWORD=zaphod
+MYSQL_DB=test
 
 testdir=$(mktemp -d)
 
@@ -100,6 +105,12 @@ redis_cli() {
     set +e
 }
 
+mysql_cli() {
+    set -e
+    mysql -h $MYSQL_HOST -P $MYSQL_PORT -u $MYSQL_USER -p${MYSQL_PASSWORD} -D $MYSQL_DB "$@"
+    set +e
+}
+
 remove_keys() {
     set -e
     for i in $@ ; do
@@ -107,8 +118,12 @@ remove_keys() {
         local uuid=$(echo $rekord | jq -r .UUID)
         local sha=sha256:$(echo $rekord | jq -r .Body.RekordObj.data.hash.value)
         local key=$(echo $rekord | jq -r .Body.RekordObj.signature.publicKey.content | base64 -d | sha256sum | cut -d ' ' -f 1)
-        redis_cli LREM $sha 1 $uuid
-        redis_cli LREM $key 1 $uuid
+        if [ "$INDEX_BACKEND" == "redis" ] ; then
+            redis_cli LREM $sha 1 $uuid
+            redis_cli LREM $key 1 $uuid
+        else
+            mysql_cli -e "DELETE FROM EntryIndex WHERE EntryUUID = '$uuid'"
+        fi
     done
     set +e
 }
@@ -152,10 +167,14 @@ check_all_entries() {
         done
         expected_uuids=($expected_uuids)
         local expected_length=${#expected_uuids[@]}
-        local actual_length=$(redis_cli LLEN sha256:${sha})
-        if [ $expected_length -ne $actual_length ] ; then
-            echo "Possible dupicate keys for artifact $artifact."
-            exit 1
+        # Check the values of each key for redis so we know there aren't duplicates.
+        # We don't need to do this for mysql, we'll just go by the total row count.
+        if [ "$INDEX_BACKEND" == "redis" ] ; then
+            local actual_length=$(redis_cli LLEN sha256:${sha})
+            if [ $expected_length -ne $actual_length ] ; then
+                echo "Possible dupicate keys for artifact $artifact."
+                exit 1
+            fi
         fi
     done
     for key in "${!expected_keys[@]}" ; do
@@ -177,15 +196,27 @@ check_all_entries() {
         local keysha=$(echo -n $(tail -1 $key) | sha256sum | cut -d ' ' -f 1)
         expected_uuids=($expected_uuids)
         local expected_length=${#expected_uuids[@]}
-        local actual_length=$(redis_cli LLEN $keysha)
-        if [ $expected_length -ne $actual_length ] ; then
-            echo "Possible dupicate keys for artifact $artifact."
-            exit 1
+        # Check the values of each key for redis so we know there aren't duplicates.
+        # We don't need to do this for mysql, we'll just go by the total row count.
+        if [ "$INDEX_BACKEND" = "redis" ] ; then
+            local actual_length=$(redis_cli LLEN $keysha)
+            if [ $expected_length -ne $actual_length ] ; then
+                echo "Possible dupicate keys for artifact $artifact."
+                exit 1
+            fi
         fi
     done
-    local dbsize=$(redis_cli DBSIZE)
-    if [ $dbsize -ne 20 ] ; then
-        echo "Found unexpected number of index entries: $dbsize."
+    local expected_size
+    local actual_size
+    if [ "${INDEX_BACKEND}" == "redis" ] ; then
+        expected_size=20
+        actual_size=$(redis_cli DBSIZE)
+    else
+        expected_size=26
+        actual_size=$(mysql_cli -NB -e "SELECT COUNT(*) FROM EntryIndex;")
+    fi
+    if [ $expected_size -ne $actual_size ] ; then
+        echo "Found unexpected number of index entries: $actual_size."
         exit 1
     fi
     set +e
@@ -194,9 +225,15 @@ check_all_entries() {
 run_backfill() {
     set -e
     local end_index=$1
-    go run cmd/backfill-index/main.go --rekor-address $REKOR_ADDRESS \
-        --redis-hostname $REDIS_HOST --redis-port $REDIS_PORT --redis-password $REDIS_PASSWORD \
-        --concurrency 5 --start 0 --end $end_index
+    if [ "$INDEX_BACKEND" == "redis" ] ; then
+        go run cmd/backfill-index/main.go --rekor-address $REKOR_ADDRESS \
+            --redis-hostname $REDIS_HOST --redis-port $REDIS_PORT --redis-password $REDIS_PASSWORD \
+            --concurrency 5 --start 0 --end $end_index
+    else
+        go run cmd/backfill-index/main.go --rekor-address $REKOR_ADDRESS \
+            --mysql-dsn "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DB}" \
+            --concurrency 5 --start 0 --end $end_index
+    fi
     set +e
 }
 
@@ -213,8 +250,12 @@ echo
 echo "##### Scenario 1: backfill from scratch #####"
 echo
 
-# delete all keys (including the checkpoints, but those aren't needed here)
-redis_cli FLUSHALL
+# delete all keys (including the checkpoints on Redis, but those aren't needed here)
+if [ "$INDEX_BACKEND" == "redis" ] ; then
+    redis_cli FLUSHALL
+else
+    mysql_cli -e "DELETE FROM EntryIndex;"
+fi
 
 # searching for any artifact should fail
 search_expect_fail $testdir/blob1

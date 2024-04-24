@@ -133,11 +133,15 @@ jobs:
         run: |
           go install ./cmd/rekor-cli
           sudo add-apt-repository ppa:savoury1/minisign && sudo apt-get update && sudo apt-get install minisign
-          sudo apt install redis-tools -y
-      - name: Backfill test
+          sudo apt install redis-tools default-mysql-client -y
+      - name: Backfill test redis
         run: ./tests/backfill-test.sh
         env:
           INDEX_BACKEND: redis
+      - name: Backfill test mysql
+        run: ./tests/backfill-test.sh
+        env:
+          INDEX_BACKEND: mysql
       - name: Upload logs if they exist
         uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
         if: failure()
