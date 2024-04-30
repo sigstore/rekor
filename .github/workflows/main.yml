@@ -70,7 +70,7 @@ jobs:
           make ko-local
           docker run --rm $(cat rekorImagerefs) version
           docker run --rm $(cat cliImagerefs) version
-          docker run --rm $(cat redisImagerefs) --version
+          docker run --rm $(cat indexImagerefs) --version
 
   e2e:
     runs-on: ubuntu-latest
@@ -117,6 +117,37 @@ jobs:
         with:
           files: /tmp/rekor-merged.cov,/tmp/pkg-rekor-merged.cov
           flags: e2etests
+
+  backfill:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # v4.1.3
+      - name: Extract version of Go to use
+        run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
+      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version: ${{ env.GOVERSION }}
+      - name: Install backfill test dependencies
+        run: |
+          go install ./cmd/rekor-cli
+          sudo add-apt-repository ppa:savoury1/minisign && sudo apt-get update && sudo apt-get install minisign
+          sudo apt install redis-tools default-mysql-client -y
+      - name: Backfill test redis
+        run: ./tests/backfill-test.sh
+        env:
+          INDEX_BACKEND: redis
+      - name: Backfill test mysql
+        run: ./tests/backfill-test.sh
+        env:
+          INDEX_BACKEND: mysql
+      - name: Upload logs if they exist
+        uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
+        if: failure()
+        with:
+          name: E2E Docker Compose logs
+          path: /tmp/docker-compose.log
 
   sharding-e2e:
     runs-on: ubuntu-latest

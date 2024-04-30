@@ -82,8 +82,8 @@ rekor-cli: $(SRCS)
 rekor-server: $(SRCS)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o rekor-server ./cmd/rekor-server
 
-backfill-redis: $(SRCS)
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o backfill-redis ./cmd/backfill-redis
+backfill-index: $(SRCS)
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o backfill-index ./cmd/backfill-index
 
 test:
 	go test ./...
@@ -120,11 +120,11 @@ ko:
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		--image-refs rekorCliImagerefs github.com/sigstore/rekor/cmd/rekor-cli
 
-	# backfill-redis
+	# backfill-index
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs bRedisImagerefs github.com/sigstore/rekor/cmd/backfill-redis
+		--image-refs bIndexImagerefs github.com/sigstore/rekor/cmd/backfill-index
 
 deploy:
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) ko apply -f config/
@@ -154,8 +154,8 @@ ko-local:
 
 	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs redisImagerefs \
-		github.com/sigstore/rekor/cmd/backfill-redis
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs indexImagerefs \
+		github.com/sigstore/rekor/cmd/backfill-index
 
 .PHONY: fuzz
 # This runs the fuzz tests for a short period of time to ensure they don't crash.

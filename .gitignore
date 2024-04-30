@@ -21,7 +21,7 @@ trillianServerImagerefs
 trillianSignerImagerefs
 rekorImagerefs
 cliImagerefs
-redisImagerefs
+indexImagerefs
 cosign.*
 signature
 rekor.pub
