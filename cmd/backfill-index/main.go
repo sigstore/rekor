@@ -69,7 +69,14 @@ import (
 )
 
 const (
-	mysqlWriteStmt = "INSERT IGNORE INTO EntryIndex (EntryKey, EntryUUID) VALUES (:key, :uuid)"
+	mysqlWriteStmt       = "INSERT IGNORE INTO EntryIndex (EntryKey, EntryUUID) VALUES (:key, :uuid)"
+	mysqlCreateTableStmt = `CREATE TABLE IF NOT EXISTS EntryIndex (
+		PK BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+		EntryKey varchar(512) NOT NULL,
+		EntryUUID char(80) NOT NULL,
+		PRIMARY KEY(PK),
+		UNIQUE(EntryKey, EntryUUID)
+	)`
 )
 
 type provider int
@@ -188,6 +195,9 @@ func getIndexClient(backend provider) (indexClient, error) {
 			return nil, err
 		}
 		if err = dbClient.Ping(); err != nil {
+			return nil, err
+		}
+		if _, err = dbClient.Exec(mysqlCreateTableStmt); err != nil {
 			return nil, err
 		}
 		return &mysqlClient{client: dbClient}, nil
