@@ -29,6 +29,10 @@ testdir=$(mktemp -d)
 declare -A expected_artifacts
 declare -A expected_keys
 
+source $(dirname "$0")/index-test-utils.sh
+
+trap cleanup EXIT
+
 make_entries() {
     set -e
     # make 10 unique artifacts and sign each once
@@ -64,50 +68,6 @@ make_entries() {
         local orig_art_uuid="${expected_artifacts[${testdir}/blob${i}]}"
         expected_artifacts[${testdir}/blob${i}]="$orig_art_uuid $uuid"
     done
-    set +e
-}
-
-cleanup() {
-    rv=$?
-    if [ $rv -ne 0 ] ; then
-        docker-compose -f docker-compose.yml -f docker-compose.backfill-test.yml logs --no-color > /tmp/docker-compose.log
-    fi
-    docker-compose down --remove-orphans
-    rm -rf $testdir
-    exit $rv
-}
-trap cleanup EXIT
-
-docker_up () {
-    set -e
-    docker-compose -f docker-compose.yml -f docker-compose.backfill-test.yml up -d --build
-    local count=0
-    echo "waiting up to 2 min for system to start"
-    until [ $(docker-compose ps | \
-       grep -E "(rekor[-_]mysql|rekor[-_]redis|rekor[-_]rekor-server)" | \
-       grep -c "(healthy)" ) == 3 ];
-    do
-        if [ $count -eq 24 ]; then
-           echo "! timeout reached"
-           exit 1
-        else
-           echo -n "."
-           sleep 5
-           let 'count+=1'
-        fi
-    done
-    set +e
-}
-
-redis_cli() {
-    set -e
-    redis-cli -h $REDIS_HOST -a $REDIS_PASSWORD $@ 2>/dev/null
-    set +e
-}
-
-mysql_cli() {
-    set -e
-    mysql -h $MYSQL_HOST -P $MYSQL_PORT -u $MYSQL_USER -p${MYSQL_PASSWORD} -D $MYSQL_DB "$@"
     set +e
 }
 
