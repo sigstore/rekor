@@ -161,7 +161,7 @@ func main() {
 		log.Fatalf("creating index client: %v", err)
 	}
 
-	rekorClient, err := client.GetRekorClient(*rekorAddress)
+	rekorClient, err := client.GetRekorClient(*rekorAddress, client.WithNoDisableKeepalive(true))
 	if err != nil {
 		log.Fatalf("creating rekor client: %v", err)
 	}
