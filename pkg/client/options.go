@@ -24,10 +24,11 @@ import (
 type Option func(*options)
 
 type options struct {
-	UserAgent   string
-	RetryCount  uint
-	InsecureTLS bool
-	Logger      interface{}
+	UserAgent           string
+	RetryCount          uint
+	InsecureTLS         bool
+	Logger              interface{}
+	NoDisableKeepalives bool
 }
 
 const (
@@ -75,6 +76,12 @@ func WithLogger(logger interface{}) Option {
 func WithInsecureTLS(enabled bool) Option {
 	return func(o *options) {
 		o.InsecureTLS = enabled
+	}
+}
+
+func WithNoDisableKeepalive(noDisableKeepalive bool) Option {
+	return func(o *options) {
+		o.NoDisableKeepalives = noDisableKeepalive
 	}
 }
 
