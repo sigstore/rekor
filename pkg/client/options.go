@@ -73,15 +73,17 @@ func WithLogger(logger interface{}) Option {
 	}
 }
 
+// WithInsecureTLS disables TLS verification.
 func WithInsecureTLS(enabled bool) Option {
 	return func(o *options) {
 		o.InsecureTLS = enabled
 	}
 }
 
-func WithNoDisableKeepalive(noDisableKeepalive bool) Option {
+// WithNoDisableKeepalives unsets the default DisableKeepalives setting.
+func WithNoDisableKeepalives(noDisableKeepalives bool) Option {
 	return func(o *options) {
-		o.NoDisableKeepalives = noDisableKeepalive
+		o.NoDisableKeepalives = noDisableKeepalives
 	}
 }
 
