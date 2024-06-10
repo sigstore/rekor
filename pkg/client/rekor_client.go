@@ -49,6 +49,8 @@ func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error
 		Transport: defaultTransport,
 	}
 	retryableClient.RetryMax = int(o.RetryCount)
+	retryableClient.RetryWaitMin = o.RetryWaitMin
+	retryableClient.RetryWaitMax = o.RetryWaitMax
 	retryableClient.Logger = o.Logger
 
 	httpClient := retryableClient.StandardClient()

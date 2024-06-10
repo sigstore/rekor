@@ -16,6 +16,7 @@ package client
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
 )
@@ -26,6 +27,8 @@ type Option func(*options)
 type options struct {
 	UserAgent           string
 	RetryCount          uint
+	RetryWaitMin        time.Duration
+	RetryWaitMax        time.Duration
 	InsecureTLS         bool
 	Logger              interface{}
 	NoDisableKeepalives bool
@@ -60,6 +63,20 @@ func WithUserAgent(userAgent string) Option {
 func WithRetryCount(retryCount uint) Option {
 	return func(o *options) {
 		o.RetryCount = retryCount
+	}
+}
+
+// WithRetryWaitMin sets the minimum length of time to wait between retries.
+func WithRetryWaitMin(t time.Duration) Option {
+	return func(o *options) {
+		o.RetryWaitMin = t
+	}
+}
+
+// WithRetryWaitMax sets the minimum length of time to wait between retries.
+func WithRetryWaitMax(t time.Duration) Option {
+	return func(o *options) {
+		o.RetryWaitMax = t
 	}
 }
 
