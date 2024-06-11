@@ -32,6 +32,7 @@ type options struct {
 	InsecureTLS         bool
 	Logger              interface{}
 	NoDisableKeepalives bool
+	Headers             map[string][]string
 }
 
 const (
@@ -104,14 +105,27 @@ func WithNoDisableKeepalives(noDisableKeepalives bool) Option {
 	}
 }
 
+// WithHeaders sets default headers for every client request.
+func WithHeaders(h map[string][]string) Option {
+	return func(o *options) {
+		o.Headers = h
+	}
+}
+
 type roundTripper struct {
 	http.RoundTripper
 	UserAgent string
+	Headers   map[string][]string
 }
 
 // RoundTrip implements `http.RoundTripper`
 func (rt *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Set("User-Agent", rt.UserAgent)
+	for k, v := range rt.Headers {
+		for _, h := range v {
+			req.Header.Add(k, h)
+		}
+	}
 	return rt.RoundTripper.RoundTrip(req)
 }
 
@@ -119,12 +133,13 @@ func createRoundTripper(inner http.RoundTripper, o *options) http.RoundTripper {
 	if inner == nil {
 		inner = http.DefaultTransport
 	}
-	if o.UserAgent == "" {
+	if o.UserAgent == "" && o.Headers == nil {
 		// There's nothing to do...
 		return inner
 	}
 	return &roundTripper{
 		RoundTripper: inner,
 		UserAgent:    o.UserAgent,
+		Headers:      o.Headers,
 	}
 }
