@@ -239,7 +239,7 @@ func getIndexClient(backend provider) (indexClient, error) {
 }
 
 // populate does the heavy lifting of populating the index storage for whichever client is passed in.
-func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) error {
+func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) (err error) {
 	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	group, ctx := errgroup.WithContext(ctx)
 	group.SetLimit(*concurrency)
@@ -264,6 +264,16 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) error {
 		}
 	}()
 
+	defer func() {
+		close(resultChan)
+		if len(parseErrs) > 0 {
+			err = fmt.Errorf("failed to parse %d entries: %v", len(parseErrs), parseErrs)
+		}
+		if len(insertErrs) > 0 {
+			err = fmt.Errorf("failed to insert/remove %d entries: %v", len(insertErrs), insertErrs)
+		}
+	}()
+
 	for i := *startIndex; i <= *endIndex; i++ {
 		index := i // capture loop variable for closure
 		group.Go(func() error {
@@ -275,7 +285,7 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) error {
 				if errors.Is(err, context.Canceled) {
 					return nil
 				}
-				log.Fatalf("retrieving log uuid by index: %v", err)
+				return fmt.Errorf("retrieving log uuid by index: %v", err)
 			}
 			var parseErrs []error
 			var insertErrs []error
@@ -293,7 +303,11 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) error {
 				}
 				for _, key := range keys {
 					if err := indexClient.idempotentAddToIndex(ctx, key, uuid); err != nil {
+						if errors.Is(err, context.Canceled) {
+							return nil
+						}
 						insertErrs = append(insertErrs, fmt.Errorf("error inserting UUID %s with key %s: %w", uuid, key, err))
+						continue
 					}
 					fmt.Printf("Uploaded entry %s, index %d, key %s\n", uuid, index, key)
 				}
@@ -318,18 +332,11 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) error {
 			return nil
 		})
 	}
-	err := group.Wait()
+	err = group.Wait()
 	if err != nil {
-		log.Fatalf("error running backfill: %v", err)
+		return fmt.Errorf("error running backfill: %v", err)
 	}
-	close(resultChan)
 	fmt.Println("Backfill complete")
-	if len(parseErrs) > 0 {
-		return fmt.Errorf("failed to parse %d entries: %v", len(parseErrs), parseErrs)
-	}
-	if len(insertErrs) > 0 {
-		return fmt.Errorf("failed to insert/remove %d entries: %v", len(insertErrs), insertErrs)
-	}
 	return nil
 }
 
