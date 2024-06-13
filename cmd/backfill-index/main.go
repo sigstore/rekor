@@ -38,7 +38,9 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/go-openapi/runtime"
 	_ "github.com/go-sql-driver/mysql"
@@ -99,6 +101,25 @@ type mysqlClient struct {
 	client *sqlx.DB
 }
 
+type headers map[string][]string
+
+func (h *headers) String() string {
+	return fmt.Sprintf("%#v", h)
+}
+
+func (h *headers) Set(value string) error {
+	parts := strings.Split(value, "=")
+	k, v := parts[0], parts[1]
+	if *h == nil {
+		*h = make(map[string][]string)
+	}
+	if _, ok := (*h)[k]; !ok {
+		(*h)[k] = make([]string, 0)
+	}
+	(*h)[k] = append((*h)[k], v)
+	return nil
+}
+
 var (
 	redisHostname           = flag.String("redis-hostname", "", "Hostname for Redis application")
 	redisPort               = flag.String("redis-port", "", "Port to Redis application")
@@ -109,12 +130,18 @@ var (
 	startIndex              = flag.Int("start", -1, "First index to backfill")
 	endIndex                = flag.Int("end", -1, "Last index to backfill")
 	rekorAddress            = flag.String("rekor-address", "", "Address for Rekor, e.g. https://rekor.sigstore.dev")
+	rekorDisableKeepalives  = flag.Bool("rekor-disable-keepalives", true, "Disable Keep-Alive connections (defaults to true, meaning Keep-Alive is disabled)")
+	rekorRetryCount         = flag.Uint("rekor-retry-count", 3, "Maximum number of times to retry rekor requests")                          // https://github.com/sigstore/rekor/blob/5988bfa6b0761be3a810047d23b3d3191ed5af3d/pkg/client/options.go#L36
+	rekorRetryWaitMin       = flag.Duration("rekor-retry-wait-min", 1*time.Second, "Minimum time to wait between retrying rekor requests")  //nolint:revive // https://github.com/hashicorp/go-retryablehttp/blob/1542b31176d3973a6ecbc06c05a2d0df89b59afb/client.go#L49
+	rekorRetryWaitMax       = flag.Duration("rekor-retry-wait-max", 30*time.Second, "Maximum time to wait between retrying rekor requests") // https://github.com/hashicorp/go-retryablehttp/blob/1542b31176d3973a6ecbc06c05a2d0df89b59afb/client.go#L50
+	rekorHeaders            headers
 	versionFlag             = flag.Bool("version", false, "Print the current version of Backfill MySQL")
 	concurrency             = flag.Int("concurrency", 1, "Number of workers to use for backfill")
 	dryRun                  = flag.Bool("dry-run", false, "Dry run - don't actually insert into MySQL")
 )
 
 func main() {
+	flag.Var(&rekorHeaders, "rekor-header", "HTTP headers for Rekor in key=value format, repeat flag to add additional headers")
 	flag.Parse()
 
 	versionInfo := version.GetVersionInfo()
@@ -161,7 +188,12 @@ func main() {
 		log.Fatalf("creating index client: %v", err)
 	}
 
-	rekorClient, err := client.GetRekorClient(*rekorAddress, client.WithNoDisableKeepalive(true), client.WithRetryCount(10))
+	opts := []client.Option{client.WithNoDisableKeepalives(!*rekorDisableKeepalives)}
+	opts = append(opts, client.WithRetryCount(*rekorRetryCount))
+	opts = append(opts, client.WithRetryWaitMin(*rekorRetryWaitMin))
+	opts = append(opts, client.WithRetryWaitMax(*rekorRetryWaitMax))
+	opts = append(opts, client.WithHeaders(rekorHeaders))
+	rekorClient, err := client.GetRekorClient(*rekorAddress, opts...)
 	if err != nil {
 		log.Fatalf("creating rekor client: %v", err)
 	}
