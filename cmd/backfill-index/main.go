@@ -79,6 +79,7 @@ const (
 		PRIMARY KEY(PK),
 		UNIQUE(EntryKey, EntryUUID)
 	)`
+	maxInsertErrors = 5
 )
 
 type provider int
@@ -252,6 +253,7 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) (err erro
 	var resultChan = make(chan result)
 	parseErrs := make([]int, 0)
 	insertErrs := make([]int, 0)
+	runningInsertErrs := 0
 
 	go func() {
 		for r := range resultChan {
@@ -289,6 +291,19 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) (err erro
 			}
 			var parseErrs []error
 			var insertErrs []error
+			defer func() {
+				if len(insertErrs) != 0 || len(parseErrs) != 0 {
+					fmt.Printf("Errors with log index %d:\n", index)
+					for _, e := range insertErrs {
+						fmt.Println(e)
+					}
+					for _, e := range parseErrs {
+						fmt.Println(e)
+					}
+				} else {
+					fmt.Printf("Completed log index %d\n", index)
+				}
+			}()
 			for uuid, entry := range resp.Payload {
 				// uuid is the global UUID - tree ID and entry UUID
 				e, _, _, err := unmarshalEntryImpl(entry.Body.(string))
@@ -307,21 +322,19 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) (err erro
 							return nil
 						}
 						insertErrs = append(insertErrs, fmt.Errorf("error inserting UUID %s with key %s: %w", uuid, key, err))
+						runningInsertErrs++
+						if runningInsertErrs > maxInsertErrors {
+							resultChan <- result{
+								index:      index,
+								parseErrs:  parseErrs,
+								insertErrs: insertErrs,
+							}
+							return fmt.Errorf("too many insertion errors")
+						}
 						continue
 					}
 					fmt.Printf("Uploaded entry %s, index %d, key %s\n", uuid, index, key)
 				}
-			}
-			if len(insertErrs) != 0 || len(parseErrs) != 0 {
-				fmt.Printf("Errors with log index %d:\n", index)
-				for _, e := range insertErrs {
-					fmt.Println(e)
-				}
-				for _, e := range parseErrs {
-					fmt.Println(e)
-				}
-			} else {
-				fmt.Printf("Completed log index %d\n", index)
 			}
 			resultChan <- result{
 				index:      index,
