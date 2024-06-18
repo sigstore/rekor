@@ -17,8 +17,13 @@
 set -e
 testdir=$(dirname "$0")
 
+docker_compose="docker compose"
+if ! ${docker_compose} version >/dev/null 2>&1; then
+    docker_compose="docker-compose"
+fi
+
 echo "* starting services"
-docker-compose up -d
+${docker_compose} up -d
 
 echo "* building CLI"
 go build -o rekor-cli ./cmd/rekor-cli
@@ -50,7 +55,7 @@ trap "rm -rf $REKORTMPDIR" EXIT
 waitForRekorServer
 
 echo "* stopping rekor to test issue #872"
-docker-compose stop rekor-server
+${docker_compose} stop rekor-server
 
 docker volume rm -f issue872_attestations || true
 ATT_VOLUME=$(docker volume create --name issue872_attestations)
@@ -90,7 +95,7 @@ volumes:
 EOF
 
 echo "* starting rekor v0.6.0 to test issue #872"
-docker-compose -f $V060_COMPOSE_FILE --project-directory=$PWD up -d rekor-server-issue-872-v060
+${docker_compose} -f $V060_COMPOSE_FILE --project-directory=$PWD up -d rekor-server-issue-872-v060
 sleep 5
 
 # this rekor-cli image is based on v0.6.0 and has the fix for issue #800
@@ -104,8 +109,8 @@ V060_UPLOAD_OUTPUT=$REKORTMPDIR/issue-872-upload-output
 echo "* inserting intoto entry into Rekor v0.6.0"
 if ! $ISSUE800_CLI upload --type intoto --artifact tests/intoto_dsse.json --public-key tests/intoto_dsse.pem --format=json --rekor_server=http://localhost:3000 > $V060_UPLOAD_OUTPUT; then
    echo "* failed to insert intoto entry to test issue #872, exiting"
-   docker-compose logs --no-color > /tmp/docker-compose.log
-   docker-compose -f $V060_COMPOSE_FILE --project-directory=$PWD logs rekor-server-issue-872-v060 > /tmp/post-insert-docker-compose.log
+   ${docker_compose} logs --no-color > /tmp/docker-compose.log
+   ${docker_compose} -f $V060_COMPOSE_FILE --project-directory=$PWD logs rekor-server-issue-872-v060 > /tmp/post-insert-docker-compose.log
    exit 1
 fi
 
@@ -114,8 +119,8 @@ V060_GET_OUTPUT=$REKORTMPDIR/issue-872-get-output
 echo "* read back entry from Rekor v0.6.0"
 if ! $ISSUE800_CLI get --log-index=$ISSUE872_UPLOAD_INDEX  --format=json --rekor_server=http://localhost:3000 > $V060_GET_OUTPUT; then
    echo "* failed to retrieve entry from rekor v0.6.0 to test issue #872, exiting"
-   docker-compose logs --no-color > /tmp/docker-compose.log
-   docker-compose -f $V060_COMPOSE_FILE --project-directory=$PWD logs rekor-server-issue-872-v060 > /tmp/post-insert-docker-compose.log
+   ${docker_compose} logs --no-color > /tmp/docker-compose.log
+   ${docker_compose} -f $V060_COMPOSE_FILE --project-directory=$PWD logs rekor-server-issue-872-v060 > /tmp/post-insert-docker-compose.log
    exit 1
 fi
 
@@ -124,16 +129,16 @@ V060_ATT_LENGTH=$(jq -r '.Attestation | length' $V060_GET_OUTPUT)
 if [ $V060_ATT_LENGTH -eq 0 ]; then
    echo "* failed to read back attestation while testing issue #872 against rekor v0.6.0, exiting"
    cat $V060_GET_OUTPUT
-   docker-compose logs --no-color > /tmp/docker-compose.log
-   docker-compose -f $V060_COMPOSE_FILE --project-directory=$PWD logs rekor-server-issue-872-v060 > /tmp/post-insert-docker-compose.log
+   ${docker_compose} logs --no-color > /tmp/docker-compose.log
+   ${docker_compose} -f $V060_COMPOSE_FILE --project-directory=$PWD logs rekor-server-issue-872-v060 > /tmp/post-insert-docker-compose.log
    exit 1
 fi
 
 echo "* grabbing TreeID to use when starting older version"
 REKOR_TRILLIAN_LOG_SERVER_TLOG_ID=$($ISSUE800_CLI loginfo --rekor_server=http://localhost:3000 --format=json | jq -r .TreeID)
 echo "* stopping rekor v0.6.0 to test issue #872"
-docker-compose -f $V060_COMPOSE_FILE --project-directory=$PWD logs rekor-server-issue-872-v060 > /tmp/post-insert-docker-compose.log
-docker-compose -f $V060_COMPOSE_FILE --project-directory=$PWD stop rekor-server-issue-872-v060
+${docker_compose} -f $V060_COMPOSE_FILE --project-directory=$PWD logs rekor-server-issue-872-v060 > /tmp/post-insert-docker-compose.log
+${docker_compose} -f $V060_COMPOSE_FILE --project-directory=$PWD stop rekor-server-issue-872-v060
 
 COMPOSE_FILE=$REKORTMPDIR/docker-compose-issue872.yaml
 cat << EOF > $COMPOSE_FILE
@@ -177,14 +182,14 @@ EOF
 
 docker network prune -f
 echo "* starting rekor under test to ensure attestation inserted in old version is successfully returned"
-docker-compose -f $COMPOSE_FILE --project-directory=$PWD up -d
+${docker_compose} -f $COMPOSE_FILE --project-directory=$PWD up -d
 waitForRekorServer
 
 ISSUE872_GET_ENTRY=$REKORTMPDIR/issue-872-get-entry
 echo "* fetching previous entry made under v0.6.0"
 if ! $REKOR_CLI get --log-index=$ISSUE872_UPLOAD_INDEX --rekor_server=http://localhost:3000 --format=json > $ISSUE872_GET_ENTRY; then
    echo "* failed to read back intoto entry while testing issue #872, exiting"
-   docker-compose logs --no-color > /tmp/docker-compose.log
+   ${docker_compose} logs --no-color > /tmp/docker-compose.log
    exit 1
 fi
 
@@ -194,7 +199,7 @@ ATT_LENGTH=$(jq -r '.Attestation | length' $ISSUE872_GET_ENTRY)
 if [ $ATT_LENGTH -eq 0 ]; then
    echo "* failed to read back attestation while testing issue #872, exiting"
    cat $ISSUE872_GET_ENTRY
-   docker-compose logs --no-color > /tmp/docker-compose.log
+   ${docker_compose} logs --no-color > /tmp/docker-compose.log
    exit 1
 else
    echo "* tests succeeded!"
