@@ -17,13 +17,18 @@ set -e
 
 TREE_ID=""
 
+docker_compose="docker compose"
+if ! ${docker_compose} version >/dev/null 2>&1; then
+    docker_compose="docker-compose"
+fi
+
 function start_server () {
     server_version=$1
     current_branch=$(git rev-parse --abbrev-ref HEAD)
     git checkout $server_version
-    if [ $(docker-compose ps | grep -c "(healthy)") == 0 ]; then
+    if [ $(${docker_compose} ps | grep -c "(healthy)") == 0 ]; then
         echo "starting services with version $server_version"
-        docker-compose up -d --build
+        ${docker_compose} up -d --build
         sleep 30
         make rekor-cli
         export TREE_ID=$(./rekor-cli loginfo --format json --rekor_server http://localhost:3000 --store_tree_state=false | jq -r .TreeID)
@@ -36,17 +41,17 @@ function start_server () {
         replace="\"--trillian_log_server.tlog_id=$TREE_ID\","
         sed -i "s/$search/$replace/" docker-compose.yml
 
-        docker-compose up -d --build rekor-server
+        ${docker_compose} up -d --build rekor-server
     fi
 
     count=0
     echo -n "waiting up to 60 sec for system to start"
-    until [ $(docker-compose ps | grep -c "(healthy)") == 3 ];
+    until [ $(${docker_compose} ps | grep -c "(healthy)") == 3 ];
     do
         if [ $count -eq 6 ]; then
             echo "! timeout reached"
             cat docker-compose.yml
-            docker-compose logs --no-color > /tmp/docker-compose.log
+            ${docker_compose} logs --no-color > /tmp/docker-compose.log
             exit 1
         else
             echo -n "."
@@ -76,13 +81,13 @@ function run_tests () {
 
     go clean -testcache
     if ! REKORTMPDIR=$REKORTMPDIR SERVER_VERSION=$1 CLI_VERSION=$2 go test -run TestHarness -v -tags=e2e ./tests/ ; then
-        docker-compose logs --no-color > /tmp/docker-compose.log
+        ${docker_compose} logs --no-color > /tmp/docker-compose.log
         exit 1
     fi
-    if docker-compose logs --no-color | grep -q "panic: runtime error:" ; then
+    if ${docker_compose} logs --no-color | grep -q "panic: runtime error:" ; then
         # if we're here, we found a panic
         echo "Failing due to panics detected in logs"
-        docker-compose logs --no-color > /tmp/docker-compose.log
+        ${docker_compose} logs --no-color > /tmp/docker-compose.log
         exit 1
     fi
 }
@@ -102,7 +107,7 @@ VERSIONS="$VERSIONS $HEAD"
 echo $VERSIONS
 
 export REKOR_HARNESS_TMPDIR="$(mktemp -d -t rekor_test_harness.XXXXXX)"
-docker-compose down
+${docker_compose} down
 
 for server_version in $VERSIONS
 do
