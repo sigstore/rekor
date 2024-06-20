@@ -63,8 +63,8 @@ var (
 	redisEnableTLS          = flag.Bool("redis-enable-tls", false, "Enable TLS for Redis client")
 	redisInsecureSkipVerify = flag.Bool("redis-insecure-skip-verify", false, "Whether to skip TLS verification for Redis client or not")
 	mysqlDSN                = flag.String("mysql-dsn", "", "MySQL Data Source Name")
-	versionFlag             = flag.Bool("version", false, "Print the current version of Backfill MySQL")
-	dryRun                  = flag.Bool("dry-run", false, "Dry run - don't actually insert into MySQL")
+	versionFlag             = flag.Bool("version", false, "Print the current version of cleanup-index")
+	dryRun                  = flag.Bool("dry-run", false, "Dry run - don't actually delete from Redis")
 )
 
 func main() {
