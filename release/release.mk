@@ -10,7 +10,7 @@ release:
 # used when need to validate the goreleaser
 .PHONY: snapshot
 snapshot:
-	CLI_LDFLAGS="$(CLI_LDFLAGS)" SERVER_LDFLAGS="$(SERVER_LDFLAGS)" goreleaser release --skip-sign --skip-publish --snapshot --clean --timeout 120m
+	CLI_LDFLAGS="$(CLI_LDFLAGS)" SERVER_LDFLAGS="$(SERVER_LDFLAGS)" goreleaser release --skip=sign,publish --snapshot --clean --timeout 120m
 
 ###########################
 # sign section
