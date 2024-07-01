@@ -51,7 +51,7 @@ require (
 
 require (
 	cloud.google.com/go/profiler v0.4.0
-	cloud.google.com/go/pubsub v1.39.0
+	cloud.google.com/go/pubsub v1.40.0
 	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230919221257-8b5d3ce2d11d
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7
@@ -141,7 +141,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect
 	go.opentelemetry.io/otel/trace v1.24.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240610135401-a8a62080eff3 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240617180043-68d350f18fd4 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.3 // indirect
 	k8s.io/klog/v2 v2.120.0 // indirect
 	software.sslmate.com/src/go-pkcs12 v0.4.0 // indirect
