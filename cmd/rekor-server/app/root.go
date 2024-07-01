@@ -20,11 +20,15 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/middleware"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -136,6 +140,18 @@ Memory and file-based signers should only be used for testing.`)
 
 	rootCmd.PersistentFlags().String("http-request-id-header-name", middleware.RequestIDHeader, "name of HTTP Request Header to use as request correlation ID")
 	rootCmd.PersistentFlags().String("trace-string-prefix", "", "if set, this will be used to prefix the 'trace' field when outputting structured logs")
+
+	keyAlgorithmTypes := []string{}
+	for _, keyAlgorithm := range api.AllowedClientSigningAlgorithms {
+		keyFlag, err := signature.FormatSignatureAlgorithmFlag(keyAlgorithm)
+		if err != nil {
+			panic(err)
+		}
+		keyAlgorithmTypes = append(keyAlgorithmTypes, keyFlag)
+	}
+	sort.Strings(keyAlgorithmTypes)
+	keyAlgorithmHelp := fmt.Sprintf("signing algorithm to use for signing/hashing (allowed %s)", strings.Join(keyAlgorithmTypes, ", "))
+	rootCmd.PersistentFlags().StringSlice("client-signing-algorithms", keyAlgorithmTypes, keyAlgorithmHelp)
 
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)

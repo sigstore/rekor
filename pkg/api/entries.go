@@ -18,12 +18,18 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
@@ -179,12 +185,82 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 	return entries.NewGetLogEntryByIndexOK().WithPayload(logEntry)
 }
 
+func checkEntryAlgorithms(entry types.EntryImpl) (bool, error) {
+	verifiers, err := entry.Verifiers()
+	if err != nil {
+		return false, fmt.Errorf("getting verifiers: %w", err)
+	}
+	// Default to SHA256 if no artifact hash is specified
+	artifactHashValue := crypto.SHA256
+	// Get artifact hash from entry
+	artifactHash, err := entry.ArtifactHash()
+	if err == nil {
+		var artifactHashAlgorithm string
+		algoPosition := strings.Index(artifactHash, ":")
+		if algoPosition != -1 {
+			artifactHashAlgorithm = artifactHash[:algoPosition]
+		}
+		switch artifactHashAlgorithm {
+		case "sha256":
+			artifactHashValue = crypto.SHA256
+		case "sha384":
+			artifactHashValue = crypto.SHA384
+		case "sha512":
+			artifactHashValue = crypto.SHA512
+		default:
+			artifactHashValue = crypto.SHA256
+		}
+	}
+
+	// Check if all the verifiers public keys (together with the ArtifactHash)
+	// are allowed according to the policy
+	for _, v := range verifiers {
+		identities, err := v.Identities()
+		if err != nil {
+			return false, fmt.Errorf("getting identities: %w", err)
+		}
+
+		for _, identity := range identities {
+			var publicKey crypto.PublicKey
+			switch identityCrypto := identity.Crypto.(type) {
+			case *x509.Certificate:
+				publicKey = identityCrypto.PublicKey
+			case *rsa.PublicKey:
+				publicKey = identityCrypto
+			case *ecdsa.PublicKey:
+				publicKey = identityCrypto
+			case ed25519.PublicKey:
+				publicKey = identityCrypto
+			default:
+				continue
+			}
+			isPermitted, err := api.algorithmRegistry.IsAlgorithmPermitted(publicKey, artifactHashValue)
+			if err != nil {
+				return false, fmt.Errorf("checking if algorithm is permitted: %w", err)
+			}
+			if !isPermitted {
+				return false, nil
+			}
+		}
+	}
+	return true, nil
+}
+
 func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middleware.Responder) {
 	ctx := params.HTTPRequest.Context()
 	entry, err := types.CreateVersionedEntry(params.ProposedEntry)
 	if err != nil {
 		return nil, handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf(validationError, err))
 	}
+
+	areEntryAlgorithmsAllowed, err := checkEntryAlgorithms(entry)
+	if err != nil {
+		return nil, handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf(validationError, err))
+	}
+	if !areEntryAlgorithmsAllowed {
+		return nil, handleRekorAPIError(params, http.StatusBadRequest, errors.New("entry algorithms are not allowed"), fmt.Sprintf(validationError, "entry algorithms are not allowed"))
+	}
+
 	leaf, err := types.CanonicalizeEntry(ctx, entry)
 	if err != nil {
 		if _, ok := (err).(types.ValidationError); ok {
