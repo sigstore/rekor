@@ -58,7 +58,12 @@ services:
       "--rpc_endpoint=0.0.0.0:8090",
       "--http_endpoint=0.0.0.0:8091",
       "--alsologtostderr",
+      "--tls_cert_file=/etc/tls/tls.crt",
+      "--tls_key_file=/etc/tls/tls.key"
     ]
+    volumes:
+      - /tests/sharding-testdata/tls.crt:/etc/tls/tls.crt
+      - /tests/sharding-testdata/tls.key:/etc/tls/tls.key
     restart: always # retry while mysql is starting up
     ports:
       - "8090:8090"
@@ -102,11 +107,13 @@ services:
       "--enable_stable_checkpoint",
       "--search_index.storage_provider=mysql",
       "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test",
+      "--tls_ca_cert=/etc/tls/ca.crt"
       # Uncomment this for production logging
       # "--log_type=prod",
       ]
     volumes:
     - "/var/run/attestations:/var/run/attestations:z"
+    - /tests/sharding-testdata/ca.crt:/etc/tls/ca.crt
     restart: always # keep the server running
     ports:
       - "3000:3000"
