@@ -19,13 +19,18 @@ set -ex
 # Things to install first:
 # - jq, createtree
 
+docker_compose="docker compose"
+if ! ${docker_compose} version >/dev/null 2>&1; then
+    docker_compose="docker-compose"
+fi
+
 # Spin up services as usual
 
 echo "Installing createtree..."
 go install github.com/google/trillian/cmd/createtree@latest
 
 echo "starting services"
-docker-compose up -d --build
+${docker_compose} up -d --build
 rm ~/.rekor/state.json || true
 
 echo "building CLI"
@@ -62,7 +67,7 @@ function waitForRekorServer () {
   count=0
 
   echo -n "waiting up to 60 sec for system to start"
-  until [ $(docker-compose ps | grep -c "(healthy)") == 3 ];
+  until [ $(${docker_compose} ps | grep -c "(healthy)") == 3 ];
   do
       if [ $count -eq 6 ]; then
         echo "! timeout reached"
@@ -82,12 +87,12 @@ function waitForRekorServer () {
 function collectLogsOnFailure () {
     if [[ "$1" -ne "0" ]]; then
         echo "failure detected, collecting docker-compose logs"
-        docker-compose logs --no-color > /tmp/docker-compose.log
+        ${docker_compose} logs --no-color > /tmp/docker-compose.log
         exit $1
-    elif docker-compose logs --no-color | grep -q "panic: runtime error:" ; then
+    elif ${docker_compose} logs --no-color | grep -q "panic: runtime error:" ; then
         # if we're here, we found a panic
         echo "failing due to panics detected in logs"
-        docker-compose logs --no-color > /tmp/docker-compose.log
+        ${docker_compose} logs --no-color > /tmp/docker-compose.log
         exit 1
     fi
     exit 0
@@ -187,7 +192,7 @@ EOF
 
 # Spin up the new Rekor
 
-docker-compose -f $COMPOSE_FILE up  -d
+${docker_compose} -f $COMPOSE_FILE up -d
 waitForRekorServer
 $REKOR_CLI loginfo --rekor_server http://localhost:3000 
 
