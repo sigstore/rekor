@@ -22,12 +22,15 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/google/trillian"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/sigstore/rekor/pkg/indexstorage"
@@ -47,7 +50,33 @@ import (
 
 func dial(rpcServer string) (*grpc.ClientConn, error) {
 	// Set up and test connection to rpc server
-	creds := insecure.NewCredentials()
+	var creds credentials.TransportCredentials
+	tlsCACertFile := viper.GetString("tls_ca_cert")
+	useSystemTrustStore := viper.GetBool("trillian_log_server.tls")
+
+	switch {
+	case useSystemTrustStore:
+		creds = credentials.NewTLS(&tls.Config{
+			ServerName: rpcServer,
+			MinVersion: tls.VersionTLS12,
+		})
+	case tlsCACertFile != "":
+		tlsCaCert, err := os.ReadFile(filepath.Clean(tlsCACertFile))
+		if err != nil {
+			log.Logger.Fatalf("Failed to load tls_ca_cert:", err)
+		}
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(tlsCaCert) {
+			return nil, fmt.Errorf("failed to append CA certificate to pool")
+		}
+		creds = credentials.NewTLS(&tls.Config{
+			ServerName: rpcServer,
+			RootCAs:    certPool,
+			MinVersion: tls.VersionTLS12,
+		})
+	default:
+		creds = insecure.NewCredentials()
+	}
 	conn, err := grpc.NewClient(rpcServer, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		log.Logger.Fatalf("Failed to connect to RPC server:", err)
