@@ -117,7 +117,7 @@ Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().String("redis_server.password", "", "Redis server password")
 	rootCmd.PersistentFlags().Bool("redis_server.enable-tls", false, "Whether to enable TLS verification when connecting to Redis endpoint")
 	rootCmd.PersistentFlags().Bool("redis_server.insecure-skip-verify", false, "Whether to skip TLS verification when connecting to Redis endpoint, only applicable when 'redis_server.enable-tls' is set to 'true'")
-	rootCmd.PersistentFlags().String("tls_ca_cert", "", "Certificate file to use for secure connections with Trillian server")
+	rootCmd.PersistentFlags().String("trillian_log_server.tls_ca_cert", "", "Certificate file to use for secure connections with Trillian server")
 	rootCmd.PersistentFlags().Bool("trillian_log_server.tls", false, "Use TLS when connecting to Trillian Server")
 
 	rootCmd.PersistentFlags().Bool("enable_attestation_storage", false, "enables rich attestation storage")

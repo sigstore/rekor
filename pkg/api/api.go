@@ -51,7 +51,7 @@ import (
 func dial(rpcServer string) (*grpc.ClientConn, error) {
 	// Set up and test connection to rpc server
 	var creds credentials.TransportCredentials
-	tlsCACertFile := viper.GetString("tls_ca_cert")
+	tlsCACertFile := viper.GetString("trillian_log_server.tls_ca_cert")
 	useSystemTrustStore := viper.GetBool("trillian_log_server.tls")
 
 	switch {
