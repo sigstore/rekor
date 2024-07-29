@@ -41,7 +41,7 @@ require (
 	golang.org/x/mod v0.19.0
 	golang.org/x/net v0.27.0
 	golang.org/x/sync v0.7.0
-	google.golang.org/genproto v0.0.0-20240708141625-4ad9e859172b // indirect
+	google.golang.org/genproto v0.0.0-20240722135656-d784300faade // indirect
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/ini.v1 v1.67.0
@@ -69,13 +69,13 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.7
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.7
 	golang.org/x/exp v0.0.0-20240112132812-db7319d0e0e3
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240708141625-4ad9e859172b
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240722135656-d784300faade
 )
 
 require (
-	cloud.google.com/go/auth v0.7.0 // indirect
-	cloud.google.com/go/auth/oauth2adapt v0.2.2 // indirect
-	cloud.google.com/go/compute/metadata v0.4.0 // indirect
+	cloud.google.com/go/auth v0.7.2 // indirect
+	cloud.google.com/go/auth/oauth2adapt v0.2.3 // indirect
+	cloud.google.com/go/compute/metadata v0.5.0 // indirect
 	cloud.google.com/go/longrunning v0.5.9 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.12.0 // indirect
@@ -113,7 +113,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.2 // indirect
-	github.com/go-logr/logr v1.4.1 // indirect
+	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/google/pprof v0.0.0-20240528025155-186aa0362fba // indirect
@@ -200,7 +200,7 @@ require (
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/term v0.22.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
-	google.golang.org/api v0.188.0
+	google.golang.org/api v0.189.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
