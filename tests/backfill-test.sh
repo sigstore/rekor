@@ -33,44 +33,6 @@ source $(dirname "$0")/index-test-utils.sh
 
 trap cleanup EXIT
 
-make_entries() {
-    set -e
-    # make 10 unique artifacts and sign each once
-    for i in $(seq 0 9) ; do
-        minisign -GW -p $testdir/mini${i}.pub -s $testdir/mini${i}.key
-        echo test${i} > $testdir/blob${i}
-        minisign -S -s $testdir/mini${i}.key -m $testdir/blob${i}
-        local rekor_out=$(rekor-cli --rekor_server $REKOR_ADDRESS upload \
-            --artifact $testdir/blob${i} \
-            --pki-format=minisign \
-            --public-key $testdir/mini${i}.pub \
-            --signature $testdir/blob${i}.minisig \
-            --format json)
-        local uuid=$(echo $rekor_out | jq -r .Location | cut -d '/' -f 6)
-        expected_keys["$testdir/mini${i}.pub"]=$uuid
-        expected_artifacts["$testdir/blob${i}"]=$uuid
-    done
-    # double-sign a few artifacts
-    for i in $(seq 7 9) ; do
-        set +e
-        let key_index=$i-5
-        set -e
-        minisign -S -s $testdir/mini${key_index}.key -m $testdir/blob${i}
-        rekor_out=$(rekor-cli --rekor_server $REKOR_ADDRESS upload \
-            --artifact $testdir/blob${i} \
-            --pki-format=minisign \
-            --public-key $testdir/mini${key_index}.pub \
-            --signature $testdir/blob${i}.minisig \
-            --format json)
-        uuid=$(echo $rekor_out | jq -r .Location | cut -d '/' -f 6)
-        local orig_key_uuid="${expected_keys[${testdir}/mini${key_index}.pub]}"
-        expected_keys[$testdir/mini${key_index}.pub]="$orig_key_uuid $uuid"
-        local orig_art_uuid="${expected_artifacts[${testdir}/blob${i}]}"
-        expected_artifacts[${testdir}/blob${i}]="$orig_art_uuid $uuid"
-    done
-    set +e
-}
-
 remove_keys() {
     set -e
     for i in $@ ; do
