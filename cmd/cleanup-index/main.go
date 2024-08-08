@@ -30,6 +30,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -170,6 +171,9 @@ func removeFromRedis(ctx context.Context, redisClient *redis.Client, keys []stri
 	fmt.Printf("attempting to remove %d keys from redis (batch %d)\n", len(keys), batchIndex)
 	if *dryRun {
 		return nil
+	}
+	for i, k := range keys {
+		keys[i] = strings.ToLower(k)
 	}
 	result, err := redisClient.Del(ctx, keys...).Result()
 	if err != nil {

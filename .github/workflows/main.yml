@@ -146,6 +146,8 @@ jobs:
         run: ./tests/cleanup-index-test.sh
         env:
           INDEX_BACKEND: redis
+      - name: Copy index test
+        run: ./tests/copy-index-test.sh
       - name: Upload logs if they exist
         uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
         if: failure()
@@ -163,7 +165,7 @@ jobs:
         run: sudo add-apt-repository ppa:savoury1/minisign && sudo apt-get update && sudo apt-get install minisign
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Docker Build
-        run: docker-compose build
+        run: docker compose build
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
       - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
@@ -186,7 +188,7 @@ jobs:
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Docker Build
-        run: docker-compose build
+        run: docker compose build
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
       - uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2

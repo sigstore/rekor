@@ -14,6 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+docker_compose="docker compose -f docker-compose.yml -f docker-compose.backfill-test.yml"
+if ! ${docker_compose} version >/dev/null 2>&1; then
+    docker_compose="docker-compose -f docker-compose.yml -f docker-compose.backfill-test.yml"
+fi
+
 make_entries() {
     set -e
     # make 10 unique artifacts and sign each once
@@ -55,19 +60,19 @@ make_entries() {
 cleanup() {
     rv=$?
     if [ $rv -ne 0 ] ; then
-        docker-compose -f docker-compose.yml -f docker-compose.backfill-test.yml logs --no-color > /tmp/docker-compose.log
+        ${docker_compose} logs --no-color > /tmp/docker-compose.log
     fi
-    docker-compose down --remove-orphans
+    ${docker_compose} down --remove-orphans
     rm -rf $testdir
     exit $rv
 }
 
 docker_up () {
     set -e
-    docker-compose -f docker-compose.yml -f docker-compose.backfill-test.yml up -d --build
+    ${docker_compose} up -d --build
     local count=0
     echo "waiting up to 2 min for system to start"
-    until [ $(docker-compose ps | \
+    until [ $(${docker_compose} ps | \
        grep -E "(rekor[-_]mysql|rekor[-_]redis|rekor[-_]rekor-server)" | \
        grep -c "(healthy)" ) == 3 ];
     do
@@ -95,3 +100,20 @@ mysql_cli() {
     set +e
 }
 
+search_expect_fail() {
+    local artifact=$1
+    rekor-cli --rekor_server $REKOR_ADDRESS search --artifact $artifact 2>/dev/null
+    if [ $? -eq 0 ] ; then
+        echo "Unexpected index found."
+        exit 1
+    fi
+}
+
+search_expect_success() {
+    local artifact=$1
+    rekor-cli --rekor_server $REKOR_ADDRESS search --artifact $artifact 2>/dev/null
+    if [ $? -ne 0 ] ; then
+        echo "Unexpected missing index."
+        exit 1
+    fi
+}
