@@ -100,3 +100,20 @@ mysql_cli() {
     set +e
 }
 
+search_expect_fail() {
+    local artifact=$1
+    rekor-cli --rekor_server $REKOR_ADDRESS search --artifact $artifact 2>/dev/null
+    if [ $? -eq 0 ] ; then
+        echo "Unexpected index found."
+        exit 1
+    fi
+}
+
+search_expect_success() {
+    local artifact=$1
+    rekor-cli --rekor_server $REKOR_ADDRESS search --artifact $artifact 2>/dev/null
+    if [ $? -ne 0 ] ; then
+        echo "Unexpected missing index."
+        exit 1
+    fi
+}

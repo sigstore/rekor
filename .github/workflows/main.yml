@@ -146,6 +146,8 @@ jobs:
         run: ./tests/cleanup-index-test.sh
         env:
           INDEX_BACKEND: redis
+      - name: Copy index test
+        run: ./tests/copy-index-test.sh
       - name: Upload logs if they exist
         uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
         if: failure()

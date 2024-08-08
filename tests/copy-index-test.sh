@@ -33,24 +33,28 @@ source $(dirname "$0")/index-test-utils.sh
 
 trap cleanup EXIT
 
-remove_keys() {
+make_intoto_entries() {
     set -e
-    for i in $@ ; do
-        local rekord=$(rekor-cli --rekor_server $REKOR_ADDRESS get --log-index $i --format json)
-        local uuid=$(echo $rekord | jq -r .UUID)
-        local sha=sha256:$(echo $rekord | jq -r .Body.RekordObj.data.hash.value)
-        local key=$(echo $rekord | jq -r .Body.RekordObj.signature.publicKey.content | base64 -d | sha256sum | cut -d ' ' -f 1)
-        if [ "$INDEX_BACKEND" == "redis" ] ; then
-            redis_cli LREM $sha 1 $uuid
-            redis_cli LREM $key 1 $uuid
-        else
-            mysql_cli -e "DELETE FROM EntryIndex WHERE EntryUUID = '$uuid'"
-        fi
+    for type in intoto:0.0.1 intoto:0.0.2 dsse ; do
+        rekor-cli --rekor_server $REKOR_ADDRESS upload \
+            --type $type \
+            --artifact tests/intoto_dsse.json \
+            --public-key tests/intoto_dsse.pem \
+            --format=json
     done
     set +e
 }
 
-check_all_entries() {
+search_sha_expect_success() {
+    local sha=$1
+    rekor-cli --rekor_server $REKOR_ADDRESS search --sha $sha 2>/dev/null
+    if [ $? -ne 0 ] ; then
+        echo "Unexpected missing index."
+        exit 1
+    fi
+}
+
+check_basic_entries() {
     set -e
     for artifact in "${!expected_artifacts[@]}" ; do
         local expected_uuids="${expected_artifacts[$artifact]}"
@@ -110,105 +114,45 @@ check_all_entries() {
             fi
         fi
     done
-    local expected_size
-    local actual_size
-    if [ "${INDEX_BACKEND}" == "redis" ] ; then
-        expected_size=20
-        actual_size=$(redis_cli DBSIZE)
-    else
-        expected_size=26
-        actual_size=$(mysql_cli -NB -e "SELECT COUNT(*) FROM EntryIndex;")
-    fi
-    if [ $expected_size -ne $actual_size ] ; then
-        echo "Found unexpected number of index entries: $actual_size."
-        exit 1
-    fi
     set +e
 }
 
-run_backfill() {
+check_intoto_entries() {
+    local dsse_sha=$(sha256sum tests/intoto_dsse.json | cut -d ' ' -f 1)
+    local dsse_key_sha=$(echo | cat tests/intoto_dsse.pem - | sha256sum | cut -d ' ' -f 1)
+    local dsse_payload=$(jq -r .payload tests/intoto_dsse.json | base64 -d | sha256sum)
+
+    search_expect_success tests/intoto_dsse.json
+    search_sha_expect_success $dsse_sha
+    search_sha_expect_success $dsse_key_sha
+    search_sha_expect_success $dsse_payload
+}
+
+run_copy() {
     set -e
-    local end_index=$1
-    if [ "$INDEX_BACKEND" == "redis" ] ; then
-        go run cmd/backfill-index/main.go --rekor-address $REKOR_ADDRESS \
-            --redis-hostname $REDIS_HOST --redis-port $REDIS_PORT --redis-password $REDIS_PASSWORD \
-            --concurrency 5 --start 0 --end $end_index
-    else
-        go run cmd/backfill-index/main.go --rekor-address $REKOR_ADDRESS \
-            --mysql-dsn "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DB}" \
-            --concurrency 5 --start 0 --end $end_index
-    fi
+    go run cmd/copy-index/main.go \
+        --mysql-dsn "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DB}" \
+        --redis-hostname $REDIS_HOST --redis-port $REDIS_PORT --redis-password $REDIS_PASSWORD \
+        --batch-size 5
     set +e
 }
 
+export INDEX_BACKEND=redis
 docker_up
 
 make_entries
+make_intoto_entries
 
-set -e
-loginfo=$(rekor-cli --rekor_server $REKOR_ADDRESS loginfo --format=json)
-let end_index=$(echo $loginfo | jq .ActiveTreeSize)-1
-set +e
+check_basic_entries
+check_intoto_entries
 
-echo
-echo "##### Scenario 1: backfill from scratch #####"
-echo
+export INDEX_BACKEND=mysql
+docker-compose stop rekor-server
+docker_up
 
-# delete all keys (including the checkpoints on Redis, but those aren't needed here)
-if [ "$INDEX_BACKEND" == "redis" ] ; then
-    redis_cli FLUSHALL
-else
-    mysql_cli -e "DELETE FROM EntryIndex;"
-fi
+search_expect_fail tests/intoto_dsse.json # the new index backend should be empty at this point
 
-# searching for any artifact should fail
-search_expect_fail $testdir/blob1
+run_copy
 
-run_backfill $end_index
-
-check_all_entries
-
-echo "Scenario 1: SUCCESS"
-
-echo
-echo "##### Scenario 2: backfill last half of entries #####"
-echo
-
-remove_keys $(seq 6 12)
-
-# searching for artifact 0-5 should succeed, but searching for later artifacts should fail
-search_expect_success $testdir/blob1
-search_expect_fail $testdir/blob9
-
-run_backfill $end_index
-
-check_all_entries
-
-echo "Scenario 2: SUCCESS"
-
-echo
-echo "##### Scenario 3: backfill sparse entries #####"
-echo
-
-remove_keys $(seq 2 2 12)
-
-# searching for odd artifacts should succeed, but searching for even artifacts should fail unless it was re-signed
-search_expect_success $testdir/blob5
-search_expect_fail $testdir/blob2
-search_expect_success $testdir/blob8
-
-run_backfill $end_index
-
-check_all_entries
-
-echo "Scenario 3: SUCCESS"
-
-echo
-echo "##### Scenario 4: backfill full instance (noop) #####"
-echo
-
-run_backfill $end_index
-
-check_all_entries
-
-echo "Scenario 4: SUCCESS"
+check_basic_entries
+check_intoto_entries
