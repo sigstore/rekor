@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/google/trillian"
 	"github.com/redis/go-redis/v9"
@@ -49,6 +50,11 @@ import (
 )
 
 func dial(rpcServer string) (*grpc.ClientConn, error) {
+	// Extract the hostname without the port
+	hostname := rpcServer
+	if idx := strings.Index(rpcServer, ":"); idx != -1 {
+		hostname = rpcServer[:idx]
+	}
 	// Set up and test connection to rpc server
 	var creds credentials.TransportCredentials
 	tlsCACertFile := viper.GetString("trillian_log_server.tls_ca_cert")
@@ -57,7 +63,7 @@ func dial(rpcServer string) (*grpc.ClientConn, error) {
 	switch {
 	case useSystemTrustStore:
 		creds = credentials.NewTLS(&tls.Config{
-			ServerName: rpcServer,
+			ServerName: hostname,
 			MinVersion: tls.VersionTLS12,
 		})
 	case tlsCACertFile != "":
@@ -70,7 +76,7 @@ func dial(rpcServer string) (*grpc.ClientConn, error) {
 			return nil, fmt.Errorf("failed to append CA certificate to pool")
 		}
 		creds = credentials.NewTLS(&tls.Config{
-			ServerName: rpcServer,
+			ServerName: hostname,
 			RootCAs:    certPool,
 			MinVersion: tls.VersionTLS12,
 		})
