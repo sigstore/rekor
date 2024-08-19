@@ -18,6 +18,7 @@ package util
 import (
 	"bufio"
 	"bytes"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -53,16 +54,14 @@ func (s *SignedNote) Sign(identity string, signer signature.Signer, opts signatu
 	if err != nil {
 		return nil, fmt.Errorf("retrieving public key: %w", err)
 	}
-	pubKeyBytes, err := x509.MarshalPKIXPublicKey(pk)
+	pkHash, err := getPublicKeyHash(pk)
 	if err != nil {
-		return nil, fmt.Errorf("marshalling public key: %w", err)
+		return nil, err
 	}
-
-	pkSha := sha256.Sum256(pubKeyBytes)
 
 	signature := note.Signature{
 		Name:   identity,
-		Hash:   binary.BigEndian.Uint32(pkSha[:]),
+		Hash:   pkHash,
 		Base64: base64.StdEncoding.EncodeToString(sig),
 	}
 
@@ -80,15 +79,35 @@ func (s SignedNote) Verify(verifier signature.Verifier) bool {
 	msg := []byte(s.Note)
 	digest := sha256.Sum256(msg)
 
+	/*
+		Clarifications required:
+		0. Am I understanding this correctly? calculate the hash of the public key in every loop? Isn't the PK constant throughout this function call?
+		1. Would it still suffice to still only return `false` upon error?
+		2. Should I write a function to reuse the logic for generating hash of the PK?
+		3. How can I test this?
+			- unit tests
+			- end-to-end behavior test
+	*/
+
+	pk, err := verifier.PublicKey()
+	if err != nil {
+		return false
+	}
+	verifierPkHash, err := getPublicKeyHash(pk)
+	if err != nil {
+		return false
+	}
+
 	for _, s := range s.Signatures {
 		sigBytes, err := base64.StdEncoding.DecodeString(s.Base64)
 		if err != nil {
 			return false
 		}
-		pk, err := verifier.PublicKey()
-		if err != nil {
+
+		if s.Hash != verifierPkHash {
 			return false
 		}
+
 		opts := []signature.VerifyOption{}
 		switch pk.(type) {
 		case *rsa.PublicKey, *ecdsa.PublicKey:
@@ -189,4 +208,14 @@ func (s *SignedNote) UnmarshalText(data []byte) error {
 func SignedNoteValidator(strToValidate string) bool {
 	s := SignedNote{}
 	return s.UnmarshalText([]byte(strToValidate)) == nil
+}
+
+func getPublicKeyHash(publicKey crypto.PublicKey) (uint32, error) {
+	pubKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		return 0, fmt.Errorf("marshalling public key: %w", err)
+	}
+	pkSha := sha256.Sum256(pubKeyBytes)
+	hash := binary.BigEndian.Uint32(pkSha[:])
+	return hash, nil
 }
