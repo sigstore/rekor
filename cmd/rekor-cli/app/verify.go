@@ -31,6 +31,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/verify"
 )
@@ -45,9 +46,10 @@ type verifyCmdOutput struct {
 }
 
 func (v *verifyCmdOutput) String() string {
+	leafHash, _ := sharding.GetUUIDFromIDString(v.EntryUUID)
 	s := fmt.Sprintf("Current Root Hash: %v\n", v.RootHash)
-	s += fmt.Sprintf("Entry Hash: %v\n", v.EntryUUID)
-	s += fmt.Sprintf("Entry Index: %v\n", v.Index)
+	s += fmt.Sprintf("Entry Hash: %v\n", leafHash)
+	s += fmt.Sprintf("Entry Index in Current Tree: %v\n", v.Index)
 	s += fmt.Sprintf("Current Tree Size: %v\n", v.Size)
 	if len(v.Checkpoint) > 0 {
 		s += fmt.Sprintf("Checkpoint:\n%v\n\n", v.Checkpoint)
@@ -59,7 +61,7 @@ func (v *verifyCmdOutput) String() string {
 	hasher := rfc6962.DefaultHasher
 	inner := bits.Len64(uint64(v.Index ^ (v.Size - 1)))
 	var left, right []byte
-	result, _ := hex.DecodeString(v.EntryUUID)
+	result, _ := hex.DecodeString(leafHash)
 	for i, h := range v.Hashes {
 		if i < inner && (v.Index>>uint(i))&1 == 0 {
 			left = result
@@ -72,6 +74,8 @@ func (v *verifyCmdOutput) String() string {
 		s += fmt.Sprintf("SHA256(0x01 | %v | %v) =\n\t%v\n\n",
 			hex.EncodeToString(left), hex.EncodeToString(right), hex.EncodeToString(result))
 	}
+
+	s += fmt.Sprintf("Computed Root Hash: %s\nExpected Root Hash: %s\n", hex.EncodeToString(result), v.RootHash)
 	return s
 }
 
@@ -145,7 +149,7 @@ var verifyCmd = &cobra.Command{
 			o = &verifyCmdOutput{
 				RootHash:  *v.Verification.InclusionProof.RootHash,
 				EntryUUID: k,
-				Index:     *v.LogIndex,
+				Index:     *v.Verification.InclusionProof.LogIndex,
 				Size:      *v.Verification.InclusionProof.TreeSize,
 				Hashes:    v.Verification.InclusionProof.Hashes,
 			}
