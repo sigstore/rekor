@@ -54,7 +54,7 @@ func (s *SignedNote) Sign(identity string, signer signature.Signer, opts signatu
 	if err != nil {
 		return nil, fmt.Errorf("retrieving public key: %w", err)
 	}
-	pkHash, err := getPublicKeyHash(pk)
+	pkHash, err := GetPublicKeyHash(pk)
 	if err != nil {
 		return nil, err
 	}
@@ -79,21 +79,11 @@ func (s SignedNote) Verify(verifier signature.Verifier) bool {
 	msg := []byte(s.Note)
 	digest := sha256.Sum256(msg)
 
-	/*
-		Clarifications required:
-		0. Am I understanding this correctly? calculate the hash of the public key in every loop? Isn't the PK constant throughout this function call?
-		1. Would it still suffice to still only return `false` upon error?
-		2. Should I write a function to reuse the logic for generating hash of the PK?
-		3. How can I test this?
-			- unit tests
-			- end-to-end behavior test
-	*/
-
 	pk, err := verifier.PublicKey()
 	if err != nil {
 		return false
 	}
-	verifierPkHash, err := getPublicKeyHash(pk)
+	verifierPkHash, err := GetPublicKeyHash(pk)
 	if err != nil {
 		return false
 	}
@@ -210,7 +200,7 @@ func SignedNoteValidator(strToValidate string) bool {
 	return s.UnmarshalText([]byte(strToValidate)) == nil
 }
 
-func getPublicKeyHash(publicKey crypto.PublicKey) (uint32, error) {
+func GetPublicKeyHash(publicKey crypto.PublicKey) (uint32, error) {
 	pubKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
 		return 0, fmt.Errorf("marshalling public key: %w", err)

@@ -355,6 +355,8 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 
 func TestInvalidSigVerification(t *testing.T) {
 	ecdsaKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pubKeyHash, _ := GetPublicKeyHash(ecdsaKey.Public())
+
 	for _, test := range []struct {
 		checkpoint     Checkpoint
 		s              []note.Signature
@@ -382,11 +384,26 @@ func TestInvalidSigVerification(t *testing.T) {
 			s: []note.Signature{
 				{
 					Name:   "something",
-					Hash:   1234,
+					Hash:   pubKeyHash,
 					Base64: "not_base 64 string",
 				},
 			},
 			expectedResult: false,
+		},
+		{
+			checkpoint: Checkpoint{
+				Origin: "Log Checkpoint v0 public key mismatch",
+				Size:   123,
+				Hash:   []byte("bananas"),
+			},
+			pubKey: ecdsaKey.Public(),
+			s: []note.Signature{
+				{
+					Name:   "something",
+					Hash:   123,
+					Base64: "bm90IGEgc2ln", // not a valid signature; public key mismatch happens first
+				},
+			},
 		},
 		{
 			checkpoint: Checkpoint{
@@ -398,7 +415,7 @@ func TestInvalidSigVerification(t *testing.T) {
 			s: []note.Signature{
 				{
 					Name:   "someone",
-					Hash:   142,
+					Hash:   pubKeyHash,
 					Base64: "bm90IGEgc2ln", // valid base64, not a valid signature
 				},
 			},
