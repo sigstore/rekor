@@ -355,7 +355,7 @@ func TestSigningRoundtripCheckpoint(t *testing.T) {
 
 func TestInvalidSigVerification(t *testing.T) {
 	ecdsaKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pubKeyHash, _ := GetPublicKeyHash(ecdsaKey.Public())
+	pubKeyHash, _ := getPublicKeyHash(ecdsaKey.Public())
 
 	for _, test := range []struct {
 		checkpoint     Checkpoint

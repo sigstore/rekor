@@ -54,7 +54,7 @@ func (s *SignedNote) Sign(identity string, signer signature.Signer, opts signatu
 	if err != nil {
 		return nil, fmt.Errorf("retrieving public key: %w", err)
 	}
-	pkHash, err := GetPublicKeyHash(pk)
+	pkHash, err := getPublicKeyHash(pk)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (s SignedNote) Verify(verifier signature.Verifier) bool {
 	if err != nil {
 		return false
 	}
-	verifierPkHash, err := GetPublicKeyHash(pk)
+	verifierPkHash, err := getPublicKeyHash(pk)
 	if err != nil {
 		return false
 	}
@@ -200,7 +200,7 @@ func SignedNoteValidator(strToValidate string) bool {
 	return s.UnmarshalText([]byte(strToValidate)) == nil
 }
 
-func GetPublicKeyHash(publicKey crypto.PublicKey) (uint32, error) {
+func getPublicKeyHash(publicKey crypto.PublicKey) (uint32, error) {
 	pubKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
 		return 0, fmt.Errorf("marshalling public key: %w", err)
