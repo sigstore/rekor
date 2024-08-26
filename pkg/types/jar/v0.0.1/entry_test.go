@@ -18,6 +18,7 @@ package jar
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"reflect"
 	"strings"
@@ -124,7 +125,8 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 		if (err == nil) != tc.expectCanonicalizeSuccess {
 			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
 		} else if err != nil {
-			if _, ok := err.(types.ValidationError); !ok {
+			var validationErr *types.InputValidationError
+			if !errors.As(err, &validationErr) {
 				t.Errorf("canonicalize returned an unexpected error that isn't of type types.ValidationError: %v", err)
 			}
 		}

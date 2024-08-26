@@ -118,7 +118,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*helm.Provenance, *pgp.PublicKey, *pgp.Signature, error) {
 	if err := v.validate(); err != nil {
-		return nil, nil, nil, types.ValidationError(err)
+		return nil, nil, nil, &types.InputValidationError{Err: err}
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
@@ -148,7 +148,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*helm.Provenance
 
 		keyObj, err := pgp.NewPublicKey(keyReadCloser)
 		if err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		select {
@@ -165,7 +165,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*helm.Provenance
 	g.Go(func() error {
 
 		if err := provenance.Unmarshal(provenanceR); err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		key = <-keyResult
@@ -177,12 +177,12 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*helm.Provenance
 		var err error
 		sig, err = pgp.NewSignature(provenance.Block.ArmoredSignature.Body)
 		if err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		// Verify signature
 		if err := sig.Verify(bytes.NewReader(provenance.Block.Bytes), key); err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		select {

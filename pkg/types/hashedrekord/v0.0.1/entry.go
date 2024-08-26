@@ -108,7 +108,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	sigObj, keyObj, err := v.validate()
 	if err != nil {
-		return nil, types.ValidationError(err)
+		return nil, &types.InputValidationError{Err: err}
 	}
 
 	canonicalEntry := models.HashedrekordV001Schema{}
@@ -144,34 +144,34 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 func (v *V001Entry) validate() (pki.Signature, pki.PublicKey, error) {
 	sig := v.HashedRekordObj.Signature
 	if sig == nil {
-		return nil, nil, types.ValidationError(errors.New("missing signature"))
+		return nil, nil, &types.InputValidationError{Err: errors.New("missing signature")}
 	}
 	// Hashed rekord type only works for x509 signature types
 	sigObj, err := x509.NewSignatureWithOpts(bytes.NewReader(sig.Content), options.WithED25519ph())
 	if err != nil {
-		return nil, nil, types.ValidationError(err)
+		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
 	key := sig.PublicKey
 	if key == nil {
-		return nil, nil, types.ValidationError(errors.New("missing public key"))
+		return nil, nil, &types.InputValidationError{Err: errors.New("missing public key")}
 	}
 	keyObj, err := x509.NewPublicKey(bytes.NewReader(key.Content))
 	if err != nil {
-		return nil, nil, types.ValidationError(err)
+		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
 	data := v.HashedRekordObj.Data
 	if data == nil {
-		return nil, nil, types.ValidationError(errors.New("missing data"))
+		return nil, nil, &types.InputValidationError{Err: errors.New("missing data")}
 	}
 
 	hash := data.Hash
 	if hash == nil {
-		return nil, nil, types.ValidationError(errors.New("missing hash"))
+		return nil, nil, &types.InputValidationError{Err: errors.New("missing hash")}
 	}
 	if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
-		return nil, nil, types.ValidationError(errors.New("invalid value for hash"))
+		return nil, nil, &types.InputValidationError{Err: errors.New("invalid value for hash")}
 	}
 
 	var alg crypto.Hash
@@ -189,7 +189,7 @@ func (v *V001Entry) validate() (pki.Signature, pki.PublicKey, error) {
 		return nil, nil, err
 	}
 	if err := sigObj.Verify(nil, keyObj, options.WithDigest(decoded), options.WithCryptoSignerOpts(alg)); err != nil {
-		return nil, nil, types.ValidationError(fmt.Errorf("verifying signature: %w", err))
+		return nil, nil, &types.InputValidationError{Err: fmt.Errorf("verifying signature: %w", err)}
 	}
 
 	return sigObj, keyObj, nil

@@ -171,7 +171,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, p
 
 		signature, err := ptuf.NewSignature(sigReadCloser)
 		if err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		select {
@@ -200,7 +200,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, p
 
 		key, err := ptuf.NewPublicKey(keyReadCloser)
 		if err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		select {
@@ -225,7 +225,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, p
 
 		var err error
 		if err = sigObj.Verify(nil, keyObj); err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		select {

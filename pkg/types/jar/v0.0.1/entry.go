@@ -112,7 +112,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, *pkcs7.Signature, error) {
 	if err := v.validate(); err != nil {
-		return nil, nil, types.ValidationError(err)
+		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
 	oldSHA := ""
@@ -132,12 +132,12 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, 
 
 	computedSHA := hex.EncodeToString(hasher.Sum(nil))
 	if oldSHA != "" && computedSHA != oldSHA {
-		return nil, nil, types.ValidationError(fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA))
+		return nil, nil, &types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)}
 	}
 
 	zipReader, err := zip.NewReader(bytes.NewReader(b.Bytes()), n)
 	if err != nil {
-		return nil, nil, types.ValidationError(err)
+		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
 	// Checking that uncompressed metadata files are within acceptable bounds before reading into memory.
@@ -149,8 +149,7 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, 
 			continue
 		}
 		if f.UncompressedSize64 > viper.GetUint64("max_jar_metadata_size") && viper.GetUint64("max_jar_metadata_size") > 0 {
-			return nil, nil, types.ValidationError(
-				fmt.Errorf("uncompressed jar metadata of size %d exceeds max allowed size %d", f.UncompressedSize64, viper.GetUint64("max_jar_metadata_size")))
+			return nil, nil, &types.InputValidationError{Err: fmt.Errorf("uncompressed jar metadata of size %d exceeds max allowed size %d", f.UncompressedSize64, viper.GetUint64("max_jar_metadata_size"))}
 		}
 	}
 
@@ -158,30 +157,30 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, 
 	// well as checks that the hashes in the signed manifest are all valid
 	jarObjs, err := jarutils.Verify(zipReader, false)
 	if err != nil {
-		return nil, nil, types.ValidationError(err)
+		return nil, nil, &types.InputValidationError{Err: err}
 	}
 	switch len(jarObjs) {
 	case 0:
-		return nil, nil, types.ValidationError(errors.New("no signatures detected in JAR archive"))
+		return nil, nil, &types.InputValidationError{Err: errors.New("no signatures detected in JAR archive")}
 	case 1:
 	default:
-		return nil, nil, types.ValidationError(errors.New("multiple signatures detected in JAR; unable to process"))
+		return nil, nil, &types.InputValidationError{Err: errors.New("multiple signatures detected in JAR; unable to process")}
 	}
 
 	// we need to find and extract the PKCS7 bundle from the JAR file manually
 	sigPKCS7, err := extractPKCS7SignatureFromJAR(zipReader)
 	if err != nil {
-		return nil, nil, types.ValidationError(err)
+		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
 	keyObj, err := pkcs7.NewPublicKey(bytes.NewReader(sigPKCS7))
 	if err != nil {
-		return nil, nil, types.ValidationError(err)
+		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
 	sigObj, err := pkcs7.NewSignature(bytes.NewReader(sigPKCS7))
 	if err != nil {
-		return nil, nil, types.ValidationError(err)
+		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
 	// if we get here, all goroutines succeeded without error

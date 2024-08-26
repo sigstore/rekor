@@ -111,7 +111,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pgp.PublicKey, *rpmutils.PackageFile, error) {
 
 	if err := v.validate(); err != nil {
-		return nil, nil, types.ValidationError(err)
+		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
@@ -156,7 +156,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pgp.PublicKey, 
 
 		computedSHA := hex.EncodeToString(hasher.Sum(nil))
 		if oldSHA != "" && computedSHA != oldSHA {
-			return closePipesOnError(types.ValidationError(fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)))
+			return closePipesOnError(&types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)})
 		}
 
 		select {
@@ -174,16 +174,16 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pgp.PublicKey, 
 		var err error
 		keyObj, err = pgp.NewPublicKey(keyReadCloser)
 		if err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		keyring, err := keyObj.KeyRing()
 		if err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		if _, err := rpmutils.GPGCheck(sigR, keyring); err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		select {
@@ -200,7 +200,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pgp.PublicKey, 
 		var err error
 		rpmObj, err = rpmutils.ReadPackageFile(rpmR)
 		if err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 		// ReadPackageFile does not drain the entire reader so we need to discard the rest
 		if _, err = io.Copy(io.Discard, rpmR); err != nil {

@@ -18,6 +18,7 @@ package rpm
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"reflect"
 	"testing"
@@ -177,7 +178,8 @@ func TestCrossFieldValidation(t *testing.T) {
 		if (err == nil) != tc.expectCanonicalizeSuccess {
 			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
 		} else if err != nil {
-			if _, ok := err.(types.ValidationError); !ok {
+			var validationErr *types.InputValidationError
+			if !errors.As(err, &validationErr) {
 				t.Errorf("canonicalize returned an unexpected error that isn't of type types.ValidationError: %v", err)
 			}
 		}

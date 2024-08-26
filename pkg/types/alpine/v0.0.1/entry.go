@@ -108,7 +108,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*x509.PublicKey, *alpine.Package, error) {
 	if err := v.validate(); err != nil {
-		return nil, nil, types.ValidationError(err)
+		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
@@ -150,7 +150,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*x509.PublicKey,
 
 		computedSHA := hex.EncodeToString(hasher.Sum(nil))
 		if oldSHA != "" && computedSHA != oldSHA {
-			return closePipesOnError(types.ValidationError(fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)))
+			return closePipesOnError(&types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)})
 		}
 
 		select {
@@ -169,7 +169,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*x509.PublicKey,
 
 		keyObj, err := x509.NewPublicKey(keyReadCloser)
 		if err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		select {
@@ -186,7 +186,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*x509.PublicKey,
 	g.Go(func() error {
 		apk := alpine.Package{}
 		if err := apk.Unmarshal(apkR); err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		key = <-keyResult
@@ -195,7 +195,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*x509.PublicKey,
 		}
 
 		if err := apk.VerifySignature(key.CryptoPubKey()); err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		apkObj = &apk
