@@ -162,7 +162,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, p
 
 		computedSHA := hex.EncodeToString(hasher.Sum(nil))
 		if oldSHA != "" && computedSHA != oldSHA {
-			return closePipesOnError(types.ValidationError(fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)))
+			return closePipesOnError(&types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)})
 		}
 
 		select {
@@ -182,7 +182,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, p
 
 		signature, err := af.NewSignature(sigReadCloser)
 		if err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		select {
@@ -202,7 +202,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, p
 
 		key, err := af.NewPublicKey(keyReadCloser)
 		if err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		select {
@@ -226,7 +226,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, p
 
 		var err error
 		if err = sigObj.Verify(sigR, keyObj); err != nil {
-			return closePipesOnError(types.ValidationError(err))
+			return closePipesOnError(&types.InputValidationError{Err: err})
 		}
 
 		select {

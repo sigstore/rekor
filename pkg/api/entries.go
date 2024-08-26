@@ -187,7 +187,8 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	}
 	leaf, err := types.CanonicalizeEntry(ctx, entry)
 	if err != nil {
-		if _, ok := (err).(types.ValidationError); ok {
+		var validationErr *types.InputValidationError
+		if errors.As(err, &validationErr) {
 			return nil, handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf(validationError, err))
 		}
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalEntry)
@@ -415,8 +416,9 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 		if errors.Is(err, ErrNotFound) {
 			return handleRekorAPIError(params, http.StatusNotFound, err, "")
 		}
-		if _, ok := (err).(types.ValidationError); ok {
-			return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("incorrectly formatted uuid %s", params.EntryUUID), params.EntryUUID)
+		var validationErr *types.InputValidationError
+		if errors.As(err, &validationErr) {
+			return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("validation error: %v", err), params.EntryUUID)
 		}
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianCommunicationError)
 	}
@@ -602,7 +604,7 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 
 	hashValue, err := hex.DecodeString(uuid)
 	if err != nil {
-		return models.LogEntry{}, types.ValidationError(err)
+		return models.LogEntry{}, &types.InputValidationError{Err: fmt.Errorf("parsing UUID: %w", err)}
 	}
 
 	tc := trillianclient.NewTrillianClient(ctx, api.logClient, tid)

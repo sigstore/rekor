@@ -17,4 +17,15 @@ package types
 
 // ValidationError indicates that there is an issue with the content in the HTTP Request that
 // should result in an HTTP 400 Bad Request error being returned to the client
+//
+// Deprecated: use InputValidationError instead to take advantage of Go's error wrapping
 type ValidationError error
+
+// InputValidationError indicates that there is an issue with the content in the HTTP Request that
+// should result in an HTTP 400 Bad Request error being returned to the client
+type InputValidationError struct {
+	Err error
+}
+
+func (v *InputValidationError) Error() string { return v.Err.Error() }
+func (v *InputValidationError) Unwrap() error { return v.Err }

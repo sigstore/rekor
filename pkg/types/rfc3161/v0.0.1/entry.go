@@ -121,7 +121,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	if v.tsrContent == nil {
-		return nil, errors.New("tsr content must be set before canonicalizing")
+		return nil, &types.InputValidationError{Err: errors.New("tsr content must be set before canonicalizing")}
 	}
 	canonicalEntry := models.Rfc3161V001Schema{
 		Tsr: &models.Rfc3161V001SchemaTsr{
