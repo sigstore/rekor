@@ -68,6 +68,9 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.8
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.8
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.8
+	github.com/tink-crypto/tink-go-awskms/v2 v2.1.0
+	github.com/tink-crypto/tink-go-gcpkms/v2 v2.2.0
+	github.com/tink-crypto/tink-go/v2 v2.2.0
 	golang.org/x/exp v0.0.0-20240112132812-db7319d0e0e3
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240823204242-4ba0660f739c
 )

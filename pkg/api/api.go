@@ -136,7 +136,10 @@ func NewAPI(treeID uint) (*API, error) {
 	ranges.SetActive(tid)
 
 	rekorSigner, err := signer.New(ctx, viper.GetString("rekor_server.signer"),
-		viper.GetString("rekor_server.signer-passwd"))
+		viper.GetString("rekor_server.signer-passwd"),
+		viper.GetString("rekor_server.tink_kek_uri"),
+		viper.GetString("rekor_server.tink_keyset_path"),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("getting new signer: %w", err)
 	}
