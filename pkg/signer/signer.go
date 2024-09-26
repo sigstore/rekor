@@ -32,7 +32,7 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
-func New(ctx context.Context, signer string, pass string) (signature.Signer, error) {
+func New(ctx context.Context, signer, pass, tinkKEKURI, tinkKeysetPath string) (signature.Signer, error) {
 	switch {
 	case slices.ContainsFunc(kms.SupportedProviders(),
 		func(s string) bool {
@@ -41,6 +41,8 @@ func New(ctx context.Context, signer string, pass string) (signature.Signer, err
 		return kms.Get(ctx, signer, crypto.SHA256)
 	case signer == MemoryScheme:
 		return NewMemory()
+	case signer == TinkScheme:
+		return NewTinkSigner(ctx, tinkKEKURI, tinkKeysetPath)
 	default:
 		return NewFile(signer, pass)
 	}

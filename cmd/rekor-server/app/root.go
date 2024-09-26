@@ -98,9 +98,11 @@ func init() {
 	rootCmd.PersistentFlags().String("rekor_server.address", "127.0.0.1", "Address to bind to")
 
 	rootCmd.PersistentFlags().String("rekor_server.signer", "memory",
-		`Rekor signer to use. Valid options are: [awskms://keyname, azurekms://keyname, gcpkms://keyname, hashivault://keyname, memory, <filename containing PEM-encoded private key>].
+		`Rekor signer to use. Valid options are: [awskms://keyname, azurekms://keyname, gcpkms://keyname, hashivault://keyname, memory, tink, <filename containing PEM-encoded private key>].
 Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().String("rekor_server.signer-passwd", "", "Password to decrypt signer private key")
+	rootCmd.PersistentFlags().String("rekor_server.tink_kek_uri", "", "Key encryption key for decrypting Tink keyset. Valid options are [aws-kms://keyname, gcp-kms://keyname]")
+	rootCmd.PersistentFlags().String("rekor_server.tink_keyset_path", "", "Path to encrypted Tink keyset, containing private key to sign log checkpoints")
 
 	rootCmd.PersistentFlags().String("rekor_server.new_entry_publisher", "", "URL for pub/sub queue to send messages to when new entries are added to the log. Ignored if not set. Supported providers: [gcppubsub]")
 	rootCmd.PersistentFlags().Bool("rekor_server.publish_events_protobuf", false, "Whether to publish events in Protobuf wire format. Applies to all enabled event types.")
