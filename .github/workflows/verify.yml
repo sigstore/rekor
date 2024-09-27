@@ -64,4 +64,4 @@ jobs:
         uses: golangci/golangci-lint-action@aaa42aa0628b4ae2578232a66b541047968fac86 # v6.1.0
         timeout-minutes: 10
         with:
-          version: v1.57
+          version: v1.61
