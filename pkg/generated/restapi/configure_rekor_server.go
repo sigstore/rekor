@@ -351,7 +351,7 @@ func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
 		for _, embeddedErr := range compErr.Errors {
 			var maxBytesError *http.MaxBytesError
 			if parseErr, ok := embeddedErr.(*errors.ParseError); ok && go_errors.As(parseErr.Reason, &maxBytesError) {
-				err = errors.New(http.StatusRequestEntityTooLarge, http.StatusText(http.StatusRequestEntityTooLarge))
+				err = errors.New(http.StatusRequestEntityTooLarge, http.StatusText(http.StatusRequestEntityTooLarge)) //nolint:govet
 				break
 			}
 		}

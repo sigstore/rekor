@@ -35,6 +35,9 @@ issues:
   - text: "SA1019: package golang.org/x/crypto/openpgp"
     linters:
     - staticcheck
+  - text: "G115: "
+    linters:
+    - gosec
   max-issues-per-linter: 0
   max-same-issues: 0
 run:
