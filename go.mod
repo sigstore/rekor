@@ -32,7 +32,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/theupdateframework/go-tuf v0.7.0
 	github.com/transparency-dev/merkle v0.0.2
-	github.com/veraison/go-cose v1.2.1
+	github.com/veraison/go-cose v1.3.0
 	github.com/zalando/go-keyring v0.2.3 // indirect
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.0
@@ -162,7 +162,7 @@ require (
 	github.com/danieljoos/wincred v1.2.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.5.0 // indirect
 	github.com/go-openapi/analysis v0.23.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
