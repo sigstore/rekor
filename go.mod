@@ -36,7 +36,7 @@ require (
 	github.com/zalando/go-keyring v0.2.3 // indirect
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.0
-	gocloud.dev v0.39.0
+	gocloud.dev v0.40.0
 	golang.org/x/crypto v0.28.0
 	golang.org/x/mod v0.20.0
 	golang.org/x/net v0.30.0
