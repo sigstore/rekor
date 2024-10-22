@@ -32,6 +32,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      pull-requests: read
 
     steps:
       - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -58,8 +59,23 @@ jobs:
 
       - name: creds
         run: gcloud auth configure-docker --quiet
+        
+      - name: Formatted labels
+        id: labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          FORMATED_LABELS="--image-label commit-hash=$GITHUB_SHA"
+          BRANCH_NUMBER=$(gh pr list --state all --search "sha:$GITHUB_SHA" --label "breaking-change" | awk '{print $1}')
+          
+          echo "Branch Number: $BRANCH_NUMBER" 
+          # Check if a pull request number was found
+          if [ -n "$BRANCH_NUMBER" ]; then
+            FORMATED_LABELS+=" --image-label breaking-change=true"
+          fi
+          echo "FORMATED_LABELS='$FORMATED_LABELS'" >> $GITHUB_OUTPUT
 
       - name: container
-        run: KO_PREFIX=gcr.io/projectsigstore/rekor/ci/rekor make sign-keyless-ci
+        run: KO_PREFIX=gcr.io/projectsigstore/rekor/ci/rekor FORMATED_LABEL=${{ steps.labels.outputs.FORMATED_LABELS }} make sign-keyless-ci
         env:
           COSIGN_YES: true
