@@ -46,6 +46,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/tle"
 	"github.com/sigstore/rekor/pkg/util"
 
 	"golang.org/x/exp/slices"
@@ -88,6 +89,7 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.JSONProducer = runtime.JSONProducer()
 
 	api.ApplicationXPemFileProducer = runtime.TextProducer()
+	api.ApplicationXSigstoreTleProducer = tle.TLEProducer{}
 
 	// disable all endpoints to start
 	api.IndexSearchIndexHandler = index.SearchIndexHandlerFunc(pkgapi.SearchIndexNotImplementedHandler)
@@ -159,6 +161,8 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.ServerShutdown = func() {
 		pkgapi.StopAPI()
 	}
+	// this causes the order of producers in openapi.yaml to be enforced
+	api.SetDefaultProduces("")
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
 }

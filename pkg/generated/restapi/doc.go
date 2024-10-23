@@ -29,6 +29,7 @@
 //
 //	Produces:
 //	  - application/x-pem-file
+//	  - application/x-sigstore-tle
 //	  - application/json
 //
 // swagger:meta

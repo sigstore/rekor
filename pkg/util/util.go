@@ -27,6 +27,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -324,10 +325,10 @@ func RunCliErr(t *testing.T, arg ...string) string {
 }
 
 func rekorServerFlag() string {
-	return fmt.Sprintf("--rekor_server=%s", rekorServer())
+	return fmt.Sprintf("--rekor_server=%s", RekorServer())
 }
 
-func rekorServer() string {
+func RekorServer() string {
 	if s := os.Getenv("REKOR_SERVER"); s != "" {
 		return s
 	}
@@ -443,4 +444,16 @@ func SetupTestData(t *testing.T) {
 	// Now upload to rekor!
 	out := RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	OutputContains(t, out, "Created entry at")
+}
+
+func GetLogIndexFromUploadOutput(t *testing.T, out string) int {
+	t.Helper()
+	// Output looks like "Created entry at index X, available at $URL/UUID", so grab the index X:
+	split := strings.Split(strings.TrimSpace(out), ",")
+	ss := strings.Split(split[0], " ")
+	i, err := strconv.Atoi(ss[len(ss)-1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return i
 }

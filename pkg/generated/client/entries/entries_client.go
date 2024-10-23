@@ -68,6 +68,30 @@ type Client struct {
 // ClientOption may be used to customize the behavior of Client methods.
 type ClientOption func(*runtime.ClientOperation)
 
+// This client is generated with a few options you might find useful for your swagger spec.
+//
+// Feel free to add you own set of options.
+
+// WithAccept allows the client to force the Accept header
+// to negotiate a specific Producer from the server.
+//
+// You may use this option to set arbitrary extensions to your MIME media type.
+func WithAccept(mime string) ClientOption {
+	return func(r *runtime.ClientOperation) {
+		r.ProducesMediaTypes = []string{mime}
+	}
+}
+
+// WithAcceptApplicationJSON sets the Accept header to "application/json".
+func WithAcceptApplicationJSON(r *runtime.ClientOperation) {
+	r.ProducesMediaTypes = []string{"application/json"}
+}
+
+// WithAcceptApplicationxSigstoreTle sets the Accept header to "application/x-sigstore-tle".
+func WithAcceptApplicationxSigstoreTle(r *runtime.ClientOperation) {
+	r.ProducesMediaTypes = []string{"application/x-sigstore-tle"}
+}
+
 // ClientService is the interface for Client methods
 type ClientService interface {
 	CreateLogEntry(params *CreateLogEntryParams, opts ...ClientOption) (*CreateLogEntryCreated, error)
@@ -132,7 +156,7 @@ func (a *Client) GetLogEntryByIndex(params *GetLogEntryByIndexParams, opts ...Cl
 		ID:                 "getLogEntryByIndex",
 		Method:             "GET",
 		PathPattern:        "/api/v1/log/entries",
-		ProducesMediaTypes: []string{"application/json"},
+		ProducesMediaTypes: []string{"application/json", "application/x-sigstore-tle"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
 		Params:             params,
@@ -171,7 +195,7 @@ func (a *Client) GetLogEntryByUUID(params *GetLogEntryByUUIDParams, opts ...Clie
 		ID:                 "getLogEntryByUUID",
 		Method:             "GET",
 		PathPattern:        "/api/v1/log/entries/{entryUUID}",
-		ProducesMediaTypes: []string{"application/json"},
+		ProducesMediaTypes: []string{"application/json", "application/x-sigstore-tle"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
 		Params:             params,
@@ -208,7 +232,7 @@ func (a *Client) SearchLogQuery(params *SearchLogQueryParams, opts ...ClientOpti
 		ID:                 "searchLogQuery",
 		Method:             "POST",
 		PathPattern:        "/api/v1/log/entries/retrieve",
-		ProducesMediaTypes: []string{"application/json"},
+		ProducesMediaTypes: []string{"application/json", "application/x-sigstore-tle"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
 		Params:             params,

@@ -65,6 +65,9 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 		ApplicationXPemFileProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
 			return errors.NotImplemented("applicationXPemFile producer has not yet been implemented")
 		}),
+		ApplicationXSigstoreTleProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
+			return errors.NotImplemented("applicationXSigstoreTle producer has not yet been implemented")
+		}),
 		JSONProducer: runtime.JSONProducer(),
 
 		EntriesCreateLogEntryHandler: entries.CreateLogEntryHandlerFunc(func(params entries.CreateLogEntryParams) middleware.Responder {
@@ -126,6 +129,9 @@ type RekorServerAPI struct {
 	// ApplicationXPemFileProducer registers a producer for the following mime types:
 	//   - application/x-pem-file
 	ApplicationXPemFileProducer runtime.Producer
+	// ApplicationXSigstoreTleProducer registers a producer for the following mime types:
+	//   - application/x-sigstore-tle
+	ApplicationXSigstoreTleProducer runtime.Producer
 	// JSONProducer registers a producer for the following mime types:
 	//   - application/json
 	JSONProducer runtime.Producer
@@ -222,6 +228,9 @@ func (o *RekorServerAPI) Validate() error {
 	if o.ApplicationXPemFileProducer == nil {
 		unregistered = append(unregistered, "ApplicationXPemFileProducer")
 	}
+	if o.ApplicationXSigstoreTleProducer == nil {
+		unregistered = append(unregistered, "ApplicationXSigstoreTleProducer")
+	}
 	if o.JSONProducer == nil {
 		unregistered = append(unregistered, "JSONProducer")
 	}
@@ -298,6 +307,8 @@ func (o *RekorServerAPI) ProducersFor(mediaTypes []string) map[string]runtime.Pr
 		switch mt {
 		case "application/x-pem-file":
 			result["application/x-pem-file"] = o.ApplicationXPemFileProducer
+		case "application/x-sigstore-tle":
+			result["application/x-sigstore-tle"] = o.ApplicationXSigstoreTleProducer
 		case "application/json":
 			result["application/json"] = o.JSONProducer
 		}

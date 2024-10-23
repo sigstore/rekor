@@ -187,6 +187,9 @@ paths:
           required: true
           minimum: 0
           description: specifies the index of the entry in the transparency log to be retrieved
+      produces:
+        - application/json
+        - application/x-sigstore-tle
       responses:
         200:
           description: the entry in the transparency log requested along with an inclusion proof
@@ -211,6 +214,9 @@ paths:
           required: true
           pattern: '^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$'
           description: the UUID of the entry for which the inclusion proof information should be returned
+      produces:
+        - application/json
+        - application/x-sigstore-tle
       responses:
         200:
           description: Information needed for a client to compute the inclusion proof
@@ -233,6 +239,9 @@ paths:
           required: true
           schema:
             $ref: '#/definitions/SearchLogQuery'
+      produces:
+        - application/json
+        - application/x-sigstore-tle
       responses:
         200:
           description: Returns zero or more entries from the transparency log, according to how many were included in request query

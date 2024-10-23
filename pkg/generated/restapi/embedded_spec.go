@@ -123,6 +123,10 @@ func init() {
     },
     "/api/v1/log/entries": {
       "get": {
+        "produces": [
+          "application/json",
+          "application/x-sigstore-tle"
+        ],
         "tags": [
           "entries"
         ],
@@ -201,6 +205,10 @@ func init() {
     },
     "/api/v1/log/entries/retrieve": {
       "post": {
+        "produces": [
+          "application/json",
+          "application/x-sigstore-tle"
+        ],
         "tags": [
           "entries"
         ],
@@ -241,6 +249,10 @@ func init() {
     "/api/v1/log/entries/{entryUUID}": {
       "get": {
         "description": "Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log",
+        "produces": [
+          "application/json",
+          "application/x-sigstore-tle"
+        ],
         "tags": [
           "entries"
         ],
@@ -1058,6 +1070,10 @@ func init() {
     },
     "/api/v1/log/entries": {
       "get": {
+        "produces": [
+          "application/json",
+          "application/x-sigstore-tle"
+        ],
         "tags": [
           "entries"
         ],
@@ -1155,6 +1171,10 @@ func init() {
     },
     "/api/v1/log/entries/retrieve": {
       "post": {
+        "produces": [
+          "application/json",
+          "application/x-sigstore-tle"
+        ],
         "tags": [
           "entries"
         ],
@@ -1204,6 +1224,10 @@ func init() {
     "/api/v1/log/entries/{entryUUID}": {
       "get": {
         "description": "Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log",
+        "produces": [
+          "application/json",
+          "application/x-sigstore-tle"
+        ],
         "tags": [
           "entries"
         ],

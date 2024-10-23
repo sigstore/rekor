@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"io"
 
 	"github.com/go-openapi/runtime"
 	rekor_pb_common "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
@@ -27,6 +28,8 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 	"google.golang.org/protobuf/encoding/protojson"
 )
+
+const TLEMediaType = "application/x-sigstore-tle"
 
 // GenerateTransparencyLogEntry returns a sigstore/protobuf-specs compliant message containing a
 // TransparencyLogEntry as defined at https://github.com/sigstore/protobuf-specs/blob/main/protos/sigstore_rekor.proto
@@ -103,4 +106,54 @@ func GenerateTransparencyLogEntry(anon models.LogEntryAnon) (*rekor_pb.Transpare
 // MarshalTLEToJSON marshals a TransparencyLogEntry message to JSON according to the protobuf JSON encoding rules
 func MarshalTLEToJSON(tle *rekor_pb.TransparencyLogEntry) ([]byte, error) {
 	return protojson.Marshal(tle)
+}
+
+type TLEProducer struct{}
+
+func (t TLEProducer) Produce(w io.Writer, input interface{}) error {
+	switch i := input.(type) {
+	case models.LogEntry:
+		var entry models.LogEntryAnon
+		for _, e := range i {
+			entry = e
+		}
+		tle, err := GenerateTransparencyLogEntry(entry)
+		if err != nil {
+			return err
+		}
+		tleBytes, err := MarshalTLEToJSON(tle)
+		if err != nil {
+			return err
+		}
+		if _, err = io.Copy(w, bytes.NewReader(tleBytes)); err != nil {
+			return err
+		}
+	case []models.LogEntry:
+		buf := &bytes.Buffer{}
+		if _, err := buf.Write([]byte("[")); err != nil {
+			return err
+		}
+		for _, entry := range i {
+			if err := t.Produce(buf, entry); err != nil {
+				return err
+			}
+			if _, err := buf.Write([]byte(",")); err != nil {
+				return err
+			}
+		}
+		if _, err := buf.Write([]byte("]")); err != nil {
+			return err
+		}
+		if _, err := io.Copy(w, buf); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type TLEConsumer struct{}
+
+func (t TLEConsumer) Consume(r io.Reader, output interface{}) error {
+
+	return nil
 }
