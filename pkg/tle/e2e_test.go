@@ -19,6 +19,7 @@
 package tle
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -32,7 +33,6 @@ import (
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/sharding"
-	"github.com/sigstore/rekor/pkg/tle"
 	"github.com/sigstore/rekor/pkg/util"
 )
 
@@ -67,7 +67,7 @@ func TestAcceptTLE(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Add("Accept", tle.TLEMediaType)
+	req.Header.Add("Accept", TLEMediaType)
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -85,7 +85,7 @@ func TestAcceptTLE(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req2.Header.Add("Accept", tle.TLEMediaType)
+	req2.Header.Add("Accept", TLEMediaType)
 	resp2, err := client.Do(req2)
 	if err != nil {
 		t.Fatal(err)
@@ -101,7 +101,7 @@ func TestAcceptTLE(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req3.Header.Add("Accept", tle.TLEMediaType)
+	req3.Header.Add("Accept", TLEMediaType)
 	resp3, err := client.Do(req3)
 	if err != nil {
 		t.Fatal(err)
@@ -116,8 +116,8 @@ func TestAcceptTLE(t *testing.T) {
 func parseResponseAsTLE(t *testing.T, resp *http.Response) error {
 	t.Helper()
 	ctHeader := resp.Header.Get("Content-Type")
-	if ctHeader != tle.TLEMediaType {
-		return fmt.Errorf("wrong Content-Type header received; expected '%s', got %s", tle.TLEMediaType, ctHeader)
+	if ctHeader != TLEMediaType {
+		return fmt.Errorf("wrong Content-Type header received; expected '%s', got %s", TLEMediaType, ctHeader)
 	}
 
 	bodyBytes, err := io.ReadAll(resp.Body)
@@ -132,8 +132,8 @@ func parseResponseAsTLE(t *testing.T, resp *http.Response) error {
 func parseResponseAsTLEArray(t *testing.T, resp *http.Response) error {
 	t.Helper()
 	ctHeader := resp.Header.Get("Content-Type")
-	if ctHeader != tle.TLEMediaType {
-		return fmt.Errorf("wrong Content-Type header received; expected '%s', got %s", tle.TLEMediaType, ctHeader)
+	if ctHeader != TLEMediaType {
+		return fmt.Errorf("wrong Content-Type header received; expected '%s', got %s", TLEMediaType, ctHeader)
 	}
 
 	bodyBytes, err := io.ReadAll(resp.Body)
@@ -141,7 +141,17 @@ func parseResponseAsTLEArray(t *testing.T, resp *http.Response) error {
 		return err
 	}
 
-	var entries []*rekor_pb.TransparencyLogEntry
+	var jsonArray []json.RawMessage
+	if err := json.Unmarshal(bodyBytes, &jsonArray); err != nil {
+		return fmt.Errorf("expected array: %w", err)
+	}
 
-	return protojson.Unmarshal(bodyBytes, &entries)
+	for _, element := range jsonArray {
+		msg := &rekor_pb.TransparencyLogEntry{}
+		if err := protojson.Unmarshal(element, msg); err != nil {
+			return fmt.Errorf("parsing element: %w", err)
+		}
+	}
+
+	return nil
 }

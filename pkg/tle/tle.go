@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 
@@ -147,6 +149,8 @@ func (t TLEProducer) Produce(w io.Writer, input interface{}) error {
 		if _, err := io.Copy(w, buf); err != nil {
 			return err
 		}
+	default:
+		return errors.New("unexpected type of input")
 	}
 	return nil
 }
@@ -154,6 +158,41 @@ func (t TLEProducer) Produce(w io.Writer, input interface{}) error {
 type TLEConsumer struct{}
 
 func (t TLEConsumer) Consume(r io.Reader, output interface{}) error {
+	tleBytes, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	decoder := json.NewDecoder(bytes.NewReader(tleBytes))
+	token, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+
+	switch token {
+	case json.Delim('['):
+		// this is a JSON array, let's check output type to ensure its []rekor_pb.TransparencyLogEntry
+		var jsonArray []json.RawMessage
+		if err := json.Unmarshal(tleBytes, &jsonArray); err != nil {
+			return fmt.Errorf("expected array: %w", err)
+		}
+		var result []*rekor_pb.TransparencyLogEntry
+		for _, element := range jsonArray {
+			msg := &rekor_pb.TransparencyLogEntry{}
+			if err := protojson.Unmarshal(element, msg); err != nil {
+				return fmt.Errorf("parsing element: %w", err)
+			}
+			result = append(result, msg)
+		}
+		output = &result
+		return nil
+	case json.Delim('{'):
+		// this is a JSON object, let's check output type to ensure its rekor_pb.TransparencyLogEntry
+		msg := output.(*rekor_pb.TransparencyLogEntry)
+		if err := protojson.Unmarshal(tleBytes, msg); err != nil {
+			return fmt.Errorf("parsing element: %w", err)
+		}
+		return nil
+	}
+	return errors.New("unexpected value")
 }
