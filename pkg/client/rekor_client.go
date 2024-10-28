@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/tle"
 	"github.com/sigstore/rekor/pkg/util"
 )
 
@@ -64,7 +65,7 @@ func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error
 	rt := httptransport.NewWithClient(url.Host, url.Path, []string{url.Scheme}, httpClient)
 	rt.Consumers["application/json"] = runtime.JSONConsumer()
 	rt.Consumers["application/x-pem-file"] = runtime.TextConsumer()
-	rt.Consumers["application/x-sigstore-transparency-log-entry"] = runtime.JSONConsumer()
+	rt.Consumers[tle.TLEMediaType] = tle.TLEConsumer{}
 	rt.Producers["application/json"] = runtime.JSONProducer()
 	rt.DefaultMediaType = "application/json"
 

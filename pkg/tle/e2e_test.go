@@ -102,6 +102,7 @@ func TestAcceptTLE(t *testing.T) {
 		t.Fatal(err)
 	}
 	req3.Header.Add("Accept", TLEMediaType)
+	req3.Header.Add("Content-Type", "application/json")
 	resp3, err := client.Do(req3)
 	if err != nil {
 		t.Fatal(err)
@@ -117,7 +118,7 @@ func parseResponseAsTLE(t *testing.T, resp *http.Response) error {
 	t.Helper()
 	ctHeader := resp.Header.Get("Content-Type")
 	if ctHeader != TLEMediaType {
-		return fmt.Errorf("wrong Content-Type header received; expected '%s', got %s", TLEMediaType, ctHeader)
+		return fmt.Errorf("wrong Content-Type header received; expected '%s', got '%s'", TLEMediaType, ctHeader)
 	}
 
 	bodyBytes, err := io.ReadAll(resp.Body)
@@ -133,7 +134,7 @@ func parseResponseAsTLEArray(t *testing.T, resp *http.Response) error {
 	t.Helper()
 	ctHeader := resp.Header.Get("Content-Type")
 	if ctHeader != TLEMediaType {
-		return fmt.Errorf("wrong Content-Type header received; expected '%s', got %s", TLEMediaType, ctHeader)
+		return fmt.Errorf("wrong Content-Type header received; expected '%s', got '%s'", TLEMediaType, ctHeader)
 	}
 
 	bodyBytes, err := io.ReadAll(resp.Body)

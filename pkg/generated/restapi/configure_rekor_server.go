@@ -163,6 +163,7 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	}
 	// this causes the order of producers in openapi.yaml to be enforced
 	api.SetDefaultProduces("")
+	api.RegisterProducer("*/*", runtime.JSONProducer())
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
 }

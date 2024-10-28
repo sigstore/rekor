@@ -135,11 +135,13 @@ func (t TLEProducer) Produce(w io.Writer, input interface{}) error {
 		if _, err := buf.Write([]byte("[")); err != nil {
 			return err
 		}
-		for _, entry := range i {
-			if err := t.Produce(buf, entry); err != nil {
-				return err
+		for num, entry := range i {
+			if num != 0 {
+				if _, err := buf.Write([]byte(",")); err != nil {
+					return err
+				}
 			}
-			if _, err := buf.Write([]byte(",")); err != nil {
+			if err := t.Produce(buf, entry); err != nil {
 				return err
 			}
 		}
