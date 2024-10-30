@@ -112,6 +112,26 @@ func TestAcceptTLE(t *testing.T) {
 	if err := parseResponseAsTLEArray(t, resp3); err != nil {
 		t.Fatal(err)
 	}
+
+	// test getting an entry 1000 times using a vague accept header, and ensure that we always return application/json to those request
+	for j := range 1000 {
+		req4, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/log/entries/%s", util.RekorServer(), uuid), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// set Accept on every-other call to help get coverage on different scenarios
+		if j%2 == 0 {
+			req4.Header.Add("Accept", "*/*") //explicitly accept anything
+		}
+		respIter, err := client.Do(req4)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer respIter.Body.Close()
+		if ctHeader := respIter.Header.Get("Content-Type"); ctHeader != "application/json" {
+			t.Fatalf("unexpected response 'Content-Type' header received: expected 'application/json', got '%s'", ctHeader)
+		}
+	}
 }
 
 func parseResponseAsTLE(t *testing.T, resp *http.Response) error {

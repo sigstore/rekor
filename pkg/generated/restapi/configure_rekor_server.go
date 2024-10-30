@@ -161,9 +161,8 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.ServerShutdown = func() {
 		pkgapi.StopAPI()
 	}
-	// this causes the order of producers in openapi.yaml to be enforced
-	api.SetDefaultProduces("")
-	api.RegisterProducer("*/*", runtime.JSONProducer())
+	// the trailing space is intentional to cause checking to fail inside go-openapi but ordering to be enforced from openapi.yaml
+	api.SetDefaultProduces("application/json ")
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
 }

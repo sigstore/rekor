@@ -24,10 +24,12 @@ import (
 	"io"
 
 	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/swag"
 	rekor_pb_common "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/transparency-dev/merkle/rfc6962"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -110,6 +112,36 @@ func MarshalTLEToJSON(tle *rekor_pb.TransparencyLogEntry) ([]byte, error) {
 	return protojson.Marshal(tle)
 }
 
+func GenerateLogEntry(tle *rekor_pb.TransparencyLogEntry) *models.LogEntry {
+	if tle == nil {
+		return nil
+	}
+
+	entryUUID := hex.EncodeToString(rfc6962.DefaultHasher.HashLeaf(tle.CanonicalizedBody))
+	inclusionProofHashes := []string{}
+	for _, hash := range tle.InclusionProof.Hashes {
+		inclusionProofHashes = append(inclusionProofHashes, hex.EncodeToString(hash))
+	}
+	return &models.LogEntry{
+		entryUUID: models.LogEntryAnon{
+			Body:           tle.CanonicalizedBody,
+			IntegratedTime: swag.Int64(tle.IntegratedTime),
+			LogID:          swag.String(tle.LogId.String()),
+			LogIndex:       swag.Int64(tle.LogIndex),
+			Verification: &models.LogEntryAnonVerification{
+				InclusionProof: &models.InclusionProof{
+					Checkpoint: swag.String(tle.InclusionProof.Checkpoint.String()),
+					Hashes:     inclusionProofHashes,
+					LogIndex:   swag.Int64(tle.LogIndex),
+					RootHash:   swag.String(hex.EncodeToString(tle.InclusionProof.RootHash)),
+					TreeSize:   swag.Int64(tle.InclusionProof.TreeSize),
+				},
+				SignedEntryTimestamp: tle.InclusionPromise.SignedEntryTimestamp,
+			},
+		},
+	}
+}
+
 type TLEProducer struct{}
 
 func (t TLEProducer) Produce(w io.Writer, input interface{}) error {
@@ -178,23 +210,36 @@ func (t TLEConsumer) Consume(r io.Reader, output interface{}) error {
 		if err := json.Unmarshal(tleBytes, &jsonArray); err != nil {
 			return fmt.Errorf("expected array: %w", err)
 		}
-		var result []*rekor_pb.TransparencyLogEntry
 		for _, element := range jsonArray {
 			msg := &rekor_pb.TransparencyLogEntry{}
 			if err := protojson.Unmarshal(element, msg); err != nil {
 				return fmt.Errorf("parsing element: %w", err)
 			}
-			result = append(result, msg)
+			if result, ok := output.([]models.LogEntry); ok {
+				logEntry := GenerateLogEntry(msg)
+				result = append(result, *logEntry)
+			} else if result, ok := output.([]*rekor_pb.TransparencyLogEntry); ok {
+				result = append(result, msg)
+			} else {
+				return errors.New("unsupported conversion")
+			}
 		}
-		output = &result
 		return nil
 	case json.Delim('{'):
 		// this is a JSON object, let's check output type to ensure its rekor_pb.TransparencyLogEntry
-		msg := output.(*rekor_pb.TransparencyLogEntry)
-		if err := protojson.Unmarshal(tleBytes, msg); err != nil {
+		tle := &rekor_pb.TransparencyLogEntry{}
+		if err := protojson.Unmarshal(tleBytes, tle); err != nil {
 			return fmt.Errorf("parsing element: %w", err)
 		}
-		return nil
+		if _, ok := output.(*rekor_pb.TransparencyLogEntry); ok {
+			output = tle
+			return nil
+		} else if _, ok := output.(*models.LogEntry); ok {
+			output = GenerateLogEntry(tle)
+			return nil
+		} else {
+			return errors.New("unsupported conversion")
+		}
 	}
 	return errors.New("unexpected value")
 }
