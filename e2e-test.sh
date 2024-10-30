@@ -31,7 +31,7 @@ docker build -t gcp-pubsub-emulator -f Dockerfile.pubsub-emulator .
 docker kill $(docker ps -q) || true
 
 echo "starting services"
-${docker_compose} up -d --build --force-recreate
+${docker_compose} up -d --build
 
 echo "building CLI and server"
 # set the path to the root of the repo
@@ -70,7 +70,6 @@ if ${docker_compose} logs --no-color | grep -q "panic: runtime error:" ; then
    exit 1
 fi
 
-exit 0
 echo "generating code coverage"
 ${docker_compose} restart rekor-server
 
