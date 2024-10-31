@@ -65,7 +65,7 @@ func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error
 	rt := httptransport.NewWithClient(url.Host, url.Path, []string{url.Scheme}, httpClient)
 	rt.Consumers["application/json"] = runtime.JSONConsumer()
 	rt.Consumers["application/x-pem-file"] = runtime.TextConsumer()
-	rt.Consumers[tle.TLEMediaType] = &tle.TLEConsumer{}
+	rt.Consumers[tle.TLEMediaType] = &tle.Consumer{}
 	rt.Producers["application/json"] = runtime.JSONProducer()
 	rt.DefaultMediaType = "application/json"
 

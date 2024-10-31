@@ -112,7 +112,7 @@ func MarshalTLEToJSON(tle *rekor_pb.TransparencyLogEntry) ([]byte, error) {
 	return protojson.Marshal(tle)
 }
 
-func GenerateLogEntry(tle *rekor_pb.TransparencyLogEntry) *models.LogEntry {
+func GenerateLogEntry(tle *rekor_pb.TransparencyLogEntry) models.LogEntry {
 	if tle == nil {
 		return nil
 	}
@@ -120,9 +120,9 @@ func GenerateLogEntry(tle *rekor_pb.TransparencyLogEntry) *models.LogEntry {
 	entryUUID := hex.EncodeToString(rfc6962.DefaultHasher.HashLeaf(tle.CanonicalizedBody))
 	inclusionProofHashes := []string{}
 	for _, hash := range tle.InclusionProof.Hashes {
-		inclusionProofHashes = append(inclusionProofHashes, hex.EncodeToString(hash))
+		inclusionProofHashes = append(inclusionProofHashes, base64.StdEncoding.EncodeToString(hash))
 	}
-	return &models.LogEntry{
+	return models.LogEntry{
 		entryUUID: models.LogEntryAnon{
 			Body:           tle.CanonicalizedBody,
 			IntegratedTime: swag.Int64(tle.IntegratedTime),
@@ -142,9 +142,9 @@ func GenerateLogEntry(tle *rekor_pb.TransparencyLogEntry) *models.LogEntry {
 	}
 }
 
-type TLEProducer struct{}
+type Producer struct{}
 
-func (t TLEProducer) Produce(w io.Writer, input interface{}) error {
+func (t Producer) Produce(w io.Writer, input interface{}) error {
 	switch i := input.(type) {
 	case models.LogEntry:
 		var entry models.LogEntryAnon
@@ -189,9 +189,9 @@ func (t TLEProducer) Produce(w io.Writer, input interface{}) error {
 	return nil
 }
 
-type TLEConsumer struct{}
+type Consumer struct{}
 
-func (t TLEConsumer) Consume(r io.Reader, output interface{}) error {
+func (t Consumer) Consume(r io.Reader, output interface{}) error {
 	tleBytes, err := io.ReadAll(r)
 	if err != nil {
 		return err
@@ -215,11 +215,11 @@ func (t TLEConsumer) Consume(r io.Reader, output interface{}) error {
 			if err := protojson.Unmarshal(element, msg); err != nil {
 				return fmt.Errorf("parsing element: %w", err)
 			}
-			if result, ok := output.([]models.LogEntry); ok {
+			if result, ok := output.(*[]models.LogEntry); ok {
 				logEntry := GenerateLogEntry(msg)
-				result = append(result, *logEntry)
-			} else if result, ok := output.([]*rekor_pb.TransparencyLogEntry); ok {
-				result = append(result, msg)
+				*result = append(*result, logEntry)
+			} else if result, ok := output.(*[]*rekor_pb.TransparencyLogEntry); ok {
+				*result = append(*result, msg)
 			} else {
 				return errors.New("unsupported conversion")
 			}
@@ -231,11 +231,11 @@ func (t TLEConsumer) Consume(r io.Reader, output interface{}) error {
 		if err := protojson.Unmarshal(tleBytes, tle); err != nil {
 			return fmt.Errorf("parsing element: %w", err)
 		}
-		if _, ok := output.(*rekor_pb.TransparencyLogEntry); ok {
-			output = tle
+		if result, ok := output.(**rekor_pb.TransparencyLogEntry); ok {
+			*result = tle
 			return nil
-		} else if _, ok := output.(*models.LogEntry); ok {
-			output = GenerateLogEntry(tle)
+		} else if result, ok := output.(*models.LogEntry); ok {
+			*result = GenerateLogEntry(tle)
 			return nil
 		} else {
 			return errors.New("unsupported conversion")

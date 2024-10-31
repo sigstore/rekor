@@ -89,7 +89,7 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 	api.JSONProducer = runtime.JSONProducer()
 
 	api.ApplicationXPemFileProducer = runtime.TextProducer()
-	api.ApplicationXSigstoreTleProducer = tle.TLEProducer{}
+	api.ApplicationXSigstoreTleProducer = &tle.Producer{}
 
 	// disable all endpoints to start
 	api.IndexSearchIndexHandler = index.SearchIndexHandlerFunc(pkgapi.SearchIndexNotImplementedHandler)
