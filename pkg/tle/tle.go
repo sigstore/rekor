@@ -117,16 +117,17 @@ func GenerateLogEntry(tle *rekor_pb.TransparencyLogEntry) models.LogEntry {
 		return nil
 	}
 
+	//TODO: do we have the information to prefix the tree ID onto this?
 	entryUUID := hex.EncodeToString(rfc6962.DefaultHasher.HashLeaf(tle.CanonicalizedBody))
 	inclusionProofHashes := []string{}
 	for _, hash := range tle.InclusionProof.Hashes {
-		inclusionProofHashes = append(inclusionProofHashes, base64.StdEncoding.EncodeToString(hash))
+		inclusionProofHashes = append(inclusionProofHashes, hex.EncodeToString(hash))
 	}
 	return models.LogEntry{
 		entryUUID: models.LogEntryAnon{
 			Body:           base64.StdEncoding.EncodeToString(tle.CanonicalizedBody),
 			IntegratedTime: swag.Int64(tle.IntegratedTime),
-			LogID:          swag.String(tle.LogId.String()),
+			LogID:          swag.String(hex.EncodeToString(tle.LogId.KeyId)),
 			LogIndex:       swag.Int64(tle.LogIndex),
 			Verification: &models.LogEntryAnonVerification{
 				InclusionProof: &models.InclusionProof{
