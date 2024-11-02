@@ -24,6 +24,7 @@ import (
 	"io"
 
 	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	rekor_pb_common "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
@@ -137,7 +138,7 @@ func GenerateLogEntry(tle *rekor_pb.TransparencyLogEntry) models.LogEntry {
 					RootHash:   swag.String(hex.EncodeToString(tle.InclusionProof.RootHash)),
 					TreeSize:   swag.Int64(tle.InclusionProof.TreeSize),
 				},
-				SignedEntryTimestamp: tle.InclusionPromise.SignedEntryTimestamp,
+				SignedEntryTimestamp: strfmt.Base64(tle.InclusionPromise.SignedEntryTimestamp),
 			},
 		},
 	}
