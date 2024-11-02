@@ -124,7 +124,7 @@ func GenerateLogEntry(tle *rekor_pb.TransparencyLogEntry) models.LogEntry {
 	}
 	return models.LogEntry{
 		entryUUID: models.LogEntryAnon{
-			Body:           tle.CanonicalizedBody,
+			Body:           base64.StdEncoding.EncodeToString(tle.CanonicalizedBody),
 			IntegratedTime: swag.Int64(tle.IntegratedTime),
 			LogID:          swag.String(tle.LogId.String()),
 			LogIndex:       swag.Int64(tle.LogIndex),
