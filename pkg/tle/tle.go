@@ -132,7 +132,7 @@ func GenerateLogEntry(tle *rekor_pb.TransparencyLogEntry) models.LogEntry {
 			LogIndex:       swag.Int64(tle.LogIndex),
 			Verification: &models.LogEntryAnonVerification{
 				InclusionProof: &models.InclusionProof{
-					Checkpoint: swag.String(tle.InclusionProof.Checkpoint.String()),
+					Checkpoint: swag.String(tle.InclusionProof.Checkpoint.GetEnvelope()),
 					Hashes:     inclusionProofHashes,
 					LogIndex:   swag.Int64(tle.LogIndex),
 					RootHash:   swag.String(hex.EncodeToString(tle.InclusionProof.RootHash)),
