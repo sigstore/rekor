@@ -418,7 +418,7 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 		}
 		var validationErr *types.InputValidationError
 		if errors.As(err, &validationErr) {
-			return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("validation error: %v", err), params.EntryUUID)
+			return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("validation error: %v", err))
 		}
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianCommunicationError)
 	}
