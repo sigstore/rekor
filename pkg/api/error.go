@@ -22,7 +22,6 @@ import (
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
-	"github.com/mitchellh/mapstructure"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
@@ -67,17 +66,14 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 	typeStr := fmt.Sprintf("%T", params)
 	handler := re.FindStringSubmatch(typeStr)[1]
 
-	logMsg := func(r *http.Request) {
+	logMsg := func(r *http.Request, inputs ...interface{}) {
 		ctx := r.Context()
 		fields := append([]interface{}{"handler", handler, "statusCode", code, "clientMessage", message}, fields...)
 		if code >= 500 {
+			fields = append(fields, inputs...)
 			log.ContextLogger(ctx).Errorw(err.Error(), fields...)
 		} else {
 			log.ContextLogger(ctx).Warnw(err.Error(), fields...)
-		}
-		paramsFields := map[string]interface{}{}
-		if err := mapstructure.Decode(params, &paramsFields); err == nil {
-			log.ContextLogger(ctx).Debug(paramsFields)
 		}
 	}
 
@@ -119,11 +115,16 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 			}
 			return resp
 		default:
-			logMsg(params.HTTPRequest)
+			requestFields := []interface{}{"requestBody", params.ProposedEntry}
+			logMsg(params.HTTPRequest, requestFields...)
 			return entries.NewCreateLogEntryDefault(code).WithPayload(errorMsg(message, code))
 		}
 	case entries.SearchLogQueryParams:
-		logMsg(params.HTTPRequest)
+		requestFields := []interface{}{}
+		if params.Entry != nil {
+			requestFields = append(requestFields, "requestBody", *params.Entry)
+		}
+		logMsg(params.HTTPRequest, requestFields...)
 		switch code {
 		case http.StatusBadRequest:
 			return entries.NewSearchLogQueryBadRequest().WithPayload(errorMsg(message, code))
@@ -147,7 +148,11 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		logMsg(params.HTTPRequest)
 		return pubkey.NewGetPublicKeyDefault(code).WithPayload(errorMsg(message, code))
 	case index.SearchIndexParams:
-		logMsg(params.HTTPRequest)
+		requestFields := []interface{}{}
+		if params.Query != nil {
+			requestFields = append(requestFields, "requestBody", *params.Query)
+		}
+		logMsg(params.HTTPRequest, requestFields...)
 		switch code {
 		case http.StatusBadRequest:
 			return index.NewSearchIndexBadRequest().WithPayload(errorMsg(message, code))
