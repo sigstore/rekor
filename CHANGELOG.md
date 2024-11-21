@@ -1,3 +1,44 @@
+# v1.3.7
+
+## New Features
+
+* log request body on 500 error to aid debugging (#2283)
+* Add support for signing with Tink keyset (#2228)
+* Add public key hash check in Signed Note verification (#2214)
+* update Trillian TLS configuration (#2202)
+* Add TLS support for Trillian server (#2164)
+* Replace docker-compose with plugin if available (#2153)
+* Add flags to backfill script (#2146)
+* Unset DisableKeepalive for backfill HTTP client (#2137)
+* Add script to delete indexes from Redis (#2120)
+* Run CREATE statement in backfill script (#2109)
+* Add MySQL support to backfill script (#2081)
+* Run e2e tests on mysql and redis index backends (#2079)
+
+## Bug Fixes
+
+* remove unneeded value in log message (#2282)
+* Add error message when computing consistency proof (#2278)
+* fix validation error handling on API (#2217)
+* fix error in pretty-printed inclusion proof from verify subcommand (#2210)
+* Fix index scripts (#2203)
+* fix failing sharding test
+* Better error handling in backfill script (#2148)
+* Batch entries in cleanup script (#2158)
+* Add missing workflow for index cleanup test (#2121)
+* hashedrekord: fix schema $id (#2092)
+
+## Contributors
+
+* Aditya Sirish
+* Bob Callaway
+* Colleen Murphy
+* cpanato
+* Firas Ghanmi
+* Hayden B
+* Hojoung (Brian) Jang
+* William Woodruff
+
 # v1.3.6
 
 ## New Features
