@@ -47,7 +47,7 @@
                     },
                     "required": [ "algorithm", "value" ]
                 }
-            }        
+            }
         }
     },
     "required": [ "signature", "data" ]
