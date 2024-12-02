@@ -231,8 +231,8 @@ github.com/google/rpmpack v0.6.0/go.mod h1:uqVAUVQLq8UY2hCDfmJ/+rtO3aw7qyhc90rCV
 github.com/google/s2a-go v0.1.8 h1:zZDs9gcbt9ZPLV0ndSyQk6Kacx2g/X+SKYovpnz3SMM=
 github.com/google/s2a-go v0.1.8/go.mod h1:6iNWHTpQ+nfNRN5E00MSdfDwVesa8hhS32PhPO8deJA=
 github.com/google/subcommands v1.2.0/go.mod h1:ZjhPrFU+Olkh9WazFPsl27BQ4UPiG37m3yTrtFlrHVk=
-github.com/google/trillian v1.6.1 h1:jWU5BGz24GQ5IsHNr+qbmISLkt+73jLv8BOIPN8RtD4=
-github.com/google/trillian v1.6.1/go.mod h1:TvwtNkJViJgWZ5VmAMXDwsTjzPBHaPjQO85Kt37JPmM=
+github.com/google/trillian v1.7.0 h1:Oib7mKRvZ0Z3GjvNcn2C4clRmFouEOkBcbzw7q8JlFI=
+github.com/google/trillian v1.7.0/go.mod h1:JMp1zzzHe7j2m9m8P/eTWOaoon3R/SwgqUnFMhm4vfw=
 github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
