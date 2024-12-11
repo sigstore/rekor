@@ -27,14 +27,13 @@ on:
   schedule:
     - cron: '45 10 * * 1'
 
-permissions:
-  contents: read
-  security-events: write
-
 jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
 
     strategy:
       fail-fast: false
@@ -44,6 +43,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        persist-credentials: false
 
     - name: Extract version of Go to use
       run: echo "GOVERSION=$(cat Dockerfile|grep golang | awk ' { print $2 } ' | cut -d '@' -f 1 | cut -d ':' -f 2 | uniq)" >> $GITHUB_ENV
