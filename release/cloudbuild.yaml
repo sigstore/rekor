@@ -38,13 +38,13 @@ steps:
   - TUF_ROOT=/tmp
   args:
   - 'verify'
-  - 'ghcr.io/gythialy/golang-cross:v1.23.2@sha256:85c8e52bccf05564aa6284affd4eb197507cb22606e0bb8a2deeab3c0b779d87'
+  - 'ghcr.io/gythialy/golang-cross:v1.23.4-0@sha256:fac6f9675e3e3a4ccc2b8cdab87b907cabae3a9c4e046d16816b9876315005e4'
   - '--certificate-oidc-issuer'
   - "https://token.actions.githubusercontent.com"
   - '--certificate-identity'
-  - "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.23.2"
+  - "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.23.4-0"
 
-- name: ghcr.io/gythialy/golang-cross:v1.23.2@sha256:85c8e52bccf05564aa6284affd4eb197507cb22606e0bb8a2deeab3c0b779d87
+- name: ghcr.io/gythialy/golang-cross:v1.23.4-0@sha256:fac6f9675e3e3a4ccc2b8cdab87b907cabae3a9c4e046d16816b9876315005e4
   entrypoint: /bin/sh
   dir: "go/src/sigstore/rekor"
   env:
@@ -67,7 +67,7 @@ steps:
       gcloud auth configure-docker \
       && make release
 
-- name: ghcr.io/gythialy/golang-cross:v1.23.2@sha256:85c8e52bccf05564aa6284affd4eb197507cb22606e0bb8a2deeab3c0b779d87
+- name: ghcr.io/gythialy/golang-cross:v1.23.4-0@sha256:fac6f9675e3e3a4ccc2b8cdab87b907cabae3a9c4e046d16816b9876315005e4
   entrypoint: 'bash'
   dir: "go/src/sigstore/rekor"
   env:
