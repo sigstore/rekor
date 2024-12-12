@@ -63,6 +63,13 @@ REKOR_LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
 CLI_LDFLAGS=$(REKOR_LDFLAGS)
 SERVER_LDFLAGS=$(REKOR_LDFLAGS)
 
+# It should be blank for default builds
+FORMATED_LABEL ?=
+
+GITHUB_RUN_NUMBER ?= "local"
+
+FULL_TAG := "0.$(shell date +%Y%m%d).$(GITHUB_RUN_NUMBER)-ref.$(GIT_VERSION)"
+
 Makefile.swagger: $(SWAGGER) $(OPENAPIDEPS)
 	$(SWAGGER) validate openapi.yaml
 	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --additional-initialism=TUF --additional-initialism=DSSE
@@ -110,8 +117,8 @@ debug:
 ko:
 	# rekor-server
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KO_DOCKER_REPO=$(KO_PREFIX)/rekor-server ko resolve --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
+	KO_DOCKER_REPO=$(KO_PREFIX)/rekor-server ko resolve $(FORMATED_LABEL) --bare \
+		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) --tags $(FULL_TAG) \
 		--image-refs rekorServerImagerefs --filename config/ > $(REKOR_YAML)
 
 	# rekor-cli
