@@ -9,6 +9,7 @@ The following are covered:
 - RPM (TODO)
 - TSR (TODO)
 - [TUF](#tuf)
+- [HashedRekord](#HashedRekord)
 
 ## Minisign
 
@@ -289,7 +290,7 @@ Body: {
 ```
 
 
-## Hashed rekord
+## HashedRekord
 
 This is similar to a rekord type, but allows hashed data instead of supplying the full content that was signed. This is suitable for uploading signatures on large payloads. This is only compatible with x509 / PKIX signature types.
 
