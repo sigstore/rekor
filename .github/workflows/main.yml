@@ -49,7 +49,7 @@ jobs:
       - name: Test
         run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
       - name: Upload Coverage Report
-        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
+        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5.1.2
         with:
           flags: unittests
       - name: Ensure no files were modified as a result of the build
@@ -113,13 +113,13 @@ jobs:
         env:
           INDEX_BACKEND: redis
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         if: failure()
         with:
           name: E2E Docker Compose logs
           path: /tmp/docker-compose.log
       - name: Upload Coverage Report
-        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
+        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5.1.2
         with:
           files: /tmp/rekor-merged.cov,/tmp/pkg-rekor-merged.cov
           flags: e2etests
@@ -157,7 +157,7 @@ jobs:
       - name: Copy index test
         run: ./tests/copy-index-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         if: failure()
         with:
           name: E2E Docker Compose logs
@@ -185,7 +185,7 @@ jobs:
       - name: Sharding Test
         run: ./tests/sharding-e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         if: failure()
         with:
           name: Sharding E2E Docker Compose logs
@@ -210,7 +210,7 @@ jobs:
       - name: Test for Attestation begin returned that was previously persisted in tlog
         run: ./tests/issue-872-e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         if: failure()
         with:
           name: Docker Compose logs
@@ -239,7 +239,7 @@ jobs:
         run: ./tests/rekor-harness.sh
 
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         if: failure()
         with:
           name: E2E Docker Compose logs
