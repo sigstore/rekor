@@ -1,4 +1,4 @@
-#
+
 # Copyright 2021 The Sigstore Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -82,8 +82,7 @@ jobs:
 
     steps:
       - name: download minisign
-        # run: sudo add-apt-repository ppa:dysfunctionalprogramming/minisign && sudo apt-get update && sudo apt-get install minisign
-        run: sudo add-apt-repository ppa:savoury1/minisign && sudo apt-get update && sudo apt-get install minisign
+        run: brew install minisign
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -129,6 +128,9 @@ jobs:
     needs: build
 
     steps:
+      - name: download minisign
+        run: brew install minisign
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
@@ -169,8 +171,8 @@ jobs:
 
     steps:
       - name: download minisign
-        # run: sudo add-apt-repository ppa:dysfunctionalprogramming/minisign && sudo apt-get update && sudo apt-get install minisign
-        run: sudo add-apt-repository ppa:savoury1/minisign && sudo apt-get update && sudo apt-get install minisign
+        run: brew install minisign
+
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
