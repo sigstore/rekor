@@ -1,4 +1,4 @@
-#
+
 # Copyright 2021 The Sigstore Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -81,10 +81,12 @@ jobs:
     needs: build
 
     steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@40e9946c182a64b3db1bf51be0dcb915f7802aa9
       - name: download minisign
-        # run: sudo add-apt-repository ppa:dysfunctionalprogramming/minisign && sudo apt-get update && sudo apt-get install minisign
-        run: sudo add-apt-repository ppa:savoury1/minisign && sudo apt-get update && sudo apt-get install minisign
-
+        run: |
+          brew install minisign
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
@@ -129,6 +131,12 @@ jobs:
     needs: build
 
     steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@40e9946c182a64b3db1bf51be0dcb915f7802aa9
+      - name: download minisign
+        run: |
+          brew install minisign
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
@@ -168,9 +176,12 @@ jobs:
     needs: build
 
     steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@40e9946c182a64b3db1bf51be0dcb915f7802aa9
       - name: download minisign
-        # run: sudo add-apt-repository ppa:dysfunctionalprogramming/minisign && sudo apt-get update && sudo apt-get install minisign
-        run: sudo add-apt-repository ppa:savoury1/minisign && sudo apt-get update && sudo apt-get install minisign
+        run: |
+          brew install minisign
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
