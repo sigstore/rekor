@@ -44,7 +44,7 @@ func TestVirtualLogIndex(t *testing.T) {
 						TreeID:     100,
 						TreeLength: 5,
 					}},
-				active: 300,
+				active: LogRange{TreeID: 300},
 			},
 			expectedIndex: 7,
 		},
@@ -64,7 +64,7 @@ func TestVirtualLogIndex(t *testing.T) {
 						TreeID:     300,
 						TreeLength: 4,
 					}},
-				active: 400,
+				active: LogRange{TreeID: 400},
 			},
 			expectedIndex: 6,
 		},
@@ -74,7 +74,7 @@ func TestVirtualLogIndex(t *testing.T) {
 			leafIndex:   2,
 			tid:         30,
 			ranges: LogRanges{
-				active: 30,
+				active: LogRange{TreeID: 30},
 			},
 			expectedIndex: 2,
 		}, {
@@ -82,7 +82,7 @@ func TestVirtualLogIndex(t *testing.T) {
 			leafIndex:   2,
 			tid:         4,
 			ranges: LogRanges{
-				active: 30,
+				active: LogRange{TreeID: 30},
 			},
 			expectedIndex: -1,
 		},
