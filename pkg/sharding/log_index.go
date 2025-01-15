@@ -19,7 +19,7 @@ func VirtualLogIndex(leafIndex int64, tid int64, ranges LogRanges) int64 {
 	// if we have no inactive ranges, we have just one log! return the leafIndex as is
 	// as long as it matches the active tree ID
 	if ranges.NoInactive() {
-		if ranges.GetActive() == tid {
+		if ranges.GetActive().TreeID == tid {
 			return leafIndex
 		}
 		return -1
@@ -34,7 +34,7 @@ func VirtualLogIndex(leafIndex int64, tid int64, ranges LogRanges) int64 {
 	}
 
 	// If no TreeID in Inactive matches the tid, the virtual index should be the active tree
-	if ranges.GetActive() == tid {
+	if ranges.GetActive().TreeID == tid {
 		return virtualIndex + leafIndex
 	}
 

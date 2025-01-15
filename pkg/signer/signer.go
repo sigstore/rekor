@@ -32,6 +32,19 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
+// SigningConfig initializes the signer for a specific shard
+type SigningConfig struct {
+	SigningSchemeOrKeyPath string `json:"signingSchemeOrKeyPath" yaml:"signingSchemeOrKeyPath"`
+	FileSignerPassword     string `json:"fileSignerPassword" yaml:"fileSignerPassword"`
+	TinkKEKURI             string `json:"tinkKEKURI" yaml:"tinkKEKURI"`
+	TinkKeysetPath         string `json:"tinkKeysetPath" yaml:"tinkKeysetPath"`
+}
+
+func (sc SigningConfig) IsUnset() bool {
+	return sc.SigningSchemeOrKeyPath == "" && sc.FileSignerPassword == "" &&
+		sc.TinkKEKURI == "" && sc.TinkKeysetPath == ""
+}
+
 func New(ctx context.Context, signer, pass, tinkKEKURI, tinkKeysetPath string) (signature.Signer, error) {
 	switch {
 	case slices.ContainsFunc(kms.SupportedProviders(),
