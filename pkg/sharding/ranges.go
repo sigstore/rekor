@@ -72,7 +72,6 @@ func NewLogRanges(ctx context.Context, logClient trillian.TrillianLogClient,
 	if err != nil {
 		return LogRanges{}, fmt.Errorf("creating range for active tree %d: %w", activeTreeID, err)
 	}
-	// lgtm [go/clear-text-logging]
 	log.Logger.Infof("Active log: %s", activeLog.String())
 
 	if inactiveShardsPath == "" {
@@ -97,7 +96,6 @@ func NewLogRanges(ctx context.Context, logClient trillian.TrillianLogClient,
 		ranges[i] = r
 	}
 	for i, r := range ranges {
-		// lgtm [go/clear-text-logging]
 		log.Logger.Infof("Inactive range %d: %s", i, r.String())
 	}
 
