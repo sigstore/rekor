@@ -17,15 +17,27 @@ package sharding
 
 import (
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/trillian/testonly"
+	"github.com/sigstore/rekor/pkg/signer"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
 
 	"github.com/google/trillian"
 	"google.golang.org/grpc"
@@ -33,42 +45,83 @@ import (
 )
 
 func TestNewLogRanges(t *testing.T) {
-	contents := `
+	keyPath, ecdsaSigner, pemPubKey, logID := initializeSigner(t)
+	sc := signer.SigningConfig{SigningSchemeOrKeyPath: keyPath}
+
+	// inactive shard with different key
+	keyPathI, ecdsaSignerI, pemPubKeyI, logIDI := initializeSigner(t)
+	scI := signer.SigningConfig{SigningSchemeOrKeyPath: keyPathI}
+
+	contents := fmt.Sprintf(`
 - treeID: 0001
   treeLength: 3
-  encodedPublicKey: c2hhcmRpbmcK
 - treeID: 0002
-  treeLength: 4`
+  treeLength: 4
+- treeID: 0003
+  treeLength: 5
+  signingConfig:
+    signingSchemeOrKeyPath: '%s'`, keyPathI)
+	fmt.Println(contents)
 	file := filepath.Join(t.TempDir(), "sharding-config")
 	if err := os.WriteFile(file, []byte(contents), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	treeID := uint(45)
+	treeID := int64(45)
 	expected := LogRanges{
 		inactive: []LogRange{
+			// two inactive shards without signing config
+			// inherit config from active shard
 			{
-				TreeID:           1,
-				TreeLength:       3,
-				EncodedPublicKey: "c2hhcmRpbmcK",
-				decodedPublicKey: "sharding\n",
+				TreeID:        1,
+				TreeLength:    3,
+				SigningConfig: sc,
+				Signer:        ecdsaSigner,
+				PemPubKey:     pemPubKey,
+				LogID:         logID,
 			}, {
-				TreeID:     2,
-				TreeLength: 4,
+				TreeID:        2,
+				TreeLength:    4,
+				SigningConfig: sc,
+				Signer:        ecdsaSigner,
+				PemPubKey:     pemPubKey,
+				LogID:         logID,
+			}, {
+				// inactive shard with custom signing config
+				TreeID:        3,
+				TreeLength:    5,
+				SigningConfig: scI,
+				Signer:        ecdsaSignerI,
+				PemPubKey:     pemPubKeyI,
+				LogID:         logIDI,
 			},
 		},
-		active: int64(45),
+		active: LogRange{
+			TreeID:        45,
+			TreeLength:    0, // unset
+			SigningConfig: sc,
+			Signer:        ecdsaSigner,
+			PemPubKey:     pemPubKey,
+			LogID:         logID,
+		},
 	}
 	ctx := context.Background()
 	tc := trillian.NewTrillianLogClient(&grpc.ClientConn{})
-	got, err := NewLogRanges(ctx, tc, file, treeID)
+	got, err := NewLogRanges(ctx, tc, file, treeID, sc)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if expected.ActiveTreeID() != got.ActiveTreeID() {
-		t.Fatalf("expected tree id %d got %d", expected.ActiveTreeID(), got.ActiveTreeID())
+	if expected.GetActive().TreeID != got.GetActive().TreeID {
+		t.Fatalf("expected tree id %d got %d", expected.GetActive().TreeID, got.GetActive().TreeID)
 	}
-	if !reflect.DeepEqual(expected.GetInactive(), got.GetInactive()) {
-		t.Fatalf("expected %v got %v", expected.GetInactive(), got.GetInactive())
+	for i, expected := range expected.GetInactive() {
+		got := got.GetInactive()[i]
+		logRangeEqual(t, expected, got)
+	}
+
+	// Failure: Tree ID = 0
+	_, err = NewLogRanges(ctx, tc, file, 0, sc)
+	if err == nil || !strings.Contains(err.Error(), "non-zero active tree ID required") {
+		t.Fatal("expected error initializing log ranges with 0 tree ID")
 	}
 }
 
@@ -79,7 +132,7 @@ func TestLogRanges_ResolveVirtualIndex(t *testing.T) {
 			{TreeID: 2, TreeLength: 1},
 			{TreeID: 3, TreeLength: 100},
 		},
-		active: 4,
+		active: LogRange{TreeID: 4},
 	}
 
 	for _, tt := range []struct {
@@ -112,21 +165,66 @@ func TestLogRanges_ResolveVirtualIndex(t *testing.T) {
 	}
 }
 
-func TestPublicKey(t *testing.T) {
+func TestLogRanges_GetLogRangeByTreeID(t *testing.T) {
+	lrs := LogRanges{
+		inactive: []LogRange{
+			{TreeID: 1, TreeLength: 17},
+			{TreeID: 2, TreeLength: 1},
+			{TreeID: 3, TreeLength: 100},
+		},
+		active: LogRange{TreeID: 4},
+	}
+
+	for _, tt := range []struct {
+		treeID       int64
+		wantLogRange LogRange
+		wantErr      bool
+	}{
+		// Active shard
+		{
+			treeID:       4,
+			wantLogRange: LogRange{TreeID: 4},
+			wantErr:      false,
+		},
+		// One of the inactive shards
+		{
+			treeID:       2,
+			wantLogRange: LogRange{TreeID: 2, TreeLength: 1},
+			wantErr:      false,
+		},
+		// Missing shard
+		{
+			treeID:       100,
+			wantLogRange: LogRange{},
+			wantErr:      true,
+		},
+	} {
+		got, err := lrs.GetLogRangeByTreeID(tt.treeID)
+		if (err != nil) != tt.wantErr {
+			t.Errorf("GetLogRangeByTreeID() error = %v, wantErr %v", err, tt.wantErr)
+			return
+		}
+		if !reflect.DeepEqual(tt.wantLogRange, got) {
+			t.Fatalf("log range did not match: %v, %v", tt.wantLogRange, got)
+		}
+	}
+}
+
+func TestLogRanges_PublicKey(t *testing.T) {
 	ranges := LogRanges{
-		active: 45,
+		active: LogRange{TreeID: 45, PemPubKey: "activekey"},
 		inactive: []LogRange{
 			{
-				TreeID:           10,
-				TreeLength:       10,
-				decodedPublicKey: "sharding",
+				TreeID:     10,
+				TreeLength: 10,
+				PemPubKey:  "sharding10",
 			}, {
 				TreeID:     20,
 				TreeLength: 20,
+				PemPubKey:  "sharding20",
 			},
 		},
 	}
-	activePubKey := "activekey"
 	tests := []struct {
 		description    string
 		treeID         string
@@ -139,11 +237,11 @@ func TestPublicKey(t *testing.T) {
 		}, {
 			description:    "tree id with decoded public key",
 			treeID:         "10",
-			expectedPubKey: "sharding",
+			expectedPubKey: "sharding10",
 		}, {
 			description:    "tree id without decoded public key",
 			treeID:         "20",
-			expectedPubKey: "activekey",
+			expectedPubKey: "sharding20",
 		}, {
 			description: "invalid tree id",
 			treeID:      "34",
@@ -157,7 +255,7 @@ func TestPublicKey(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			got, err := ranges.PublicKey(activePubKey, test.treeID)
+			got, err := ranges.PublicKey(test.treeID)
 			if err != nil && !test.shouldErr {
 				t.Fatal(err)
 			}
@@ -174,7 +272,7 @@ func TestPublicKey(t *testing.T) {
 func TestLogRanges_String(t *testing.T) {
 	type fields struct {
 		inactive Ranges
-		active   int64
+		active   LogRange
 	}
 	tests := []struct {
 		name   string
@@ -185,7 +283,7 @@ func TestLogRanges_String(t *testing.T) {
 			name: "empty",
 			fields: fields{
 				inactive: Ranges{},
-				active:   0,
+				active:   LogRange{},
 			},
 			want: "active=0",
 		},
@@ -198,7 +296,7 @@ func TestLogRanges_String(t *testing.T) {
 						TreeLength: 2,
 					},
 				},
-				active: 3,
+				active: LogRange{TreeID: 3},
 			},
 			want: "1=2,active=3",
 		},
@@ -215,7 +313,7 @@ func TestLogRanges_String(t *testing.T) {
 						TreeLength: 3,
 					},
 				},
-				active: 4,
+				active: LogRange{TreeID: 4},
 			},
 			want: "1=2,2=3,active=4",
 		},
@@ -236,7 +334,7 @@ func TestLogRanges_String(t *testing.T) {
 func TestLogRanges_TotalInactiveLength(t *testing.T) {
 	type fields struct {
 		inactive Ranges
-		active   int64
+		active   LogRange
 	}
 	tests := []struct {
 		name   string
@@ -247,7 +345,7 @@ func TestLogRanges_TotalInactiveLength(t *testing.T) {
 			name: "empty",
 			fields: fields{
 				inactive: Ranges{},
-				active:   0,
+				active:   LogRange{},
 			},
 			want: 0,
 		},
@@ -260,7 +358,7 @@ func TestLogRanges_TotalInactiveLength(t *testing.T) {
 						TreeLength: 2,
 					},
 				},
-				active: 3,
+				active: LogRange{TreeID: 3},
 			},
 			want: 2,
 		},
@@ -281,7 +379,7 @@ func TestLogRanges_TotalInactiveLength(t *testing.T) {
 func TestLogRanges_AllShards(t *testing.T) {
 	type fields struct {
 		inactive Ranges
-		active   int64
+		active   LogRange
 	}
 	tests := []struct {
 		name   string
@@ -292,7 +390,7 @@ func TestLogRanges_AllShards(t *testing.T) {
 			name: "empty",
 			fields: fields{
 				inactive: Ranges{},
-				active:   0,
+				active:   LogRange{},
 			},
 			want: []int64{0},
 		},
@@ -305,7 +403,7 @@ func TestLogRanges_AllShards(t *testing.T) {
 						TreeLength: 2,
 					},
 				},
-				active: 3,
+				active: LogRange{TreeID: 3},
 			},
 			want: []int64{3, 1},
 		},
@@ -322,7 +420,7 @@ func TestLogRanges_AllShards(t *testing.T) {
 						TreeLength: 3,
 					},
 				},
-				active: 4,
+				active: LogRange{TreeID: 4},
 			},
 			want: []int64{4, 1, 2},
 		},
@@ -337,6 +435,35 @@ func TestLogRanges_AllShards(t *testing.T) {
 				t.Errorf("AllShards() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestLogRanges_ActiveAndInactive(t *testing.T) {
+	active := LogRange{
+		TreeID: 1,
+	}
+	inactive := Ranges{
+		{
+			TreeID:     2,
+			TreeLength: 123,
+		},
+		{
+			TreeID:     3,
+			TreeLength: 456,
+		},
+	}
+	lr := LogRanges{
+		active:   active,
+		inactive: inactive,
+	}
+	if lr.NoInactive() {
+		t.Fatalf("expected inactive shards, got no shards")
+	}
+	if !reflect.DeepEqual(active, lr.active) {
+		t.Fatalf("expected active shards to be equal")
+	}
+	if !reflect.DeepEqual(inactive, lr.inactive) {
+		t.Fatalf("expected inactive shards to be equal")
 	}
 }
 
@@ -501,7 +628,7 @@ func TestUpdateRange(t *testing.T) {
 
 			s.Log.EXPECT().GetLatestSignedLogRoot(
 				gomock.Any(), gomock.Any()).Return(tt.rootResponse, tt.signedLogError).AnyTimes()
-			got, err := updateRange(tt.args.ctx, s.LogClient, tt.args.r)
+			got, err := updateRange(tt.args.ctx, s.LogClient, tt.args.r, false)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("updateRange() error = %v, wantErr %v", err, tt.wantErr)
@@ -515,10 +642,13 @@ func TestUpdateRange(t *testing.T) {
 }
 
 func TestNewLogRangesWithMock(t *testing.T) {
+	keyPath, ecdsaSigner, pemPubKey, logID := initializeSigner(t)
+	sc := signer.SigningConfig{SigningSchemeOrKeyPath: keyPath}
+
 	type args struct {
 		ctx    context.Context
 		path   string
-		treeID uint
+		treeID int64
 	}
 	tests := []struct {
 		name    string
@@ -533,7 +663,16 @@ func TestNewLogRangesWithMock(t *testing.T) {
 				path:   "",
 				treeID: 1,
 			},
-			want:    LogRanges{},
+			want: LogRanges{
+				active: LogRange{
+					TreeID:        1,
+					TreeLength:    0,
+					SigningConfig: sc,
+					Signer:        ecdsaSigner,
+					PemPubKey:     pemPubKey,
+					LogID:         logID,
+				},
+			},
 			wantErr: false,
 		},
 		{
@@ -558,14 +697,95 @@ func TestNewLogRangesWithMock(t *testing.T) {
 				t.Fatalf("Failed to create mock server: %v", err)
 			}
 			defer fakeServer()
-			got, err := NewLogRanges(tt.args.ctx, s.LogClient, tt.args.path, tt.args.treeID)
+			got, err := NewLogRanges(tt.args.ctx, s.LogClient, tt.args.path, tt.args.treeID, sc)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewLogRanges() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewLogRanges() got = %v, want %v", got, tt.want)
+			if !tt.wantErr {
+				logRangesEqual(t, tt.want, got)
 			}
 		})
+	}
+}
+
+// initializeSigner returns a path to an ECDSA private key, an ECDSA signer,
+// PEM-encoded public key, and log ID
+func initializeSigner(t *testing.T) (string, signature.Signer, string, string) {
+	td := t.TempDir()
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemPrivKey, err := cryptoutils.MarshalPrivateKeyToPEM(privKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signer, err := signature.LoadECDSASigner(privKey, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Encode public key
+	pubKey, err := signer.PublicKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemPubKey, err := cryptoutils.MarshalPublicKeyToPEM(pubKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Calculate log ID
+	b, err := x509.MarshalPKIXPublicKey(pubKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubkeyHashBytes := sha256.Sum256(b)
+	logID := hex.EncodeToString(pubkeyHashBytes[:])
+
+	keyFile := filepath.Join(td, fmt.Sprintf("%s-ecdsa-key.pem", logID))
+	if err := os.WriteFile(keyFile, pemPrivKey, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	return keyFile, signer, string(pemPubKey), logID
+}
+
+func logRangesEqual(t *testing.T, expected, got LogRanges) {
+	logRangeEqual(t, expected.active, got.active)
+	if len(expected.inactive) != len(got.inactive) {
+		t.Fatalf("inactive log ranges are not equal")
+	}
+	for i, lr := range expected.inactive {
+		g := got.inactive[i]
+		logRangeEqual(t, lr, g)
+	}
+}
+
+func logRangeEqual(t *testing.T, expected, got LogRange) {
+	if expected.TreeID != got.TreeID {
+		t.Fatalf("expected tree ID %v, got %v", expected.TreeID, got.TreeID)
+	}
+	if expected.TreeLength != got.TreeLength {
+		t.Fatalf("expected tree length %v, got %v", expected.TreeLength, got.TreeLength)
+	}
+	if !reflect.DeepEqual(expected.SigningConfig, got.SigningConfig) {
+		t.Fatalf("expected signing config %v, got %v", expected.SigningConfig, got.SigningConfig)
+	}
+	expectedPubKey, err := expected.Signer.PublicKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotPubKey, err := got.Signer.PublicKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cryptoutils.EqualKeys(expectedPubKey, gotPubKey); err != nil {
+		t.Fatal(err)
+	}
+	if expected.PemPubKey != got.PemPubKey {
+		t.Fatalf("expected public key %v, got %v", expected.PemPubKey, got.PemPubKey)
+	}
+	if expected.LogID != got.LogID {
+		t.Fatalf("expected log ID %v, got %v", expected.LogID, got.LogID)
 	}
 }

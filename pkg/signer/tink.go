@@ -17,6 +17,7 @@ package signer
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,6 +37,9 @@ const TinkScheme = "tink"
 // NewTinkSignerWithHandle returns a signature.SignerVerifier that wraps crypto.Signer and a hash function.
 // Provide a path to the encrypted keyset and cloud KMS key URI for decryption
 func NewTinkSigner(ctx context.Context, kekURI, keysetPath string) (signature.Signer, error) {
+	if kekURI == "" || keysetPath == "" {
+		return nil, fmt.Errorf("key encryption key URI or keyset path unset")
+	}
 	kek, err := getKeyEncryptionKey(ctx, kekURI)
 	if err != nil {
 		return nil, err

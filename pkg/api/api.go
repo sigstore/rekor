@@ -17,10 +17,8 @@ package api
 
 import (
 	"context"
-	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -42,9 +40,6 @@ import (
 	"github.com/sigstore/rekor/pkg/storage"
 	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/rekor/pkg/witness"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/options"
 
 	_ "github.com/sigstore/rekor/pkg/pubsub/gcp" // Load GCP pubsub implementation
 )
@@ -92,12 +87,9 @@ func dial(rpcServer string) (*grpc.ClientConn, error) {
 }
 
 type API struct {
-	logClient  trillian.TrillianLogClient
-	logID      int64
-	logRanges  sharding.LogRanges
-	pubkey     string // PEM encoded public key
-	pubkeyHash string // SHA256 hash of DER-encoded public key
-	signer     signature.Signer
+	logClient trillian.TrillianLogClient
+	treeID    int64
+	logRanges sharding.LogRanges
 	// stops checkpoint publishing
 	checkpointPublishCancel context.CancelFunc
 	// Publishes notifications when new entries are added to the log. May be
@@ -117,12 +109,6 @@ func NewAPI(treeID uint) (*API, error) {
 	logAdminClient := trillian.NewTrillianAdminClient(tConn)
 	logClient := trillian.NewTrillianLogClient(tConn)
 
-	shardingConfig := viper.GetString("trillian_log_server.sharding_config")
-	ranges, err := sharding.NewLogRanges(ctx, logClient, shardingConfig, treeID)
-	if err != nil {
-		return nil, fmt.Errorf("unable get sharding details from sharding config: %w", err)
-	}
-
 	tid := int64(treeID)
 	if tid == 0 {
 		log.Logger.Info("No tree ID specified, attempting to create a new tree")
@@ -133,27 +119,18 @@ func NewAPI(treeID uint) (*API, error) {
 		tid = t.TreeId
 	}
 	log.Logger.Infof("Starting Rekor server with active tree %v", tid)
-	ranges.SetActive(tid)
 
-	rekorSigner, err := signer.New(ctx, viper.GetString("rekor_server.signer"),
-		viper.GetString("rekor_server.signer-passwd"),
-		viper.GetString("rekor_server.tink_kek_uri"),
-		viper.GetString("rekor_server.tink_keyset_path"),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("getting new signer: %w", err)
+	shardingConfig := viper.GetString("trillian_log_server.sharding_config")
+	signingConfig := signer.SigningConfig{
+		SigningSchemeOrKeyPath: viper.GetString("rekor_server.signer"),
+		FileSignerPassword:     viper.GetString("rekor_server.signer-passwd"),
+		TinkKEKURI:             viper.GetString("rekor_server.tink_kek_uri"),
+		TinkKeysetPath:         viper.GetString("rekor_server.tink_keyset_path"),
 	}
-	pk, err := rekorSigner.PublicKey(options.WithContext(ctx))
+	ranges, err := sharding.NewLogRanges(ctx, logClient, shardingConfig, tid, signingConfig)
 	if err != nil {
-		return nil, fmt.Errorf("getting public key: %w", err)
+		return nil, fmt.Errorf("unable get sharding details from sharding config: %w", err)
 	}
-	b, err := x509.MarshalPKIXPublicKey(pk)
-	if err != nil {
-		return nil, fmt.Errorf("marshalling public key: %w", err)
-	}
-	pubkeyHashBytes := sha256.Sum256(b)
-
-	pubkey := cryptoutils.PEMEncode(cryptoutils.PublicKeyPEMType, b)
 
 	var newEntryPublisher pubsub.Publisher
 	if p := viper.GetString("rekor_server.new_entry_publisher"); p != "" {
@@ -170,12 +147,8 @@ func NewAPI(treeID uint) (*API, error) {
 	return &API{
 		// Transparency Log Stuff
 		logClient: logClient,
-		logID:     tid,
+		treeID:    tid,
 		logRanges: ranges,
-		// Signing/verifying fields
-		pubkey:     string(pubkey),
-		pubkeyHash: hex.EncodeToString(pubkeyHashBytes[:]),
-		signer:     rekorSigner,
 		// Utility functionality not required for operation of the core service
 		newEntryPublisher: newEntryPublisher,
 	}, nil
@@ -212,8 +185,8 @@ func ConfigureAPI(treeID uint) {
 
 	if viper.GetBool("enable_stable_checkpoint") {
 		redisClient = NewRedisClient()
-		checkpointPublisher := witness.NewCheckpointPublisher(context.Background(), api.logClient, api.logRanges.ActiveTreeID(),
-			viper.GetString("rekor_server.hostname"), api.signer, redisClient, viper.GetUint("publish_frequency"), CheckpointPublishCount)
+		checkpointPublisher := witness.NewCheckpointPublisher(context.Background(), api.logClient, api.logRanges.GetActive().TreeID,
+			viper.GetString("rekor_server.hostname"), api.logRanges.GetActive().Signer, redisClient, viper.GetUint("publish_frequency"), CheckpointPublishCount)
 
 		// create context to cancel goroutine on server shutdown
 		ctx, cancel := context.WithCancel(context.Background())
