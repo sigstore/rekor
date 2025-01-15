@@ -92,11 +92,6 @@ var getCmd = &cobra.Command{
 		if logIndex == "" && uuid == "" {
 			return nil, errors.New("either --uuid or --log-index must be specified")
 		}
-		// retrieve rekor pubkey for verification
-		verifier, err := loadVerifier(rekorClient)
-		if err != nil {
-			return nil, fmt.Errorf("retrieving rekor public key")
-		}
 
 		if logIndex != "" {
 			params := entries.NewGetLogEntryByIndexParams()
@@ -113,6 +108,15 @@ var getCmd = &cobra.Command{
 			}
 			var e models.LogEntryAnon
 			for ix, entry := range resp.Payload {
+				// retrieve rekor pubkey for verification
+				treeID, err := sharding.TreeID(ix)
+				if err != nil {
+					return nil, err
+				}
+				verifier, err := loadVerifier(rekorClient, strconv.FormatInt(treeID, 10))
+				if err != nil {
+					return nil, fmt.Errorf("retrieving rekor public key")
+				}
 				// verify log entry
 				e = entry
 				if err := verify.VerifyLogEntry(ctx, &e, verifier); err != nil {
@@ -143,6 +147,16 @@ var getCmd = &cobra.Command{
 
 			var e models.LogEntryAnon
 			for k, entry := range resp.Payload {
+				// retrieve rekor pubkey for verification
+				treeID, err := sharding.TreeID(k)
+				if err != nil {
+					return nil, err
+				}
+				verifier, err := loadVerifier(rekorClient, strconv.FormatInt(treeID, 10))
+				if err != nil {
+					return nil, fmt.Errorf("retrieving rekor public key")
+				}
+
 				if err := compareEntryUUIDs(params.EntryUUID, k); err != nil {
 					return nil, err
 				}

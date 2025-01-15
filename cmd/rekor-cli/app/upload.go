@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/swag"
@@ -35,6 +36,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/verify"
 )
@@ -122,13 +124,20 @@ var uploadCmd = &cobra.Command{
 
 		var newIndex int64
 		var logEntry models.LogEntryAnon
-		for _, entry := range resp.Payload {
+		var uuid string
+		for k, entry := range resp.Payload {
+			uuid = k
 			newIndex = swag.Int64Value(entry.LogIndex)
 			logEntry = entry
 		}
 
+		treeID, err := sharding.TreeID(uuid)
+		if err != nil {
+			return nil, err
+		}
+
 		// verify log entry
-		verifier, err := loadVerifier(rekorClient)
+		verifier, err := loadVerifier(rekorClient, strconv.FormatInt(treeID, 10))
 		if err != nil {
 			return nil, fmt.Errorf("retrieving rekor public key")
 		}

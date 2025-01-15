@@ -34,6 +34,7 @@ import (
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/format"
 	"github.com/sigstore/rekor/cmd/rekor-cli/app/state"
 	"github.com/sigstore/rekor/pkg/client"
+	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/client/tlog"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
@@ -131,7 +132,7 @@ func verifyTree(ctx context.Context, rekorClient *rclient.Rekor, signedTreeHead,
 	if err := sth.UnmarshalText([]byte(signedTreeHead)); err != nil {
 		return err
 	}
-	verifier, err := loadVerifier(rekorClient)
+	verifier, err := loadVerifier(rekorClient, treeID)
 	if err != nil {
 		return err
 	}
@@ -160,11 +161,11 @@ func verifyTree(ctx context.Context, rekorClient *rclient.Rekor, signedTreeHead,
 	return nil
 }
 
-func loadVerifier(rekorClient *rclient.Rekor) (signature.Verifier, error) {
+func loadVerifier(rekorClient *rclient.Rekor, treeID string) (signature.Verifier, error) {
 	publicKey := viper.GetString("rekor_server_public_key")
 	if publicKey == "" {
 		// fetch key from server
-		keyResp, err := rekorClient.Pubkey.GetPublicKey(nil)
+		keyResp, err := rekorClient.Pubkey.GetPublicKey(pubkey.NewGetPublicKeyParams().WithTreeID(swag.String(treeID)))
 		if err != nil {
 			return nil, err
 		}
