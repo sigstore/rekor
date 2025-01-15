@@ -72,7 +72,7 @@ func NewLogRanges(ctx context.Context, logClient trillian.TrillianLogClient,
 	if err != nil {
 		return LogRanges{}, fmt.Errorf("creating range for active tree %d: %w", activeTreeID, err)
 	}
-	log.Logger.Infof("Active log: %v", activeLog)
+	log.Logger.Infof("Active log: %s", activeLog.String())
 
 	if inactiveShardsPath == "" {
 		log.Logger.Info("No config file specified, no inactive shards")
@@ -95,7 +95,9 @@ func NewLogRanges(ctx context.Context, logClient trillian.TrillianLogClient,
 		}
 		ranges[i] = r
 	}
-	log.Logger.Infof("Ranges: %v", ranges)
+	for i, r := range ranges {
+		log.Logger.Infof("Inactive range %d: %s", i, r.String())
+	}
 
 	return LogRanges{
 		inactive: ranges,
