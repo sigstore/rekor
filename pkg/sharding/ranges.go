@@ -57,7 +57,7 @@ type LogRange struct {
 }
 
 func (l LogRange) String() string {
-	return fmt.Sprintf("{ TreeID: %v, TreeLength: %v, SigningConfig: %v, PemPubKey: %v, LogID: %v }", l.TreeID, l.TreeLength, l.SigningConfig, l.PemPubKey, l.LogID)
+	return fmt.Sprintf("{ TreeID: %v, TreeLength: %v, SigningScheme: %v, PemPubKey: %v, LogID: %v }", l.TreeID, l.TreeLength, l.SigningConfig.SigningSchemeOrKeyPath, l.PemPubKey, l.LogID)
 }
 
 // NewLogRanges initializes the active and any inactive log shards
