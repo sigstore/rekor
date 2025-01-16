@@ -1,3 +1,29 @@
+# v1.3.8
+
+## Bug Fixes
+
+* fix zizmor issues (#2298)
+* remove unneeded value in log message (#2282)
+
+## Quality Enhancements
+
+* chore: relax go directive to permit 1.22.x
+* fetch minisign from homebrew instead of custom ppa (#2329)
+* fix(ci): simplify GOVERSION extraction
+* chore(deps): bump actions pins to latest
+* Updates go and golangci-lint (#2302)
+* update builder to use go1.23.4 (#2301)
+* clean up spaces
+* log request body on 500 error to aid debugging (#2283)
+
+## Contributors
+
+* Appu Goundan
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Dominic Evans
+* sgpinkus
+
 # v1.3.7
 
 ## New Features
