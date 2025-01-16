@@ -25,10 +25,12 @@ import (
 	"strings"
 
 	"github.com/google/trillian"
+	"github.com/google/trillian/types"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -39,6 +41,7 @@ import (
 	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/rekor/pkg/storage"
 	"github.com/sigstore/rekor/pkg/trillianclient"
+	"github.com/sigstore/rekor/pkg/util"
 	"github.com/sigstore/rekor/pkg/witness"
 
 	_ "github.com/sigstore/rekor/pkg/pubsub/gcp" // Load GCP pubsub implementation
@@ -95,6 +98,11 @@ type API struct {
 	// Publishes notifications when new entries are added to the log. May be
 	// nil if no publisher is configured.
 	newEntryPublisher pubsub.Publisher
+	// Stores map of inactive tree IDs to checkpoints
+	// Inactive shards will always return the same checkpoint,
+	// so we can fetch the checkpoint on service startup to
+	// minimize signature generations
+	cachedCheckpoints map[int64]string
 }
 
 func NewAPI(treeID uint) (*API, error) {
@@ -132,6 +140,26 @@ func NewAPI(treeID uint) (*API, error) {
 		return nil, fmt.Errorf("unable get sharding details from sharding config: %w", err)
 	}
 
+	cachedCheckpoints := make(map[int64]string)
+	for _, r := range ranges.GetInactive() {
+		tc := trillianclient.NewTrillianClient(ctx, logClient, r.TreeID)
+		resp := tc.GetLatest(0)
+		if resp.Status != codes.OK {
+			return nil, fmt.Errorf("error with GetLatest(): resp code is %d", resp.Status)
+		}
+		result := resp.GetLatestResult
+		root := &types.LogRootV1{}
+		if err := root.UnmarshalBinary(result.SignedLogRoot.LogRoot); err != nil {
+			return nil, fmt.Errorf("error unmarshalling root: %w", err)
+		}
+
+		cp, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), r.TreeID, uint64(r.TreeLength), root.RootHash, r.Signer)
+		if err != nil {
+			return nil, fmt.Errorf("error signing checkpoint for inactive shard %d: %w", r.TreeID, err)
+		}
+		cachedCheckpoints[r.TreeID] = string(cp)
+	}
+
 	var newEntryPublisher pubsub.Publisher
 	if p := viper.GetString("rekor_server.new_entry_publisher"); p != "" {
 		if !viper.GetBool("rekor_server.publish_events_protobuf") && !viper.GetBool("rekor_server.publish_events_json") {
@@ -151,6 +179,7 @@ func NewAPI(treeID uint) (*API, error) {
 		logRanges: ranges,
 		// Utility functionality not required for operation of the core service
 		newEntryPublisher: newEntryPublisher,
+		cachedCheckpoints: cachedCheckpoints,
 	}, nil
 }
 
