@@ -94,7 +94,7 @@ func logEntryFromLeaf(ctx context.Context, _ trillianclient.TrillianClient, leaf
 	}
 
 	logEntryAnon := models.LogEntryAnon{
-		LogID:          swag.String(logRange.PemPubKey),
+		LogID:          swag.String(logRange.LogID),
 		LogIndex:       &virtualIndex,
 		Body:           leaf.LeafValue,
 		IntegratedTime: swag.Int64(leaf.IntegrateTimestamp.AsTime().Unix()),

@@ -115,7 +115,7 @@ var getCmd = &cobra.Command{
 				}
 				verifier, err := loadVerifier(rekorClient, strconv.FormatInt(treeID, 10))
 				if err != nil {
-					return nil, fmt.Errorf("retrieving rekor public key")
+					return nil, fmt.Errorf("retrieving rekor public key: %v", err)
 				}
 				// verify log entry
 				e = entry
@@ -154,7 +154,7 @@ var getCmd = &cobra.Command{
 				}
 				verifier, err := loadVerifier(rekorClient, strconv.FormatInt(treeID, 10))
 				if err != nil {
-					return nil, fmt.Errorf("retrieving rekor public key")
+					return nil, fmt.Errorf("retrieving rekor public key: %v", err)
 				}
 
 				if err := compareEntryUUIDs(params.EntryUUID, k); err != nil {
