@@ -256,13 +256,14 @@ func (l *LogRanges) PublicKey(treeID string) (string, error) {
 		return "", err
 	}
 
+	if tid == int(l.GetActive().TreeID) {
+		return l.active.PemPubKey, nil
+	}
+
 	for _, i := range l.inactive {
 		if int(i.TreeID) == tid {
 			return i.PemPubKey, nil
 		}
-	}
-	if tid == int(l.GetActive().TreeID) {
-		return l.active.PemPubKey, nil
 	}
 	return "", fmt.Errorf("%d is not a valid tree ID and doesn't have an associated public key", tid)
 }
