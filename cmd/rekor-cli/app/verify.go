@@ -165,9 +165,14 @@ var verifyCmd = &cobra.Command{
 			}
 		}
 
+		treeID, err := sharding.TreeID(o.EntryUUID)
+		if err != nil {
+			return nil, err
+		}
+
 		// Get Rekor Pub
 		// TODO(asraa): Replace with sigstore's GetRekorPubs to use TUF.
-		verifier, err := loadVerifier(rekorClient)
+		verifier, err := loadVerifier(rekorClient, strconv.FormatInt(treeID, 10))
 		if err != nil {
 			return nil, err
 		}

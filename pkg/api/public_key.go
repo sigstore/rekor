@@ -27,7 +27,7 @@ import (
 
 func GetPublicKeyHandler(params pubkey.GetPublicKeyParams) middleware.Responder {
 	treeID := swag.StringValue(params.TreeID)
-	pk, err := api.logRanges.PublicKey(api.pubkey, treeID)
+	pk, err := api.logRanges.PublicKey(treeID)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusBadRequest, err, "")
 	}
