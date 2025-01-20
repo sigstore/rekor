@@ -72,7 +72,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.12
 	github.com/tink-crypto/tink-go-awskms/v2 v2.1.0
 	github.com/tink-crypto/tink-go-gcpkms/v2 v2.2.0
-	github.com/tink-crypto/tink-go/v2 v2.2.0
+	github.com/tink-crypto/tink-go/v2 v2.3.0
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250102185135-69823020774d
 )
