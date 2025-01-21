@@ -33,7 +33,6 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/rekor/pkg/util"
-	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 // GetLogInfoHandler returns the current size of the tree and the STH
@@ -44,7 +43,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	var inactiveShards []*models.InactiveShardLogInfo
 	for _, shard := range api.logRanges.GetInactive() {
 		// Get details for this inactive shard
-		is, err := inactiveShardLogInfo(params.HTTPRequest.Context(), shard.TreeID, shard.Signer)
+		is, err := inactiveShardLogInfo(params.HTTPRequest.Context(), shard.TreeID, api.cachedCheckpoints)
 		if err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("inactive shard error: %w", err), unexpectedInactiveShardError)
 		}
@@ -168,7 +167,7 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	return tlog.NewGetLogProofOK().WithPayload(&consistencyProof)
 }
 
-func inactiveShardLogInfo(ctx context.Context, tid int64, signer signature.Signer) (*models.InactiveShardLogInfo, error) {
+func inactiveShardLogInfo(ctx context.Context, tid int64, cachedCheckpoints map[int64]string) (*models.InactiveShardLogInfo, error) {
 	tc := trillianclient.NewTrillianClient(ctx, api.logClient, tid)
 	resp := tc.GetLatest(0)
 	if resp.Status != codes.OK {
@@ -184,16 +183,11 @@ func inactiveShardLogInfo(ctx context.Context, tid int64, signer signature.Signe
 	hashString := hex.EncodeToString(root.RootHash)
 	treeSize := int64(root.TreeSize)
 
-	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tid, root.TreeSize, root.RootHash, signer)
-	if err != nil {
-		return nil, err
-	}
-
 	m := models.InactiveShardLogInfo{
 		RootHash:       &hashString,
 		TreeSize:       &treeSize,
 		TreeID:         stringPointer(fmt.Sprintf("%d", tid)),
-		SignedTreeHead: stringPointer(string(scBytes)),
+		SignedTreeHead: stringPointer(cachedCheckpoints[tid]),
 	}
 	return &m, nil
 }

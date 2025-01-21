@@ -63,6 +63,18 @@ function stringsMatch () {
   fi
 }
 
+function stringsNotMatch () {
+  one=$1
+  two=$2
+
+  if [[ "$one" != "$two" ]]; then
+    echo "Strings do not match"
+  else
+    echo "Strings $one match but shouldn't"
+    exit 1
+  fi
+}
+
 function waitForRekorServer () {
   count=0
 
@@ -277,5 +289,15 @@ $REKOR_CLI verify --uuid $ENTRY_ID_1 --rekor_server http://localhost:3000
 echo
 echo "Testing rekor-cli verification via Entry ID..."
 DEBUG=1 $REKOR_CLI verify --uuid $ENTRY_ID_1 --rekor_server http://localhost:3000
+
+# Verify that the checkpoint/SignedTreeHead for inactive shards is cached between calls
+ACTIVE_SHARD_CHECKPOINT=$(curl "http://localhost:3000/api/v1/log" | jq .signedTreeHead | base64 -w 0)
+INACTIVE_SHARD_CHECKPOINT=$(curl "http://localhost:3000/api/v1/log" | jq .inactiveShards[0].signedTreeHead | base64 -w 0)
+ACTIVE_SHARD_CHECKPOINT_NOT_CACHED=$(curl "http://localhost:3000/api/v1/log" | jq .signedTreeHead | base64 -w 0)
+INACTIVE_SHARD_CHECKPOINT_CACHED=$(curl "http://localhost:3000/api/v1/log" | jq .inactiveShards[0].signedTreeHead | base64 -w 0)
+# inactive shard checkpoint is cached
+stringsMatch $INACTIVE_SHARD_CHECKPOINT $INACTIVE_SHARD_CHECKPOINT_CACHED
+# active shard checkpoint is not cached
+stringsNotMatch $ACTIVE_SHARD_CHECKPOINT $ACTIVE_SHARD_CHECKPOINT_NOT_CACHED
 
 echo "Test passed successfully :)"
