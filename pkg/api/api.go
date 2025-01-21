@@ -145,7 +145,7 @@ func NewAPI(treeID uint) (*API, error) {
 		tc := trillianclient.NewTrillianClient(ctx, logClient, r.TreeID)
 		resp := tc.GetLatest(0)
 		if resp.Status != codes.OK {
-			return nil, fmt.Errorf("error with GetLatest(): resp code is %d", resp.Status)
+			return nil, fmt.Errorf("error fetching latest tree head for inactive shard %d: resp code is %d, err is %w", r.TreeID, resp.Status, resp.Err)
 		}
 		result := resp.GetLatestResult
 		root := &types.LogRootV1{}
