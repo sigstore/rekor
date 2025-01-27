@@ -1,3 +1,14 @@
+# v1.3.9
+
+## Features
+
+* Cache checkpoint for inactive shards (#2332)
+* Support per-shard signing keys (#2330)
+
+## Contributors
+
+* Hayden B
+
 # v1.3.8
 
 ## Bug Fixes
