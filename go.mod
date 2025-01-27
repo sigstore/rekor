@@ -45,7 +45,7 @@ require (
 	golang.org/x/sync v0.10.0
 	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/grpc v1.69.4
-	google.golang.org/protobuf v1.36.3
+	google.golang.org/protobuf v1.36.4
 	gopkg.in/ini.v1 v1.67.0
 	sigs.k8s.io/release-utils v0.8.4
 	sigs.k8s.io/yaml v1.4.0
