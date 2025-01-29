@@ -16,15 +16,15 @@ package client
 
 import (
 	"crypto/tls"
+	"net"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 
-	"github.com/hashicorp/go-cleanhttp"
-	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/util"
 )
@@ -36,25 +36,28 @@ func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error
 	}
 	o := makeOptions(opts...)
 
-	retryableClient := retryablehttp.NewClient()
-	defaultTransport := cleanhttp.DefaultTransport()
-	if o.NoDisableKeepalives {
-		defaultTransport.DisableKeepAlives = false
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConnsPerHost:   -1,
+		DisableKeepAlives:     !o.NoDisableKeepalives,
 	}
 	if o.InsecureTLS {
-		/* #nosec G402 */
-		defaultTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: o.InsecureTLS} //nolint:gosec
 	}
-	retryableClient.HTTPClient = &http.Client{
-		Transport: defaultTransport,
-	}
-	retryableClient.RetryMax = int(o.RetryCount)
-	retryableClient.RetryWaitMin = o.RetryWaitMin
-	retryableClient.RetryWaitMax = o.RetryWaitMax
-	retryableClient.Logger = o.Logger
 
-	httpClient := retryableClient.StandardClient()
-	httpClient.Transport = createRoundTripper(httpClient.Transport, o)
+	httpClient := &http.Client{
+		Transport: wrapRoundTripper(transport, o),
+	}
 
 	// sanitize path
 	if url.Path == "" {

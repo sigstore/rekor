@@ -15,10 +15,16 @@
 package client
 
 import (
+	"crypto/tls"
+	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
+	"regexp"
+	"strings"
 	"time"
 
-	"github.com/hashicorp/go-retryablehttp"
+	"github.com/avast/retry-go/v4"
 )
 
 // Option is a functional option for customizing static signatures.
@@ -30,7 +36,6 @@ type options struct {
 	RetryWaitMin        time.Duration
 	RetryWaitMax        time.Duration
 	InsecureTLS         bool
-	Logger              interface{}
 	NoDisableKeepalives bool
 	Headers             map[string][]string
 }
@@ -81,14 +86,9 @@ func WithRetryWaitMax(t time.Duration) Option {
 	}
 }
 
-// WithLogger sets the logger; it must implement either retryablehttp.Logger or retryablehttp.LeveledLogger; if not, this will not take effect.
-func WithLogger(logger interface{}) Option {
-	return func(o *options) {
-		switch logger.(type) {
-		case retryablehttp.Logger, retryablehttp.LeveledLogger:
-			o.Logger = logger
-		}
-	}
+// WithLogger sets the logger; this method is deprecated and will not take any effect.
+func WithLogger(_ interface{}) Option {
+	return func(*options) {}
 }
 
 // WithInsecureTLS disables TLS verification.
@@ -113,33 +113,73 @@ func WithHeaders(h map[string][]string) Option {
 }
 
 type roundTripper struct {
-	http.RoundTripper
-	UserAgent string
-	Headers   map[string][]string
+	inner http.RoundTripper
+	*options
 }
 
 // RoundTrip implements `http.RoundTripper`
-func (rt *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Set("User-Agent", rt.UserAgent)
-	for k, v := range rt.Headers {
+func (rt *roundTripper) RoundTrip(req *http.Request) (res *http.Response, err error) {
+	req.Header.Set("User-Agent", rt.options.UserAgent)
+	for k, v := range rt.options.Headers {
 		for _, h := range v {
 			req.Header.Add(k, h)
 		}
 	}
-	return rt.RoundTripper.RoundTrip(req)
+
+	err = retry.Do(func() (err error) {
+		res, err = rt.inner.RoundTrip(req)
+		return shouldRetry(res, err)
+	},
+		retry.Attempts(rt.options.RetryCount),
+		retry.Delay(rt.options.RetryWaitMin),
+		retry.MaxDelay(rt.options.RetryWaitMax),
+		retry.DelayType(retry.BackOffDelay),
+	)
+
+	return res, err
 }
 
-func createRoundTripper(inner http.RoundTripper, o *options) http.RoundTripper {
+var tooManyRedirectyRe = regexp.MustCompile(`stopped after \d+ redirects\z`)
+
+func shouldRetry(resp *http.Response, err error) error {
+	if err != nil {
+		urlErr := &url.Error{}
+
+		// Filter well known URL errors
+		if errors.As(err, &urlErr) {
+			certVerificationErr := &tls.CertificateVerificationError{}
+
+			if tooManyRedirectyRe.MatchString(urlErr.Error()) ||
+				strings.Contains(urlErr.Error(), "unsupported protocol scheme") ||
+				strings.Contains(urlErr.Error(), "invalid header") ||
+				strings.Contains(urlErr.Error(), "certificate is not trusted") ||
+				errors.As(urlErr.Err, &certVerificationErr) {
+				return nil
+			}
+		}
+
+		// Retry any other errror
+		return err
+	}
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return fmt.Errorf("retry %d: %s", resp.StatusCode, resp.Status)
+	}
+
+	if resp.StatusCode == 0 || (resp.StatusCode >= 500 &&
+		resp.StatusCode != http.StatusNotImplemented) {
+		return fmt.Errorf("retry unexpected HTTP status %d: %s", resp.StatusCode, resp.Status)
+	}
+
+	return nil
+}
+
+func wrapRoundTripper(inner http.RoundTripper, o *options) http.RoundTripper {
 	if inner == nil {
 		inner = http.DefaultTransport
 	}
-	if o.UserAgent == "" && o.Headers == nil {
-		// There's nothing to do...
-		return inner
-	}
 	return &roundTripper{
-		RoundTripper: inner,
-		UserAgent:    o.UserAgent,
-		Headers:      o.Headers,
+		inner:   inner,
+		options: o,
 	}
 }
