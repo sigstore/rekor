@@ -115,7 +115,7 @@ func initConfig(cmd *cobra.Command) error {
 			return err
 		}
 	} else if viper.GetString("format") == "default" {
-		log.CliLogger.Infof("Using config file:", viper.ConfigFileUsed())
+		log.CliLogger.Infof("Using config file: %s", viper.ConfigFileUsed())
 	}
 
 	return nil
