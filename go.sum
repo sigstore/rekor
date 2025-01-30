@@ -413,8 +413,6 @@ github.com/shibumi/go-pathspec v1.3.0 h1:QUyMZhFo0Md5B8zV8x2tesohbb5kfbpTi9rBnKh
 github.com/shibumi/go-pathspec v1.3.0/go.mod h1:Xutfslp817l2I1cZvgcfeMQJG5QnU2lh5tVaaMCl3jE=
 github.com/sigstore/protobuf-specs v0.3.3 h1:RMZQgXTD/pF7KW6b5NaRLYxFYZ/wzx44PQFXN2PEo5g=
 github.com/sigstore/protobuf-specs v0.3.3/go.mod h1:vIhZ6Uor1a38+wvRrKcqL2PtYNlgoIW9lhzYzkyy4EU=
-github.com/sigstore/sigstore v1.8.12 h1:S8xMVZbE2z9ZBuQUEG737pxdLjnbOIcFi5v9UFfkJFc=
-github.com/sigstore/sigstore v1.8.12/go.mod h1:+PYQAa8rfw0QdPpBcT+Gl3egKD9c+TUgAlF12H3Nmjo=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.12 h1:EC3UmIaa7nV9sCgSpVevmvgvTYTkMqyrRbj5ojPp7tE=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.12/go.mod h1:aw60vs3crnQdM/DYH+yF2P0MVKtItwAX34nuaMrY7Lk=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.12 h1:FPpliDTywSy0woLHMAdmTSZ5IS/lVBZ0dY0I+2HmnSY=
@@ -463,6 +461,8 @@ github.com/tink-crypto/tink-go/v2 v2.3.0 h1:4/TA0lw0lA/iVKBL9f8R5eP7397bfc4antAM
 github.com/tink-crypto/tink-go/v2 v2.3.0/go.mod h1:kfPOtXIadHlekBTeBtJrHWqoGL+Fm3JQg0wtltPuxLU=
 github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 h1:e/5i7d4oYZ+C1wj2THlRK+oAhjeS/TRQwMfkIuet3w0=
 github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399/go.mod h1:LdwHTNJT99C5fTAzDz0ud328OgXz+gierycbcIx2fRs=
+github.com/trail-of-forks/sigstore v0.0.0-20250129154658-d51867d5be49 h1:SMp4GM0QEmE50JorRByHxTCvX6HyxelazUXbTKyYYsY=
+github.com/trail-of-forks/sigstore v0.0.0-20250129154658-d51867d5be49/go.mod h1:Uqpph/R+dKBUYE1FgpD1CVjkSSorfm4/KT1CAtjBtR8=
 github.com/transparency-dev/merkle v0.0.2 h1:Q9nBoQcZcgPamMkGn7ghV8XiTZ/kRxn1yCG81+twTK4=
 github.com/transparency-dev/merkle v0.0.2/go.mod h1:pqSy+OXefQ1EDUVmAJ8MUhHB9TXGuzVAT58PqBoHz1A=
 github.com/ulikunitz/xz v0.5.12 h1:37Nm15o69RwBkXM0J6A5OlE67RZTfzUxTj8fB3dfcsc=
