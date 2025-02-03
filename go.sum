@@ -411,8 +411,8 @@ github.com/secure-systems-lab/go-securesystemslib v0.9.0 h1:rf1HIbL64nUpEIZnjLZ3
 github.com/secure-systems-lab/go-securesystemslib v0.9.0/go.mod h1:DVHKMcZ+V4/woA/peqr+L0joiRXbPpQ042GgJckkFgw=
 github.com/shibumi/go-pathspec v1.3.0 h1:QUyMZhFo0Md5B8zV8x2tesohbb5kfbpTi9rBnKh5dkI=
 github.com/shibumi/go-pathspec v1.3.0/go.mod h1:Xutfslp817l2I1cZvgcfeMQJG5QnU2lh5tVaaMCl3jE=
-github.com/sigstore/protobuf-specs v0.3.3 h1:RMZQgXTD/pF7KW6b5NaRLYxFYZ/wzx44PQFXN2PEo5g=
-github.com/sigstore/protobuf-specs v0.3.3/go.mod h1:vIhZ6Uor1a38+wvRrKcqL2PtYNlgoIW9lhzYzkyy4EU=
+github.com/sigstore/protobuf-specs v0.4.0 h1:yoZbdh0kZYKOSiVbYyA8J3f2wLh5aUk2SQB7LgAfIdU=
+github.com/sigstore/protobuf-specs v0.4.0/go.mod h1:FKW5NYhnnFQ/Vb9RKtQk91iYd0MKJ9AxyqInEwU6+OI=
 github.com/sigstore/sigstore v1.8.12 h1:S8xMVZbE2z9ZBuQUEG737pxdLjnbOIcFi5v9UFfkJFc=
 github.com/sigstore/sigstore v1.8.12/go.mod h1:+PYQAa8rfw0QdPpBcT+Gl3egKD9c+TUgAlF12H3Nmjo=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.12 h1:EC3UmIaa7nV9sCgSpVevmvgvTYTkMqyrRbj5ojPp7tE=
