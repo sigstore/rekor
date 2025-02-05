@@ -49,11 +49,13 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/pki/identity"
 	"github.com/sigstore/rekor/pkg/pubsub"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/tle"
 	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/rekor/pkg/types"
+	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/util"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -198,54 +200,73 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 	return entries.NewGetLogEntryByIndexOK().WithPayload(logEntry)
 }
 
-func checkEntryAlgorithms(entry types.EntryImpl) (bool, error) {
-	verifiers, err := entry.Verifiers()
-	if err != nil {
-		return false, fmt.Errorf("getting verifiers: %w", err)
-	}
-	// Default to SHA256 if no artifact hash is specified
-	artifactHashValue := crypto.SHA256
-	// Get artifact hash from entry
+func getArtifactHashValue(entry types.EntryImpl) crypto.Hash {
 	artifactHash, err := entry.ArtifactHash()
-	if err == nil {
-		var artifactHashAlgorithm string
-		algoPosition := strings.Index(artifactHash, ":")
-		if algoPosition != -1 {
-			artifactHashAlgorithm = artifactHash[:algoPosition]
-		}
-		switch artifactHashAlgorithm {
-		case "sha256":
-			artifactHashValue = crypto.SHA256
-		case "sha384":
-			artifactHashValue = crypto.SHA384
-		case "sha512":
-			artifactHashValue = crypto.SHA512
-		default:
-			artifactHashValue = crypto.SHA256
-		}
+	if err != nil {
+		// Default to SHA256 if no artifact hash is specified
+		return crypto.SHA256
 	}
 
-	// Check if all the verifiers public keys (together with the ArtifactHash)
-	// are allowed according to the policy
+	var artifactHashAlgorithm string
+	algoPosition := strings.Index(artifactHash, ":")
+	if algoPosition != -1 {
+		artifactHashAlgorithm = artifactHash[:algoPosition]
+	}
+	switch artifactHashAlgorithm {
+	case "sha256":
+		return crypto.SHA256
+	case "sha384":
+		return crypto.SHA384
+	case "sha512":
+		return crypto.SHA512
+	default:
+		return crypto.SHA256
+	}
+}
+
+func getPublicKey(identity identity.Identity) (crypto.PublicKey, error) {
+	switch identityCrypto := identity.Crypto.(type) {
+	case *x509.Certificate:
+		return identityCrypto.PublicKey, nil
+	case *rsa.PublicKey:
+		return identityCrypto, nil
+	case *ecdsa.PublicKey:
+		return identityCrypto, nil
+	case ed25519.PublicKey:
+		return identityCrypto, nil
+	default:
+		return nil, fmt.Errorf("unsupported public key type: %T", identityCrypto)
+	}
+}
+
+func checkEntryAlgorithms(entry types.EntryImpl) (bool, error) {
+	// Only check algorithms for hashedrekord entries
+	switch entry.(type) {
+	case *hashedrekord.V001Entry:
+		break
+	default:
+		return true, nil
+	}
+
+	verifiers, err := entry.Verifiers()
+	if err != nil {
+		return false, err
+	}
+
+	artifactHashValue := getArtifactHashValue(entry)
+
+	// Check if all the verifiers public keys (together with the
+	// artifactHashValue) are allowed according to the policy
 	for _, v := range verifiers {
 		identities, err := v.Identities()
 		if err != nil {
-			return false, fmt.Errorf("getting identities: %w", err)
+			return false, err
 		}
 
 		for _, identity := range identities {
-			var publicKey crypto.PublicKey
-			switch identityCrypto := identity.Crypto.(type) {
-			case *x509.Certificate:
-				publicKey = identityCrypto.PublicKey
-			case *rsa.PublicKey:
-				publicKey = identityCrypto
-			case *ecdsa.PublicKey:
-				publicKey = identityCrypto
-			case ed25519.PublicKey:
-				publicKey = identityCrypto
-			default:
-				continue
+			publicKey, err := getPublicKey(identity)
+			if err != nil {
+				return false, err
 			}
 			isPermitted, err := api.algorithmRegistry.IsAlgorithmPermitted(publicKey, artifactHashValue)
 			if err != nil {
