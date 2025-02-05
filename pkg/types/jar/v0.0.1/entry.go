@@ -323,30 +323,12 @@ func (v *V001Entry) CreateFromArtifactProperties(ctx context.Context, props type
 	}
 	re.JARModel.Archive.Content = (strfmt.Base64)(artifactBytes)
 
-	keyObj, sigObj, err := re.fetchExternalEntities(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving external entities: %v", err)
-	}
-
-	// need to canonicalize key content
-	keyContent, err := keyObj.CanonicalValue()
-	if err != nil {
-		return nil, err
-	}
-	sigContent, err := sigObj.CanonicalValue()
-	if err != nil {
-		return nil, err
-	}
-
-	re.JARModel.Signature = &models.JarV001SchemaSignature{
-		PublicKey: &models.JarV001SchemaSignaturePublicKey{
-			Content: (*strfmt.Base64)(&keyContent),
-		},
-		Content: sigContent,
-	}
-
 	if err := re.validate(); err != nil {
 		return nil, err
+	}
+
+	if _, _, err := re.fetchExternalEntities(ctx); err != nil {
+		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
 	returnVal.APIVersion = swag.String(re.APIVersion())
