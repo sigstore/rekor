@@ -1,7 +1,6 @@
 module github.com/sigstore/rekor
 
 go 1.22.0
-
 toolchain go1.23.4
 
 require (
@@ -47,7 +46,7 @@ require (
 	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.5
 	gopkg.in/ini.v1 v1.67.0
-	sigs.k8s.io/release-utils v0.8.4
+	sigs.k8s.io/release-utils v0.11.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
