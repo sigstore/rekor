@@ -28,7 +28,7 @@ require (
 	github.com/rs/cors v1.11.1
 	github.com/sassoftware/relic v7.2.1+incompatible
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0
-	github.com/sigstore/sigstore v1.8.12
+	github.com/sigstore/sigstore v1.8.13-0.20250204232249-4b62818325b7
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.19.0

@@ -34,6 +34,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor/pkg/indexstorage"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pubsub"
@@ -43,6 +44,7 @@ import (
 	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/rekor/pkg/util"
 	"github.com/sigstore/rekor/pkg/witness"
+	"github.com/sigstore/sigstore/pkg/signature"
 
 	_ "github.com/sigstore/rekor/pkg/pubsub/gcp" // Load GCP pubsub implementation
 )
@@ -98,12 +100,25 @@ type API struct {
 	// Publishes notifications when new entries are added to the log. May be
 	// nil if no publisher is configured.
 	newEntryPublisher pubsub.Publisher
+	algorithmRegistry *signature.AlgorithmRegistryConfig
 	// Stores map of inactive tree IDs to checkpoints
 	// Inactive shards will always return the same checkpoint,
 	// so we can fetch the checkpoint on service startup to
 	// minimize signature generations
 	cachedCheckpoints map[int64]string
 }
+
+var AllowedClientSigningAlgorithms = []v1.PublicKeyDetails{
+	v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_2048_SHA256,
+	v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_3072_SHA256,
+	v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256,
+	v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+	v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
+	v1.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512,
+	v1.PublicKeyDetails_PKIX_ED25519,
+	v1.PublicKeyDetails_PKIX_ED25519_PH,
+}
+var DefaultClientSigningAlgorithms = AllowedClientSigningAlgorithms
 
 func NewAPI(treeID uint) (*API, error) {
 	logRPCServer := fmt.Sprintf("%s:%d",
@@ -127,6 +142,32 @@ func NewAPI(treeID uint) (*API, error) {
 		tid = t.TreeId
 	}
 	log.Logger.Infof("Starting Rekor server with active tree %v", tid)
+
+	algorithmsOption := viper.GetStringSlice("client-signing-algorithms")
+	var algorithms []v1.PublicKeyDetails
+	if algorithmsOption == nil {
+		algorithms = DefaultClientSigningAlgorithms
+	} else {
+		for _, a := range algorithmsOption {
+			algorithm, err := signature.ParseSignatureAlgorithmFlag(a)
+			if err != nil {
+				return nil, fmt.Errorf("parsing signature algorithm flag: %w", err)
+			}
+			algorithms = append(algorithms, algorithm)
+		}
+	}
+	algorithmsStr := make([]string, len(algorithms))
+	for i, a := range algorithms {
+		algorithmsStr[i], err = signature.FormatSignatureAlgorithmFlag(a)
+		if err != nil {
+			return nil, fmt.Errorf("formatting signature algorithm flag: %w", err)
+		}
+	}
+	algorithmRegistry, err := signature.NewAlgorithmRegistryConfig(algorithms)
+	if err != nil {
+		return nil, fmt.Errorf("getting algorithm registry: %w", err)
+	}
+	log.Logger.Infof("Allowed client signing algorithms: %v", algorithmsStr)
 
 	shardingConfig := viper.GetString("trillian_log_server.sharding_config")
 	signingConfig := signer.SigningConfig{
@@ -179,6 +220,7 @@ func NewAPI(treeID uint) (*API, error) {
 		logRanges: ranges,
 		// Utility functionality not required for operation of the core service
 		newEntryPublisher: newEntryPublisher,
+		algorithmRegistry: algorithmRegistry,
 		cachedCheckpoints: cachedCheckpoints,
 	}, nil
 }
