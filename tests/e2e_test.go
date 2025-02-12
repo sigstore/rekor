@@ -22,12 +22,20 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -37,6 +45,9 @@ import (
 	"time"
 
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
@@ -44,6 +55,7 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/client"
 	generatedClient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
@@ -57,6 +69,17 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/spf13/viper"
+)
+
+const (
+	testTreeID     = 12345
+	testSignerKey  = "testdata/signer.key"
+	testSignerCert = "testdata/signer.pem"
+	testSignerPass = "testpassword"
+	testCAPath     = "testdata/ca.pem"
+	testCAKeyPath  = "testdata/ca.key"
+	testServerAddr = "localhost:8090"
 )
 
 func getUUIDFromUploadOutput(t *testing.T, out string) string {
@@ -280,6 +303,160 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	if err := verifier.VerifySignature(bytes.NewReader(timestampSig), bytes.NewReader(canonicalized), options.WithContext(ctx)); err != nil {
 		t.Fatal("unable to verify")
 	}
+}
+
+func setup(t *testing.T) {
+	if err := os.MkdirAll("testdata", 0755); err != nil {
+		t.Fatalf("Failed to create testdata directory: %v", err)
+	}
+
+	if _, err := os.Stat(testCAPath); os.IsNotExist(err) {
+		t.Logf("Generating CA certificate: %s", testCAPath)
+		if err := generateTestCA(testCAPath, testCAKeyPath); err != nil {
+			t.Fatalf("Failed to generate CA certificate: %v", err)
+		}
+	}
+
+	if _, err := os.Stat(testSignerKey); os.IsNotExist(err) {
+		t.Logf("Generating signer key: %s", testSignerKey)
+		if err := generateTestSigner(testSignerKey, testSignerCert); err != nil {
+			t.Fatalf("Failed to generate signer key: %v", err)
+		}
+	}
+
+	viper.Set("rekor_server.signer", testSignerKey)
+	viper.Set("rekor_server.signer-passwd", testSignerPass)
+	viper.Set("trillian_log_server.tls", true)
+	viper.Set("trillian_log_server.tls_ca_cert", testCAPath)
+}
+
+func TestNewAPIWithTLS(t *testing.T) {
+	setup(t)
+
+	apiInstance, err := api.NewAPI(testTreeID)
+	if err != nil {
+		t.Fatalf("Failed to create API instance with TLS: %v", err)
+	}
+	t.Logf("API initialized with TLS: %+v", apiInstance)
+}
+
+func TestDialWithCustomCA(t *testing.T) {
+	setup(t)
+
+	tlsCACert, err := os.ReadFile(testCAPath)
+	if err != nil {
+		t.Fatalf("Failed to read CA certificate: %v", err)
+	}
+	certPool := x509.NewCertPool()
+	if !certPool.AppendCertsFromPEM(tlsCACert) {
+		t.Fatalf("Failed to append CA certificate to pool")
+	}
+
+	creds := credentials.NewTLS(&tls.Config{
+		RootCAs:    certPool,
+		MinVersion: tls.VersionTLS12,
+	})
+
+	conn, err := grpc.Dial(testServerAddr, grpc.WithTransportCredentials(creds))
+	if err != nil {
+		t.Fatalf("Failed to dial with custom CA: %v", err)
+	}
+	defer conn.Close()
+	t.Log("Successfully connected with custom CA")
+}
+
+func TestDialInsecure(t *testing.T) {
+	setup(t)
+	viper.Set("trillian_log_server.tls", false)
+
+	conn, err := grpc.Dial(testServerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatalf("Failed to dial insecurely: %v", err)
+	}
+	defer conn.Close()
+	t.Log("Successfully connected without TLS")
+}
+
+func generateTestCA(certPath, keyPath string) error {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return err
+	}
+
+	template := x509.Certificate{
+		SerialNumber:          bigSerial(),
+		Subject:               pkix.Name{CommonName: "Test CA"},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(365 * 24 * time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return err
+	}
+
+	keyFile, err := os.Create(keyPath)
+	if err != nil {
+		return err
+	}
+	defer keyFile.Close()
+	pem.Encode(keyFile, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
+
+	certFile, err := os.Create(certPath)
+	if err != nil {
+		return err
+	}
+	defer certFile.Close()
+	pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+
+	return nil
+}
+
+func generateTestSigner(keyPath, certPath string) error {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return err
+	}
+
+	template := x509.Certificate{
+		SerialNumber: bigSerial(),
+		Subject:      pkix.Name{CommonName: "Test Signer"},
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().Add(365 * 24 * time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return err
+	}
+
+	keyFile, err := os.Create(keyPath)
+	if err != nil {
+		return err
+	}
+	defer keyFile.Close()
+	privBytes, _ := x509.MarshalECPrivateKey(priv)
+	pem.Encode(keyFile, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes})
+
+	certFile, err := os.Create(certPath)
+	if err != nil {
+		return err
+	}
+	defer certFile.Close()
+	pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+
+	return nil
+}
+
+func bigSerial() *big.Int {
+	serial, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	return serial
 }
 
 func TestEntryUpload(t *testing.T) {
