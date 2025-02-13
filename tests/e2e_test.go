@@ -72,14 +72,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-const (
-	testTreeID     = 12345
-	testSignerKey  = "testdata/signer.key"
-	testSignerCert = "testdata/signer.pem"
-	testSignerPass = "testpassword"
-	testCAPath     = "testdata/ca.pem"
-	testCAKeyPath  = "testdata/ca.key"
-	testServerAddr = "localhost:8090"
+var (
+	testTreeID     uint = 12345
+	testSignerKey       = "testdata/signer.key"
+	testSignerCert      = "testdata/signer.pem"
+	testSignerPass      = "testpassword"
+	testCAPath          = "testdata/ca.pem"
+	testCAKeyPath       = "testdata/ca.key"
+	testServerAddr      = "localhost:8090"
 )
 
 func getUUIDFromUploadOutput(t *testing.T, out string) string {
@@ -311,6 +311,11 @@ func setup(t *testing.T) {
 	}
 
 	if _, err := os.Stat(testCAPath); os.IsNotExist(err) {
+		tempDir := t.TempDir()
+		testCAPath = filepath.Join(tempDir, "ca.pem")
+		testCAKeyPath = filepath.Join(tempDir, "ca.key")
+		testSignerKey = filepath.Join(tempDir, "signer.key")
+		testSignerCert = filepath.Join(tempDir, "signer.pem")
 		t.Logf("Generating CA certificate: %s", testCAPath)
 		if err := generateTestCA(testCAPath, testCAKeyPath); err != nil {
 			t.Fatalf("Failed to generate CA certificate: %v", err)
@@ -357,11 +362,11 @@ func TestDialWithCustomCA(t *testing.T) {
 		MinVersion: tls.VersionTLS12,
 	})
 
-	conn, err := grpc.Dial(testServerAddr, grpc.WithTransportCredentials(creds))
+	trillianConn, err := grpc.Dial(testServerAddr, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		t.Fatalf("Failed to dial with custom CA: %v", err)
 	}
-	defer conn.Close()
+	defer trillianConn.Close()
 	t.Log("Successfully connected with custom CA")
 }
 
@@ -369,11 +374,11 @@ func TestDialInsecure(t *testing.T) {
 	setup(t)
 	viper.Set("trillian_log_server.tls", false)
 
-	conn, err := grpc.Dial(testServerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	trillianConn, err := grpc.Dial(testServerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("Failed to dial insecurely: %v", err)
 	}
-	defer conn.Close()
+	defer trillianConn.Close()
 	t.Log("Successfully connected without TLS")
 }
 
