@@ -15,7 +15,7 @@
 
 .PHONY: all test clean clean-gen lint gosec ko ko-local cross-cli gocovmerge
 
-all: rekor-cli rekor-server
+all: rekor-cli rekor-server ## Build all binaries (rekor-cli and rekor-server)
 
 include Makefile.swagger
 
@@ -63,51 +63,51 @@ REKOR_LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
 CLI_LDFLAGS=$(REKOR_LDFLAGS)
 SERVER_LDFLAGS=$(REKOR_LDFLAGS)
 
-Makefile.swagger: $(SWAGGER) $(OPENAPIDEPS)
+Makefile.swagger: $(SWAGGER) $(OPENAPIDEPS) ## Generate Swagger code and Makefile
 	$(SWAGGER) validate openapi.yaml
 	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --additional-initialism=TUF --additional-initialism=DSSE
 	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A rekor_server --flag-strategy=pflag --default-produces application/json --additional-initialism=TUF --additional-initialism=DSSE
 	@echo "# This file is generated after swagger runs as part of the build; do not edit!" > Makefile.swagger
 	@echo "SWAGGER_GEN=`find pkg/generated/client pkg/generated/models pkg/generated/restapi -iname '*.go' | grep -v 'configure_rekor_server' | sort -d | tr '\n' ' ' | sed 's/ $$//'`" >> Makefile.swagger;
 
-lint:
+lint: ## Run golangci-lint checks
 	$(GOBIN)/golangci-lint run -v ./...
 
-gosec:
+gosec: ## Run gosec security scanner
 	$(GOBIN)/gosec ./...
 
-rekor-cli: $(SRCS)
+rekor-cli: $(SRCS) ## Build the rekor command-line interface
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(CLI_LDFLAGS)" -o rekor-cli ./cmd/rekor-cli
 
-rekor-server: $(SRCS)
+rekor-server: $(SRCS) ## Build the rekor server
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o rekor-server ./cmd/rekor-server
 
-backfill-index: $(SRCS)
+backfill-index: $(SRCS) ## Build the backfill-index utility
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o backfill-index ./cmd/backfill-index
 
-test:
+test: ## Run all tests
 	go test ./...
 
-gocovmerge: $(GOCOVMERGE)
+gocovmerge: $(GOCOVMERGE) ## Merge coverage profiles
 
-clean:
+clean: ## Remove built binaries and artifacts
 	rm -rf dist
 	rm -rf hack/tools/bin
 	rm -rf rekor-cli rekor-server
 	rm -f *fuzz.zip
 
-clean-gen: clean
+clean-gen: clean ## Clean generated files and swagger code
 	rm -rf $(SWAGGER_GEN)
 
-up:
+up: ## Start services using docker-compose
 	docker-compose -f docker-compose.yml build --build-arg SERVER_LDFLAGS="$(SERVER_LDFLAGS)"
 	docker-compose -f docker-compose.yml up
 
-debug:
+debug: ## Start services in debug mode
 	docker-compose -f docker-compose.yml -f docker-compose.debug.yml build --build-arg SERVER_LDFLAGS="$(SERVER_LDFLAGS)" rekor-server-debug
 	docker-compose -f docker-compose.yml -f docker-compose.debug.yml up rekor-server-debug
 
-ko:
+ko: ## Build and publish container images using ko
 	# rekor-server
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	KO_DOCKER_REPO=$(KO_PREFIX)/rekor-server ko resolve --bare \
@@ -126,22 +126,20 @@ ko:
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		--image-refs bIndexImagerefs github.com/sigstore/rekor/cmd/backfill-index
 
-deploy:
+deploy: ## Deploy to Kubernetes using ko
 	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) ko apply -f config/
 
-e2e:
+e2e: ## Build and prepare end-to-end tests
 	go test -c -tags=e2e ./tests
 	go test -c -tags=e2e ./pkg/pki/x509
 	go test -c -tags=e2e ./pkg/pki/tuf
 	go test -c -tags=e2e ./pkg/types/rekord
 
-.PHONY: sign-keyless-ci
-sign-keyless-ci: ko
+sign-keyless-ci: ko ## Sign container images using keyless signing
 	cosign sign --yes -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
 	cosign sign --yes -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-cli:$(GIT_HASH)
 
-.PHONY: ko-local
-ko-local:
+ko-local: ## Build container images locally using ko
 	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs rekorImagerefs \
@@ -157,9 +155,7 @@ ko-local:
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs indexImagerefs \
 		github.com/sigstore/rekor/cmd/backfill-index
 
-.PHONY: fuzz
-# This runs the fuzz tests for a short period of time to ensure they don't crash.
-fuzz:
+fuzz: ## Run fuzz tests for a configured duration
 	go test -fuzz FuzzCreateEntryIDFromParts -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzGetUUIDFromIDString -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzGetTreeIDFromIDString -fuzztime $(FUZZ_DURATION) ./pkg/sharding
@@ -174,23 +170,23 @@ fuzz:
 ## Tooling Binaries
 ## --------------------------------------
 
-$(GO-FUZZ-BUILD): $(TOOLS_DIR)/go.mod
+$(GO-FUZZ-BUILD): $(TOOLS_DIR)/go.mod ## Build go-fuzz-build tool
 	cd $(TOOLS_DIR); go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/go-fuzz-build github.com/dvyukov/go-fuzz/go-fuzz-build
 
-$(SWAGGER): $(TOOLS_DIR)/go.mod
+$(SWAGGER): $(TOOLS_DIR)/go.mod ## Build swagger tool
 	cd $(TOOLS_DIR); go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/swagger github.com/go-swagger/go-swagger/cmd/swagger
 
-$(GOCOVMERGE): $(TOOLS_DIR)/go.mod
+$(GOCOVMERGE): $(TOOLS_DIR)/go.mod ## Build gocovmerge tool
 	cd $(TOOLS_DIR); go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/gocovmerge github.com/wadey/gocovmerge
 
 ##################
 # help
 ##################
 
-help: # Display help
-	@awk -F ':|##' \
-		'/^[^\t].+?:.*?##/ (\
-			printf "\033[36m%-30s\033[0m %s\n", $$1, $$NF \
-		)' $(MAKEFILE_LIST) | sort
+help: ## Display this help message
+	@echo "Usage: make <target>"
+	@echo ""
+	@echo "Targets:"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_-]+:.*?## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 include release/release.mk
