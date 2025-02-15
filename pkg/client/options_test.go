@@ -15,17 +15,14 @@
 package client
 
 import (
-	"log"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"go.uber.org/zap"
 )
 
 func TestMakeOptions(t *testing.T) {
-	customLogger := log.New(os.Stdout, "", log.LstdFlags)
-
 	tests := []struct {
 		desc string
 
@@ -43,10 +40,6 @@ func TestMakeOptions(t *testing.T) {
 		opts: []Option{WithRetryCount(2)},
 		want: &options{UserAgent: "", RetryCount: 2},
 	}, {
-		desc: "WithLogger",
-		opts: []Option{WithLogger(customLogger)},
-		want: &options{UserAgent: "", RetryCount: DefaultRetryCount, Logger: customLogger},
-	}, {
 		desc: "WithLoggerNil",
 		opts: []Option{WithLogger(nil)},
 		want: &options{UserAgent: "", RetryCount: DefaultRetryCount},
@@ -62,7 +55,9 @@ func TestMakeOptions(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := makeOptions(tc.opts...)
-			if d := cmp.Diff(tc.want, got, cmp.Comparer(func(a, b *log.Logger) bool { return a == b })); d != "" {
+			if d := cmp.Diff(tc.want, got, cmp.Comparer(func(a, b zap.SugaredLogger) bool {
+				return a == b
+			})); d != "" {
 				t.Errorf("makeOptions(%v) returned unexpected result (-want +got): %s", tc.desc, d)
 			}
 		})
@@ -82,11 +77,11 @@ func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	return m.resp, m.err
 }
 
-func TestCreateRoundTripper(t *testing.T) {
+func TestWrapRoundTripper(t *testing.T) {
 	t.Run("always returns non-nil", func(t *testing.T) {
-		got := createRoundTripper(nil, &options{})
+		got := wrapRoundTripper(nil, &options{})
 		if got == nil {
-			t.Errorf("createRoundTripper() should never return a nil `http.RoundTripper`")
+			t.Errorf("wrapRoundTripper() should never return a nil `http.RoundTripper`")
 		}
 	})
 
@@ -104,7 +99,7 @@ func TestCreateRoundTripper(t *testing.T) {
 	expectedUserAgent := "test UserAgent"
 
 	m := &mockRoundTripper{}
-	rt := createRoundTripper(m, &options{
+	rt := wrapRoundTripper(m, &options{
 		UserAgent: expectedUserAgent,
 	})
 	m.resp = testResp
