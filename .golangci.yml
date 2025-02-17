@@ -23,8 +23,6 @@ linters:
   - gocritic
   - revive
   - misspell
-output:
-  uniq-by-line: false
 issues:
   exclude-rules:
   - path: _test\.go
