@@ -1,7 +1,6 @@
 module github.com/sigstore/rekor
 
 go 1.22.7
-
 toolchain go1.23.4
 
 require (
@@ -39,7 +38,7 @@ require (
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.0
 	gocloud.dev v0.40.0
-	golang.org/x/crypto v0.33.0
+	golang.org/x/crypto v0.34.0
 	golang.org/x/mod v0.23.0
 	golang.org/x/net v0.35.0
 	golang.org/x/sync v0.11.0
