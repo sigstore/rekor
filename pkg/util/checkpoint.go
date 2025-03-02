@@ -51,7 +51,7 @@ func (c Checkpoint) String() string {
 	return b.String()
 }
 
-// MarshalText returns the common format representation of this Checkpoint.
+// MarshalCheckpoint returns the common format representation of this Checkpoint.
 func (c Checkpoint) MarshalCheckpoint() ([]byte, error) {
 	return []byte(c.String()), nil
 }
