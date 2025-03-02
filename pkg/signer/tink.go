@@ -34,7 +34,7 @@ import (
 
 const TinkScheme = "tink"
 
-// NewTinkSignerWithHandle returns a signature.SignerVerifier that wraps crypto.Signer and a hash function.
+// NewTinkSigner returns a signature.SignerVerifier that wraps crypto.Signer and a hash function.
 // Provide a path to the encrypted keyset and cloud KMS key URI for decryption
 func NewTinkSigner(ctx context.Context, kekURI, keysetPath string) (signature.Signer, error) {
 	if kekURI == "" || keysetPath == "" {
