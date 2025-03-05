@@ -19,7 +19,7 @@ provider "google" {
 }
 
 module "network" {
-    source = "git::https://github.com/sigstore/terraform-modules.git//terraform/gcp/modules/network?ref=385f4490a88608e156bfb3530f098aa5f2fd3722"
+    source = "git::https://github.com/sigstore/terraform-modules.git//gcp/modules/network?ref=385f4490a88608e156bfb3530f098aa5f2fd3722"
 
     region = var.region
     project_id = var.project
@@ -27,7 +27,7 @@ module "network" {
 }
 
 module "bastion" {
-    source = "git::https://github.com/sigstore/terraform-modules.git//terraform/gcp/modules/bastion?ref=385f4490a88608e156bfb3530f098aa5f2fd3722"
+    source = "git::https://github.com/sigstore/terraform-modules.git//gcp/modules/bastion?ref=385f4490a88608e156bfb3530f098aa5f2fd3722"
 
     project_id = var.project
     region = var.region
@@ -42,7 +42,7 @@ module "bastion" {
 }
 
 module "mysql" {
-    source = "git::https://github.com/sigstore/terraform-modules.git//terraform/gcp/modules/mysql?ref=385f4490a88608e156bfb3530f098aa5f2fd3722"
+    source = "git::https://github.com/sigstore/terraform-modules.git//gcp/modules/mysql?ref=385f4490a88608e156bfb3530f098aa5f2fd3722"
 
     project_id = var.project
     region = var.region
@@ -59,7 +59,7 @@ module "mysql" {
 }
 
 module "gke_cluster" {
-    source = "git::https://github.com/sigstore/terraform-modules.git//terraform/gcp/modules/gke_cluster?ref=385f4490a88608e156bfb3530f098aa5f2fd3722"
+    source = "git::https://github.com/sigstore/terraform-modules.git//gcp/modules/gke_cluster?ref=385f4490a88608e156bfb3530f098aa5f2fd3722"
 
     region = var.region
     project_id = var.project
@@ -78,7 +78,7 @@ module "gke_cluster" {
 }
 
 module "rekor" {
-    source = "git::https://github.com/sigstore/terraform-modules.git//terraform/gcp/modules/rekor?ref=385f4490a88608e156bfb3530f098aa5f2fd3722"
+    source = "git::https://github.com/sigstore/terraform-modules.git//gcp/modules/rekor?ref=385f4490a88608e156bfb3530f098aa5f2fd3722"
 
     region = var.region
     project_id = var.project
@@ -99,7 +99,7 @@ module "rekor" {
 }
 
 module "oslogin" {
-    source = "git::https://github.com/sigstore/terraform-modules.git//terraform/gcp/modules/oslogin?ref=385f4490a88608e156bfb3530f098aa5f2fd3722"
+    source = "git::https://github.com/sigstore/terraform-modules.git//gcp/modules/oslogin?ref=385f4490a88608e156bfb3530f098aa5f2fd3722"
 
     project_id = var.project
     count = 1
