@@ -164,7 +164,6 @@ cat $SHARDING_CONFIG
 
 COMPOSE_FILE=docker-compose-sharding.yaml
 cat << EOF > $COMPOSE_FILE
-version: '3.4'
 services:
   rekor-server:
     build:
