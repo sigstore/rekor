@@ -112,7 +112,6 @@ ${docker_compose} stop rekor-server
 # Create a new compose file with restricted algorithms
 COMPOSE_FILE=$REKORTMPDIR/docker-compose-restricted-algos.yaml
 cat << EOF > $COMPOSE_FILE
-version: '3.4'
 services:
   rekor-server:
     build:

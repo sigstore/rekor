@@ -64,7 +64,6 @@ docker run --rm -v $ATT_VOLUME:/att:z busybox /bin/sh -c 'touch /att/.initialize
 
 V060_COMPOSE_FILE=$REKORTMPDIR/docker-compose-issue872-v060.yaml
 cat << EOF > $V060_COMPOSE_FILE
-version: '3.4'
 services:
   rekor-server-issue-872-v060:
     # this container image is built on v0.6.0 with the fix for issue #800
@@ -142,7 +141,6 @@ ${docker_compose} -f $V060_COMPOSE_FILE --project-directory=$PWD stop rekor-serv
 
 COMPOSE_FILE=$REKORTMPDIR/docker-compose-issue872.yaml
 cat << EOF > $COMPOSE_FILE
-version: '3.4'
 services:
   rekor-server:
     build:
