@@ -30,6 +30,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -227,7 +228,12 @@ func TestSearchNoEntriesRC1(t *testing.T) {
 }
 func TestHostnameInSTH(t *testing.T) {
 	// get ID of container
-	rekorContainerID := strings.Trim(util.Run(t, "", "docker", "ps", "-q", "-f", "name=rekor-server"), "\n")
+	c := exec.Command("docker","ps","-q","-f","name=rekor-server")
+	b, err := c.CombinedOutput()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rekorContainerID := strings.Trim(string(b), "\n")
 	resp, err := http.Get(fmt.Sprintf("%s/api/v1/log", rekorServer()))
 	if err != nil {
 		t.Fatal(err)
