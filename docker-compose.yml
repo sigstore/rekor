@@ -27,8 +27,8 @@ services:
       test: ["CMD", "/etc/init.d/mysql", "status"]
       interval: 30s
       timeout: 3s
-      retries: 3
-      start_period: 10s
+      retries: 5
+      start_period: 90s
   redis-server:
     image: docker.io/redis:6.2
     command: [
@@ -63,7 +63,8 @@ services:
       - "8090:8090"
       - "8091:8091"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
   trillian-log-signer:
     image: ghcr.io/sigstore/scaffolding/trillian_log_signer@sha256:79d57af375cfa997ed5452cc0c02c0396d909fcc91d11065586f119490aa9214 # v1.6.0
     command: [
@@ -79,7 +80,8 @@ services:
     ports:
       - "8092:8091"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
   rekor-server:
     build:
       context: .
