@@ -22,12 +22,20 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/big"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -37,6 +45,10 @@ import (
 	"time"
 
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
@@ -44,6 +56,7 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/client"
 	generatedClient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
@@ -57,6 +70,18 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/require"
+)
+
+var (
+	testTreeID     uint = 12345
+	testSignerKey       = "testdata/signer.key"
+	testSignerCert      = "testdata/signer.pem"
+	testSignerPass      = "testpassword"
+	testCAPath          = "testdata/ca.pem"
+	testCAKeyPath       = "testdata/ca.key"
+	testServerAddr      = "localhost:8090"
 )
 
 func getUUIDFromUploadOutput(t *testing.T, out string) string {
@@ -280,6 +305,204 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	if err := verifier.VerifySignature(bytes.NewReader(timestampSig), bytes.NewReader(canonicalized), options.WithContext(ctx)); err != nil {
 		t.Fatal("unable to verify")
 	}
+}
+
+func TestNewAPIWithTLS(t *testing.T) {
+	tempDir := t.TempDir()
+	testCAPath = filepath.Join(tempDir, "ca.pem")
+	testCAKeyPath = filepath.Join(tempDir, "ca.key")
+	testSignerKey = filepath.Join(tempDir, "signer.key")
+	testSignerCert = filepath.Join(tempDir, "signer.pem")
+	t.Logf("Generating CA certificate: %s", testCAPath)
+	if err := generateTestCA(testCAPath, testCAKeyPath); err != nil {
+		t.Fatalf("Failed to generate CA certificate: %v", err)
+	}
+
+	t.Logf("Generating signer key: %s", testSignerKey)
+	if err := generateTestSigner(testSignerKey, testSignerCert); err != nil {
+		t.Fatalf("Failed to generate signer key: %v", err)
+	}
+
+	viper.Set("rekor_server.signer", testSignerKey)
+	viper.Set("rekor_server.signer-passwd", testSignerPass)
+	viper.Set("trillian_log_server.tls", true)
+	viper.Set("trillian_log_server.tls_ca_cert", testCAPath)
+
+	apiInstance, err := api.NewAPI(testTreeID)
+	if err != nil {
+		t.Fatalf("Failed to create API instance with TLS: %v", err)
+	}
+	t.Logf("API initialized with TLS: %+v", apiInstance)
+}
+
+func TestDialE2E(t *testing.T) {
+	tempDir := t.TempDir()
+
+	serverKeyPath := filepath.Join(tempDir, "server.key")
+	serverCertPath := filepath.Join(tempDir, "server.pem")
+	require.NoError(t, generateTestCA(serverKeyPath, serverCertPath))
+
+	serverCert, err := tls.LoadX509KeyPair(serverCertPath, serverKeyPath)
+	require.NoError(t, err)
+
+	serverTLSConfig := &tls.Config{
+		Certificates: []tls.Certificate{serverCert},
+	}
+
+	listener, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err)
+	defer listener.Close()
+
+	server := grpc.NewServer(grpc.Creds(credentials.NewTLS(serverTLSConfig)))
+	healthServer := health.NewServer()
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+	grpc_health_v1.RegisterHealthServer(server, healthServer)
+
+	go func() {
+		if err := server.Serve(listener); err != nil && err != grpc.ErrServerStopped {
+			t.Logf("Server error: %v", err)
+		}
+	}()
+	defer server.Stop()
+
+	tests := []struct {
+		name          string
+		tlsCACert     string
+		useSystemTLS  bool
+		expectedError bool
+	}{
+		{
+			name:          "Connection with custom CA cert",
+			tlsCACert:     serverCertPath,
+			useSystemTLS:  false,
+			expectedError: false,
+		},
+		{
+			name:          "Connection with system TLS",
+			tlsCACert:     "",
+			useSystemTLS:  true,
+			expectedError: true,
+		},
+		{
+			name:          "Insecure connection attempt",
+			tlsCACert:     "",
+			useSystemTLS:  false,
+			expectedError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			viper.Reset()
+			viper.Set("trillian_log_server.tls_ca_cert", tt.tlsCACert)
+			viper.Set("trillian_log_server.tls", tt.useSystemTLS)
+
+			serverAddr := listener.Addr().String()
+			conn, _ := api.TestDial(serverAddr)
+			require.NotNil(t, conn)
+
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+
+			healthClient := grpc_health_v1.NewHealthClient(conn)
+			resp, err := healthClient.Check(ctx, &grpc_health_v1.HealthCheckRequest{})
+
+			if tt.expectedError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, grpc_health_v1.HealthCheckResponse_SERVING, resp.Status)
+			}
+			conn.Close()
+		})
+	}
+}
+
+func generateTestSigner(keyPath, certPath string) error {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return err
+	}
+
+	template := x509.Certificate{
+		SerialNumber: bigSerial(),
+		Subject:      pkix.Name{CommonName: "Test Signer"},
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().Add(365 * 24 * time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return err
+	}
+
+	keyFile, err := os.Create(keyPath)
+	if err != nil {
+		return err
+	}
+	defer keyFile.Close()
+	privBytes, _ := x509.MarshalECPrivateKey(priv)
+	pem.Encode(keyFile, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes})
+
+	certFile, err := os.Create(certPath)
+	if err != nil {
+		return err
+	}
+	defer certFile.Close()
+	pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+
+	return nil
+}
+
+func generateTestCA(keyPath, certPath string) error {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return err
+	}
+
+	template := x509.Certificate{
+		SerialNumber: bigSerial(),
+		Subject:      pkix.Name{CommonName: "Test Signer"},
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().Add(365 * 24 * time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		//:Necessary  as cannot validate certificate for 127.0.0.1 because it doesn't contain any IP SANs
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		DNSNames:    []string{"localhost"},
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return err
+	}
+
+	keyFile, err := os.Create(keyPath)
+	if err != nil {
+		return err
+	}
+	defer keyFile.Close()
+	privBytes, err := x509.MarshalECPrivateKey(priv)
+	if err != nil {
+		return err
+	}
+	pem.Encode(keyFile, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes})
+
+	certFile, err := os.Create(certPath)
+	if err != nil {
+		return err
+	}
+	defer certFile.Close()
+	pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+
+	return nil
+}
+
+func bigSerial() *big.Int {
+	serial, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	return serial
 }
 
 func TestEntryUpload(t *testing.T) {
