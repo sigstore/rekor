@@ -34,6 +34,7 @@ Building on the active development in the Certificate Transparency ecosystem, Re
 Follow its progress on the [rekor-tiles](https://github.com/sigstore/rekor-tiles/) repo, and learn more about
 Rekor v2 on the [proposal](https://docs.google.com/document/d/1Mi9OhzrucIyt-UCLk_FxO2_xSQZW9ow9U3Lv0ZB_PpM/edit?resourcekey=0-4rPbZPyCS7QDj26Hk0UyvA&tab=t.0#heading=h.bjitqo6lwsmn)
 and [design doc](https://docs.google.com/document/d/1qZ-lkpbQkBzV45rtemWYmT6ReqCwjTt5TbMDFLdaPyM/edit?resourcekey=0-bMAyN9EKPDvB0H3edYi_Cw&tab=t.0#heading=h.xzptrog8pyxf).
+As we near a V2 release, we plan to merge the rekor-tiles codebase into this repository.
 
 ## Public Instance
 
