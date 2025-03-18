@@ -211,7 +211,7 @@ func (l *LogRanges) TotalInactiveLength() int64 {
 	return total
 }
 
-// GetLogRangebyTreeID returns the active or inactive
+// GetLogRangeByTreeID returns the active or inactive
 // shard with the given tree ID
 func (l *LogRanges) GetLogRangeByTreeID(treeID int64) (LogRange, error) {
 	if l.active.TreeID == treeID {
