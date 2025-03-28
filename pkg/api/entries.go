@@ -187,7 +187,7 @@ func logEntryFromLeaf(ctx context.Context, leaf *trillian.LogLeaf, signedLogRoot
 		entryID: logEntryAnon}, nil
 }
 
-// GetLogEntryAndProofByIndexHandler returns the entry and inclusion proof for a specified log index
+// GetLogEntryByIndexHandler returns the entry and inclusion proof for a specified log index
 func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middleware.Responder {
 	ctx := params.HTTPRequest.Context()
 	logEntry, err := retrieveLogEntryByIndex(ctx, int(params.LogIndex))

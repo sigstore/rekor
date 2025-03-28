@@ -56,7 +56,7 @@ func (c Checkpoint) MarshalCheckpoint() ([]byte, error) {
 	return []byte(c.String()), nil
 }
 
-// UnmarshalText parses the common formatted checkpoint data and stores the result
+// UnmarshalCheckpoint parses the common formatted checkpoint data and stores the result
 // in the Checkpoint.
 //
 // The supplied data is expected to begin with the following 3 lines of text,
