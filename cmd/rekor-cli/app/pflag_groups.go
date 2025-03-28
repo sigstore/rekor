@@ -105,14 +105,8 @@ func addArtifactPFlags(cmd *cobra.Command) error {
 }
 
 func validateArtifactPFlags(uuidValid, indexValid bool) error {
-	uuidGiven := false
-	if uuidValid && viper.GetString("uuid") != "" {
-		uuidGiven = true
-	}
-	indexGiven := false
-	if indexValid && viper.GetString("log-index") != "" {
-		indexGiven = true
-	}
+	uuidGiven := uuidValid && viper.GetString("uuid") != ""
+	indexGiven := indexValid && viper.GetString("log-index") != ""
 
 	// if neither --entry or --artifact were given, then a reference to a uuid or index is needed
 	if viper.GetString("entry") == "" && viper.GetString("artifact") == "" && viper.GetString("artifact-hash") == "" {

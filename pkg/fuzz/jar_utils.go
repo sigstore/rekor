@@ -124,7 +124,7 @@ func createJarArtifactFiles(ff *fuzz.ConsumeFuzzer) ([]*fuzz.TarFile, error) {
 	}
 	for _, file := range files {
 		if len(file.Body) == 0 {
-			return files, errors.New("Created an empty file")
+			return files, errors.New("created an empty file")
 		}
 	}
 

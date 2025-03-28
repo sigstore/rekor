@@ -13,31 +13,49 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-linters:
-  enable:
-  - unused
-  - errcheck
-  - gofmt
-  - goimports
-  - gosec
-  - gocritic
-  - revive
-  - misspell
-issues:
-  exclude-rules:
-  - path: _test\.go
-    linters:
-    - errcheck
-    - gosec
-  # TODO, tracked in #286
-  - text: "SA1019: package golang.org/x/crypto/openpgp"
-    linters:
-    - staticcheck
-  - text: "G115: "
-    linters:
-    - gosec
-  max-issues-per-linter: 0
-  max-same-issues: 0
+version: "2"
 run:
   issues-exit-code: 1
-  timeout: 10m
+linters:
+  enable:
+    - gocritic
+    - gosec
+    - misspell
+    - revive
+    - unused
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+          - gosec
+        path: _test\.go
+      - linters:
+          - staticcheck
+        # TODO, tracked in #286
+        text: 'SA1019: package golang.org/x/crypto/openpgp'
+      - linters:
+          - gosec
+        text: 'G115: '
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

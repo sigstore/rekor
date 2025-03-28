@@ -43,22 +43,22 @@ func (p *Provenance) Unmarshal(reader io.Reader) error {
 	buf := &bytes.Buffer{}
 	read, err := buf.ReadFrom(reader)
 	if err != nil {
-		return errors.New("Failed to read from buffer")
+		return errors.New("failed to read from buffer")
 	} else if read == 0 {
-		return errors.New("Provenance file contains no content")
+		return errors.New("provenance file contains no content")
 	}
 
 	block, _ := clearsign.Decode(buf.Bytes())
 	if block == nil {
-		return errors.New("Unable to decode provenance file")
+		return errors.New("unable to decode provenance file")
 	}
 
 	if block.ArmoredSignature == nil {
-		return errors.New("Unable to locate armored signature in provenance file")
+		return errors.New("unable to locate armored signature in provenance file")
 	}
 
 	if err = p.parseMessageBlock(block.Plaintext); err != nil {
-		return fmt.Errorf("Error occurred parsing message block: %w", err)
+		return fmt.Errorf("error occurred parsing message block: %w", err)
 	}
 
 	p.Block = block
@@ -75,7 +75,7 @@ func (p *Provenance) parseMessageBlock(data []byte) error {
 	sc := &SumCollection{}
 
 	if err := yaml.Unmarshal(parts[1], sc); err != nil {
-		return fmt.Errorf("Error occurred parsing SumCollection: %w", err)
+		return fmt.Errorf("error occurred parsing SumCollection: %w", err)
 	}
 
 	p.SumCollection = sc
@@ -86,19 +86,19 @@ func (p *Provenance) parseMessageBlock(data []byte) error {
 func (p *Provenance) GetChartAlgorithmHash() (string, string, error) {
 
 	if p.SumCollection == nil || p.SumCollection.Files == nil {
-		return "", "", errors.New("Unable to locate chart hash")
+		return "", "", errors.New("unable to locate chart hash")
 	}
 
 	for _, value := range p.SumCollection.Files {
 		parts := strings.Split(value, ":")
 		if len(parts) != 2 {
-			return "", "", errors.New("Invalid hash found in Provenance file")
+			return "", "", errors.New("invalid hash found in Provenance file")
 		}
 
 		return parts[0], parts[1], nil
 	}
 
 	// Return error if no keys found
-	return "", "", errors.New("No checksums found")
+	return "", "", errors.New("no checksums found")
 
 }

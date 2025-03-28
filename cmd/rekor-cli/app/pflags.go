@@ -121,7 +121,7 @@ func initializePFlagMap() {
 				if !validator.IsURL(val) {
 					return fmt.Errorf("'%v' is not a valid url", val)
 				}
-				if !(strings.HasPrefix(val, "http") || strings.HasPrefix(val, "https")) {
+				if !strings.HasPrefix(val, "http") && !strings.HasPrefix(val, "https") {
 					return errors.New("URL must be for http or https scheme")
 				}
 				return nil
