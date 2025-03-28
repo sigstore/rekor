@@ -312,7 +312,7 @@ func CreateAlpineProps(ff *fuzz.ConsumeFuzzer) (types.ArtifactProperties, func()
 
 	err = setAdditionalAuthenticatedData(ff, props)
 	if err != nil {
-		return *props, cleanupArtifactFile, errors.New("Failed setting AdditionalAuthenticatedData")
+		return *props, cleanupArtifactFile, errors.New("failed setting AdditionalAuthenticatedData")
 	}
 
 	cleanupSignatureFile, err := setSignatureFields(ff, props)
