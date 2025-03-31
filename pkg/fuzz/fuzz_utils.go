@@ -183,7 +183,7 @@ func createDefaultArtifactFiles(ff *fuzz.ConsumeFuzzer) ([]*fuzz.TarFile, error)
 	}
 	for _, file := range files {
 		if len(file.Body) == 0 {
-			return files, errors.New("Created an empty file")
+			return files, errors.New("created an empty file")
 		}
 	}
 	return files, nil
@@ -207,7 +207,7 @@ func CreateProps(ff *fuzz.ConsumeFuzzer, fuzzType string) (types.ArtifactPropert
 
 	err = setAdditionalAuthenticatedData(ff, props)
 	if err != nil {
-		return *props, cleanups, errors.New("Failed setting AdditionalAuthenticatedData")
+		return *props, cleanups, errors.New("failed setting AdditionalAuthenticatedData")
 	}
 
 	cleanupSignatureFile, err := setSignatureFields(ff, props)

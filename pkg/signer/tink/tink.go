@@ -71,9 +71,9 @@ func KeyHandleToSigner(kh *keyset.Handle) (crypto.Signer, crypto.Hash, error) {
 		if c == nil {
 			return nil, 0, errors.New("tink ecdsa signer: invalid curve")
 		}
-		p.PublicKey.Curve = c
+		p.Curve = c
 		p.D = new(big.Int).SetBytes(privKey.GetKeyValue())
-		p.PublicKey.X, p.PublicKey.Y = c.ScalarBaseMult(privKey.GetKeyValue())
+		p.X, p.Y = c.ScalarBaseMult(privKey.GetKeyValue())
 		hash := getHashFunc(hashAlg)
 		return p, hash, nil
 	case ed25519SignerTypeURL:

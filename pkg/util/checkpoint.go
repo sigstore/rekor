@@ -157,7 +157,7 @@ func CreateAndSignCheckpoint(ctx context.Context, hostname string, treeID int64,
 	if _, err := sth.Sign(hostname, signer, options.WithContext(ctx)); err != nil {
 		return nil, fmt.Errorf("error signing checkpoint: %w", err)
 	}
-	scBytes, err := sth.SignedNote.MarshalText()
+	scBytes, err := sth.MarshalText()
 	if err != nil {
 		return nil, fmt.Errorf("error marshalling checkpoint: %w", err)
 	}
