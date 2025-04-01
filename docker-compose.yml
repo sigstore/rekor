@@ -121,7 +121,7 @@ services:
         condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/ping"]
-      interval: 30s
+      interval: 10s
       timeout: 3s
-      retries: 5
+      retries: 15
       start_period: 30s
