@@ -320,7 +320,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 			publicKeyInfo = fmt.Sprintf("public key: %T", pKey)
 		}
 		algorithmInfo := fmt.Sprintf("entry algorithm %v/%v not allowed", publicKeyInfo, checkedAlgorithmResult.hash)
-		return nil, handleRekorAPIError(params, http.StatusBadRequest, errors.New("entry algorithms are not allowed"), fmt.Sprintf(validationError, algorithmInfo))
+		return nil, handleRekorAPIError(params, http.StatusBadRequest, errors.New(algorithmInfo), fmt.Sprintf(validationError, "entry algorithms are not allowed"))
 	}
 
 	leaf, err := types.CanonicalizeEntry(ctx, entry)
