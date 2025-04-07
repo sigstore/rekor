@@ -21,6 +21,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/hex"
@@ -239,18 +240,24 @@ func getPublicKey(identity identity.Identity) (crypto.PublicKey, error) {
 	}
 }
 
-func checkEntryAlgorithms(entry types.EntryImpl) (bool, error) {
+type checkedAlgorithmResult struct {
+	allowed   bool
+	publicKey crypto.PublicKey
+	hash      crypto.Hash
+}
+
+func checkEntryAlgorithms(entry types.EntryImpl) (checkedAlgorithmResult, error) {
 	// Only check algorithms for hashedrekord entries
 	switch entry.(type) {
 	case *hashedrekord.V001Entry:
 		break
 	default:
-		return true, nil
+		return checkedAlgorithmResult{allowed: true}, nil
 	}
 
 	verifiers, err := entry.Verifiers()
 	if err != nil {
-		return false, err
+		return checkedAlgorithmResult{allowed: false}, err
 	}
 
 	artifactHashValue := getArtifactHashValue(entry)
@@ -260,24 +267,24 @@ func checkEntryAlgorithms(entry types.EntryImpl) (bool, error) {
 	for _, v := range verifiers {
 		identities, err := v.Identities()
 		if err != nil {
-			return false, err
+			return checkedAlgorithmResult{allowed: false}, err
 		}
 
 		for _, identity := range identities {
 			publicKey, err := getPublicKey(identity)
 			if err != nil {
-				return false, err
+				return checkedAlgorithmResult{allowed: false}, err
 			}
 			isPermitted, err := api.algorithmRegistry.IsAlgorithmPermitted(publicKey, artifactHashValue)
 			if err != nil {
-				return false, fmt.Errorf("checking if algorithm is permitted: %w", err)
+				return checkedAlgorithmResult{allowed: false, publicKey: publicKey, hash: artifactHashValue}, fmt.Errorf("checking if algorithm is permitted: %w", err)
 			}
 			if !isPermitted {
-				return false, nil
+				return checkedAlgorithmResult{allowed: false, publicKey: publicKey, hash: artifactHashValue}, nil
 			}
 		}
 	}
-	return true, nil
+	return checkedAlgorithmResult{allowed: true}, nil
 }
 
 func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middleware.Responder) {
@@ -287,12 +294,33 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		return nil, handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf(validationError, err))
 	}
 
-	areEntryAlgorithmsAllowed, err := checkEntryAlgorithms(entry)
+	checkedAlgorithmResult, err := checkEntryAlgorithms(entry)
 	if err != nil {
 		return nil, handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf(validationError, err))
 	}
-	if !areEntryAlgorithmsAllowed {
-		return nil, handleRekorAPIError(params, http.StatusBadRequest, errors.New("entry algorithms are not allowed"), fmt.Sprintf(validationError, "entry algorithms are not allowed"))
+	if !checkedAlgorithmResult.allowed {
+		var publicKeyInfo string
+		switch pKey := checkedAlgorithmResult.publicKey.(type) {
+		case *ecdsa.PublicKey:
+			switch pKey.Curve {
+			case elliptic.P256():
+				publicKeyInfo = "ecdsa public key: P256"
+			case elliptic.P384():
+				publicKeyInfo = "ecdsa public key: P384"
+			case elliptic.P521():
+				publicKeyInfo = "ecdsa public key: P521"
+			default:
+				publicKeyInfo = "ecdsa public key"
+			}
+		case *rsa.PublicKey:
+			publicKeyInfo = fmt.Sprintf("rsa public key: %T/%v", pKey, pKey.Size())
+		case *ed25519.PublicKey:
+			publicKeyInfo = fmt.Sprintf("ed25519 public key: %T", pKey)
+		default:
+			publicKeyInfo = fmt.Sprintf("public key: %T", pKey)
+		}
+		algorithmInfo := fmt.Sprintf("entry algorithm %v/%v not allowed", publicKeyInfo, checkedAlgorithmResult.hash)
+		return nil, handleRekorAPIError(params, http.StatusBadRequest, errors.New(algorithmInfo), fmt.Sprintf(validationError, "entry algorithms are not allowed"))
 	}
 
 	leaf, err := types.CanonicalizeEntry(ctx, entry)
