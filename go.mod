@@ -28,7 +28,7 @@ require (
 	github.com/rs/cors v1.11.1
 	github.com/sassoftware/relic v7.2.1+incompatible
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0
-	github.com/sigstore/sigstore v1.9.1
+	github.com/sigstore/sigstore v1.9.3
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.20.1
@@ -44,7 +44,7 @@ require (
 	golang.org/x/net v0.37.0
 	golang.org/x/sync v0.13.0
 	google.golang.org/genproto v0.0.0-20250303144028-a0af3efb3deb // indirect
-	google.golang.org/grpc v1.71.0
+	google.golang.org/grpc v1.71.1
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/ini.v1 v1.67.0
 	sigs.k8s.io/release-utils v0.8.4
@@ -58,7 +58,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7
 	github.com/go-redis/redismock/v9 v9.2.0
-	github.com/go-sql-driver/mysql v1.9.1
+	github.com/go-sql-driver/mysql v1.9.2
 	github.com/golang/mock v1.6.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.7
@@ -66,10 +66,10 @@ require (
 	github.com/redis/go-redis/v9 v9.7.3
 	github.com/sassoftware/relic/v7 v7.6.2
 	github.com/sigstore/protobuf-specs v0.4.1
-	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.1
-	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.1
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.9.1
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.1
+	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.3
+	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.3
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.9.3
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.3
 	github.com/stretchr/testify v1.10.0
 	github.com/tink-crypto/tink-go-awskms/v2 v2.1.0
 	github.com/tink-crypto/tink-go-gcpkms/v2 v2.2.0
@@ -99,8 +99,8 @@ require (
 	github.com/aws/aws-sdk-go v1.55.6 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.36.3 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.3 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.29.10 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.63 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.29.13 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.66 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.10 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.34 // indirect
@@ -111,11 +111,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.3.17 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.15 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.17.15 // indirect
-	github.com/aws/aws-sdk-go-v2/service/kms v1.38.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/kms v1.38.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.58.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.25.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.29.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.33.17 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.25.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.30.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.33.18 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
 	github.com/cavaliergopher/cpio v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
