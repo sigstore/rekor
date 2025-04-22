@@ -26,9 +26,9 @@ services:
     healthcheck:
       # better healthcheck for mysql. See https://github.com/docker-library/mysql/issues/930.
       test: ["CMD", "mysqladmin", "-h", "localhost", "-u$MYSQL_USER",  "-p$MYSQL_ROOT_PASSWORD", "-s", "ping"]
-      interval: 30s
+      interval: 10s
       timeout: 3s
-      retries: 5
+      retries: 15
       start_period: 90s
   redis-server:
     image: docker.io/redis:6.2
