@@ -24,7 +24,8 @@ services:
       - MYSQL_PASSWORD=zaphod
     restart: always # keep the MySQL server running
     healthcheck:
-      test: ["CMD", "/etc/init.d/mysql", "status"]
+      # better healthcheck for mysql. See https://github.com/docker-library/mysql/issues/930.
+      test: ["CMD", "mysqladmin", "-h", "localhost", "-u$MYSQL_USER",  "-p$MYSQL_ROOT_PASSWORD", "-s", "ping"]
       interval: 30s
       timeout: 3s
       retries: 5
