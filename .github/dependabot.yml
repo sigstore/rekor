@@ -51,3 +51,12 @@ updates:
         update-types:
           - "minor"
           - "patch"
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      all:
+        update-types:
+          - "minor"
+          - "patch"

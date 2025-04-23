@@ -16,7 +16,7 @@
 services:
   mysql:
     platform: linux/amd64
-    image: gcr.io/trillian-opensource-ci/db_server:v1.4.0
+    image: gcr.io/trillian-opensource-ci/db_server:v1.7.1@sha256:ae8a6772975720e8b7f0b96bdac1787123c4183b7e33c9bc84768a3f2b99b2bb
     environment:
       - MYSQL_ROOT_PASSWORD=zaphod
       - MYSQL_DATABASE=test
@@ -50,7 +50,7 @@ services:
       retries: 3
       start_period: 5s
   trillian-log-server:
-    image: ghcr.io/sigstore/scaffolding/trillian_log_server@sha256:beffee16bb07b5cb051dc4e476d3a1063521ed5ae0b670efc7fe6f3507d94d2b # v1.6.0
+    image: ghcr.io/sigstore/scaffolding/trillian_log_server:v1.7.1@sha256:8ae059cbde81aadc80aa07fb3a8e84f43a8d87e9f7e820c48dd33f6288b232fe
     command: [
       "--quota_system=noop",
       "--storage_system=mysql",
@@ -67,7 +67,7 @@ services:
       mysql:
         condition: service_healthy
   trillian-log-signer:
-    image: ghcr.io/sigstore/scaffolding/trillian_log_signer@sha256:79d57af375cfa997ed5452cc0c02c0396d909fcc91d11065586f119490aa9214 # v1.6.0
+    image: ghcr.io/sigstore/scaffolding/trillian_log_signer:v1.7.1@sha256:46de4e7eec9944567f688dff946569f0725e48eeb4b07093a5f3aa11c130627f
     command: [
       "--quota_system=noop",
       "--storage_system=mysql",
