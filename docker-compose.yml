@@ -24,9 +24,9 @@ services:
       - MYSQL_PASSWORD=zaphod
     restart: always # keep the MySQL server running
     healthcheck:
-      # better healthcheck for mysql. See https://github.com/docker-library/mysql/issues/930.
-      test: ["CMD", "mysqladmin", "-h", "localhost", "-u$MYSQL_USER",  "-p$MYSQL_ROOT_PASSWORD", "-s", "ping"]
-      interval: 10s
+      # better healthcheck for MySQL. See https://github.com/docker-library/mysql/issues/930.
+      test: "mysqladmin -h 127.0.0.1 --user=$$MYSQL_USER --password=$$MYSQL_ROOT_PASSWORD -s ping"
+      interval: 5s
       timeout: 3s
       retries: 15
       start_period: 90s
@@ -50,7 +50,9 @@ services:
       retries: 3
       start_period: 5s
   trillian-log-server:
-    image: ghcr.io/sigstore/scaffolding/trillian_log_server@sha256:beffee16bb07b5cb051dc4e476d3a1063521ed5ae0b670efc7fe6f3507d94d2b # v1.6.0
+    build:
+      context: .
+      dockerfile: Dockerfile.trillian-log-server
     command: [
       "--quota_system=noop",
       "--storage_system=mysql",
@@ -59,15 +61,23 @@ services:
       "--http_endpoint=0.0.0.0:8091",
       "--alsologtostderr",
     ]
-    restart: always # retry while mysql is starting up
+    restart: always # keep the Trillian log server up
     ports:
       - "8090:8090"
       - "8091:8091"
     depends_on:
       mysql:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8091/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+      start_period: 15s
   trillian-log-signer:
-    image: ghcr.io/sigstore/scaffolding/trillian_log_signer@sha256:79d57af375cfa997ed5452cc0c02c0396d909fcc91d11065586f119490aa9214 # v1.6.0
+    build:
+      context: .
+      dockerfile: Dockerfile.trillian-log-signer
     command: [
       "--quota_system=noop",
       "--storage_system=mysql",
@@ -77,12 +87,18 @@ services:
       "--force_master",
       "--alsologtostderr",
     ]
-    restart: always # retry while mysql is starting up
+    restart: always # keep the log signer up
     ports:
       - "8092:8091"
     depends_on:
       mysql:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8091/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+      start_period: 15s
   rekor-server:
     build:
       context: .
@@ -119,7 +135,7 @@ services:
       redis-server:
         condition: service_healthy
       trillian-log-server:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/ping"]
       interval: 10s
