@@ -73,8 +73,8 @@ docker_up () {
     local count=0
     echo "waiting up to 2 min for system to start"
     until [ $(${docker_compose} ps | \
-       grep -E "(rekor[-_]mysql|rekor[-_]redis|rekor[-_]rekor-server)" | \
-       grep -c "(healthy)" ) == 3 ];
+       grep -E "(rekor[-_]mysql|rekor[-_]redis|rekor[-_]rekor-server|rekor[-_]trillian)" | \
+       grep -c "(healthy)" ) == 5 ];
     do
         if [ $count -eq 24 ]; then
            echo "! timeout reached"

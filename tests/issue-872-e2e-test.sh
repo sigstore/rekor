@@ -33,7 +33,7 @@ function waitForRekorServer () {
   echo -n "* waiting up to 60 sec for system to start"
   count=0
 
-  until [ $(docker ps -a | grep -c "(healthy)") == 3 ];
+  until [ $(docker ps -a | grep -c "(healthy)") == 5 ];
   do
       if [ $count -eq 6 ]; then
         echo "! timeout reached"

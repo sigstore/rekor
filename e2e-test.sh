@@ -41,7 +41,7 @@ go test -c ./cmd/rekor-server -o rekor-server -covermode=count -coverpkg=./...
 
 count=0
 echo -n "waiting up to 120 sec for system to start"
-until [ $(${docker_compose} ps | grep -c "(healthy)") == 4 ];
+until [ $(${docker_compose} ps | grep -c "(healthy)") == 6 ];
 do
     if [ $count -eq 12 ]; then
        echo "! timeout reached"
