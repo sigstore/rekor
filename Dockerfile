@@ -31,7 +31,7 @@ RUN CGO_ENABLED=0 go build -gcflags "all=-N -l" -ldflags "${SERVER_LDFLAGS}" -o 
 RUN go test -c -ldflags "${SERVER_LDFLAGS}" -cover -covermode=count -coverpkg=./... -o rekor-server_test ./cmd/rekor-server
 
 # Multi-Stage production build
-FROM golang:1.24.3@sha256:39d9e7d9c5d9c9e4baf0d8fff579f06d5032c0f4425cdec9e86732e8e4e374dc as deploy
+FROM golang:1.24.3@sha256:39d9e7d9c5d9c9e4baf0d8fff579f06d5032c0f4425cdec9e86732e8e4e374dc AS deploy
 
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
@@ -40,12 +40,12 @@ COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
 CMD ["rekor-server", "serve"]
 
 # debug compile options & debugger
-FROM deploy as debug
+FROM deploy AS debug
 RUN go install github.com/go-delve/delve/cmd/dlv@v1.22.1
 
 # overwrite server and include debugger
 COPY --from=builder /opt/app-root/src/rekor-server_debug /usr/local/bin/rekor-server
 
-FROM deploy as test
+FROM deploy AS test
 # overwrite server with test build with code coverage
 COPY --from=builder /opt/app-root/src/rekor-server_test /usr/local/bin/rekor-server
