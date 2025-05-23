@@ -239,8 +239,7 @@ func ConfigureAPI(treeID uint) {
 	if err != nil {
 		log.Logger.Panic(err)
 	}
-	if viper.GetBool("enable_retrieve_api") || viper.GetBool("enable_stable_checkpoint") ||
-		slices.Contains(viper.GetStringSlice("enabled_api_endpoints"), "searchIndex") {
+	if viper.GetBool("enable_retrieve_api") || slices.Contains(viper.GetStringSlice("enabled_api_endpoints"), "searchIndex") {
 		indexStorageClient, err = indexstorage.NewIndexStorage(viper.GetString("search_index.storage_provider"))
 		if err != nil {
 			log.Logger.Panic(err)
