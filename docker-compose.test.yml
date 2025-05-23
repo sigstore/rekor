@@ -27,9 +27,6 @@ services:
       "serve",
       "--trillian_log_server.address=trillian-log-server",
       "--trillian_log_server.port=8090",
-      "--redis_server.address=redis-server",
-      "--redis_server.port=6379",
-      "--redis_server.password=test",
       "--rekor_server.address=0.0.0.0",
       "--rekor_server.signer=memory",
       "--enable_attestation_storage",
@@ -46,7 +43,6 @@ services:
     depends_on:
       - gcp-pubsub-emulator
       - mysql
-      - redis-server
       - trillian-log-server
   gcp-pubsub-emulator:
     image: gcp-pubsub-emulator
