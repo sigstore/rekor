@@ -215,7 +215,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.mongodb.org/mongo-driver v1.14.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.step.sm/crypto v0.63.0
+	go.step.sm/crypto v0.64.0
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
