@@ -96,7 +96,7 @@ signs:
     artifacts: checksum
 
 archives:
-  - format: binary
+  - formats: [binary]
     name_template: "{{ .Binary }}"
     allow_different_binary_count: true
 
@@ -104,7 +104,7 @@ checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
 
 snapshot:
-  name_template: SNAPSHOT-{{ .ShortCommit }}
+  version_template: SNAPSHOT-{{ .ShortCommit }}
 
 release:
   prerelease: allow # remove this when we start publishing non-prerelease or set to auto
