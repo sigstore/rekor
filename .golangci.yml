@@ -42,6 +42,9 @@ linters:
       - linters:
           - gosec
         text: 'G115: '
+      - linters:
+          - revive
+        text: "var-naming: avoid meaningless package names"
     paths:
       - third_party$
       - builtin$
