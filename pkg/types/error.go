@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package types // nolint: revive // this is a valid package name
 
 // ValidationError indicates that there is an issue with the content in the HTTP Request that
 // should result in an HTTP 400 Bad Request error being returned to the client
