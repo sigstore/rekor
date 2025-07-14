@@ -41,8 +41,7 @@ function start_server () {
         replace="\"--trillian_log_server.tlog_id=$TREE_ID\","
         sed -i "s/$search/$replace/" docker-compose.yml
 
-        ${docker_compose} build
-        ${docker_compose} up -d --build rekor-server
+        ${docker_compose} up -d --build
     fi
 
     count=0
