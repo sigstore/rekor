@@ -332,9 +332,9 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalEntry)
 	}
 
-	tc := trillianclient.NewTrillianClient(ctx, api.logClient, api.treeID)
+	tc := trillianclient.NewTrillianClient(api.logClient, api.treeID)
 
-	resp := tc.AddLeaf(leaf)
+	resp := tc.AddLeaf(ctx, leaf)
 	// this represents overall GRPC response state (not the results of insertion into the log)
 	if resp.Status != codes.OK {
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.Err), trillianUnexpectedResult)
@@ -622,8 +622,8 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		for i, hash := range searchHashes {
 			var results map[int64]*trillian.GetEntryAndProofResponse
 			for _, shard := range api.logRanges.AllShards() {
-				tcs := trillianclient.NewTrillianClient(httpReqCtx, api.logClient, shard)
-				resp := tcs.GetLeafAndProofByHash(hash)
+				tcs := trillianclient.NewTrillianClient(api.logClient, shard)
+				resp := tcs.GetLeafAndProofByHash(httpReqCtx, hash)
 				switch resp.Status {
 				case codes.OK:
 					leafResult := resp.GetLeafAndProofResult
@@ -677,10 +677,10 @@ func retrieveLogEntryByIndex(ctx context.Context, logIndex int) (models.LogEntry
 	log.ContextLogger(ctx).Infof("Retrieving log entry by index %d", logIndex)
 
 	tid, resolvedIndex := api.logRanges.ResolveVirtualIndex(logIndex)
-	tc := trillianclient.NewTrillianClient(ctx, api.logClient, tid)
+	tc := trillianclient.NewTrillianClient(api.logClient, tid)
 	log.ContextLogger(ctx).Debugf("Retrieving resolved index %v from TreeID %v", resolvedIndex, tid)
 
-	resp := tc.GetLeafAndProofByIndex(resolvedIndex)
+	resp := tc.GetLeafAndProofByIndex(ctx, resolvedIndex)
 	switch resp.Status {
 	case codes.OK:
 	case codes.NotFound, codes.OutOfRange, codes.InvalidArgument:
@@ -744,10 +744,10 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 		return models.LogEntry{}, &types.InputValidationError{Err: fmt.Errorf("parsing UUID: %w", err)}
 	}
 
-	tc := trillianclient.NewTrillianClient(ctx, api.logClient, tid)
+	tc := trillianclient.NewTrillianClient(api.logClient, tid)
 	log.ContextLogger(ctx).Debugf("Attempting to retrieve UUID %v from TreeID %v", uuid, tid)
 
-	resp := tc.GetLeafAndProofByHash(hashValue)
+	resp := tc.GetLeafAndProofByHash(ctx, hashValue)
 	switch resp.Status {
 	case codes.OK:
 		result := resp.GetLeafAndProofResult

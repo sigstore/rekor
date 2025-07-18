@@ -37,13 +37,14 @@ import (
 
 // GetLogInfoHandler returns the current size of the tree and the STH
 func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
-	tc := trillianclient.NewTrillianClient(params.HTTPRequest.Context(), api.logClient, api.treeID)
+	ctx := params.HTTPRequest.Context()
+	tc := trillianclient.NewTrillianClient(api.logClient, api.treeID)
 
 	// for each inactive shard, get the loginfo
 	var inactiveShards []*models.InactiveShardLogInfo
 	for _, shard := range api.logRanges.GetInactive() {
 		// Get details for this inactive shard
-		is, err := inactiveShardLogInfo(params.HTTPRequest.Context(), shard.TreeID, api.cachedCheckpoints)
+		is, err := inactiveShardLogInfo(ctx, shard.TreeID, api.cachedCheckpoints)
 		if err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("inactive shard error: %w", err), unexpectedInactiveShardError)
 		}
@@ -53,7 +54,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	if swag.BoolValue(params.Stable) && redisClient != nil {
 		// key is treeID/latest
 		key := fmt.Sprintf("%d/latest", api.logRanges.GetActive().TreeID)
-		redisResult, err := redisClient.Get(params.HTTPRequest.Context(), key).Result()
+		redisResult, err := redisClient.Get(ctx, key).Result()
 		if err != nil {
 			return handleRekorAPIError(params, http.StatusInternalServerError,
 				fmt.Errorf("error getting checkpoint from redis: %w", err), "error getting checkpoint from redis")
@@ -82,7 +83,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 		return tlog.NewGetLogInfoOK().WithPayload(&logInfo)
 	}
 
-	resp := tc.GetLatest(0)
+	resp := tc.GetLatest(ctx, 0)
 	if resp.Status != codes.OK {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.Err), trillianCommunicationError)
 	}
@@ -96,7 +97,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	hashString := hex.EncodeToString(root.RootHash)
 	treeSize := int64(root.TreeSize)
 
-	scBytes, err := util.CreateAndSignCheckpoint(params.HTTPRequest.Context(),
+	scBytes, err := util.CreateAndSignCheckpoint(ctx,
 		viper.GetString("rekor_server.hostname"), api.logRanges.GetActive().TreeID, root.TreeSize, root.RootHash, api.logRanges.GetActive().Signer)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, sthGenerateError)
@@ -123,17 +124,18 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 		errMsg := fmt.Sprintf(firstSizeLessThanLastSize, *params.FirstSize, params.LastSize)
 		return handleRekorAPIError(params, http.StatusBadRequest, fmt.Errorf("consistency proof: %s", errMsg), errMsg)
 	}
-	tc := trillianclient.NewTrillianClient(params.HTTPRequest.Context(), api.logClient, api.treeID)
+	ctx := params.HTTPRequest.Context()
+	tc := trillianclient.NewTrillianClient(api.logClient, api.treeID)
 	if treeID := swag.StringValue(params.TreeID); treeID != "" {
 		id, err := strconv.Atoi(treeID)
 		if err != nil {
 			log.Logger.Infof("Unable to convert %s to string, skipping initializing client with Tree ID: %v", treeID, err)
 		} else {
-			tc = trillianclient.NewTrillianClient(params.HTTPRequest.Context(), api.logClient, int64(id))
+			tc = trillianclient.NewTrillianClient(api.logClient, int64(id))
 		}
 	}
 
-	resp := tc.GetConsistencyProof(*params.FirstSize, params.LastSize)
+	resp := tc.GetConsistencyProof(ctx, *params.FirstSize, params.LastSize)
 	if resp.Status != codes.OK {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.Err), trillianCommunicationError)
 	}
@@ -168,8 +170,8 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 }
 
 func inactiveShardLogInfo(ctx context.Context, tid int64, cachedCheckpoints map[int64]string) (*models.InactiveShardLogInfo, error) {
-	tc := trillianclient.NewTrillianClient(ctx, api.logClient, tid)
-	resp := tc.GetLatest(0)
+	tc := trillianclient.NewTrillianClient(api.logClient, tid)
+	resp := tc.GetLatest(ctx, 0)
 	if resp.Status != codes.OK {
 		return nil, fmt.Errorf("resp code is %d", resp.Status)
 	}

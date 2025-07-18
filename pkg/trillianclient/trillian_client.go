@@ -36,17 +36,15 @@ import (
 
 // TrillianClient provides a wrapper around the Trillian client
 type TrillianClient struct {
-	client  trillian.TrillianLogClient
-	logID   int64
-	context context.Context
+	client trillian.TrillianLogClient
+	logID  int64
 }
 
 // NewTrillianClient creates a TrillianClient with the given Trillian client and log/tree ID.
-func NewTrillianClient(ctx context.Context, logClient trillian.TrillianLogClient, logID int64) TrillianClient {
+func NewTrillianClient(logClient trillian.TrillianLogClient, logID int64) TrillianClient {
 	return TrillianClient{
-		client:  logClient,
-		logID:   logID,
-		context: ctx,
+		client: logClient,
+		logID:  logID,
 	}
 }
 
@@ -76,18 +74,18 @@ func unmarshalLogRoot(logRoot []byte) (types.LogRootV1, error) {
 	return root, nil
 }
 
-func (t *TrillianClient) root() (types.LogRootV1, error) {
+func (t *TrillianClient) root(ctx context.Context) (types.LogRootV1, error) {
 	rqst := &trillian.GetLatestSignedLogRootRequest{
 		LogId: t.logID,
 	}
-	resp, err := t.client.GetLatestSignedLogRoot(t.context, rqst)
+	resp, err := t.client.GetLatestSignedLogRoot(ctx, rqst)
 	if err != nil {
 		return types.LogRootV1{}, err
 	}
 	return unmarshalLogRoot(resp.SignedLogRoot.LogRoot)
 }
 
-func (t *TrillianClient) AddLeaf(byteValue []byte) *Response {
+func (t *TrillianClient) AddLeaf(ctx context.Context, byteValue []byte) *Response {
 	leaf := &trillian.LogLeaf{
 		LeafValue: byteValue,
 	}
@@ -95,7 +93,7 @@ func (t *TrillianClient) AddLeaf(byteValue []byte) *Response {
 		LogId: t.logID,
 		Leaf:  leaf,
 	}
-	resp, err := t.client.QueueLeaf(t.context, rqst)
+	resp, err := t.client.QueueLeaf(ctx, rqst)
 
 	// check for error
 	if err != nil || (resp.QueuedLeaf.Status != nil && resp.QueuedLeaf.Status.Code != int32(codes.OK)) {
@@ -106,7 +104,7 @@ func (t *TrillianClient) AddLeaf(byteValue []byte) *Response {
 		}
 	}
 
-	root, err := t.root()
+	root, err := t.root(ctx)
 	if err != nil {
 		return &Response{
 			Status:       status.Code(err),
@@ -131,7 +129,7 @@ func (t *TrillianClient) AddLeaf(byteValue []byte) *Response {
 		for {
 			root = *logClient.GetRoot()
 			if root.TreeSize >= 1 {
-				proofResp := t.getProofByHash(resp.QueuedLeaf.Leaf.MerkleLeafHash)
+				proofResp := t.getProofByHash(ctx, resp.QueuedLeaf.Leaf.MerkleLeafHash)
 				// if this call succeeds or returns an error other than "not found", return
 				if proofResp.Err == nil || (proofResp.Err != nil && status.Code(proofResp.Err) != codes.NotFound) {
 					return proofResp
@@ -148,7 +146,7 @@ func (t *TrillianClient) AddLeaf(byteValue []byte) *Response {
 		}
 	}
 
-	proofResp := waitForInclusion(t.context, resp.QueuedLeaf.Leaf.MerkleLeafHash)
+	proofResp := waitForInclusion(ctx, resp.QueuedLeaf.Leaf.MerkleLeafHash)
 	if proofResp.Err != nil {
 		return &Response{
 			Status:       status.Code(proofResp.Err),
@@ -168,7 +166,7 @@ func (t *TrillianClient) AddLeaf(byteValue []byte) *Response {
 	}
 
 	leafIndex := proofs[0].LeafIndex
-	leafResp := t.GetLeafAndProofByIndex(leafIndex)
+	leafResp := t.GetLeafAndProofByIndex(ctx, leafIndex)
 	if leafResp.Err != nil {
 		return &Response{
 			Status:       status.Code(leafResp.Err),
@@ -189,9 +187,9 @@ func (t *TrillianClient) AddLeaf(byteValue []byte) *Response {
 	}
 }
 
-func (t *TrillianClient) GetLeafAndProofByHash(hash []byte) *Response {
+func (t *TrillianClient) GetLeafAndProofByHash(ctx context.Context, hash []byte) *Response {
 	// get inclusion proof for hash, extract index, then fetch leaf using index
-	proofResp := t.getProofByHash(hash)
+	proofResp := t.getProofByHash(ctx, hash)
 	if proofResp.Err != nil {
 		return &Response{
 			Status: status.Code(proofResp.Err),
@@ -208,14 +206,11 @@ func (t *TrillianClient) GetLeafAndProofByHash(hash []byte) *Response {
 		}
 	}
 
-	return t.GetLeafAndProofByIndex(proofs[0].LeafIndex)
+	return t.GetLeafAndProofByIndex(ctx, proofs[0].LeafIndex)
 }
 
-func (t *TrillianClient) GetLeafAndProofByIndex(index int64) *Response {
-	ctx, cancel := context.WithTimeout(t.context, 20*time.Second)
-	defer cancel()
-
-	rootResp := t.GetLatest(0)
+func (t *TrillianClient) GetLeafAndProofByIndex(ctx context.Context, index int64) *Response {
+	rootResp := t.GetLatest(ctx, 0)
 	if rootResp.Err != nil {
 		return &Response{
 			Status: status.Code(rootResp.Err),
@@ -262,11 +257,7 @@ func (t *TrillianClient) GetLeafAndProofByIndex(index int64) *Response {
 	}
 }
 
-func (t *TrillianClient) GetLatest(leafSizeInt int64) *Response {
-
-	ctx, cancel := context.WithTimeout(t.context, 20*time.Second)
-	defer cancel()
-
+func (t *TrillianClient) GetLatest(ctx context.Context, leafSizeInt int64) *Response {
 	resp, err := t.client.GetLatestSignedLogRoot(ctx,
 		&trillian.GetLatestSignedLogRootRequest{
 			LogId:         t.logID,
@@ -280,11 +271,7 @@ func (t *TrillianClient) GetLatest(leafSizeInt int64) *Response {
 	}
 }
 
-func (t *TrillianClient) GetConsistencyProof(firstSize, lastSize int64) *Response {
-
-	ctx, cancel := context.WithTimeout(t.context, 20*time.Second)
-	defer cancel()
-
+func (t *TrillianClient) GetConsistencyProof(ctx context.Context, firstSize, lastSize int64) *Response {
 	resp, err := t.client.GetConsistencyProof(ctx,
 		&trillian.GetConsistencyProofRequest{
 			LogId:          t.logID,
@@ -299,11 +286,8 @@ func (t *TrillianClient) GetConsistencyProof(firstSize, lastSize int64) *Respons
 	}
 }
 
-func (t *TrillianClient) getProofByHash(hashValue []byte) *Response {
-	ctx, cancel := context.WithTimeout(t.context, 20*time.Second)
-	defer cancel()
-
-	rootResp := t.GetLatest(0)
+func (t *TrillianClient) getProofByHash(ctx context.Context, hashValue []byte) *Response {
+	rootResp := t.GetLatest(ctx, 0)
 	if rootResp.Err != nil {
 		return &Response{
 			Status: status.Code(rootResp.Err),
