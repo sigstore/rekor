@@ -30,25 +30,6 @@ services:
       timeout: 3s
       retries: 15
       start_period: 90s
-  redis-server:
-    image: docker.io/redis:6.2
-    command: [
-      "--bind",
-      "0.0.0.0",
-      "--appendonly",
-      "yes",
-      "--requirepass",
-      "test"
-    ]
-    ports:
-      - "6379:6379"
-    restart: always # keep the redis server running
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "test", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 5s
   trillian-log-server:
     build:
       context: .
@@ -110,9 +91,6 @@ services:
       "serve",
       "--trillian_log_server.address=trillian-log-server",
       "--trillian_log_server.port=8090",
-      "--redis_server.address=redis-server",
-      "--redis_server.password=test",
-      "--redis_server.port=6379",
       "--rekor_server.address=0.0.0.0",
       "--rekor_server.signer=memory",
       "--enable_attestation_storage",
@@ -131,8 +109,6 @@ services:
       - "2112:2112"
     depends_on:
       mysql:
-        condition: service_healthy
-      redis-server:
         condition: service_healthy
       trillian-log-server:
         condition: service_healthy
