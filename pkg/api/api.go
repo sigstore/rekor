@@ -183,8 +183,8 @@ func NewAPI(treeID uint) (*API, error) {
 
 	cachedCheckpoints := make(map[int64]string)
 	for _, r := range ranges.GetInactive() {
-		tc := trillianclient.NewTrillianClient(ctx, logClient, r.TreeID)
-		resp := tc.GetLatest(0)
+		tc := trillianclient.NewTrillianClient(logClient, r.TreeID)
+		resp := tc.GetLatest(context.Background(), 0)
 		if resp.Status != codes.OK {
 			return nil, fmt.Errorf("error fetching latest tree head for inactive shard %d: resp code is %d, err is %w", r.TreeID, resp.Status, resp.Err)
 		}

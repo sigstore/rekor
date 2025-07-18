@@ -81,7 +81,7 @@ func NewCheckpointPublisher(ctx context.Context,
 // before publishing the latest checkpoint. If this occurs due to a sporadic failure, this simply
 // means that a witness will not see a fresh checkpoint for an additional period.
 func (c *CheckpointPublisher) StartPublisher(ctx context.Context) {
-	tc := trillianclient.NewTrillianClient(context.Background(), c.logClient, c.treeID)
+	tc := trillianclient.NewTrillianClient(c.logClient, c.treeID)
 	sTreeID := strconv.FormatInt(c.treeID, 10)
 
 	// publish on startup to ensure a checkpoint is available the first time Rekor starts up
@@ -103,7 +103,7 @@ func (c *CheckpointPublisher) StartPublisher(ctx context.Context) {
 // publish publishes the latest checkpoint to Redis once
 func (c *CheckpointPublisher) publish(tc *trillianclient.TrillianClient, sTreeID string) {
 	// get latest checkpoint
-	resp := tc.GetLatest(0)
+	resp := tc.GetLatest(context.Background(), 0)
 	if resp.Status != codes.OK {
 		c.reqCounter.With(
 			map[string]string{
