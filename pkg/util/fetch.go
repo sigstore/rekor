@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package util // nolint: revive // this is a valid package name
 
 import (
 	"bytes"
