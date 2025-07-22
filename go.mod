@@ -40,14 +40,14 @@ require (
 	go.uber.org/zap v1.27.0
 	gocloud.dev v0.40.0
 	golang.org/x/crypto v0.40.0
-	golang.org/x/mod v0.25.0
+	golang.org/x/mod v0.26.0
 	golang.org/x/net v0.42.0
 	golang.org/x/sync v0.16.0
 	google.golang.org/genproto v0.0.0-20250505200425-f936aa4a68b2 // indirect
 	google.golang.org/grpc v1.73.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/ini.v1 v1.67.0
-	sigs.k8s.io/release-utils v0.11.1
+	sigs.k8s.io/release-utils v0.12.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
