@@ -42,7 +42,7 @@ count=0
 echo "waiting up to 2 min for system to start"
 until [ $(${docker_compose} ps | \
    grep -E "(rekor[-_]mysql|rekor[-_]rekor-server|rekor[-_]gcp-pubsub-emulator)" | \
-   grep -c "(healthy)" ) == 3 ];
+   grep -c "(healthy)" ) == 4 ];
 do
     if [ $count -eq 24 ]; then
        echo "! timeout reached"

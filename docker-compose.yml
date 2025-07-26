@@ -80,6 +80,25 @@ services:
       timeout: 3s
       retries: 15
       start_period: 15s
+  redis-server:
+    image: docker.io/redis:6.2
+    command: [
+      "--bind",
+      "0.0.0.0",
+      "--appendonly",
+      "yes",
+      "--requirepass",
+      "test"
+    ]
+    ports:
+      - "6379:6379"
+    restart: always # keep the redis server running
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "test", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
   rekor-server:
     build:
       context: .

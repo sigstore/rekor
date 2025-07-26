@@ -179,7 +179,7 @@ services:
       "--enable_attestation_storage",
       "--attestation_storage_bucket=file:///var/run/attestations",
       "--trillian_log_server.tlog_id=$SHARD_TREE_ID",
-      "--trillian_log_server.sharding_config=/$SHARDING_CONFIG"
+      "--trillian_log_server.sharding_config=/$SHARDING_CONFIG",
       "--search_index.storage_provider=mysql",
       "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test",
       # Uncomment this for production logging
