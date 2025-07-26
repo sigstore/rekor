@@ -95,7 +95,6 @@ services:
       "--rekor_server.signer=memory",
       "--enable_attestation_storage",
       "--attestation_storage_bucket=file:///var/run/attestations",
-      "--enable_stable_checkpoint",
       "--search_index.storage_provider=mysql",
       "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test",
       # Uncomment this for production logging
