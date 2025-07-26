@@ -99,15 +99,6 @@ func init() {
         ],
         "summary": "Get information about the current state of the transparency log",
         "operationId": "getLogInfo",
-        "parameters": [
-          {
-            "type": "boolean",
-            "default": false,
-            "description": "Whether to return a stable checkpoint for the active shard",
-            "name": "stable",
-            "in": "query"
-          }
-        ],
         "responses": {
           "200": {
             "description": "A JSON object with the root hash and tree size as properties",
@@ -1031,15 +1022,6 @@ func init() {
         ],
         "summary": "Get information about the current state of the transparency log",
         "operationId": "getLogInfo",
-        "parameters": [
-          {
-            "type": "boolean",
-            "default": false,
-            "description": "Whether to return a stable checkpoint for the active shard",
-            "name": "stable",
-            "in": "query"
-          }
-        ],
         "responses": {
           "200": {
             "description": "A JSON object with the root hash and tree size as properties",
