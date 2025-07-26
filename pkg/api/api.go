@@ -228,7 +228,6 @@ var (
 	api                      *API
 	attestationStorageClient storage.AttestationStorage
 	indexStorageClient       indexstorage.IndexStorage
-	redisClient              *redis.Client
 )
 
 func ConfigureAPI(treeID uint) {
