@@ -79,7 +79,9 @@ function waitForRekorServer () {
   count=0
 
   echo -n "waiting up to 60 sec for system to start"
-  until [ $(${docker_compose} ps | grep -c "(healthy)") == 4 ];
+  until [ $(${docker_compose} ps | \
+     grep -E "(rekor[-_]mysql|rekor[-_]rekor-server|rekor[-_]trillian-log-server|rekor[-_]trillian-log-signer)" | \
+     grep -c "(healthy)") == 4 ];
   do
       if [ $count -eq 6 ]; then
         echo "! timeout reached"
