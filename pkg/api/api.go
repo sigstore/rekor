@@ -94,8 +94,6 @@ type API struct {
 	logClient trillian.TrillianLogClient
 	treeID    int64
 	logRanges sharding.LogRanges
-	// stops checkpoint publishing
-	checkpointPublishCancel context.CancelFunc
 	// Publishes notifications when new entries are added to the log. May be
 	// nil if no publisher is configured.
 	newEntryPublisher pubsub.Publisher
@@ -272,8 +270,6 @@ func NewRedisClient() *redis.Client {
 }
 
 func StopAPI() {
-	api.checkpointPublishCancel()
-
 	if api.newEntryPublisher != nil {
 		if err := api.newEntryPublisher.Close(); err != nil {
 			log.Logger.Errorf("shutting down newEntryPublisher: %v", err)
