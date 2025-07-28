@@ -43,7 +43,6 @@ import (
 	"github.com/sigstore/rekor/pkg/storage"
 	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/rekor/pkg/util"
-	"github.com/sigstore/rekor/pkg/witness"
 	"github.com/sigstore/sigstore/pkg/signature"
 
 	_ "github.com/sigstore/rekor/pkg/pubsub/gcp" // Load GCP pubsub implementation
@@ -95,8 +94,6 @@ type API struct {
 	logClient trillian.TrillianLogClient
 	treeID    int64
 	logRanges sharding.LogRanges
-	// stops checkpoint publishing
-	checkpointPublishCancel context.CancelFunc
 	// Publishes notifications when new entries are added to the log. May be
 	// nil if no publisher is configured.
 	newEntryPublisher pubsub.Publisher
@@ -229,7 +226,6 @@ var (
 	api                      *API
 	attestationStorageClient storage.AttestationStorage
 	indexStorageClient       indexstorage.IndexStorage
-	redisClient              *redis.Client
 )
 
 func ConfigureAPI(treeID uint) {
@@ -251,17 +247,6 @@ func ConfigureAPI(treeID uint) {
 		if err != nil {
 			log.Logger.Panic(err)
 		}
-	}
-
-	if viper.GetBool("enable_stable_checkpoint") {
-		redisClient = NewRedisClient()
-		checkpointPublisher := witness.NewCheckpointPublisher(context.Background(), api.logClient, api.logRanges.GetActive().TreeID,
-			viper.GetString("rekor_server.hostname"), api.logRanges.GetActive().Signer, redisClient, viper.GetUint("publish_frequency"), CheckpointPublishCount)
-
-		// create context to cancel goroutine on server shutdown
-		ctx, cancel := context.WithCancel(context.Background())
-		api.checkpointPublishCancel = cancel
-		checkpointPublisher.StartPublisher(ctx)
 	}
 }
 
@@ -285,8 +270,6 @@ func NewRedisClient() *redis.Client {
 }
 
 func StopAPI() {
-	api.checkpointPublishCancel()
-
 	if api.newEntryPublisher != nil {
 		if err := api.newEntryPublisher.Close(); err != nil {
 			log.Logger.Errorf("shutting down newEntryPublisher: %v", err)

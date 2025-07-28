@@ -33,7 +33,9 @@ function waitForRekorServer () {
   echo -n "* waiting up to 60 sec for system to start"
   count=0
 
-  until [ $(docker ps -a | grep -c "(healthy)") == 5 ];
+  until [ $(docker ps -a | \
+     grep -E "(rekor[-_]mysql|rekor[-_]rekor-server|rekor[-_]trillian-log-server|rekor[-_]trillian-log-signer)" | \
+     grep -c "(healthy)") == 4 ];
   do
       if [ $count -eq 6 ]; then
         echo "! timeout reached"
@@ -73,8 +75,7 @@ services:
       "serve",
       "--trillian_log_server.address=trillian-log-server",
       "--trillian_log_server.port=8090",
-      "--redis_server.address=redis-server",
-      "--redis_server.port=6379",
+      "--enable_retrieve_api=false",
       "--rekor_server.address=0.0.0.0",
       "--rekor_server.signer=memory",
       "--enable_attestation_storage",
@@ -151,10 +152,9 @@ services:
       "serve",
       "--trillian_log_server.address=trillian-log-server",
       "--trillian_log_server.port=8090",
-      "--redis_server.address=redis-server",
-      "--redis_server.port=6379",
       "--rekor_server.address=0.0.0.0",
       "--rekor_server.signer=memory",
+      "--enable_retrieve_api=false",
       "--enable_attestation_storage",
       "--attestation_storage_bucket=file:///var/run/attestations",
       "--trillian_log_server.tlog_id=$REKOR_TRILLIAN_LOG_SERVER_TLOG_ID",

@@ -41,6 +41,7 @@ services:
       - "2112:2112"
     depends_on:
       - mysql
+      - redis-server
   mysql:
     platform: linux/amd64
     image: gcr.io/trillian-opensource-ci/db_server:v1.4.0
