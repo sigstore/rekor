@@ -30,10 +30,11 @@ import (
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 
+	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
+
 	// these are imported to load the providers via init() calls
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
-	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
