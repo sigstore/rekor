@@ -439,12 +439,12 @@ func TestSendingEntryWithClientComputedHashes(t *testing.T) {
 	sha.Write(b)
 	payloadHashBytes := sha.Sum(nil)
 	payloadHashStr := hex.EncodeToString(payloadHashBytes)
-	t.Logf(payloadHashStr)
+	t.Log(payloadHashStr)
 	sha.Reset()
 	sha.Write(eb)
 	envelopeHashBytes := sha.Sum(nil)
 	envelopeHashStr := hex.EncodeToString(envelopeHashBytes)
-	t.Logf(envelopeHashStr)
+	t.Log(envelopeHashStr)
 
 	ap := types.ArtifactProperties{
 		ArtifactBytes:  eb,

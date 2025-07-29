@@ -218,7 +218,7 @@ func getTreeID(t *testing.T) int64 {
 	tidStr := strings.TrimSpace(strings.Split(out, "TreeID: ")[1])
 	tid, err := strconv.ParseInt(tidStr, 10, 64)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 	t.Log("Tree ID:", tid)
 	return tid
