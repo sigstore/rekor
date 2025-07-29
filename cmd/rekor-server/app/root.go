@@ -103,6 +103,8 @@ func init() {
 	rootCmd.PersistentFlags().String("rekor_server.signer", "memory",
 		`Rekor signer to use. Valid options are: [awskms://keyname, azurekms://keyname, gcpkms://keyname, hashivault://keyname, memory, tink, <filename containing PEM-encoded private key>].
 Memory and file-based signers should only be used for testing.`)
+	rootCmd.PersistentFlags().Uint("rekor_server.signer.gcpkms.retries", 0, "Number of retries for GCP KMS requests")
+	rootCmd.PersistentFlags().Uint("rekor_server.signer.gcpkms.timeout", 0, "sets the RPC timeout per call for GCP KMS requests in seconds, defaults to 0 (no timeout)")
 	rootCmd.PersistentFlags().String("rekor_server.signer-passwd", "", "Password to decrypt signer private key")
 	rootCmd.PersistentFlags().String("rekor_server.tink_kek_uri", "", "Key encryption key for decrypting Tink keyset. Valid options are [aws-kms://keyname, gcp-kms://keyname]")
 	rootCmd.PersistentFlags().String("rekor_server.tink_keyset_path", "", "Path to encrypted Tink keyset, containing private key to sign log checkpoints")

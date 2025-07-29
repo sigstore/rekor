@@ -172,6 +172,8 @@ func NewAPI(treeID uint) (*API, error) {
 		FileSignerPassword:     viper.GetString("rekor_server.signer-passwd"),
 		TinkKEKURI:             viper.GetString("rekor_server.tink_kek_uri"),
 		TinkKeysetPath:         viper.GetString("rekor_server.tink_keyset_path"),
+		GCPKMSRetries:          viper.GetUint("rekor_server.signer.gcpkms.retries"),
+		GCPKMSTimeout:          viper.GetUint("rekor_server.signer.gcpkms.timeout"),
 	}
 	ranges, err := sharding.NewLogRanges(ctx, logClient, shardingConfig, tid, signingConfig)
 	if err != nil {
