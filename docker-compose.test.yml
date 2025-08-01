@@ -27,7 +27,7 @@ services:
       "serve",
       "--trillian_log_server.address=trillian-log-server",
       "--trillian_log_server.port=8090",
-      "--trillian_log_server.grpc_default_service_config={\"loadBalancingPolicy\":\"round_robin\"}",
+      "--trillian_log_server.grpc_default_service_config={\"loadBalancingConfig\":[{\"round_robin\":{}}]}",
       "--redis_server.address=redis-server",
       "--redis_server.port=6379",
       "--redis_server.password=test",
