@@ -147,7 +147,7 @@ func updateRange(ctx context.Context, logClient trillian.TrillianLogClient, r Lo
 
 	// Initialize shard signer
 	s, err := signer.New(ctx, r.SigningConfig.SigningSchemeOrKeyPath, r.SigningConfig.FileSignerPassword,
-		r.SigningConfig.TinkKEKURI, r.SigningConfig.TinkKeysetPath)
+		r.SigningConfig.TinkKEKURI, r.SigningConfig.TinkKeysetPath, r.SigningConfig.GCPKMSRetries, r.SigningConfig.GCPKMSTimeout)
 	if err != nil {
 		return LogRange{}, err
 	}

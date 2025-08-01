@@ -20,15 +20,21 @@ import (
 	"context"
 	"crypto"
 	"strings"
+	"time"
 
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 	"golang.org/x/exp/slices"
 
+	"google.golang.org/api/option"
+	"google.golang.org/grpc"
+
+	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
+
 	// these are imported to load the providers via init() calls
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
-	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
@@ -38,6 +44,8 @@ type SigningConfig struct {
 	FileSignerPassword     string `json:"fileSignerPassword" yaml:"fileSignerPassword"`
 	TinkKEKURI             string `json:"tinkKEKURI" yaml:"tinkKEKURI"`
 	TinkKeysetPath         string `json:"tinkKeysetPath" yaml:"tinkKeysetPath"`
+	GCPKMSRetries          uint   `json:"gcpkmsRetries" yaml:"gcpkmsRetries"`
+	GCPKMSTimeout          uint   `json:"gcpkmsTimeout" yaml:"gcpkmsTimeout"`
 }
 
 func (sc SigningConfig) IsUnset() bool {
@@ -45,13 +53,18 @@ func (sc SigningConfig) IsUnset() bool {
 		sc.TinkKEKURI == "" && sc.TinkKeysetPath == ""
 }
 
-func New(ctx context.Context, signer, pass, tinkKEKURI, tinkKeysetPath string) (signature.Signer, error) {
+func New(ctx context.Context, signer, pass, tinkKEKURI, tinkKeysetPath string, gcpkmsretries, gcpkmstimeout uint) (signature.Signer, error) {
 	switch {
 	case slices.ContainsFunc(kms.SupportedProviders(),
 		func(s string) bool {
 			return strings.HasPrefix(signer, s)
 		}):
-		return kms.Get(ctx, signer, crypto.SHA256)
+		opts := make([]signature.RPCOption, 0)
+		if strings.HasPrefix(signer, gcp.ReferenceScheme) {
+			callOpts := []grpc_retry.CallOption{grpc_retry.WithMax(gcpkmsretries), grpc_retry.WithPerRetryTimeout(time.Duration(gcpkmstimeout) * time.Second)}
+			opts = append(opts, gcp.WithGoogleAPIClientOption(option.WithGRPCDialOption(grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(callOpts...)))))
+		}
+		return kms.Get(ctx, signer, crypto.SHA256, opts...)
 	case signer == MemoryScheme:
 		return NewMemory()
 	case signer == TinkScheme:

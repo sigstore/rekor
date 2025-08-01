@@ -710,7 +710,7 @@ func getTreeID(t *testing.T) int64 {
 	tidStr := strings.TrimSpace(strings.Split(out, "TreeID: ")[1])
 	tid, err := strconv.ParseInt(tidStr, 10, 64)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 	t.Log("Tree ID:", tid)
 	return tid
@@ -721,7 +721,7 @@ func getTotalTreeSize(t *testing.T) int64 {
 	sizeStr := strings.Fields(strings.Split(out, "Total Tree Size: ")[1])[0]
 	size, err := strconv.ParseInt(sizeStr, 10, 64)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err)
 	}
 	t.Log("Total Tree Size:", size)
 	return size
