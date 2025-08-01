@@ -82,7 +82,13 @@ func dial(rpcServer string) (*grpc.ClientConn, error) {
 	default:
 		creds = insecure.NewCredentials()
 	}
-	conn, err := grpc.NewClient(rpcServer, grpc.WithTransportCredentials(creds))
+
+	opts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
+	grpcDefaultServiceConfig := viper.GetString("trillian_log_server.grpc_default_service_config")
+	if grpcDefaultServiceConfig != "" {
+		opts = append(opts, grpc.WithDefaultServiceConfig(grpcDefaultServiceConfig))
+	}
+	conn, err := grpc.NewClient(rpcServer, opts...)
 	if err != nil {
 		log.Logger.Fatalf("Failed to connect to RPC server:", err)
 	}
