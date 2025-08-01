@@ -1,3 +1,33 @@
+# v1.4.0
+
+This is a minor version release given the removal of the stable checkpoint feature. To our knowledge, this was not
+used effectively anywhere and therefore was removed from Rekor v1. Witnessing will be added as part of the upcoming
+Rekor v2 release.
+
+## Features
+
+* enable retries and timeouts on GCP KMS calls (#2548)
+* allow configuring gRPC default service config for trillian client load balancing & timeouts (#2549)
+* move context handling in trillian RPC calls to be request based and idiomatic (#2536)
+
+## Fixes
+
+* Fix docker compose up --wait failing when Trillian server isn't healthy (#2473)
+* better mysql healthcheck (#2459)
+* numerous upgraded dependencies, including moving to go 1.24
+
+## Removed
+
+* remove stable checkpoint feature (#2537)
+* Don't initialize index storage with stable checkpoint publishing (#2486)
+
+## Contributors
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Emmanuel Ferdman
+* Hayden B
+* Ramon Petgrave
+
 # v1.3.10
 
 Note that Rekor v1 is in maintenance mode as we are actively developing
