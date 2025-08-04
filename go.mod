@@ -17,7 +17,7 @@ require (
 	github.com/go-openapi/swag v0.23.1
 	github.com/go-openapi/validate v0.24.0
 	github.com/google/go-cmp v0.7.0
-	github.com/google/rpmpack v0.7.0
+	github.com/google/rpmpack v0.7.1
 	github.com/google/trillian v1.7.2
 	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b
@@ -27,7 +27,7 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/rs/cors v1.11.1
 	github.com/sassoftware/relic v7.2.1+incompatible
-	github.com/secure-systems-lab/go-securesystemslib v0.9.0
+	github.com/secure-systems-lab/go-securesystemslib v0.9.1
 	github.com/sigstore/sigstore v1.9.5
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.7
