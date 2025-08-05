@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/profiler"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-openapi/loads"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
