@@ -30,7 +30,7 @@ import (
 	// using embed to add the static html page duing build time
 	_ "embed"
 
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
 	"github.com/mitchellh/mapstructure"
