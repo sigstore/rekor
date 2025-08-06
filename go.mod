@@ -53,6 +53,7 @@ require (
 require (
 	cloud.google.com/go/profiler v0.4.3
 	cloud.google.com/go/pubsub v1.50.0
+	cloud.google.com/go/pubsub/v2 v2.0.0
 	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230919221257-8b5d3ce2d11d
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7
@@ -86,7 +87,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.7.0 // indirect
 	cloud.google.com/go/longrunning v0.6.7 // indirect
 	cloud.google.com/go/monitoring v1.24.2 // indirect
-	cloud.google.com/go/pubsub/v2 v2.0.0 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.18.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.10.1 // indirect
@@ -175,7 +175,7 @@ require (
 
 require (
 	cloud.google.com/go v0.121.4 // indirect
-	cloud.google.com/go/iam v1.5.2 // indirect
+	cloud.google.com/go/iam v1.5.2
 	cloud.google.com/go/kms v1.22.0 // indirect
 	cloud.google.com/go/storage v1.55.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
