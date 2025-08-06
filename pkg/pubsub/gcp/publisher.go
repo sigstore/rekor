@@ -27,7 +27,9 @@ import (
 	"github.com/sigstore/rekor/pkg/events"
 	sigpubsub "github.com/sigstore/rekor/pkg/pubsub"
 
-	"cloud.google.com/go/pubsub"
+	iam "cloud.google.com/go/iam/apiv1"
+	"cloud.google.com/go/iam/apiv1/iampb"
+	"cloud.google.com/go/pubsub/v2"
 	"google.golang.org/api/option"
 )
 
@@ -69,7 +71,14 @@ func New(ctx context.Context, topicResourceID string, opts ...option.ClientOptio
 	// server start up if they are called. If the environment variable is set,
 	// skip this check.
 	if os.Getenv("PUBSUB_EMULATOR_HOST") == "" {
-		if _, err := client.Topic(topic).IAM().TestPermissions(ctx, requiredIAMPermissions); err != nil {
+		iamClient, err := iam.NewIamPolicyClient(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("getting IAM client: %w", err)
+		}
+		if _, err := iamClient.TestIamPermissions(ctx, &iampb.TestIamPermissionsRequest{
+			Resource:    client.Publisher(topic).String(),
+			Permissions: requiredIAMPermissions,
+		}); err != nil {
 			return nil, fmt.Errorf("insufficient permissions for topic %q: %w", topic, err)
 		}
 	}
@@ -105,7 +114,7 @@ func (p *Publisher) Publish(ctx context.Context, event *events.Event, encoding e
 	}
 
 	// The Publish call does not block.
-	res := p.client.Topic(p.topic).Publish(ctx, msg)
+	res := p.client.Publisher(p.topic).Publish(ctx, msg)
 
 	// TODO: Consider making the timeout configurable.
 	cctx, cancel := context.WithTimeout(ctx, pubsub.DefaultPublishSettings.Timeout)
