@@ -118,9 +118,7 @@ func (l *LogRanges) CompleteInitialization(ctx context.Context, tcm *trilliancli
 		}
 		l.inactive[i].TreeLength = int64(root.TreeSize)
 		sthMap[r.TreeID] = root
-		log.Logger.Infof("Inactive range %d: %s", i, r.String())
 	}
-	log.Logger.Infof("Active log: %s", l.active.String())
 	return sthMap, nil
 }
 
