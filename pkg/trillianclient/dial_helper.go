@@ -15,11 +15,11 @@
 
 //go:build e2e
 
-package api
+package trillianclient
 
 import "google.golang.org/grpc"
 
 // TestDial  exposes the dial function for testing purposes
-func TestDial(rpcServer string) (*grpc.ClientConn, error) {
-	return dial(rpcServer)
+func TestDial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStore bool) (*grpc.ClientConn, error) {
+	return dial(hostname, port, tlsCACertFile, useSystemTrustStore, "")
 }
