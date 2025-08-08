@@ -238,4 +238,10 @@ func StopAPI() {
 			log.Logger.Errorf("shutting down indexStorageClient: %v", err)
 		}
 	}
+
+	if api.trillianClientManager != nil {
+		if err := api.trillianClientManager.Close(); err != nil {
+			log.Logger.Errorf("shutting down trillian client manager: %v", err)
+		}
+	}
 }

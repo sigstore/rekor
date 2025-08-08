@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -188,4 +189,19 @@ func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStor
 	}
 
 	return conn, nil
+}
+
+// Close stops clients and closes underlying gRPC connections.
+func (cm *ClientManager) Close() error {
+	var err error
+
+	cm.connMu.Lock()
+	for cfg, conn := range cm.connections {
+		if closeErr := conn.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close conn %v:%d: %w", cfg.Address, cfg.Port, closeErr))
+		}
+		delete(cm.connections, cfg)
+	}
+	cm.connMu.Unlock()
+	return err
 }
