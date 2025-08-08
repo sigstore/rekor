@@ -27,10 +27,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/trillian"
 	"github.com/google/trillian/types"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/signer"
+	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -48,9 +48,10 @@ type Ranges []LogRange
 
 // LogRange represents a log or tree shard
 type LogRange struct {
-	TreeID        int64                `json:"treeID" yaml:"treeID"`
-	TreeLength    int64                `json:"treeLength" yaml:"treeLength"`       // unused for active tree
-	SigningConfig signer.SigningConfig `json:"signingConfig" yaml:"signingConfig"` // if unset, assume same as active tree
+	TreeID        int64                      `json:"treeID" yaml:"treeID"`
+	TreeLength    int64                      `json:"treeLength" yaml:"treeLength"`       // unused for active tree
+	SigningConfig signer.SigningConfig       `json:"signingConfig" yaml:"signingConfig"` // if unset, assume same as active tree
+	GRPCConfig    *trillianclient.GRPCConfig `json:"grpcEndpoint" yaml:"grpcEndpoint"`   // if unset, assume same as active tree
 	Signer        signature.Signer
 	PemPubKey     string // PEM-encoded PKIX public key
 	LogID         string // Hex-encoded SHA256 digest of PKIX-encoded public key
@@ -60,49 +61,65 @@ func (l LogRange) String() string {
 	return fmt.Sprintf("{ TreeID: %v, TreeLength: %v, SigningScheme: %v, PemPubKey: %v, LogID: %v }", l.TreeID, l.TreeLength, l.SigningConfig.SigningSchemeOrKeyPath, l.PemPubKey, l.LogID)
 }
 
-// NewLogRanges initializes the active and any inactive log shards
-func NewLogRanges(ctx context.Context, logClient trillian.TrillianLogClient,
-	inactiveShardsPath string, activeTreeID int64, signingConfig signer.SigningConfig) (LogRanges, error) {
+// NewLogRanges initializes the active and any inactive log shards from a config file.
+func NewLogRanges(ctx context.Context, inactiveShardsPath string, activeTreeID int64, signingConfig signer.SigningConfig) (*LogRanges, error) {
 	if activeTreeID == 0 {
-		return LogRanges{}, errors.New("non-zero active tree ID required; please set the active tree ID via the `--trillian_log_server.tlog_id` flag")
+		return nil, errors.New("non-zero active tree ID required; please set the active tree ID via the `--trillian_log_server.tlog_id` flag")
 	}
-
 	// Initialize active shard
-	activeLog, err := updateRange(ctx, logClient, LogRange{TreeID: activeTreeID, TreeLength: 0, SigningConfig: signingConfig}, true /*=active*/)
+	activeLog, err := initializeRange(ctx, LogRange{TreeID: activeTreeID, SigningConfig: signingConfig})
 	if err != nil {
-		return LogRanges{}, fmt.Errorf("creating range for active tree %d: %w", activeTreeID, err)
+		return nil, fmt.Errorf("creating range for active tree %d: %w", activeTreeID, err)
 	}
-	log.Logger.Infof("Active log: %s", activeLog.String())
 
 	if inactiveShardsPath == "" {
 		log.Logger.Info("No config file specified, no inactive shards")
-		return LogRanges{active: activeLog}, nil
+		return &LogRanges{active: activeLog}, nil
 	}
 
 	// Initialize inactive shards from inactive tree IDs
 	ranges, err := logRangesFromPath(inactiveShardsPath)
 	if err != nil {
-		return LogRanges{}, fmt.Errorf("log ranges from path: %w", err)
+		return nil, fmt.Errorf("log ranges from path: %w", err)
 	}
 	for i, r := range ranges {
 		// If no signing config is provided, use the active tree signing key
 		if r.SigningConfig.IsUnset() {
 			r.SigningConfig = signingConfig
 		}
-		r, err := updateRange(ctx, logClient, r, false /*=active*/)
+		r, err := initializeRange(ctx, r)
 		if err != nil {
-			return LogRanges{}, fmt.Errorf("updating range for tree id %d: %w", r.TreeID, err)
+			return nil, fmt.Errorf("updating range for tree id %d: %w", r.TreeID, err)
 		}
 		ranges[i] = r
 	}
-	for i, r := range ranges {
-		log.Logger.Infof("Inactive range %d: %s", i, r.String())
-	}
 
-	return LogRanges{
+	return &LogRanges{
 		inactive: ranges,
 		active:   activeLog,
 	}, nil
+}
+
+// CompleteInitialization populates the tree length for all inactive shards.
+func (l *LogRanges) CompleteInitialization(ctx context.Context, tcm *trillianclient.ClientManager) (map[int64]types.LogRootV1, error) {
+	sthMap := make(map[int64]types.LogRootV1)
+	for i, r := range l.inactive {
+		logClient, err := tcm.GetTrillianClient(r.TreeID)
+		if err != nil {
+			return nil, fmt.Errorf("getting log client for tree %d: %w", r.TreeID, err)
+		}
+		resp := logClient.GetLatest(ctx, 0)
+		if resp.Err != nil {
+			return nil, fmt.Errorf("getting signed log root for tree %d: %w", r.TreeID, err)
+		}
+		var root types.LogRootV1
+		if err := root.UnmarshalBinary(resp.GetLatestResult.SignedLogRoot.LogRoot); err != nil {
+			return nil, err
+		}
+		l.inactive[i].TreeLength = int64(root.TreeSize)
+		sthMap[r.TreeID] = root
+	}
+	return sthMap, nil
 }
 
 // logRangesFromPath unmarshals a shard config
@@ -126,21 +143,8 @@ func logRangesFromPath(path string) (Ranges, error) {
 	return ranges, nil
 }
 
-// updateRange fills in any missing information about the range
-func updateRange(ctx context.Context, logClient trillian.TrillianLogClient, r LogRange, active bool) (LogRange, error) {
-	// If a tree length wasn't passed in or if the shard is inactive, fetch the tree size
-	if r.TreeLength == 0 && !active {
-		resp, err := logClient.GetLatestSignedLogRoot(ctx, &trillian.GetLatestSignedLogRootRequest{LogId: r.TreeID})
-		if err != nil {
-			return LogRange{}, fmt.Errorf("getting signed log root for tree %d: %w", r.TreeID, err)
-		}
-		var root types.LogRootV1
-		if err := root.UnmarshalBinary(resp.SignedLogRoot.LogRoot); err != nil {
-			return LogRange{}, err
-		}
-		r.TreeLength = int64(root.TreeSize)
-	}
-
+// initializeRange fills in any missing information about the range that can be derived without a client.
+func initializeRange(ctx context.Context, r LogRange) (LogRange, error) {
 	if r.SigningConfig.IsUnset() {
 		return LogRange{}, fmt.Errorf("signing config not set, unable to initialize shard signer")
 	}
@@ -251,17 +255,17 @@ func (l *LogRanges) PublicKey(treeID string) (string, error) {
 	if treeID == "" {
 		return l.active.PemPubKey, nil
 	}
-	tid, err := strconv.Atoi(treeID)
+	tid, err := strconv.ParseInt(treeID, 10, 64)
 	if err != nil {
 		return "", err
 	}
 
-	if tid == int(l.GetActive().TreeID) {
+	if tid == l.GetActive().TreeID {
 		return l.active.PemPubKey, nil
 	}
 
 	for _, i := range l.inactive {
-		if int(i.TreeID) == tid {
+		if i.TreeID == tid {
 			return i.PemPubKey, nil
 		}
 	}

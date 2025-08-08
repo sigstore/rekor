@@ -25,22 +25,26 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/google/trillian"
 	"github.com/google/trillian/testonly"
+	"github.com/google/trillian/types"
 	"github.com/sigstore/rekor/pkg/signer"
+	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-
-	"github.com/google/trillian"
-	"google.golang.org/grpc"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/yaml.v2"
 )
 
@@ -105,8 +109,7 @@ func TestNewLogRanges(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	tc := trillian.NewTrillianLogClient(&grpc.ClientConn{})
-	got, err := NewLogRanges(ctx, tc, file, treeID, sc)
+	got, err := NewLogRanges(ctx, file, treeID, sc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +122,7 @@ func TestNewLogRanges(t *testing.T) {
 	}
 
 	// Failure: Tree ID = 0
-	_, err = NewLogRanges(ctx, tc, file, 0, sc)
+	_, err = NewLogRanges(ctx, file, 0, sc)
 	if err == nil || !strings.Contains(err.Error(), "non-zero active tree ID required") {
 		t.Fatal("expected error initializing log ranges with 0 tree ID")
 	}
@@ -575,67 +578,233 @@ func TestLogRangesFromPath(t *testing.T) {
 	}
 }
 
-func TestUpdateRange(t *testing.T) {
-	type args struct {
-		ctx context.Context
-		r   LogRange
+func TestInitializeRange(t *testing.T) {
+	keyPath, _, pemPubKey, logID := initializeSigner(t)
+	sc := signer.SigningConfig{
+		SigningSchemeOrKeyPath: keyPath,
 	}
+
 	tests := []struct {
-		name           string
-		args           args
-		want           LogRange
-		wantErr        bool
-		rootResponse   *trillian.GetLatestSignedLogRootResponse
-		signedLogError error
+		name      string
+		rangeIn   LogRange
+		wantRange LogRange
+		wantErr   bool
 	}{
 		{
-			name: "empty",
-			args: args{
-				ctx: context.Background(),
-				r:   LogRange{},
+			name: "valid range",
+			rangeIn: LogRange{
+				TreeID:        1,
+				SigningConfig: sc,
 			},
-			want:    LogRange{},
-			wantErr: true,
-			rootResponse: &trillian.GetLatestSignedLogRootResponse{
-				SignedLogRoot: &trillian.SignedLogRoot{},
+			wantRange: LogRange{
+				TreeID:        1,
+				SigningConfig: sc,
+				PemPubKey:     pemPubKey,
+				LogID:         logID,
 			},
-			signedLogError: nil,
+			wantErr: false,
 		},
 		{
-			name: "error in GetLatestSignedLogRoot",
-			args: args{
-				ctx: context.Background(),
-				r:   LogRange{},
+			name: "missing signing config",
+			rangeIn: LogRange{
+				TreeID: 1,
 			},
-			want:    LogRange{},
 			wantErr: true,
-			rootResponse: &trillian.GetLatestSignedLogRootResponse{
-				SignedLogRoot: &trillian.SignedLogRoot{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			got, err := initializeRange(ctx, tt.rangeIn)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("initializeRange() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			// Clear the signer for comparison, as it's not comparable
+			if got.Signer != nil {
+				got.Signer = nil
+			}
+			if !tt.wantErr {
+				// Manually remove signer for comparison
+				tt.wantRange.Signer = nil
+				if !reflect.DeepEqual(got, tt.wantRange) {
+					t.Errorf("initializeRange() = %v, want %v", got, tt.wantRange)
+				}
+			}
+		})
+	}
+}
+
+func setupMockServer(t *testing.T, mockCtl *gomock.Controller) (*testonly.MockServer, func()) {
+	t.Helper()
+	s, closeFn, err := testonly.NewMockServer(mockCtl)
+	if err != nil {
+		t.Fatalf("Failed to create mock server: %v", err)
+	}
+	return s, closeFn
+}
+
+func TestCompleteInitialization_Scenarios(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	// Shared setup for all scenarios
+	keyPath, _, _, _ := initializeSigner(t)
+	activeSC := signer.SigningConfig{
+		SigningSchemeOrKeyPath: keyPath,
+	}
+
+	// --- Scenario 1: Multiple Backends ---
+	s1, close1 := setupMockServer(t, mockCtl)
+	defer close1()
+	addr1 := s1.Addr
+	port1, err := strconv.Atoi(addr1[strings.LastIndex(addr1, ":")+1:])
+	require.NoError(t, err)
+
+	s2, close2 := setupMockServer(t, mockCtl)
+	defer close2()
+	addr2 := s2.Addr
+	port2, err := strconv.Atoi(addr2[strings.LastIndex(addr2, ":")+1:])
+	require.NoError(t, err)
+
+	// --- Scenario 4: Connection Failure ---
+	// Find an unused port for the connection failure test
+	lisClosed, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+	closedAddr := lisClosed.Addr().(*net.TCPAddr)
+	lisClosed.Close() // Immediately close it
+
+	// --- Test Case Definitions ---
+	testCases := []struct {
+		name          string
+		setup         func(t *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager)
+		expectErr     bool
+		postCondition func(t *testing.T, logRanges *LogRanges, roots map[int64]types.LogRootV1)
+	}{
+		{
+			name: "Scenario 1: Multiple Backends",
+			setup: func(_ *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
+				// Setup two inactive shards, each pointing to a different server
+				inactive1, _ := initializeRange(context.Background(), LogRange{TreeID: 101, SigningConfig: activeSC})
+				inactive2, _ := initializeRange(context.Background(), LogRange{TreeID: 102, SigningConfig: activeSC})
+				logRanges.inactive = Ranges{inactive1, inactive2}
+
+				// Mock responses from each server
+				root1 := &types.LogRootV1{TreeSize: 42}
+				rootBytes1, _ := root1.MarshalBinary()
+				s1.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: &trillian.SignedLogRoot{LogRoot: rootBytes1}}, nil)
+
+				root2 := &types.LogRootV1{TreeSize: 84}
+				rootBytes2, _ := root2.MarshalBinary()
+				s2.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: &trillian.SignedLogRoot{LogRoot: rootBytes2}}, nil)
+
+				// Configure client manager to route to the correct servers
+				grpcConfigs := map[int64]trillianclient.GRPCConfig{
+					101: {Address: "localhost", Port: uint16(port1)},
+					102: {Address: "localhost", Port: uint16(port2)},
+				}
+				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{}, "")
 			},
-			signedLogError: errors.New("error"),
+			expectErr: false,
+			postCondition: func(t *testing.T, logRanges *LogRanges, roots map[int64]types.LogRootV1) {
+				require.Len(t, logRanges.inactive, 2)
+				t.Log(logRanges.inactive)
+				require.Equal(t, int64(42), logRanges.inactive[0].TreeLength)
+				require.Equal(t, int64(84), logRanges.inactive[1].TreeLength)
+				require.Len(t, roots, 2)
+				require.Equal(t, uint64(42), roots[101].TreeSize)
+				require.Equal(t, uint64(84), roots[102].TreeSize)
+			},
+		},
+		{
+			name: "Scenario 2: Fallback to Default Backend",
+			setup: func(_ *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
+				inactive, _ := initializeRange(context.Background(), LogRange{TreeID: 201, SigningConfig: activeSC})
+				logRanges.inactive = Ranges{inactive}
+
+				root := &types.LogRootV1{TreeSize: 99}
+				rootBytes, _ := root.MarshalBinary()
+				s1.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: &trillian.SignedLogRoot{LogRoot: rootBytes}}, nil)
+
+				// No specific config for tree 201, so it should use the default
+				defaultConfig := trillianclient.GRPCConfig{Address: "localhost", Port: uint16(port1)}
+				*tcm = trillianclient.NewClientManager(map[int64]trillianclient.GRPCConfig{}, defaultConfig, "")
+			},
+			expectErr: false,
+			postCondition: func(t *testing.T, logRanges *LogRanges, roots map[int64]types.LogRootV1) {
+				require.Len(t, logRanges.inactive, 1)
+				require.Equal(t, int64(99), logRanges.inactive[0].TreeLength)
+				require.Len(t, roots, 1)
+				require.Equal(t, uint64(99), roots[201].TreeSize)
+			},
+		},
+		{
+			name: "Scenario 3: No Inactive Shards",
+			setup: func(_ *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
+				logRanges.inactive = Ranges{}
+				*tcm = trillianclient.NewClientManager(nil, trillianclient.GRPCConfig{Address: "localhost", Port: uint16(port1)}, "")
+			},
+			expectErr: false,
+			postCondition: func(t *testing.T, logRanges *LogRanges, roots map[int64]types.LogRootV1) {
+				require.Empty(t, logRanges.inactive)
+				require.Empty(t, roots)
+			},
+		},
+		{
+			name: "Scenario 4: gRPC Connection Failure",
+			setup: func(_ *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
+				inactive, _ := initializeRange(context.Background(), LogRange{TreeID: 401, SigningConfig: activeSC})
+				logRanges.inactive = Ranges{inactive}
+
+				// Point to a closed port
+				grpcConfigs := map[int64]trillianclient.GRPCConfig{
+					401: {Address: "localhost", Port: uint16(closedAddr.Port)},
+				}
+				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{}, "")
+			},
+			expectErr: true,
+		},
+		{
+			name: "Scenario 5: Trillian API Error",
+			setup: func(_ *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
+				inactive, _ := initializeRange(context.Background(), LogRange{TreeID: 501, SigningConfig: activeSC})
+				logRanges.inactive = Ranges{inactive}
+
+				// Mock an error from the Trillian server
+				s1.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(nil, status.Error(codes.NotFound, "tree not found"))
+
+				grpcConfigs := map[int64]trillianclient.GRPCConfig{
+					501: {Address: "localhost", Port: uint16(port1)},
+				}
+				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{}, "")
+			},
+			expectErr: true,
 		},
 	}
 
-	mockCtl := gomock.NewController(t)
-	defer mockCtl.Finish()
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s, fakeServer, err := testonly.NewMockServer(mockCtl)
-			if err != nil {
-				t.Fatalf("Failed to create mock server: %v", err)
-			}
-			defer fakeServer()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create a base LogRanges object for each test run
+			logRanges, err := NewLogRanges(context.Background(), "", 1, activeSC)
+			require.NoError(t, err)
+			var tcm *trillianclient.ClientManager
 
-			s.Log.EXPECT().GetLatestSignedLogRoot(
-				gomock.Any(), gomock.Any()).Return(tt.rootResponse, tt.signedLogError).AnyTimes()
-			got, err := updateRange(tt.args.ctx, s.LogClient, tt.args.r, false)
+			// Run the specific setup for the scenario
+			tc.setup(t, logRanges, &tcm)
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("updateRange() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			// Execute the function under test
+			roots, err := logRanges.CompleteInitialization(context.Background(), tcm)
+
+			// Assert error expectation
+			if tc.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("updateRange() got = %v, want %v", got, tt.want)
+
+			// Run post-conditions if any
+			if tc.postCondition != nil {
+				tc.postCondition(t, logRanges, roots)
 			}
 		})
 	}
@@ -692,18 +861,13 @@ func TestNewLogRangesWithMock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			s, fakeServer, err := testonly.NewMockServer(mockCtl)
-			if err != nil {
-				t.Fatalf("Failed to create mock server: %v", err)
-			}
-			defer fakeServer()
-			got, err := NewLogRanges(tt.args.ctx, s.LogClient, tt.args.path, tt.args.treeID, sc)
+			got, err := NewLogRanges(tt.args.ctx, tt.args.path, tt.args.treeID, sc)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewLogRanges() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !tt.wantErr {
-				logRangesEqual(t, tt.want, got)
+				logRangesEqual(t, tt.want, *got)
 			}
 		})
 	}

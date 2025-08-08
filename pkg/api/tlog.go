@@ -18,6 +18,7 @@ package api
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -30,15 +31,16 @@ import (
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
-	"github.com/sigstore/rekor/pkg/log"
-	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/rekor/pkg/util"
 )
 
 // GetLogInfoHandler returns the current size of the tree and the STH
 func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	ctx := params.HTTPRequest.Context()
-	tc := trillianclient.NewTrillianClient(api.logClient, api.treeID)
+	tc, err := api.trillianClientManager.GetTrillianClient(api.ActiveTreeID())
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianCommunicationError)
+	}
 
 	// for each inactive shard, get the loginfo
 	var inactiveShards []*models.InactiveShardLogInfo
@@ -75,7 +77,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 		RootHash:       &hashString,
 		TreeSize:       &treeSize,
 		SignedTreeHead: stringPointer(string(scBytes)),
-		TreeID:         stringPointer(fmt.Sprintf("%d", api.treeID)),
+		TreeID:         stringPointer(fmt.Sprintf("%d", api.ActiveTreeID())),
 		InactiveShards: inactiveShards,
 	}
 
@@ -93,14 +95,22 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 		return handleRekorAPIError(params, http.StatusBadRequest, fmt.Errorf("consistency proof: %s", errMsg), errMsg)
 	}
 	ctx := params.HTTPRequest.Context()
-	tc := trillianclient.NewTrillianClient(api.logClient, api.treeID)
-	if treeID := swag.StringValue(params.TreeID); treeID != "" {
-		id, err := strconv.Atoi(treeID)
+	treeID := api.ActiveTreeID()
+	if treeIDStr := swag.StringValue(params.TreeID); treeIDStr != "" {
+		id, err := strconv.ParseInt(treeIDStr, 10, 64)
 		if err != nil {
-			log.Logger.Infof("Unable to convert %s to string, skipping initializing client with Tree ID: %v", treeID, err)
-		} else {
-			tc = trillianclient.NewTrillianClient(api.logClient, int64(id))
+			errMsg := fmt.Sprintf("invalid tree ID specified: %s", treeIDStr)
+			return handleRekorAPIError(params, http.StatusBadRequest, errors.New(errMsg), errMsg)
 		}
+		// check if tree ID is valid
+		if _, err := api.logRanges.GetLogRangeByTreeID(id); err != nil {
+			return handleRekorAPIError(params, http.StatusBadRequest, err, err.Error())
+		}
+		treeID = id
+	}
+	tc, err := api.trillianClientManager.GetTrillianClient(treeID)
+	if err != nil {
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianCommunicationError)
 	}
 
 	resp := tc.GetConsistencyProof(ctx, *params.FirstSize, params.LastSize)
@@ -138,7 +148,10 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 }
 
 func inactiveShardLogInfo(ctx context.Context, tid int64, cachedCheckpoints map[int64]string) (*models.InactiveShardLogInfo, error) {
-	tc := trillianclient.NewTrillianClient(api.logClient, tid)
+	tc, err := api.trillianClientManager.GetTrillianClient(tid)
+	if err != nil {
+		return nil, fmt.Errorf("getting log client for tree %d: %w", tid, err)
+	}
 	resp := tc.GetLatest(ctx, 0)
 	if resp.Status != codes.OK {
 		return nil, fmt.Errorf("resp code is %d", resp.Status)
