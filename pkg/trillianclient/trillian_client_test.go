@@ -70,7 +70,11 @@ func TestEnsureStartedAndGetLatest(t *testing.T) {
 	s.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: slr}, nil).MinTimes(1)
 
 	conn := dialMock(t, s.Addr)
+<<<<<<< HEAD
 	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 42, DefaultConfig())
+=======
+	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 42, DefaultTrillianClientConfig())
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 	t.Cleanup(tc.Close)
 
 	resp := tc.GetLatest(context.Background(), 0)
@@ -103,7 +107,11 @@ func TestGetLeafAndProofByIndex_VerifiesProof(t *testing.T) {
 	s.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: slr1}, nil).MinTimes(1)
 
 	s.Log.EXPECT().GetEntryAndProof(gomock.Any(), gomock.Any()).DoAndReturn(
+<<<<<<< HEAD
 		func(_ context.Context, r *trillian.GetEntryAndProofRequest) (*trillian.GetEntryAndProofResponse, error) {
+=======
+		func(ctx context.Context, r *trillian.GetEntryAndProofRequest) (*trillian.GetEntryAndProofResponse, error) {
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 			// Ensure we were asked for the current tree size
 			if r.TreeSize != 1 || r.LeafIndex != 0 {
 				return nil, status.Error(codes.InvalidArgument, "unexpected request")
@@ -116,7 +124,11 @@ func TestGetLeafAndProofByIndex_VerifiesProof(t *testing.T) {
 	).Times(1)
 
 	conn := dialMock(t, s.Addr)
+<<<<<<< HEAD
 	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 9, DefaultConfig())
+=======
+	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 9, DefaultTrillianClientConfig())
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 	t.Cleanup(tc.Close)
 
 	resp := tc.GetLeafAndProofByIndex(context.Background(), 0)
@@ -142,6 +154,7 @@ func TestGetLeafAndProofByHash_VerifiesProof(t *testing.T) {
 		&trillian.GetInclusionProofByHashResponse{Proof: []*trillian.Proof{{LeafIndex: 0, Hashes: nil}}}, nil,
 	).Times(1)
 
+<<<<<<< HEAD
 	// GetLeafAndProofByHash now calls GetLeavesByRange to fetch the leaf
 	s.Log.EXPECT().GetLeavesByRange(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, r *trillian.GetLeavesByRangeRequest) (*trillian.GetLeavesByRangeResponse, error) {
@@ -154,6 +167,14 @@ func TestGetLeafAndProofByHash_VerifiesProof(t *testing.T) {
 
 	conn := dialMock(t, s.Addr)
 	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 13, DefaultConfig())
+=======
+	s.Log.EXPECT().GetEntryAndProof(gomock.Any(), gomock.Any()).Return(
+		&trillian.GetEntryAndProofResponse{Leaf: &trillian.LogLeaf{MerkleLeafHash: rootHash}, Proof: &trillian.Proof{LeafIndex: 0, Hashes: nil}}, nil,
+	).Times(1)
+
+	conn := dialMock(t, s.Addr)
+	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 13, DefaultTrillianClientConfig())
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 	t.Cleanup(tc.Close)
 
 	resp := tc.GetLeafAndProofByHash(context.Background(), rootHash)
@@ -196,7 +217,11 @@ func TestAddLeaf_HappyPath(t *testing.T) {
 
 	// After inclusion, client fetches leaf by index without proof to get server-populated fields
 	s.Log.EXPECT().GetLeavesByRange(gomock.Any(), gomock.Any()).DoAndReturn(
+<<<<<<< HEAD
 		func(_ context.Context, r *trillian.GetLeavesByRangeRequest) (*trillian.GetLeavesByRangeResponse, error) {
+=======
+		func(ctx context.Context, r *trillian.GetLeavesByRangeRequest) (*trillian.GetLeavesByRangeResponse, error) {
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 			if r.Count != 1 || r.StartIndex != 0 {
 				return nil, status.Error(codes.InvalidArgument, "unexpected range request")
 			}
@@ -205,7 +230,11 @@ func TestAddLeaf_HappyPath(t *testing.T) {
 	).Times(1)
 
 	conn := dialMock(t, s.Addr)
+<<<<<<< HEAD
 	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 21, DefaultConfig())
+=======
+	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 21, DefaultTrillianClientConfig())
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 	// Pre-initialize
 	tc.started = true
 	tc.v = client.NewLogVerifier(rfc6962.DefaultHasher)
@@ -245,7 +274,11 @@ func TestGetLatestFirstSizeCanceledOnClose(t *testing.T) {
 	s.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: slr0}, nil).MinTimes(1)
 
 	conn := dialMock(t, s.Addr)
+<<<<<<< HEAD
 	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 33, DefaultConfig())
+=======
+	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 33, DefaultTrillianClientConfig())
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 
 	done := make(chan *Response, 1)
 	go func() {
@@ -276,7 +309,11 @@ func TestEnsureStartedError(t *testing.T) {
 	s.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(nil, status.Error(codes.Unavailable, "boom")).Times(1)
 
 	conn := dialMock(t, s.Addr)
+<<<<<<< HEAD
 	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 99, DefaultConfig())
+=======
+	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 99, DefaultTrillianClientConfig())
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 	t.Cleanup(tc.Close)
 
 	resp := tc.GetLatest(context.Background(), 0)
@@ -287,7 +324,11 @@ func TestEnsureStartedError(t *testing.T) {
 func TestWaitForRootAtLeast_BroadcastWakesAll(t *testing.T) {
 	opt := goleak.IgnoreCurrent()
 	t.Cleanup(func() { goleak.VerifyNone(t, opt) })
+<<<<<<< HEAD
 	tc := newTrillianClient(nil, 100, DefaultConfig())
+=======
+	tc := newTrillianClient(nil, 100, DefaultTrillianClientConfig())
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 	// Start with size 0
 	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 0}})
 
@@ -331,7 +372,11 @@ func TestWaitForRootAtLeast_BroadcastWakesAll(t *testing.T) {
 func TestGetLatest_WithFirstSize_BroadcastWakesAll(t *testing.T) {
 	opt := goleak.IgnoreCurrent()
 	t.Cleanup(func() { goleak.VerifyNone(t, opt) })
+<<<<<<< HEAD
 	tc := newTrillianClient(nil, 101, DefaultConfig())
+=======
+	tc := newTrillianClient(nil, 101, DefaultTrillianClientConfig())
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 	// Mark as started to bypass network init in GetLatest
 	tc.started = true
 	// initial snapshot with size 0
@@ -391,14 +436,22 @@ func TestEnsureStarted_SingleRPCWithFanIn(t *testing.T) {
 
 	slr := mkSLR(t, 0, make([]byte, 32))
 	s.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).DoAndReturn(
+<<<<<<< HEAD
 		func(_ context.Context, _ *trillian.GetLatestSignedLogRootRequest) (*trillian.GetLatestSignedLogRootResponse, error) {
+=======
+		func(ctx context.Context, r *trillian.GetLatestSignedLogRootRequest) (*trillian.GetLatestSignedLogRootResponse, error) {
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 			time.Sleep(30 * time.Millisecond)
 			return &trillian.GetLatestSignedLogRootResponse{SignedLogRoot: slr}, nil
 		},
 	).MinTimes(1)
 
 	conn := dialMock(t, s.Addr)
+<<<<<<< HEAD
 	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 222, DefaultConfig())
+=======
+	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 222, DefaultTrillianClientConfig())
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 	t.Cleanup(tc.Close)
 
 	const n = 20
@@ -424,7 +477,11 @@ func TestEnsureStarted_SingleRPCWithFanIn(t *testing.T) {
 func TestWaitForRootAtLeast_SpuriousBroadcastIgnored(t *testing.T) {
 	opt := goleak.IgnoreCurrent()
 	t.Cleanup(func() { goleak.VerifyNone(t, opt) })
+<<<<<<< HEAD
 	tc := newTrillianClient(nil, 303, DefaultConfig())
+=======
+	tc := newTrillianClient(nil, 303, DefaultTrillianClientConfig())
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 1}})
 
 	const waiters = 6
@@ -472,7 +529,11 @@ func TestWaitForRootAtLeast_SpuriousBroadcastIgnored(t *testing.T) {
 func TestSnapshotConcurrentReadersWriters_NoDataRace(t *testing.T) {
 	opt := goleak.IgnoreCurrent()
 	t.Cleanup(func() { goleak.VerifyNone(t, opt) })
+<<<<<<< HEAD
 	tc := newTrillianClient(nil, 404, DefaultConfig())
+=======
+	tc := newTrillianClient(nil, 404, DefaultTrillianClientConfig())
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 	tc.started = true
 	// Provide a minimal signed root so GetLatest can return without NotFound
 	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 0}, signed: mkSLR(t, 0, make([]byte, 32))})
@@ -537,14 +598,22 @@ func TestEnsureStartedDeadlineRespected(t *testing.T) {
 
 	// Server handler sleeps longer than client deadline; client should return DeadlineExceeded
 	s.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).DoAndReturn(
+<<<<<<< HEAD
 		func(_ context.Context, _ *trillian.GetLatestSignedLogRootRequest) (*trillian.GetLatestSignedLogRootResponse, error) {
+=======
+		func(ctx context.Context, r *trillian.GetLatestSignedLogRootRequest) (*trillian.GetLatestSignedLogRootResponse, error) {
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 			time.Sleep(200 * time.Millisecond)
 			return &trillian.GetLatestSignedLogRootResponse{SignedLogRoot: mkSLR(t, 0, make([]byte, 32))}, nil
 		},
 	).MinTimes(1)
 
 	conn := dialMock(t, s.Addr)
+<<<<<<< HEAD
 	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 606, DefaultConfig())
+=======
+	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 606, DefaultTrillianClientConfig())
+>>>>>>> a302a909 (initial implementation of STH cache, poller, etc)
 	t.Cleanup(tc.Close)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)

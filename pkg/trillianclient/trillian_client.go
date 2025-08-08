@@ -24,7 +24,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/transparency-dev/merkle/proof"
 	"github.com/transparency-dev/merkle/rfc6962"
 
 	"google.golang.org/grpc/codes"
@@ -96,17 +95,17 @@ func init() {
 	)
 }
 
-// Config holds configuration options for TrillianClient
-type Config struct {
+// TrillianClientConfig holds configuration options for TrillianClient
+type TrillianClientConfig struct {
 	// InitLatestRootTimeout is the timeout for fetching the latest root during initialization
 	InitLatestRootTimeout time.Duration
 	// UpdaterWaitTimeout is the timeout for updater polling wait operations
 	UpdaterWaitTimeout time.Duration
 }
 
-// DefaultConfig returns a config with default timeout values
-func DefaultConfig() Config {
-	return Config{
+// DefaultTrillianClientConfig returns a config with default timeout values
+func DefaultTrillianClientConfig() TrillianClientConfig {
+	return TrillianClientConfig{
 		InitLatestRootTimeout: DefaultInitLatestRootTimeout,
 		UpdaterWaitTimeout:    DefaultUpdaterWaitTimeout,
 	}
@@ -116,7 +115,7 @@ func DefaultConfig() Config {
 type TrillianClient struct {
 	client trillian.TrillianLogClient
 	logID  int64
-	config Config
+	config TrillianClientConfig
 
 	// shared trillian client/verifier
 	lc   *client.LogClient
@@ -144,7 +143,7 @@ type rootSnapshot struct {
 }
 
 // newTrillianClient creates a TrillianClient with the given Trillian client, log/tree ID, and config.
-func newTrillianClient(logClient trillian.TrillianLogClient, logID int64, config Config) *TrillianClient {
+func newTrillianClient(logClient trillian.TrillianLogClient, logID int64, config TrillianClientConfig) *TrillianClient {
 	t := &TrillianClient{
 		client: logClient,
 		logID:  logID,
@@ -252,6 +251,7 @@ func (t *TrillianClient) updater() {
 		Factor: 2.0,                    // Double each time
 		Jitter: true,                   // Add randomization
 	}
+
 	for {
 		// Wrap the WaitForRootUpdate call with backoff retry
 		var nr *types.LogRootV1
@@ -269,6 +269,7 @@ func (t *TrillianClient) updater() {
 			nr, waitErr = t.lc.WaitForRootUpdate(ctx)
 			return waitErr
 		})
+
 		select {
 		case <-t.stopCh:
 			return
@@ -475,7 +476,7 @@ func (t *TrillianClient) GetLeafAndProofByIndex(ctx context.Context, index int64
 	}
 
 	if resp != nil && resp.Proof != nil {
-		if err := proof.VerifyInclusion(rfc6962.DefaultHasher, uint64(index), root.TreeSize, resp.GetLeaf().MerkleLeafHash, resp.Proof.Hashes, root.RootHash); err != nil { //nolint:gosec
+		if err := t.v.VerifyInclusionByHash(&root, resp.GetLeaf().MerkleLeafHash, resp.Proof); err != nil {
 			return &Response{
 				Status: status.Code(err),
 				Err:    err,
@@ -560,7 +561,6 @@ func (t *TrillianClient) getProofByHashWithRoot(ctx context.Context, hashValue [
 			Err:    err,
 		}
 	}
-
 	if resp != nil {
 		for _, p := range resp.Proof {
 			if err := t.v.VerifyInclusionByHash(&root, hashValue, p); err != nil {
