@@ -654,19 +654,6 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 		SigningSchemeOrKeyPath: keyPath,
 	}
 
-	// --- Scenario 1: Multiple Backends ---
-	s1, close1 := setupMockServer(t, mockCtl)
-	defer close1()
-	addr1 := s1.Addr
-	port1, err := strconv.Atoi(addr1[strings.LastIndex(addr1, ":")+1:])
-	require.NoError(t, err)
-
-	s2, close2 := setupMockServer(t, mockCtl)
-	defer close2()
-	addr2 := s2.Addr
-	port2, err := strconv.Atoi(addr2[strings.LastIndex(addr2, ":")+1:])
-	require.NoError(t, err)
-
 	// --- Scenario 4: Connection Failure ---
 	// Find an unused port for the connection failure test
 	lisClosed, err := net.Listen("tcp", ":0")
@@ -683,27 +670,40 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 	}{
 		{
 			name: "Scenario 1: Multiple Backends",
-			setup: func(_ *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
+			setup: func(t *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
 				// Setup two inactive shards, each pointing to a different server
 				inactive1, _ := initializeRange(context.Background(), LogRange{TreeID: 101, SigningConfig: activeSC})
 				inactive2, _ := initializeRange(context.Background(), LogRange{TreeID: 102, SigningConfig: activeSC})
 				logRanges.inactive = Ranges{inactive1, inactive2}
 
+				// Create isolated servers for this scenario
+				sA, closeA := setupMockServer(t, mockCtl)
+				t.Cleanup(closeA)
+				addrA := sA.Addr
+				portA, err := strconv.Atoi(addrA[strings.LastIndex(addrA, ":")+1:])
+				require.NoError(t, err)
+
+				sB, closeB := setupMockServer(t, mockCtl)
+				t.Cleanup(closeB)
+				addrB := sB.Addr
+				portB, err := strconv.Atoi(addrB[strings.LastIndex(addrB, ":")+1:])
+				require.NoError(t, err)
+
 				// Mock responses from each server
 				root1 := &types.LogRootV1{TreeSize: 42}
 				rootBytes1, _ := root1.MarshalBinary()
-				s1.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: &trillian.SignedLogRoot{LogRoot: rootBytes1}}, nil)
+				sA.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: &trillian.SignedLogRoot{LogRoot: rootBytes1}}, nil).MinTimes(1)
 
 				root2 := &types.LogRootV1{TreeSize: 84}
 				rootBytes2, _ := root2.MarshalBinary()
-				s2.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: &trillian.SignedLogRoot{LogRoot: rootBytes2}}, nil)
+				sB.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: &trillian.SignedLogRoot{LogRoot: rootBytes2}}, nil).MinTimes(1)
 
 				// Configure client manager to route to the correct servers
 				grpcConfigs := map[int64]trillianclient.GRPCConfig{
-					101: {Address: "localhost", Port: uint16(port1)},
-					102: {Address: "localhost", Port: uint16(port2)},
+					101: {Address: "localhost", Port: uint16(portA)},
+					102: {Address: "localhost", Port: uint16(portB)},
 				}
-				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{})
+				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{}, trillianclient.DefaultTrillianClientConfig())
 			},
 			expectErr: false,
 			postCondition: func(t *testing.T, logRanges *LogRanges, roots map[int64]types.LogRootV1) {
@@ -718,17 +718,24 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 		},
 		{
 			name: "Scenario 2: Fallback to Default Backend",
-			setup: func(_ *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
+			setup: func(t *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
 				inactive, _ := initializeRange(context.Background(), LogRange{TreeID: 201, SigningConfig: activeSC})
 				logRanges.inactive = Ranges{inactive}
 
+				// Create a dedicated default backend for this scenario
+				sDef, closeDef := setupMockServer(t, mockCtl)
+				t.Cleanup(closeDef)
+				addr := sDef.Addr
+				port, err := strconv.Atoi(addr[strings.LastIndex(addr, ":")+1:])
+				require.NoError(t, err)
+
 				root := &types.LogRootV1{TreeSize: 99}
 				rootBytes, _ := root.MarshalBinary()
-				s1.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: &trillian.SignedLogRoot{LogRoot: rootBytes}}, nil)
+				sDef.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: &trillian.SignedLogRoot{LogRoot: rootBytes}}, nil).MinTimes(1)
 
 				// No specific config for tree 201, so it should use the default
-				defaultConfig := trillianclient.GRPCConfig{Address: "localhost", Port: uint16(port1)}
-				*tcm = trillianclient.NewClientManager(map[int64]trillianclient.GRPCConfig{}, defaultConfig)
+				defaultConfig := trillianclient.GRPCConfig{Address: "localhost", Port: uint16(port)}
+				*tcm = trillianclient.NewClientManager(map[int64]trillianclient.GRPCConfig{}, defaultConfig, trillianclient.DefaultTrillianClientConfig())
 			},
 			expectErr: false,
 			postCondition: func(t *testing.T, logRanges *LogRanges, roots map[int64]types.LogRootV1) {
@@ -742,7 +749,9 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 			name: "Scenario 3: No Inactive Shards",
 			setup: func(_ *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
 				logRanges.inactive = Ranges{}
-				*tcm = trillianclient.NewClientManager(nil, trillianclient.GRPCConfig{Address: "localhost", Port: uint16(port1)})
+				// No inactive shards means the client manager won't be used.
+				// Provide a no-op default config to satisfy constructor.
+				*tcm = trillianclient.NewClientManager(nil, trillianclient.GRPCConfig{Address: "localhost", Port: 0}, trillianclient.DefaultTrillianClientConfig())
 			},
 			expectErr: false,
 			postCondition: func(t *testing.T, logRanges *LogRanges, roots map[int64]types.LogRootV1) {
@@ -752,7 +761,7 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 		},
 		{
 			name: "Scenario 4: gRPC Connection Failure",
-			setup: func(_ *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
+			setup: func(t *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
 				inactive, _ := initializeRange(context.Background(), LogRange{TreeID: 401, SigningConfig: activeSC})
 				logRanges.inactive = Ranges{inactive}
 
@@ -760,23 +769,30 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 				grpcConfigs := map[int64]trillianclient.GRPCConfig{
 					401: {Address: "localhost", Port: uint16(closedAddr.Port)},
 				}
-				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{})
+				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{}, trillianclient.DefaultTrillianClientConfig())
 			},
 			expectErr: true,
 		},
 		{
 			name: "Scenario 5: Trillian API Error",
-			setup: func(_ *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
+			setup: func(t *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
 				inactive, _ := initializeRange(context.Background(), LogRange{TreeID: 501, SigningConfig: activeSC})
 				logRanges.inactive = Ranges{inactive}
 
+				// Create a dedicated backend that returns an error
+				sErr, closeErr := setupMockServer(t, mockCtl)
+				t.Cleanup(closeErr)
+				addr := sErr.Addr
+				port, err := strconv.Atoi(addr[strings.LastIndex(addr, ":")+1:])
+				require.NoError(t, err)
+
 				// Mock an error from the Trillian server
-				s1.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(nil, status.Error(codes.NotFound, "tree not found"))
+				sErr.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(nil, status.Error(codes.NotFound, "tree not found")).MinTimes(1)
 
 				grpcConfigs := map[int64]trillianclient.GRPCConfig{
-					501: {Address: "localhost", Port: uint16(port1)},
+					501: {Address: "localhost", Port: uint16(port)},
 				}
-				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{})
+				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{}, trillianclient.DefaultTrillianClientConfig())
 			},
 			expectErr: true,
 		},
