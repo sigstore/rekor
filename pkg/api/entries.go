@@ -314,7 +314,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 			}
 		case *rsa.PublicKey:
 			publicKeyInfo = fmt.Sprintf("rsa public key: %T/%v", pKey, pKey.Size())
-		case *ed25519.PublicKey:
+		case ed25519.PublicKey:
 			publicKeyInfo = fmt.Sprintf("ed25519 public key: %T", pKey)
 		default:
 			publicKeyInfo = fmt.Sprintf("public key: %T", pKey)
