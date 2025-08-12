@@ -31,7 +31,6 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -117,134 +116,45 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, pki.Signature, error) {
-	g, ctx := errgroup.WithContext(ctx)
-
+func (v *V001Entry) fetchExternalEntities(_ context.Context) (pki.PublicKey, pki.Signature, error) {
 	af, err := pki.NewArtifactFactory(pki.Format(*v.RekordObj.Signature.Format))
 	if err != nil {
 		return nil, nil, err
 	}
 
-	hashR, hashW := io.Pipe()
-	sigR, sigW := io.Pipe()
-	defer hashR.Close()
-	defer sigR.Close()
+	// Hash computation
+	hasher := sha256.New()
+	if _, err := hasher.Write(v.RekordObj.Data.Content); err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+	computedSHA := hex.EncodeToString(hasher.Sum(nil))
 
-	closePipesOnError := types.PipeCloser(hashR, hashW, sigR, sigW)
-
-	oldSHA := ""
+	// Validate hash if provided
 	if v.RekordObj.Data.Hash != nil && v.RekordObj.Data.Hash.Value != nil {
-		oldSHA = swag.StringValue(v.RekordObj.Data.Hash.Value)
+		oldSHA := swag.StringValue(v.RekordObj.Data.Hash.Value)
+		if computedSHA != oldSHA {
+			return nil, nil, &types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)}
+		}
 	}
 
-	g.Go(func() error {
-		defer hashW.Close()
-		defer sigW.Close()
-
-		dataReadCloser := bytes.NewReader(v.RekordObj.Data.Content)
-
-		/* #nosec G110 */
-		if _, err := io.Copy(io.MultiWriter(hashW, sigW), dataReadCloser); err != nil {
-			return closePipesOnError(err)
-		}
-		return nil
-	})
-
-	hashResult := make(chan string)
-
-	g.Go(func() error {
-		defer close(hashResult)
-		hasher := sha256.New()
-
-		if _, err := io.Copy(hasher, hashR); err != nil {
-			return closePipesOnError(err)
-		}
-
-		computedSHA := hex.EncodeToString(hasher.Sum(nil))
-		if oldSHA != "" && computedSHA != oldSHA {
-			return closePipesOnError(&types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case hashResult <- computedSHA:
-			return nil
-		}
-	})
-
-	sigResult := make(chan pki.Signature)
-
-	g.Go(func() error {
-		defer close(sigResult)
-
-		sigReadCloser := bytes.NewReader(*v.RekordObj.Signature.Content)
-
-		signature, err := af.NewSignature(sigReadCloser)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case sigResult <- signature:
-			return nil
-		}
-	})
-
-	keyResult := make(chan pki.PublicKey)
-
-	g.Go(func() error {
-		defer close(keyResult)
-
-		keyReadCloser := bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content)
-
-		key, err := af.NewPublicKey(keyReadCloser)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case keyResult <- key:
-			return nil
-		}
-	})
-
-	var (
-		keyObj pki.PublicKey
-		sigObj pki.Signature
-	)
-	g.Go(func() error {
-		keyObj, sigObj = <-keyResult, <-sigResult
-
-		if keyObj == nil || sigObj == nil {
-			return closePipesOnError(errors.New("failed to read signature or public key"))
-		}
-
-		var err error
-		if err = sigObj.Verify(sigR, keyObj); err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			return nil
-		}
-	})
-
-	computedSHA := <-hashResult
-
-	if err := g.Wait(); err != nil {
-		return nil, nil, err
+	// Parse signature and key
+	sigObj, err := af.NewSignature(bytes.NewReader(*v.RekordObj.Signature.Content))
+	if err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
-	// if we get here, all goroutines succeeded without error
-	if oldSHA == "" {
+	keyObj, err := af.NewPublicKey(bytes.NewReader(*v.RekordObj.Signature.PublicKey.Content))
+	if err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Verify signature
+	if err := sigObj.Verify(bytes.NewReader(v.RekordObj.Data.Content), keyObj); err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Set computed hash if not provided
+	if v.RekordObj.Data.Hash == nil {
 		v.RekordObj.Data.Hash = &models.RekordV001SchemaDataHash{}
 		v.RekordObj.Data.Hash.Algorithm = swag.String(models.RekordV001SchemaDataHashAlgorithmSha256)
 		v.RekordObj.Data.Hash.Value = swag.String(computedSHA)
