@@ -46,24 +46,22 @@ type ClientManager struct {
 	clientMu sync.RWMutex
 	// trillianClients caches the TrillianClient wrappers.
 	trillianClients map[int64]*TrillianClient
+	// flag to indicate whether the client manager is shutting down
+	shutdown bool
 
 	// treeIDToConfig maps a specific tree ID to its gRPC configuration.
 	treeIDToConfig map[int64]GRPCConfig
 	// defaultConfig is the global fallback configuration.
 	defaultConfig GRPCConfig
-
-	// defaultServiceConfig is the default gRPC service config to be used with connections
-	defaultServiceConfig string
 }
 
 // NewClientManager creates a new ClientManager.
-func NewClientManager(treeIDToConfig map[int64]GRPCConfig, defaultConfig GRPCConfig, defaultServiceConfig string) *ClientManager {
+func NewClientManager(treeIDToConfig map[int64]GRPCConfig, defaultConfig GRPCConfig) *ClientManager {
 	return &ClientManager{
-		connections:          make(map[GRPCConfig]*grpc.ClientConn),
-		treeIDToConfig:       treeIDToConfig,
-		defaultConfig:        defaultConfig,
-		trillianClients:      make(map[int64]*TrillianClient),
-		defaultServiceConfig: defaultServiceConfig,
+		connections:     make(map[GRPCConfig]*grpc.ClientConn),
+		treeIDToConfig:  treeIDToConfig,
+		defaultConfig:   defaultConfig,
+		trillianClients: make(map[int64]*TrillianClient),
 	}
 }
 
@@ -92,7 +90,7 @@ func (cm *ClientManager) getConn(treeID int64) (*grpc.ClientConn, error) {
 	}
 
 	// Dial and cache the new connection.
-	newConn, err := dial(config.Address, config.Port, config.TLSCACert, config.UseSystemTrustStore, cm.defaultServiceConfig)
+	newConn, err := dial(config.Address, config.Port, config.TLSCACert, config.UseSystemTrustStore, config.GRPCServiceConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +101,10 @@ func (cm *ClientManager) getConn(treeID int64) (*grpc.ClientConn, error) {
 // GetTrillianClient returns a Rekor Trillian client wrapper for the given tree ID.
 func (cm *ClientManager) GetTrillianClient(treeID int64) (*TrillianClient, error) {
 	cm.clientMu.RLock()
+	if cm.shutdown {
+		cm.clientMu.RUnlock()
+		return nil, errors.New("client manager is shutting down")
+	}
 	client, ok := cm.trillianClients[treeID]
 	cm.clientMu.RUnlock()
 	if ok {
@@ -117,6 +119,9 @@ func (cm *ClientManager) GetTrillianClient(treeID int64) (*TrillianClient, error
 	cm.clientMu.Lock()
 	defer cm.clientMu.Unlock()
 	// Double-check after acquiring the write lock.
+	if cm.shutdown {
+		return nil, errors.New("client manager is shutting down")
+	}
 	if client, ok = cm.trillianClients[treeID]; ok {
 		return client, nil
 	}
@@ -126,8 +131,8 @@ func (cm *ClientManager) GetTrillianClient(treeID int64) (*TrillianClient, error
 	return newClient, nil
 }
 
-func CreateAndInitTree(ctx context.Context, config GRPCConfig, defaultServiceConfig string) (*trillian.Tree, error) {
-	newConn, err := dial(config.Address, config.Port, config.TLSCACert, config.UseSystemTrustStore, defaultServiceConfig)
+func CreateAndInitTree(ctx context.Context, config GRPCConfig) (*trillian.Tree, error) {
+	newConn, err := dial(config.Address, config.Port, config.TLSCACert, config.UseSystemTrustStore, config.GRPCServiceConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -194,6 +199,12 @@ func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStor
 // Close stops clients and closes underlying gRPC connections.
 func (cm *ClientManager) Close() error {
 	var err error
+
+	// set shutdown flag to true and clear cache of clients
+	cm.clientMu.Lock()
+	cm.shutdown = true
+	cm.trillianClients = make(map[int64]*TrillianClient)
+	cm.clientMu.Unlock()
 
 	cm.connMu.Lock()
 	for cfg, conn := range cm.connections {

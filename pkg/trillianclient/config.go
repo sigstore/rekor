@@ -22,4 +22,5 @@ type GRPCConfig struct {
 	Port                uint16
 	TLSCACert           string
 	UseSystemTrustStore bool
+	GRPCServiceConfig   string
 }

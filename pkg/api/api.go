@@ -77,11 +77,12 @@ func NewAPI(treeID int64) (*API, error) {
 		Port:                viper.GetUint16("trillian_log_server.port"),
 		TLSCACert:           viper.GetString("trillian_log_server.tls_ca_cert"),
 		UseSystemTrustStore: viper.GetBool("trillian_log_server.tls"),
+		GRPCServiceConfig:   viper.GetString("trillian_log_server.grpc_default_service_config"),
 	}
 
 	if treeID == 0 {
 		log.Logger.Info("No tree ID specified, attempting to create a new tree")
-		t, err := trillianclient.CreateAndInitTree(ctx, defaultGRPCConfig, viper.GetString("trillian_log_server.grpc_default_service_config"))
+		t, err := trillianclient.CreateAndInitTree(ctx, defaultGRPCConfig)
 		if err != nil {
 			return nil, fmt.Errorf("create and init tree: %w", err)
 		}
@@ -102,13 +103,13 @@ func NewAPI(treeID int64) (*API, error) {
 		return nil, fmt.Errorf("unable get sharding details from sharding config: %w", err)
 	}
 
-	grpcConfigs := make(map[int64]trillianclient.GRPCConfig)
+	inactiveGRPCConfigs := make(map[int64]trillianclient.GRPCConfig)
 	for _, r := range ranges.GetInactive() {
 		if r.GRPCConfig != nil {
-			grpcConfigs[r.TreeID] = *r.GRPCConfig
+			inactiveGRPCConfigs[r.TreeID] = *r.GRPCConfig
 		}
 	}
-	tcm := trillianclient.NewClientManager(grpcConfigs, defaultGRPCConfig, viper.GetString("trillian_log_server.grpc_default_service_config"))
+	tcm := trillianclient.NewClientManager(inactiveGRPCConfigs, defaultGRPCConfig)
 
 	roots, err := ranges.CompleteInitialization(ctx, tcm)
 	if err != nil {
