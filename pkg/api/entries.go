@@ -313,7 +313,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 			}
 		case *rsa.PublicKey:
 			publicKeyInfo = fmt.Sprintf("rsa public key: %T/%v", pKey, pKey.Size())
-		case *ed25519.PublicKey:
+		case ed25519.PublicKey:
 			publicKeyInfo = fmt.Sprintf("ed25519 public key: %T", pKey)
 		default:
 			publicKeyInfo = fmt.Sprintf("public key: %T", pKey)
@@ -768,7 +768,7 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 			if result.Leaf == nil {
 				return models.LogEntry{}, ErrNotFound
 			}
-			return models.LogEntry{}, err
+			return models.LogEntry{}, resp.Err
 		}
 
 		logEntry, err := logEntryFromLeaf(ctx, result.Leaf, result.SignedLogRoot, result.Proof, tid, api.logRanges, api.cachedCheckpoints)

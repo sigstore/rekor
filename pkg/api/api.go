@@ -120,7 +120,7 @@ func NewAPI(treeID int64) (*API, error) {
 
 	algorithmsOption := viper.GetStringSlice("client-signing-algorithms")
 	var algorithms []v1.PublicKeyDetails
-	if algorithmsOption == nil {
+	if len(algorithmsOption) == 0 {
 		algorithms = DefaultClientSigningAlgorithms
 	} else {
 		for _, a := range algorithmsOption {
