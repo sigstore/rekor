@@ -16,6 +16,7 @@
 package trillianclient
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -62,6 +63,8 @@ type Response struct {
 	GetLatestResult *trillian.GetLatestSignedLogRootResponse
 	// GetConsistencyProofResult contains the response for a consistency proof between two log sizes
 	GetConsistencyProofResult *trillian.GetConsistencyProofResponse
+	// GetLeavesByRangeResult contains the response for fetching a leaf without an inclusion proof
+	GetLeavesByRangeResult *trillian.GetLeavesByRangeResponse
 	// getProofResult contains the response for an inclusion proof fetched by leaf hash
 	getProofResult *trillian.GetInclusionProofByHashResponse
 }
@@ -166,24 +169,46 @@ func (t *TrillianClient) AddLeaf(ctx context.Context, byteValue []byte) *Respons
 	}
 
 	leafIndex := proofs[0].LeafIndex
-	leafResp := t.GetLeafAndProofByIndex(ctx, leafIndex)
-	if leafResp.Err != nil {
+	// fetch the leaf without re-requesting a proof (since we already have it)
+	leafOnlyResp := t.GetLeafWithoutProof(ctx, leafIndex)
+	if leafOnlyResp.Err != nil {
 		return &Response{
-			Status:       status.Code(leafResp.Err),
-			Err:          leafResp.Err,
+			Status:       status.Code(leafOnlyResp.Err),
+			Err:          leafOnlyResp.Err,
 			GetAddResult: resp,
 		}
 	}
 
-	// overwrite queued leaf that doesn't have index set
-	resp.QueuedLeaf.Leaf = leafResp.GetLeafAndProofResult.Leaf
+	if leafOnlyResp.GetLeavesByRangeResult == nil || len(leafOnlyResp.GetLeavesByRangeResult.Leaves) == 0 {
+		err := fmt.Errorf("no leaf returned for index %d", leafIndex)
+		return &Response{
+			Status:       codes.NotFound,
+			Err:          err,
+			GetAddResult: resp}
+	}
+	leaf = leafOnlyResp.GetLeavesByRangeResult.Leaves[0]
+
+	if !bytes.Equal(leaf.MerkleLeafHash, resp.QueuedLeaf.Leaf.MerkleLeafHash) {
+		// extremely unlikely but this means the index in the proof doesn't match the content stored in the index
+		err := fmt.Errorf("leaf hash mismatch: expected %v, got %v", hex.EncodeToString(resp.QueuedLeaf.Leaf.MerkleLeafHash), hex.EncodeToString(leaf.MerkleLeafHash))
+		return &Response{
+			Status:       status.Code(err),
+			Err:          err,
+			GetAddResult: resp,
+		}
+	}
+
+	// Populate the queued leaf and construct a combined response for callers expecting it
+	resp.QueuedLeaf.Leaf = leaf
 
 	return &Response{
-		Status:       status.Code(err),
-		Err:          err,
+		Status:       codes.OK,
 		GetAddResult: resp,
-		// include getLeafAndProofResult for inclusion proof
-		GetLeafAndProofResult: leafResp.GetLeafAndProofResult,
+		GetLeafAndProofResult: &trillian.GetEntryAndProofResponse{
+			Proof:         proofs[0],
+			Leaf:          leaf,
+			SignedLogRoot: proofResp.getProofResult.SignedLogRoot,
+		},
 	}
 }
 
@@ -342,6 +367,25 @@ func (t *TrillianClient) getProofByHash(ctx context.Context, hashValue []byte) *
 		Status: status.Code(err),
 		Err:    err,
 	}
+}
+
+// GetLeavesByRange fetches leaves from startIndex (inclusive) up to count leaves without proofs.
+func (t *TrillianClient) GetLeavesByRange(ctx context.Context, startIndex, count int64) *Response {
+	resp, err := t.client.GetLeavesByRange(ctx, &trillian.GetLeavesByRangeRequest{
+		LogId:      t.logID,
+		StartIndex: startIndex,
+		Count:      count,
+	})
+	return &Response{
+		Status:                 status.Code(err),
+		Err:                    err,
+		GetLeavesByRangeResult: resp,
+	}
+}
+
+// GetLeafWithoutProof is a convenience wrapper for fetching a single leaf by index without proofs.
+func (t *TrillianClient) GetLeafWithoutProof(ctx context.Context, index int64) *Response {
+	return t.GetLeavesByRange(ctx, index, 1)
 }
 
 func CreateAndInitTree(ctx context.Context, adminClient trillian.TrillianAdminClient, logClient trillian.TrillianLogClient) (*trillian.Tree, error) {
