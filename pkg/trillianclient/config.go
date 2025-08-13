@@ -13,13 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build e2e
+package trillianclient
 
-package api
-
-import "google.golang.org/grpc"
-
-// TestDial  exposes the dial function for testing purposes
-func TestDial(rpcServer string) (*grpc.ClientConn, error) {
-	return dial(rpcServer)
+// GRPCConfig holds the configuration for a gRPC client. Because all its fields
+// are comparable, it can be used as a map key.
+type GRPCConfig struct {
+	Address             string
+	Port                uint16
+	TLSCACert           string
+	UseSystemTrustStore bool
+	GRPCServiceConfig   string
 }

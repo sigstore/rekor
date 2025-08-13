@@ -22,13 +22,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sigstore/rekor/pkg/log"
 	"github.com/transparency-dev/merkle/proof"
 	"github.com/transparency-dev/merkle/rfc6962"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
@@ -41,9 +39,9 @@ type TrillianClient struct {
 	logID  int64
 }
 
-// NewTrillianClient creates a TrillianClient with the given Trillian client and log/tree ID.
-func NewTrillianClient(logClient trillian.TrillianLogClient, logID int64) TrillianClient {
-	return TrillianClient{
+// newTrillianClient creates a TrillianClient with the given Trillian client and log/tree ID.
+func newTrillianClient(logClient trillian.TrillianLogClient, logID int64) *TrillianClient {
+	return &TrillianClient{
 		client: logClient,
 		logID:  logID,
 	}
@@ -386,23 +384,4 @@ func (t *TrillianClient) GetLeavesByRange(ctx context.Context, startIndex, count
 // GetLeafWithoutProof is a convenience wrapper for fetching a single leaf by index without proofs.
 func (t *TrillianClient) GetLeafWithoutProof(ctx context.Context, index int64) *Response {
 	return t.GetLeavesByRange(ctx, index, 1)
-}
-
-func CreateAndInitTree(ctx context.Context, adminClient trillian.TrillianAdminClient, logClient trillian.TrillianLogClient) (*trillian.Tree, error) {
-	t, err := adminClient.CreateTree(ctx, &trillian.CreateTreeRequest{
-		Tree: &trillian.Tree{
-			TreeType:        trillian.TreeType_LOG,
-			TreeState:       trillian.TreeState_ACTIVE,
-			MaxRootDuration: durationpb.New(time.Hour),
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create tree: %w", err)
-	}
-
-	if err := client.InitLog(ctx, t, logClient); err != nil {
-		return nil, fmt.Errorf("init log: %w", err)
-	}
-	log.Logger.Infof("Created new tree with ID: %v", t.TreeId)
-	return t, nil
 }

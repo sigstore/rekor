@@ -18,21 +18,11 @@ package api
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
-	"github.com/google/trillian"
-	"github.com/google/trillian/types"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/slices"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor/pkg/indexstorage"
@@ -48,58 +38,9 @@ import (
 	_ "github.com/sigstore/rekor/pkg/pubsub/gcp" // Load GCP pubsub implementation
 )
 
-func dial(rpcServer string) (*grpc.ClientConn, error) {
-	// Extract the hostname without the port
-	hostname := rpcServer
-	if idx := strings.Index(rpcServer, ":"); idx != -1 {
-		hostname = rpcServer[:idx]
-	}
-	// Set up and test connection to rpc server
-	var creds credentials.TransportCredentials
-	tlsCACertFile := viper.GetString("trillian_log_server.tls_ca_cert")
-	useSystemTrustStore := viper.GetBool("trillian_log_server.tls")
-
-	switch {
-	case useSystemTrustStore:
-		creds = credentials.NewTLS(&tls.Config{
-			ServerName: hostname,
-			MinVersion: tls.VersionTLS12,
-		})
-	case tlsCACertFile != "":
-		tlsCaCert, err := os.ReadFile(filepath.Clean(tlsCACertFile))
-		if err != nil {
-			log.Logger.Fatalf("Failed to load tls_ca_cert:", err)
-		}
-		certPool := x509.NewCertPool()
-		if !certPool.AppendCertsFromPEM(tlsCaCert) {
-			return nil, fmt.Errorf("failed to append CA certificate to pool")
-		}
-		creds = credentials.NewTLS(&tls.Config{
-			ServerName: hostname,
-			RootCAs:    certPool,
-			MinVersion: tls.VersionTLS12,
-		})
-	default:
-		creds = insecure.NewCredentials()
-	}
-
-	opts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
-	grpcDefaultServiceConfig := viper.GetString("trillian_log_server.grpc_default_service_config")
-	if grpcDefaultServiceConfig != "" {
-		opts = append(opts, grpc.WithDefaultServiceConfig(grpcDefaultServiceConfig))
-	}
-	conn, err := grpc.NewClient(rpcServer, opts...)
-	if err != nil {
-		log.Logger.Fatalf("Failed to connect to RPC server:", err)
-	}
-
-	return conn, nil
-}
-
 type API struct {
-	logClient trillian.TrillianLogClient
-	treeID    int64
-	logRanges sharding.LogRanges
+	trillianClientManager *trillianclient.ClientManager
+	logRanges             *sharding.LogRanges
 	// Publishes notifications when new entries are added to the log. May be
 	// nil if no publisher is configured.
 	newEntryPublisher pubsub.Publisher
@@ -109,6 +50,10 @@ type API struct {
 	// so we can fetch the checkpoint on service startup to
 	// minimize signature generations
 	cachedCheckpoints map[int64]string
+}
+
+func (api *API) ActiveTreeID() int64 {
+	return api.logRanges.GetActive().TreeID
 }
 
 var AllowedClientSigningAlgorithms = []v1.PublicKeyDetails{
@@ -123,28 +68,55 @@ var AllowedClientSigningAlgorithms = []v1.PublicKeyDetails{
 }
 var DefaultClientSigningAlgorithms = AllowedClientSigningAlgorithms
 
-func NewAPI(treeID uint) (*API, error) {
-	logRPCServer := fmt.Sprintf("%s:%d",
-		viper.GetString("trillian_log_server.address"),
-		viper.GetUint("trillian_log_server.port"))
+func NewAPI(treeID int64) (*API, error) {
 	ctx := context.Background()
-	tConn, err := dial(logRPCServer)
-	if err != nil {
-		return nil, fmt.Errorf("dial: %w", err)
-	}
-	logAdminClient := trillian.NewTrillianAdminClient(tConn)
-	logClient := trillian.NewTrillianLogClient(tConn)
 
-	tid := int64(treeID)
-	if tid == 0 {
+	// this is also used for the active tree
+	defaultGRPCConfig := trillianclient.GRPCConfig{
+		Address:             viper.GetString("trillian_log_server.address"),
+		Port:                viper.GetUint16("trillian_log_server.port"),
+		TLSCACert:           viper.GetString("trillian_log_server.tls_ca_cert"),
+		UseSystemTrustStore: viper.GetBool("trillian_log_server.tls"),
+		GRPCServiceConfig:   viper.GetString("trillian_log_server.grpc_default_service_config"),
+	}
+
+	if treeID == 0 {
 		log.Logger.Info("No tree ID specified, attempting to create a new tree")
-		t, err := trillianclient.CreateAndInitTree(ctx, logAdminClient, logClient)
+		t, err := trillianclient.CreateAndInitTree(ctx, defaultGRPCConfig)
 		if err != nil {
 			return nil, fmt.Errorf("create and init tree: %w", err)
 		}
-		tid = t.TreeId
+		treeID = t.TreeId
 	}
-	log.Logger.Infof("Starting Rekor server with active tree %v", tid)
+
+	shardingConfig := viper.GetString("trillian_log_server.sharding_config")
+	signingConfig := signer.SigningConfig{
+		SigningSchemeOrKeyPath: viper.GetString("rekor_server.signer"),
+		FileSignerPassword:     viper.GetString("rekor_server.signer-passwd"),
+		TinkKEKURI:             viper.GetString("rekor_server.tink_kek_uri"),
+		TinkKeysetPath:         viper.GetString("rekor_server.tink_keyset_path"),
+		GCPKMSRetries:          viper.GetUint("rekor_server.signer.gcpkms.retries"),
+		GCPKMSTimeout:          viper.GetUint("rekor_server.signer.gcpkms.timeout"),
+	}
+	ranges, err := sharding.NewLogRanges(ctx, shardingConfig, treeID, signingConfig)
+	if err != nil {
+		return nil, fmt.Errorf("unable get sharding details from sharding config: %w", err)
+	}
+
+	inactiveGRPCConfigs := make(map[int64]trillianclient.GRPCConfig)
+	for _, r := range ranges.GetInactive() {
+		if r.GRPCConfig != nil {
+			inactiveGRPCConfigs[r.TreeID] = *r.GRPCConfig
+		}
+	}
+	tcm := trillianclient.NewClientManager(inactiveGRPCConfigs, defaultGRPCConfig)
+
+	roots, err := ranges.CompleteInitialization(ctx, tcm)
+	if err != nil {
+		return nil, fmt.Errorf("completing log ranges initialization: %w", err)
+	}
+
+	log.Logger.Infof("Starting Rekor server with active tree %v", treeID)
 
 	algorithmsOption := viper.GetStringSlice("client-signing-algorithms")
 	var algorithms []v1.PublicKeyDetails
@@ -172,33 +144,12 @@ func NewAPI(treeID uint) (*API, error) {
 	}
 	log.Logger.Infof("Allowed client signing algorithms: %v", algorithmsStr)
 
-	shardingConfig := viper.GetString("trillian_log_server.sharding_config")
-	signingConfig := signer.SigningConfig{
-		SigningSchemeOrKeyPath: viper.GetString("rekor_server.signer"),
-		FileSignerPassword:     viper.GetString("rekor_server.signer-passwd"),
-		TinkKEKURI:             viper.GetString("rekor_server.tink_kek_uri"),
-		TinkKeysetPath:         viper.GetString("rekor_server.tink_keyset_path"),
-		GCPKMSRetries:          viper.GetUint("rekor_server.signer.gcpkms.retries"),
-		GCPKMSTimeout:          viper.GetUint("rekor_server.signer.gcpkms.timeout"),
-	}
-	ranges, err := sharding.NewLogRanges(ctx, logClient, shardingConfig, tid, signingConfig)
-	if err != nil {
-		return nil, fmt.Errorf("unable get sharding details from sharding config: %w", err)
-	}
-
 	cachedCheckpoints := make(map[int64]string)
 	for _, r := range ranges.GetInactive() {
-		tc := trillianclient.NewTrillianClient(logClient, r.TreeID)
-		resp := tc.GetLatest(ctx, 0)
-		if resp.Status != codes.OK {
-			return nil, fmt.Errorf("error fetching latest tree head for inactive shard %d: resp code is %d, err is %w", r.TreeID, resp.Status, resp.Err)
+		root, ok := roots[r.TreeID]
+		if !ok {
+			return nil, fmt.Errorf("no root found for inactive shard %d", r.TreeID)
 		}
-		result := resp.GetLatestResult
-		root := &types.LogRootV1{}
-		if err := root.UnmarshalBinary(result.SignedLogRoot.LogRoot); err != nil {
-			return nil, fmt.Errorf("error unmarshalling root: %w", err)
-		}
-
 		cp, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), r.TreeID, uint64(r.TreeLength), root.RootHash, r.Signer)
 		if err != nil {
 			return nil, fmt.Errorf("error signing checkpoint for inactive shard %d: %w", r.TreeID, err)
@@ -220,9 +171,8 @@ func NewAPI(treeID uint) (*API, error) {
 
 	return &API{
 		// Transparency Log Stuff
-		logClient: logClient,
-		treeID:    tid,
-		logRanges: ranges,
+		trillianClientManager: tcm,
+		logRanges:             ranges,
 		// Utility functionality not required for operation of the core service
 		newEntryPublisher: newEntryPublisher,
 		algorithmRegistry: algorithmRegistry,
@@ -236,7 +186,7 @@ var (
 	indexStorageClient       indexstorage.IndexStorage
 )
 
-func ConfigureAPI(treeID uint) {
+func ConfigureAPI(treeID int64) {
 	var err error
 
 	api, err = NewAPI(treeID)
@@ -287,6 +237,12 @@ func StopAPI() {
 	if indexStorageClient != nil {
 		if err := indexStorageClient.Shutdown(); err != nil {
 			log.Logger.Errorf("shutting down indexStorageClient: %v", err)
+		}
+	}
+
+	if api.trillianClientManager != nil {
+		if err := api.trillianClientManager.Close(); err != nil {
+			log.Logger.Errorf("shutting down trillian client manager: %v", err)
 		}
 	}
 }

@@ -90,7 +90,7 @@ func TestVirtualLogIndex(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			got := VirtualLogIndex(test.leafIndex, test.tid, test.ranges)
+			got := VirtualLogIndex(test.leafIndex, test.tid, &test.ranges)
 			if got != test.expectedIndex {
 				t.Fatalf("expected %v got %v", test.expectedIndex, got)
 			}

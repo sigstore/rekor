@@ -15,7 +15,7 @@
 package sharding
 
 // VirtualLogIndex returns the virtual log index for a given leaf index
-func VirtualLogIndex(leafIndex int64, tid int64, ranges LogRanges) int64 {
+func VirtualLogIndex(leafIndex int64, tid int64, ranges *LogRanges) int64 {
 	// if we have no inactive ranges, we have just one log! return the leafIndex as is
 	// as long as it matches the active tree ID
 	if ranges.NoInactive() {

@@ -65,6 +65,7 @@ import (
 	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
+	"github.com/sigstore/rekor/pkg/trillianclient"
 	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -75,13 +76,13 @@ import (
 )
 
 var (
-	testTreeID     uint = 12345
-	testSignerKey       = "testdata/signer.key"
-	testSignerCert      = "testdata/signer.pem"
-	testSignerPass      = "testpassword"
-	testCAPath          = "testdata/ca.pem"
-	testCAKeyPath       = "testdata/ca.key"
-	testServerAddr      = "localhost:8090"
+	testTreeID     int64 = 12345
+	testSignerKey        = "testdata/signer.key"
+	testSignerCert       = "testdata/signer.pem"
+	testSignerPass       = "testpassword"
+	testCAPath           = "testdata/ca.pem"
+	testCAKeyPath        = "testdata/ca.key"
+	testServerAddr       = "localhost:8090"
 )
 
 func getUUIDFromUploadOutput(t *testing.T, out string) string {
@@ -397,8 +398,7 @@ func TestDialE2E(t *testing.T) {
 			viper.Set("trillian_log_server.tls_ca_cert", tt.tlsCACert)
 			viper.Set("trillian_log_server.tls", tt.useSystemTLS)
 
-			serverAddr := listener.Addr().String()
-			conn, _ := api.TestDial(serverAddr)
+			conn, _ := trillianclient.TestDial("localhost", uint16(listener.Addr().(*net.TCPAddr).Port), tt.tlsCACert, tt.useSystemTLS)
 			require.NotNil(t, conn)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -1248,5 +1248,25 @@ func TestSearchLogQuerySingleShard(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestGetLogProofInvalidShard(t *testing.T) {
+	// Test case for GetLogProofHandler where a valid int64 is given for logIndex,
+	// but it doesn't match a known shard. This should result in a 400 Bad Request, not a 500 error.
+	treeID := "999999999999999999" // A large int64 value
+	firstSize := "1"
+	lastSize := "2"
+
+	url := fmt.Sprintf("%s/api/v1/log/proof?treeID=%s&firstSize=%s&lastSize=%s", rekorServer(), treeID, firstSize, lastSize)
+	resp, err := http.Get(url)
+	if err != nil {
+		t.Fatalf("unexpected error getting log proof: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		bodyBytes, _ := ioutil.ReadAll(resp.Body)
+		t.Fatalf("expected status code %d, got %d: %s", http.StatusBadRequest, resp.StatusCode, string(bodyBytes))
 	}
 }
