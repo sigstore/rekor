@@ -229,7 +229,42 @@ func (t *TrillianClient) GetLeafAndProofByHash(ctx context.Context, hash []byte)
 		}
 	}
 
-	return t.GetLeafAndProofByIndex(ctx, proofs[0].LeafIndex)
+	leafIndex := proofs[0].LeafIndex
+	// fetch the leaf without re-requesting a proof (since we already have it)
+	leafOnlyResp := t.GetLeafWithoutProof(ctx, leafIndex)
+	if leafOnlyResp.Err != nil {
+		return &Response{
+			Status: status.Code(leafOnlyResp.Err),
+			Err:    leafOnlyResp.Err,
+		}
+	}
+
+	if leafOnlyResp.GetLeavesByRangeResult == nil || len(leafOnlyResp.GetLeavesByRangeResult.Leaves) == 0 {
+		err := fmt.Errorf("no leaf returned for index %d", leafIndex)
+		return &Response{
+			Status: codes.NotFound,
+			Err:    err,
+		}
+	}
+	leaf := leafOnlyResp.GetLeavesByRangeResult.Leaves[0]
+
+	if !bytes.Equal(leaf.MerkleLeafHash, hash) {
+		// extremely unlikely but this means the index in the proof doesn't match the content stored in the index
+		err := fmt.Errorf("leaf hash mismatch: expected %v, got %v", hex.EncodeToString(hash), hex.EncodeToString(leaf.MerkleLeafHash))
+		return &Response{
+			Status: status.Code(err),
+			Err:    err,
+		}
+	}
+
+	return &Response{
+		Status: codes.OK,
+		GetLeafAndProofResult: &trillian.GetEntryAndProofResponse{
+			Proof:         proofs[0],
+			Leaf:          leaf,
+			SignedLogRoot: proofResp.getProofResult.SignedLogRoot,
+		},
+	}
 }
 
 func (t *TrillianClient) GetLeafAndProofByIndex(ctx context.Context, index int64) *Response {
