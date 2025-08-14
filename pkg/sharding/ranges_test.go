@@ -761,7 +761,7 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 		},
 		{
 			name: "Scenario 4: gRPC Connection Failure",
-			setup: func(t *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
+			setup: func(_ *testing.T, logRanges *LogRanges, tcm **trillianclient.ClientManager) {
 				inactive, _ := initializeRange(context.Background(), LogRange{TreeID: 401, SigningConfig: activeSC})
 				logRanges.inactive = Ranges{inactive}
 
