@@ -168,7 +168,7 @@ func (t *TrillianClient) AddLeaf(ctx context.Context, byteValue []byte) *Respons
 
 	leafIndex := proofs[0].LeafIndex
 	// fetch the leaf without re-requesting a proof (since we already have it)
-	leafOnlyResp := t.GetLeafWithoutProof(ctx, leafIndex)
+	leafOnlyResp := t.getStandaloneLeaf(ctx, leafIndex, resp.QueuedLeaf.Leaf.MerkleLeafHash, proofs[0], proofResp.getProofResult.SignedLogRoot)
 	if leafOnlyResp.Err != nil {
 		return &Response{
 			Status:       status.Code(leafOnlyResp.Err),
@@ -177,36 +177,13 @@ func (t *TrillianClient) AddLeaf(ctx context.Context, byteValue []byte) *Respons
 		}
 	}
 
-	if leafOnlyResp.GetLeavesByRangeResult == nil || len(leafOnlyResp.GetLeavesByRangeResult.Leaves) == 0 {
-		err := fmt.Errorf("no leaf returned for index %d", leafIndex)
-		return &Response{
-			Status:       codes.NotFound,
-			Err:          err,
-			GetAddResult: resp}
-	}
-	leaf = leafOnlyResp.GetLeavesByRangeResult.Leaves[0]
-
-	if !bytes.Equal(leaf.MerkleLeafHash, resp.QueuedLeaf.Leaf.MerkleLeafHash) {
-		// extremely unlikely but this means the index in the proof doesn't match the content stored in the index
-		err := fmt.Errorf("leaf hash mismatch: expected %v, got %v", hex.EncodeToString(resp.QueuedLeaf.Leaf.MerkleLeafHash), hex.EncodeToString(leaf.MerkleLeafHash))
-		return &Response{
-			Status:       status.Code(err),
-			Err:          err,
-			GetAddResult: resp,
-		}
-	}
-
-	// Populate the queued leaf and construct a combined response for callers expecting it
-	resp.QueuedLeaf.Leaf = leaf
+	// Copy this value explicitly because it contains the integrated timestamp
+	resp.QueuedLeaf.Leaf = leafOnlyResp.GetLeafAndProofResult.Leaf
 
 	return &Response{
-		Status:       codes.OK,
-		GetAddResult: resp,
-		GetLeafAndProofResult: &trillian.GetEntryAndProofResponse{
-			Proof:         proofs[0],
-			Leaf:          leaf,
-			SignedLogRoot: proofResp.getProofResult.SignedLogRoot,
-		},
+		Status:                codes.OK,
+		GetAddResult:          resp,
+		GetLeafAndProofResult: leafOnlyResp.GetLeafAndProofResult,
 	}
 }
 
@@ -229,7 +206,17 @@ func (t *TrillianClient) GetLeafAndProofByHash(ctx context.Context, hash []byte)
 		}
 	}
 
-	return t.GetLeafAndProofByIndex(ctx, proofs[0].LeafIndex)
+	leafIndex := proofs[0].LeafIndex
+	// fetch the leaf without re-requesting a proof (since we already have it)
+	leafOnlyResp := t.getStandaloneLeaf(ctx, leafIndex, hash, proofs[0], proofResp.getProofResult.SignedLogRoot)
+	if leafOnlyResp.Err != nil {
+		return &Response{
+			Status: status.Code(leafOnlyResp.Err),
+			Err:    leafOnlyResp.Err,
+		}
+	}
+
+	return leafOnlyResp
 }
 
 func (t *TrillianClient) GetLeafAndProofByIndex(ctx context.Context, index int64) *Response {
@@ -384,4 +371,50 @@ func (t *TrillianClient) GetLeavesByRange(ctx context.Context, startIndex, count
 // GetLeafWithoutProof is a convenience wrapper for fetching a single leaf by index without proofs.
 func (t *TrillianClient) GetLeafWithoutProof(ctx context.Context, index int64) *Response {
 	return t.GetLeavesByRange(ctx, index, 1)
+}
+
+// getStandaloneLeaf gets just the leaf, returns it in GetLeafAndProof result for easier reuse
+func (t *TrillianClient) getStandaloneLeaf(ctx context.Context, index int64, hash []byte, proof *trillian.Proof, signedRoot *trillian.SignedLogRoot) *Response {
+	leafOnlyResp := t.GetLeafWithoutProof(ctx, index)
+	if leafOnlyResp.Err != nil {
+		return &Response{
+			Status: status.Code(leafOnlyResp.Err),
+			Err:    leafOnlyResp.Err,
+		}
+	}
+
+	if leafOnlyResp.GetLeavesByRangeResult == nil || len(leafOnlyResp.GetLeavesByRangeResult.Leaves) == 0 {
+		err := fmt.Errorf("no leaf returned for index %d", index)
+		return &Response{
+			Status: codes.NotFound,
+			Err:    err,
+		}
+	}
+	// shouldn't happen since we're using a log mode that prevents duplicates
+	if len(leafOnlyResp.GetLeavesByRangeResult.Leaves) != 1 {
+		err := fmt.Errorf("multiple leaves returned for index %d", index)
+		return &Response{
+			Status: codes.FailedPrecondition,
+			Err:    err,
+		}
+	}
+	leaf := leafOnlyResp.GetLeavesByRangeResult.Leaves[0]
+
+	if !bytes.Equal(leaf.MerkleLeafHash, hash) {
+		// extremely unlikely but this means the index in the proof doesn't match the content stored in the index
+		err := fmt.Errorf("leaf hash mismatch: expected %v, got %v", hex.EncodeToString(hash), hex.EncodeToString(leaf.MerkleLeafHash))
+		return &Response{
+			Status: status.Code(err),
+			Err:    err,
+		}
+	}
+
+	return &Response{
+		Status: codes.OK,
+		GetLeafAndProofResult: &trillian.GetEntryAndProofResponse{
+			Proof:         proof,
+			Leaf:          leaf,
+			SignedLogRoot: signedRoot,
+		},
+	}
 }
