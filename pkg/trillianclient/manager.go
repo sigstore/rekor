@@ -54,11 +54,11 @@ type ClientManager struct {
 	// defaultConfig is the global fallback configuration.
 	defaultConfig GRPCConfig
 	// clientConfig holds timeout settings for new clients
-	clientConfig TrillianClientConfig
+	clientConfig Config
 }
 
 // NewClientManager creates a new ClientManager.
-func NewClientManager(treeIDToConfig map[int64]GRPCConfig, defaultConfig GRPCConfig, clientConfig TrillianClientConfig) *ClientManager {
+func NewClientManager(treeIDToConfig map[int64]GRPCConfig, defaultConfig GRPCConfig, clientConfig Config) *ClientManager {
 	return &ClientManager{
 		connections:     make(map[GRPCConfig]*grpc.ClientConn),
 		treeIDToConfig:  treeIDToConfig,

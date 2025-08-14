@@ -95,17 +95,17 @@ func init() {
 	)
 }
 
-// TrillianClientConfig holds configuration options for TrillianClient
-type TrillianClientConfig struct {
+// Config holds configuration options for TrillianClient
+type Config struct {
 	// InitLatestRootTimeout is the timeout for fetching the latest root during initialization
 	InitLatestRootTimeout time.Duration
 	// UpdaterWaitTimeout is the timeout for updater polling wait operations
 	UpdaterWaitTimeout time.Duration
 }
 
-// DefaultTrillianClientConfig returns a config with default timeout values
-func DefaultTrillianClientConfig() TrillianClientConfig {
-	return TrillianClientConfig{
+// DefaultConfig returns a config with default timeout values
+func DefaultConfig() Config {
+	return Config{
 		InitLatestRootTimeout: DefaultInitLatestRootTimeout,
 		UpdaterWaitTimeout:    DefaultUpdaterWaitTimeout,
 	}
@@ -115,7 +115,7 @@ func DefaultTrillianClientConfig() TrillianClientConfig {
 type TrillianClient struct {
 	client trillian.TrillianLogClient
 	logID  int64
-	config TrillianClientConfig
+	config Config
 
 	// shared trillian client/verifier
 	lc   *client.LogClient
@@ -143,7 +143,7 @@ type rootSnapshot struct {
 }
 
 // newTrillianClient creates a TrillianClient with the given Trillian client, log/tree ID, and config.
-func newTrillianClient(logClient trillian.TrillianLogClient, logID int64, config TrillianClientConfig) *TrillianClient {
+func newTrillianClient(logClient trillian.TrillianLogClient, logID int64, config Config) *TrillianClient {
 	t := &TrillianClient{
 		client: logClient,
 		logID:  logID,
@@ -247,11 +247,10 @@ func (t *TrillianClient) updater() {
 	// Create backoff for retry logic with reasonable defaults
 	bo := backoff.Backoff{
 		Min:    100 * time.Millisecond, // Start with 100ms
-		Max:    30 * time.Second,       // Cap at 30s  
+		Max:    30 * time.Second,       // Cap at 30s
 		Factor: 2.0,                    // Double each time
 		Jitter: true,                   // Add randomization
 	}
-	
 	for {
 		// Wrap the WaitForRootUpdate call with backoff retry
 		var nr *types.LogRootV1
@@ -261,21 +260,20 @@ func (t *TrillianClient) updater() {
 				return fmt.Errorf("client stopped")
 			default:
 			}
-			
+
 			ctx, cancel := context.WithTimeout(t.bgCtx, t.config.UpdaterWaitTimeout)
 			defer cancel()
-			
+
 			var waitErr error
 			nr, waitErr = t.lc.WaitForRootUpdate(ctx)
 			return waitErr
 		})
-		
 		select {
 		case <-t.stopCh:
 			return
 		default:
 		}
-		
+
 		if err != nil {
 			log.Logger.Debugw("trillian root update wait failed after retries", "treeID", t.logID, "err", err)
 			metricUpdaterErrors.WithLabelValues(fmt.Sprintf("%d", t.logID)).Inc()
@@ -283,10 +281,10 @@ func (t *TrillianClient) updater() {
 			bo.Reset()
 			continue
 		}
-		
+
 		// Success - reset backoff for next potential failure
 		bo.Reset()
-		
+
 		if nr == nil {
 			continue
 		}

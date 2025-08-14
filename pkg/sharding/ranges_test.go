@@ -703,7 +703,7 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 					101: {Address: "localhost", Port: uint16(portA)},
 					102: {Address: "localhost", Port: uint16(portB)},
 				}
-				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{}, trillianclient.DefaultTrillianClientConfig())
+				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{}, trillianclient.DefaultConfig())
 			},
 			expectErr: false,
 			postCondition: func(t *testing.T, logRanges *LogRanges, roots map[int64]types.LogRootV1) {
@@ -735,7 +735,7 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 
 				// No specific config for tree 201, so it should use the default
 				defaultConfig := trillianclient.GRPCConfig{Address: "localhost", Port: uint16(port)}
-				*tcm = trillianclient.NewClientManager(map[int64]trillianclient.GRPCConfig{}, defaultConfig, trillianclient.DefaultTrillianClientConfig())
+				*tcm = trillianclient.NewClientManager(map[int64]trillianclient.GRPCConfig{}, defaultConfig, trillianclient.DefaultConfig())
 			},
 			expectErr: false,
 			postCondition: func(t *testing.T, logRanges *LogRanges, roots map[int64]types.LogRootV1) {
@@ -751,7 +751,7 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 				logRanges.inactive = Ranges{}
 				// No inactive shards means the client manager won't be used.
 				// Provide a no-op default config to satisfy constructor.
-				*tcm = trillianclient.NewClientManager(nil, trillianclient.GRPCConfig{Address: "localhost", Port: 0}, trillianclient.DefaultTrillianClientConfig())
+				*tcm = trillianclient.NewClientManager(nil, trillianclient.GRPCConfig{Address: "localhost", Port: 0}, trillianclient.DefaultConfig())
 			},
 			expectErr: false,
 			postCondition: func(t *testing.T, logRanges *LogRanges, roots map[int64]types.LogRootV1) {
@@ -769,7 +769,7 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 				grpcConfigs := map[int64]trillianclient.GRPCConfig{
 					401: {Address: "localhost", Port: uint16(closedAddr.Port)},
 				}
-				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{}, trillianclient.DefaultTrillianClientConfig())
+				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{}, trillianclient.DefaultConfig())
 			},
 			expectErr: true,
 		},
@@ -792,7 +792,7 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 				grpcConfigs := map[int64]trillianclient.GRPCConfig{
 					501: {Address: "localhost", Port: uint16(port)},
 				}
-				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{}, trillianclient.DefaultTrillianClientConfig())
+				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{}, trillianclient.DefaultConfig())
 			},
 			expectErr: true,
 		},
