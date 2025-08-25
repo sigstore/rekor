@@ -72,7 +72,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.5
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.9.6-0.20250729224751-181c5d3339b3
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.5
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	github.com/tink-crypto/tink-go-awskms/v2 v2.1.0
 	github.com/tink-crypto/tink-go-gcpkms/v2 v2.2.0
 	github.com/tink-crypto/tink-go/v2 v2.4.0
