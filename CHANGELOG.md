@@ -1,3 +1,22 @@
+# v1.4.1
+
+This release includes updated dependencies for known CVEs, as well as some optimizations to minimize gRPC traffic between Rekor and Trillian.
+
+## Fixes
+
+* use less expensive gRPC call to implement GetLeafAndProofByHash (#2581)
+* move to per-shard trillian client manager (#2564)
+* use cheaper gRPC endpoint when we already have the inclusion proof (#2580)
+* simplify hash and signature verification in rekord type (#2579)
+* use correct type; just look for len() instead of nil check (#2576)
+* return correct error if GetLeafAndProofByHash fails (#2574)
+* fix incorrect client lb policy in test config (#2551)
+* numerous upgraded dependencies
+
+## Contributors
+* Bob Callaway
+* Carlos Alexandro Becker
+
 # v1.4.0
 
 This is a minor version release given the removal of the stable checkpoint feature. To our knowledge, this was not
