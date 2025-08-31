@@ -101,7 +101,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non Rfc3161 v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(rfc3161Resp.Spec, &v.Rfc3161Obj); err != nil {
+	if err := DecodeEntry(rfc3161Resp.Spec, &v.Rfc3161Obj); err != nil {
 		return err
 	}
 
@@ -117,6 +117,42 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	v.tsrContent = v.Rfc3161Obj.Tsr.Content
 
 	return nil
+}
+
+// DecodeEntry decodes input into provided output pointer without mutating receiver on error
+func DecodeEntry(input any, output *models.Rfc3161V001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.Rfc3161V001Schema")
+	}
+	var m models.Rfc3161V001Schema
+	switch data := input.(type) {
+	case map[string]any:
+		if tsr, ok := data["tsr"].(map[string]any); ok {
+			m.Tsr = &models.Rfc3161V001SchemaTsr{}
+			if c, ok := tsr["content"].(string); ok && c != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(c))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for tsr content: %w", err)
+				}
+				b := strfmt.Base64(outb[:n])
+				m.Tsr.Content = &b
+			}
+		}
+		*output = m
+		return nil
+	case *models.Rfc3161V001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.Rfc3161V001Schema")
+		}
+		*output = *data
+		return nil
+	case models.Rfc3161V001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
 }
 
 func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {

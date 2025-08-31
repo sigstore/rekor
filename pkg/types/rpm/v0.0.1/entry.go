@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -96,7 +97,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non RPM v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(rpm.Spec, &v.RPMModel); err != nil {
+	if err := DecodeEntry(rpm.Spec, &v.RPMModel); err != nil {
 		return err
 	}
 
@@ -106,6 +107,72 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	return v.validate()
+}
+
+// DecodeEntry decodes input into provided output pointer without mutating receiver on error
+func DecodeEntry(input any, output *models.RpmV001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.RpmV001Schema")
+	}
+	var m models.RpmV001Schema
+	// Single switch including map[string]any fast path
+	switch data := input.(type) {
+	case map[string]any:
+		mm := data
+		if pk, ok := mm["publicKey"].(map[string]any); ok {
+			m.PublicKey = &models.RpmV001SchemaPublicKey{}
+			if c, ok := pk["content"].(string); ok && c != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(c))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for publicKey content: %w", err)
+				}
+				b := strfmt.Base64(outb[:n])
+				m.PublicKey.Content = &b
+			}
+		}
+		if pkgRaw, ok := mm["package"].(map[string]any); ok {
+			m.Package = &models.RpmV001SchemaPackage{}
+			if hdrs, ok := pkgRaw["headers"].(map[string]any); ok {
+				m.Package.Headers = make(map[string]string, len(hdrs))
+				for k, v2 := range hdrs {
+					if s, ok := v2.(string); ok {
+						m.Package.Headers[k] = s
+					}
+				}
+			}
+			if hRaw, ok := pkgRaw["hash"].(map[string]any); ok {
+				m.Package.Hash = &models.RpmV001SchemaPackageHash{}
+				if alg, ok := hRaw["algorithm"].(string); ok {
+					m.Package.Hash.Algorithm = &alg
+				}
+				if val, ok := hRaw["value"].(string); ok {
+					m.Package.Hash.Value = &val
+				}
+			}
+			if c, ok := pkgRaw["content"].(string); ok && c != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(c))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for package content: %w", err)
+				}
+				m.Package.Content = strfmt.Base64(outb[:n])
+			}
+		}
+		*output = m
+		return nil
+	case *models.RpmV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.RpmV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.RpmV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
 }
 
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pgp.PublicKey, *rpmutils.PackageFile, error) {
