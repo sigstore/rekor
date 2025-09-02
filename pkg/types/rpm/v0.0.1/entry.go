@@ -34,7 +34,6 @@ import (
 	rpmutils "github.com/cavaliercoder/go-rpm"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -175,120 +174,57 @@ func DecodeEntry(input any, output *models.RpmV001Schema) error {
 	}
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pgp.PublicKey, *rpmutils.PackageFile, error) {
-
+func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pgp.PublicKey, *rpmutils.PackageFile, error) {
 	if err := v.validate(); err != nil {
 		return nil, nil, &types.InputValidationError{Err: err}
 	}
-
-	g, ctx := errgroup.WithContext(ctx)
-
-	hashR, hashW := io.Pipe()
-	sigR, sigW := io.Pipe()
-	rpmR, rpmW := io.Pipe()
-	defer hashR.Close()
-	defer sigR.Close()
-	defer rpmR.Close()
-
-	closePipesOnError := types.PipeCloser(hashR, hashW, sigR, sigW, rpmR, rpmW)
 
 	oldSHA := ""
 	if v.RPMModel.Package.Hash != nil && v.RPMModel.Package.Hash.Value != nil {
 		oldSHA = conv.Value(v.RPMModel.Package.Hash.Value)
 	}
 
-	g.Go(func() error {
-		defer hashW.Close()
-		defer sigW.Close()
-		defer rpmW.Close()
+	// Parse public key
+	keyObj, err := pgp.NewPublicKey(bytes.NewReader(*v.RPMModel.PublicKey.Content))
+	if err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
 
-		dataReadCloser := bytes.NewReader(v.RPMModel.Package.Content)
+	// Prepare package data and verify hash
+	dataReadCloser := bytes.NewReader(v.RPMModel.Package.Content)
+	hasher := sha256.New()
 
-		/* #nosec G110 */
-		if _, err := io.Copy(io.MultiWriter(hashW, sigW, rpmW), dataReadCloser); err != nil {
-			return closePipesOnError(err)
-		}
-		return nil
-	})
+	// Create buffers for signature verification and RPM parsing
+	sigBuffer := bytes.NewBuffer(nil)
+	rpmBuffer := bytes.NewBuffer(nil)
 
-	hashResult := make(chan string)
-
-	g.Go(func() error {
-		defer close(hashResult)
-		hasher := sha256.New()
-
-		if _, err := io.Copy(hasher, hashR); err != nil {
-			return closePipesOnError(err)
-		}
-
-		computedSHA := hex.EncodeToString(hasher.Sum(nil))
-		if oldSHA != "" && computedSHA != oldSHA {
-			return closePipesOnError(&types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case hashResult <- computedSHA:
-			return nil
-		}
-	})
-
-	var keyObj *pgp.PublicKey
-	g.Go(func() error {
-		keyReadCloser := bytes.NewReader(*v.RPMModel.PublicKey.Content)
-
-		var err error
-		keyObj, err = pgp.NewPublicKey(keyReadCloser)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		keyring, err := keyObj.KeyRing()
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		if _, err := rpmutils.GPGCheck(sigR, keyring); err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			return nil
-		}
-	})
-
-	var rpmObj *rpmutils.PackageFile
-	g.Go(func() error {
-
-		var err error
-		rpmObj, err = rpmutils.ReadPackageFile(rpmR)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-		// ReadPackageFile does not drain the entire reader so we need to discard the rest
-		if _, err = io.Copy(io.Discard, rpmR); err != nil {
-			return closePipesOnError(err)
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			return nil
-		}
-	})
-
-	computedSHA := <-hashResult
-
-	if err := g.Wait(); err != nil {
+	/* #nosec G110 */
+	if _, err := io.Copy(io.MultiWriter(hasher, sigBuffer, rpmBuffer), dataReadCloser); err != nil {
 		return nil, nil, err
 	}
 
-	// if we get here, all goroutines succeeded without error
+	computedSHA := hex.EncodeToString(hasher.Sum(nil))
+	if oldSHA != "" && computedSHA != oldSHA {
+		return nil, nil, &types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)}
+	}
+
+	// Verify GPG signature
+	keyring, err := keyObj.KeyRing()
+	if err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	if _, err := rpmutils.GPGCheck(sigBuffer, keyring); err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Parse RPM package
+	rpmObj, err := rpmutils.ReadPackageFile(rpmBuffer)
+	if err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Set hash if not provided
 	if oldSHA == "" {
 		v.RPMModel.Package.Hash = &models.RpmV001SchemaPackageHash{}
 		v.RPMModel.Package.Hash.Algorithm = conv.Pointer(models.RpmV001SchemaPackageHashAlgorithmSha256)
