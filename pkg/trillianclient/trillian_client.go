@@ -24,6 +24,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/transparency-dev/merkle/rfc6962"
 
 	"google.golang.org/grpc/codes"
@@ -33,7 +34,6 @@ import (
 	"github.com/google/trillian/client"
 	"github.com/google/trillian/client/backoff"
 	"github.com/google/trillian/types"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sigstore/rekor/pkg/log"
 )
 
@@ -278,7 +278,6 @@ func (t *TrillianClient) updater() {
 
 		if err != nil {
 			log.Logger.Debugw("trillian root update wait failed after retries", "treeID", t.logID, "err", err)
-			metricUpdaterErrors.WithLabelValues(fmt.Sprintf("%d", t.logID)).Inc()
 			// Reset backoff on persistent failure and continue to next iteration
 			bo.Reset()
 			continue
@@ -304,7 +303,6 @@ func (t *TrillianClient) updater() {
 		lrBytes, mErr := nr.MarshalBinary()
 		if mErr != nil {
 			log.Logger.Debugw("failed to marshal updated log root", "treeID", t.logID, "err", mErr)
-			metricUpdaterErrors.WithLabelValues(fmt.Sprintf("%d", t.logID)).Inc()
 			continue
 		}
 		slr := &trillian.SignedLogRoot{LogRoot: lrBytes}
@@ -314,11 +312,6 @@ func (t *TrillianClient) updater() {
 		t.snapshot.Store(rootSnapshot{root: *nr, signed: slr})
 		t.cond.Broadcast()
 		t.mu.Unlock()
-
-		// metrics
-		tree := fmt.Sprintf("%d", t.logID)
-		metricRootAdvance.WithLabelValues(tree).Inc()
-		metricLatestTreeSize.WithLabelValues(tree).Set(float64(nr.TreeSize))
 	}
 }
 
@@ -589,20 +582,14 @@ func (t *TrillianClient) getProofByHashWithRoot(ctx context.Context, hashValue [
 // least minSize. This reduces initial NotFound churn without increasing time
 // to success (since inclusion requires a root advance).
 func (t *TrillianClient) waitForInclusionWithMinSize(ctx context.Context, leafHash []byte, minSize uint64) *Response {
-	start := time.Now()
-
 	// Optionally delay the very first attempt until minSize is reached.
 	// If the current snapshot is already beyond minSize, this returns immediately.
 	if err := t.waitForRootAtLeast(ctx, minSize); err != nil {
-		elapsed := float64(time.Since(start).Milliseconds())
-		metricInclusionWait.WithLabelValues("false").Observe(elapsed)
 		return &Response{Status: status.Code(err), Err: err}
 	}
 
 	for {
 		if err := ctx.Err(); err != nil {
-			elapsed := float64(time.Since(start).Milliseconds())
-			metricInclusionWait.WithLabelValues("false").Observe(elapsed)
 			return &Response{Status: status.Code(err), Err: err}
 		}
 		snap, _ := t.snapshot.Load().(rootSnapshot)
@@ -611,9 +598,6 @@ func (t *TrillianClient) waitForInclusionWithMinSize(ctx context.Context, leafHa
 
 		proofResp := t.getProofByHashWithRoot(ctx, leafHash, root, signed)
 		if proofResp.Err == nil || status.Code(proofResp.Err) != codes.NotFound {
-			success := proofResp.Err == nil
-			elapsed := float64(time.Since(start).Milliseconds())
-			metricInclusionWait.WithLabelValues(fmt.Sprintf("%t", success)).Observe(elapsed)
 			return proofResp
 		}
 
@@ -626,27 +610,19 @@ func (t *TrillianClient) waitForInclusionWithMinSize(ctx context.Context, leafHa
 
 // waitForRootAtLeast blocks until t.lastRoot.TreeSize >= size, or context/client closes.
 func (t *TrillianClient) waitForRootAtLeast(ctx context.Context, size uint64) error {
-	start := time.Now()
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	for {
 		if err := ctx.Err(); err != nil {
-			// metrics
-			elapsed := float64(time.Since(start).Milliseconds())
-			metricWaitForRootAtLeast.WithLabelValues(fmt.Sprintf("%d", t.logID), "false").Observe(elapsed)
 			return err
 		}
 		select {
 		case <-t.stopCh:
-			elapsed := float64(time.Since(start).Milliseconds())
-			metricWaitForRootAtLeast.WithLabelValues(fmt.Sprintf("%d", t.logID), "false").Observe(elapsed)
 			return status.Error(codes.Canceled, "client closed")
 		default:
 		}
 		cur := t.snapshot.Load().(rootSnapshot)
 		if cur.root.TreeSize >= size {
-			elapsed := float64(time.Since(start).Milliseconds())
-			metricWaitForRootAtLeast.WithLabelValues(fmt.Sprintf("%d", t.logID), "true").Observe(elapsed)
 			return nil
 		}
 		t.cond.Wait()
