@@ -18,6 +18,7 @@ package rpm
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -29,7 +30,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/asaskevich/govalidator"
 	rpmutils "github.com/cavaliercoder/go-rpm"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -297,7 +297,12 @@ func (v V001Entry) validate() error {
 
 	hash := pkg.Hash
 	if hash != nil {
-		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
+		// Only sha256 is supported for rpm v0.0.1; enforce length accordingly.
+		var want = crypto.SHA256
+		if hash.Value == nil || len(*hash.Value) != want.Size()*2 {
+			return errors.New("invalid value for hash")
+		}
+		if _, err := hex.DecodeString(*hash.Value); err != nil {
 			return errors.New("invalid value for hash")
 		}
 	} else if len(pkg.Content) == 0 {
