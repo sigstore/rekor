@@ -35,7 +35,6 @@ import (
 	// This will support deprecated ECDSA hex-encoded keys in TUF metadata.
 	// Will be removed when sigstore migrates entirely off hex-encoded.
 	_ "github.com/theupdateframework/go-tuf/pkg/deprecated/set_ecdsa"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types"
@@ -183,102 +182,39 @@ func DecodeEntry(input any, output *models.TUFV001Schema) error {
 	}
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, pki.Signature, error) {
-	g, ctx := errgroup.WithContext(ctx)
-
-	metaR, metaW := io.Pipe()
-	rootR, rootW := io.Pipe()
-	defer metaR.Close()
-	defer rootR.Close()
-
-	closePipesOnError := types.PipeCloser(metaR, metaW, rootR, rootW)
-
-	// verify artifact signature
-	sigResult := make(chan pki.Signature)
-
-	g.Go(func() error {
-		defer close(sigResult)
-
-		var contentBytes []byte
-		if v.TufObj.Metadata.Content != nil {
-			var err error
-			contentBytes, err = v.parseMetadataContent()
-			if err != nil {
-				return closePipesOnError(err)
-			}
-		}
-
-		sigReadCloser := bytes.NewReader(contentBytes)
-
-		signature, err := ptuf.NewSignature(sigReadCloser)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case sigResult <- signature:
-			return nil
-		}
-	})
-
-	keyResult := make(chan pki.PublicKey)
-
-	g.Go(func() error {
-		defer close(keyResult)
-
-		var contentBytes []byte
-		if v.TufObj.Root.Content != nil {
-			var err error
-			contentBytes, err = v.parseRootContent()
-			if err != nil {
-				return closePipesOnError(err)
-			}
-		}
-
-		keyReadCloser := bytes.NewReader(contentBytes)
-
-		key, err := ptuf.NewPublicKey(keyReadCloser)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case keyResult <- key:
-			return nil
-		}
-	})
-
-	var (
-		keyObj pki.PublicKey
-		sigObj pki.Signature
-	)
-	// the sigObj contains the signed content.
-	g.Go(func() error {
-		keyObj, sigObj = <-keyResult, <-sigResult
-
-		if keyObj == nil || sigObj == nil {
-			return closePipesOnError(errors.New("failed to read signature or public key"))
-		}
-
+func (v *V001Entry) fetchExternalEntities(_ context.Context) (pki.PublicKey, pki.Signature, error) {
+	// Parse metadata content
+	var contentBytes []byte
+	if v.TufObj.Metadata.Content != nil {
 		var err error
-		if err = sigObj.Verify(nil, keyObj); err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
+		contentBytes, err = v.parseMetadataContent()
+		if err != nil {
+			return nil, nil, err
 		}
+	}
 
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			return nil
+	sigObj, err := ptuf.NewSignature(bytes.NewReader(contentBytes))
+	if err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Parse root content
+	var rootContentBytes []byte
+	if v.TufObj.Root.Content != nil {
+		rootContentBytes, err = v.parseRootContent()
+		if err != nil {
+			return nil, nil, err
 		}
-	})
+	}
 
-	if err := g.Wait(); err != nil {
-		return nil, nil, err
+	keyObj, err := ptuf.NewPublicKey(bytes.NewReader(rootContentBytes))
+	if err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Verify signature
+	if err := sigObj.Verify(nil, keyObj); err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
 	return keyObj, sigObj, nil
