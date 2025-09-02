@@ -139,7 +139,7 @@ func FuzzHelmDecodeEntryDirectMapAndRaw(f *testing.F) {
 				}
 				prov["content"] = toB64(512)
 				m["chart"] = map[string]any{
-					"hash":      map[string]any{"algorithm": "sha256", "value": "deadbeef"},
+					"hash":       map[string]any{"algorithm": "sha256", "value": "deadbeef"},
 					"provenance": prov,
 				}
 			}
