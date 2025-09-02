@@ -298,8 +298,7 @@ func (v V001Entry) validate() error {
 	hash := pkg.Hash
 	if hash != nil {
 		// Only sha256 is supported for rpm v0.0.1; enforce length accordingly.
-		var want = crypto.SHA256
-		if hash.Value == nil || len(*hash.Value) != want.Size()*2 {
+		if hash.Value == nil || len(*hash.Value) != crypto.SHA256.Size()*2 {
 			return errors.New("invalid value for hash")
 		}
 		if _, err := hex.DecodeString(*hash.Value); err != nil {
