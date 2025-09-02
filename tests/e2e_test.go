@@ -53,7 +53,7 @@ import (
 	"cloud.google.com/go/pubsub"
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/sigstore/rekor/pkg/api"
@@ -262,7 +262,7 @@ func TestSignedEntryTimestamp(t *testing.T) {
 			},
 			Signature: &models.RekordV001SchemaSignature{
 				Content: (*strfmt.Base64)(&sig),
-				Format:  swag.String(models.RekordV001SchemaSignatureFormatX509),
+				Format:  conv.Pointer(models.RekordV001SchemaSignatureFormatX509),
 				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 					Content: (*strfmt.Base64)(&pemBytes),
 				},
@@ -271,7 +271,7 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	}
 
 	returnVal := models.Rekord{
-		APIVersion: swag.String(re.APIVersion()),
+		APIVersion: conv.Pointer(re.APIVersion()),
 		Spec:       re.RekordObj,
 	}
 	params := entries.NewCreateLogEntryParams()
@@ -530,7 +530,7 @@ func TestEntryUpload(t *testing.T) {
 			},
 			Signature: &models.RekordV001SchemaSignature{
 				Content: (*strfmt.Base64)(&sig),
-				Format:  swag.String(models.RekordV001SchemaSignatureFormatPgp),
+				Format:  conv.Pointer(models.RekordV001SchemaSignatureFormatPgp),
 				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 					Content: (*strfmt.Base64)(&pubKeyBytes),
 				},
@@ -539,7 +539,7 @@ func TestEntryUpload(t *testing.T) {
 	}
 
 	returnVal := models.Rekord{
-		APIVersion: swag.String(re.APIVersion()),
+		APIVersion: conv.Pointer(re.APIVersion()),
 		Spec:       re.RekordObj,
 	}
 	entryBytes, err := json.Marshal(returnVal)
@@ -808,7 +808,7 @@ func TestSearchLogQuerySingleShard(t *testing.T) {
 			},
 			Signature: &models.RekordV001SchemaSignature{
 				Content: (*strfmt.Base64)(&firstSigBytes),
-				Format:  swag.String(models.RekordV001SchemaSignatureFormatPgp),
+				Format:  conv.Pointer(models.RekordV001SchemaSignatureFormatPgp),
 				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 					Content: (*strfmt.Base64)(&pubKeyBytes),
 				},
@@ -816,7 +816,7 @@ func TestSearchLogQuerySingleShard(t *testing.T) {
 		},
 	}
 	firstEntry := &models.Rekord{
-		APIVersion: swag.String(firstRekord.APIVersion()),
+		APIVersion: conv.Pointer(firstRekord.APIVersion()),
 		Spec:       firstRekord.RekordObj,
 	}
 
@@ -833,7 +833,7 @@ func TestSearchLogQuerySingleShard(t *testing.T) {
 			},
 			Signature: &models.RekordV001SchemaSignature{
 				Content: (*strfmt.Base64)(&secondSigBytes),
-				Format:  swag.String(models.RekordV001SchemaSignatureFormatPgp),
+				Format:  conv.Pointer(models.RekordV001SchemaSignatureFormatPgp),
 				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 					Content: (*strfmt.Base64)(&pubKeyBytes),
 				},
@@ -841,7 +841,7 @@ func TestSearchLogQuerySingleShard(t *testing.T) {
 		},
 	}
 	secondEntry := &models.Rekord{
-		APIVersion: swag.String(secondRekord.APIVersion()),
+		APIVersion: conv.Pointer(secondRekord.APIVersion()),
 		Spec:       secondRekord.RekordObj,
 	}
 
@@ -860,7 +860,7 @@ func TestSearchLogQuerySingleShard(t *testing.T) {
 	invalidEntryID := "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeeefff"
 	invalidIndex := int64(-1)
 	invalidEntry := &models.Rekord{
-		APIVersion: swag.String(secondRekord.APIVersion()),
+		APIVersion: conv.Pointer(secondRekord.APIVersion()),
 	}
 
 	nonexistentArtifactPath := filepath.Join(t.TempDir(), "artifact3")
@@ -879,7 +879,7 @@ func TestSearchLogQuerySingleShard(t *testing.T) {
 			},
 			Signature: &models.RekordV001SchemaSignature{
 				Content: (*strfmt.Base64)(&nonexistentSigBytes),
-				Format:  swag.String(models.RekordV001SchemaSignatureFormatPgp),
+				Format:  conv.Pointer(models.RekordV001SchemaSignatureFormatPgp),
 				PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 					Content: (*strfmt.Base64)(&pubKeyBytes),
 				},
@@ -887,7 +887,7 @@ func TestSearchLogQuerySingleShard(t *testing.T) {
 		},
 	}
 	nonexistentEntry := &models.Rekord{
-		APIVersion: swag.String("0.0.1"),
+		APIVersion: conv.Pointer("0.0.1"),
 		Spec:       nonexistentRekord.RekordObj,
 	}
 

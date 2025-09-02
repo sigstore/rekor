@@ -32,7 +32,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/spf13/viper"
 	gocose "github.com/veraison/go-cose"
@@ -208,18 +208,18 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 		PublicKey: &pkb,
 		Data: &models.CoseV001SchemaData{
 			PayloadHash: &models.CoseV001SchemaDataPayloadHash{
-				Algorithm: swag.String(models.CoseV001SchemaDataPayloadHashAlgorithmSha256),
-				Value:     swag.String(hex.EncodeToString(h[:])),
+				Algorithm: conv.Pointer(models.CoseV001SchemaDataPayloadHashAlgorithmSha256),
+				Value:     conv.Pointer(hex.EncodeToString(h[:])),
 			},
 			EnvelopeHash: &models.CoseV001SchemaDataEnvelopeHash{
-				Algorithm: swag.String(models.CoseV001SchemaDataEnvelopeHashAlgorithmSha256),
-				Value:     swag.String(hex.EncodeToString(v.envelopeHash)),
+				Algorithm: conv.Pointer(models.CoseV001SchemaDataEnvelopeHashAlgorithmSha256),
+				Value:     conv.Pointer(hex.EncodeToString(v.envelopeHash)),
 			},
 		},
 	}
 
 	itObj := models.Cose{}
-	itObj.APIVersion = swag.String(APIVERSION)
+	itObj.APIVersion = conv.Pointer(APIVERSION)
 	itObj.Spec = &canonicalEntry
 
 	return json.Marshal(&itObj)
@@ -420,7 +420,7 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	}
 
 	returnVal.Spec = re.CoseObj
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 
 	return &returnVal, nil
 }

@@ -26,7 +26,7 @@ import (
 	"strconv"
 
 	"github.com/go-openapi/runtime"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -127,7 +127,7 @@ var uploadCmd = &cobra.Command{
 		var uuid string
 		for k, entry := range resp.Payload {
 			uuid = k
-			newIndex = swag.Int64Value(entry.LogIndex)
+			newIndex = conv.Value(entry.LogIndex)
 			logEntry = entry
 		}
 

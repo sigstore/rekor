@@ -24,7 +24,7 @@ import (
 	"strconv"
 
 	"github.com/go-openapi/runtime/middleware"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/google/trillian/types"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc/codes"
@@ -96,7 +96,7 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	}
 	ctx := params.HTTPRequest.Context()
 	treeID := api.ActiveTreeID()
-	if treeIDStr := swag.StringValue(params.TreeID); treeIDStr != "" {
+	if treeIDStr := conv.Value(params.TreeID); treeIDStr != "" {
 		id, err := strconv.ParseInt(treeIDStr, 10, 64)
 		if err != nil {
 			errMsg := fmt.Sprintf("invalid tree ID specified: %s", treeIDStr)

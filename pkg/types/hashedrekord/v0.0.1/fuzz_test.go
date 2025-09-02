@@ -23,7 +23,7 @@ import (
 
 	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 
 	fuzzUtils "github.com/sigstore/rekor/pkg/fuzz"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -87,7 +87,7 @@ func FuzzHashedRekordUnmarshalAndCanonicalize(f *testing.F) {
 		}
 
 		targetEntry := &models.Hashedrekord{
-			APIVersion: swag.String(APIVERSION),
+			APIVersion: conv.Pointer(APIVERSION),
 			Spec:       targetV001,
 		}
 

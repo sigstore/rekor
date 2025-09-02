@@ -35,7 +35,7 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -332,8 +332,8 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 
 	h := sha256.Sum256(decodedPayload)
 	v.IntotoObj.Content.PayloadHash = &models.IntotoV002SchemaContentPayloadHash{
-		Algorithm: swag.String(models.IntotoV002SchemaContentPayloadHashAlgorithmSha256),
-		Value:     swag.String(hex.EncodeToString(h[:])),
+		Algorithm: conv.Pointer(models.IntotoV002SchemaContentPayloadHashAlgorithmSha256),
+		Value:     conv.Pointer(hex.EncodeToString(h[:])),
 	}
 
 	return nil
@@ -375,7 +375,7 @@ func (v *V002Entry) Canonicalize(_ context.Context) ([]byte, error) {
 		},
 	}
 	itObj := models.Intoto{}
-	itObj.APIVersion = swag.String(APIVERSION)
+	itObj.APIVersion = conv.Pointer(APIVERSION)
 	itObj.Spec = &canonicalEntry
 
 	return json.Marshal(&itObj)
@@ -519,12 +519,12 @@ func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 
 	h := sha256.Sum256([]byte(artifactBytes))
 	re.IntotoObj.Content.Hash = &models.IntotoV002SchemaContentHash{
-		Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-		Value:     swag.String(hex.EncodeToString(h[:])),
+		Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
+		Value:     conv.Pointer(hex.EncodeToString(h[:])),
 	}
 
 	returnVal.Spec = re.IntotoObj
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 
 	return &returnVal, nil
 }

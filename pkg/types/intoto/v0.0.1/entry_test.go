@@ -38,7 +38,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/in-toto/in-toto-golang/in_toto"
@@ -178,8 +178,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				Content: &models.IntotoV001SchemaContent{
 					Envelope: envelope(t, key, validPayload, "application/vnd.in-toto+json"),
 					Hash: &models.IntotoV001SchemaContentHash{
-						Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-						Value:     swag.String("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+						Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
+						Value:     conv.Pointer("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
 					},
 				},
 			},
@@ -193,8 +193,8 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				Content: &models.IntotoV001SchemaContent{
 					Envelope: envelope(t, key, validPayload, "application/vnd.in-toto+json"),
 					PayloadHash: &models.IntotoV001SchemaContentPayloadHash{
-						Algorithm: swag.String(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
-						Value:     swag.String("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+						Algorithm: conv.Pointer(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
+						Value:     conv.Pointer("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
 					},
 				},
 			},
@@ -208,12 +208,12 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				Content: &models.IntotoV001SchemaContent{
 					Envelope: envelope(t, key, validPayload, "application/vnd.in-toto+json"),
 					Hash: &models.IntotoV001SchemaContentHash{
-						Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-						Value:     swag.String("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+						Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
+						Value:     conv.Pointer("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
 					},
 					PayloadHash: &models.IntotoV001SchemaContentPayloadHash{
-						Algorithm: swag.String(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
-						Value:     swag.String("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+						Algorithm: conv.Pointer(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
+						Value:     conv.Pointer("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
 					},
 				},
 			},
@@ -389,8 +389,8 @@ func TestV001EntryWithoutEnvelopeOrPayloadHash(t *testing.T) {
 		PublicKey: p(pub),
 		Content: &models.IntotoV001SchemaContent{
 			Hash: &models.IntotoV001SchemaContentHash{
-				Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-				Value:     swag.String("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+				Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
+				Value:     conv.Pointer("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
 			},
 		},
 	}
@@ -469,12 +469,12 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 				IntotoObj: models.IntotoV001Schema{
 					Content: &models.IntotoV001SchemaContent{
 						Hash: &models.IntotoV001SchemaContentHash{
-							Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-							Value:     swag.String(dataSHA),
+							Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
+							Value:     conv.Pointer(dataSHA),
 						},
 						PayloadHash: &models.IntotoV001SchemaContentPayloadHash{
-							Algorithm: swag.String(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
-							Value:     swag.String(hex.EncodeToString(payloadHash[:])),
+							Algorithm: conv.Pointer(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
+							Value:     conv.Pointer(hex.EncodeToString(payloadHash[:])),
 						},
 					},
 				},

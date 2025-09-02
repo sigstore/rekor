@@ -19,7 +19,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/types"
@@ -66,7 +66,7 @@ func TestJARType(t *testing.T) {
 		t.Error("valid semver range was not added to SemVerToFacFnMap")
 	}
 
-	u.Jar.APIVersion = swag.String("2.0.1")
+	u.Jar.APIVersion = conv.Pointer("2.0.1")
 	brt := New()
 
 	// version requested matches implementation in map
@@ -75,13 +75,13 @@ func TestJARType(t *testing.T) {
 	}
 
 	// version requested fails to match implementation in map
-	u.Jar.APIVersion = swag.String("1.2.2")
+	u.Jar.APIVersion = conv.Pointer("1.2.2")
 	if _, err := brt.UnmarshalEntry(&u.Jar); err == nil {
 		t.Error("unexpected success in Unmarshal for non-matching version")
 	}
 
 	// error in Unmarshal call is raised appropriately
-	u.Jar.APIVersion = swag.String("2.2.0")
+	u.Jar.APIVersion = conv.Pointer("2.2.0")
 	u2 := UnmarshalFailsTester{}
 	VersionMap.SetEntryFactory(">= 1.2.3", u2.NewEntry)
 	if _, err := brt.UnmarshalEntry(&u.Jar); err == nil {
@@ -89,7 +89,7 @@ func TestJARType(t *testing.T) {
 	}
 
 	// version requested fails to match implementation in map
-	u.Jar.APIVersion = swag.String("not_a_version")
+	u.Jar.APIVersion = conv.Pointer("not_a_version")
 	if _, err := brt.UnmarshalEntry(&u.Jar); err == nil {
 		t.Error("unexpected success in Unmarshal for invalid version")
 	}

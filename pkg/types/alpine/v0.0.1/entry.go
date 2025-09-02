@@ -31,7 +31,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -195,7 +195,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*x509.PublicKey,
 
 	oldSHA := ""
 	if v.AlpineModel.Package.Hash != nil && v.AlpineModel.Package.Hash.Value != nil {
-		oldSHA = swag.StringValue(v.AlpineModel.Package.Hash.Value)
+		oldSHA = conv.Value(v.AlpineModel.Package.Hash.Value)
 	}
 
 	g.Go(func() error {
@@ -290,8 +290,8 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*x509.PublicKey,
 	// if we get here, all goroutines succeeded without error
 	if oldSHA == "" {
 		v.AlpineModel.Package.Hash = &models.AlpineV001SchemaPackageHash{}
-		v.AlpineModel.Package.Hash.Algorithm = swag.String(models.AlpineV001SchemaPackageHashAlgorithmSha256)
-		v.AlpineModel.Package.Hash.Value = swag.String(computedSHA)
+		v.AlpineModel.Package.Hash.Algorithm = conv.Pointer(models.AlpineV001SchemaPackageHashAlgorithmSha256)
+		v.AlpineModel.Package.Hash.Value = conv.Pointer(computedSHA)
 	}
 
 	return key, apkObj, nil
@@ -325,7 +325,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	// wrap in valid object with kind and apiVersion set
 	apk := models.Alpine{}
-	apk.APIVersion = swag.String(APIVERSION)
+	apk.APIVersion = conv.Pointer(APIVERSION)
 	apk.Spec = &canonicalEntry
 
 	v.AlpineModel = canonicalEntry
@@ -422,7 +422,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 	returnVal.Spec = re.AlpineModel
 
 	return &returnVal, nil
