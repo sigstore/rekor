@@ -36,7 +36,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	x509r "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
@@ -258,8 +258,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha512),
-							Value:     swag.String(dataSHA512),
+							Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha512),
+							Value:     conv.Pointer(dataSHA512),
 						},
 					},
 				},
@@ -281,8 +281,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Value:     swag.String(dataSHA256),
-							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     conv.Pointer(dataSHA256),
+							Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
 						},
 					},
 				},
@@ -304,8 +304,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Value:     swag.String(dataSHA384),
-							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha384),
+							Value:     conv.Pointer(dataSHA384),
+							Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha384),
 						},
 					},
 				},
@@ -327,8 +327,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Value:     swag.String(dataSHA512),
-							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha512),
+							Value:     conv.Pointer(dataSHA512),
+							Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha512),
 						},
 					},
 				},
@@ -350,8 +350,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Value:     swag.String(incorrectLengthSHA),
-							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     conv.Pointer(incorrectLengthSHA),
+							Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
 						},
 					},
 				},
@@ -373,8 +373,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Value:     swag.String(badDataSHA),
-							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     conv.Pointer(badDataSHA),
+							Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
 						},
 					},
 				},
@@ -396,8 +396,8 @@ func TestCrossFieldValidation(t *testing.T) {
 					},
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Value:     swag.String(dataSHA256),
-							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     conv.Pointer(dataSHA256),
+							Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
 						},
 					},
 				},
@@ -416,7 +416,7 @@ func TestCrossFieldValidation(t *testing.T) {
 
 		v := &V001Entry{}
 		r := models.Hashedrekord{
-			APIVersion: swag.String(tc.entry.APIVersion()),
+			APIVersion: conv.Pointer(tc.entry.APIVersion()),
 			Spec:       tc.entry.HashedRekordObj,
 		}
 
@@ -520,8 +520,8 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 		HashedRekordObj: models.HashedrekordV001Schema{
 			Data: &models.HashedrekordV001SchemaData{
 				Hash: &models.HashedrekordV001SchemaDataHash{
-					Algorithm: swag.String("sha256"),
-					Value:     swag.String(hashStr),
+					Algorithm: conv.Pointer("sha256"),
+					Value:     conv.Pointer(hashStr),
 				},
 			},
 			Signature: &models.HashedrekordV001SchemaSignature{
@@ -634,8 +634,8 @@ func TestInsertable(t *testing.T) {
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
-							Value:     swag.String("deadbeef"),
+							Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     conv.Pointer("deadbeef"),
 						},
 					},
 					Signature: &models.HashedrekordV001SchemaSignature{
@@ -654,8 +654,8 @@ func TestInsertable(t *testing.T) {
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
-							Value:     swag.String("deadbeef"),
+							Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     conv.Pointer("deadbeef"),
 						},
 					},
 					Signature: &models.HashedrekordV001SchemaSignature{
@@ -671,8 +671,8 @@ func TestInsertable(t *testing.T) {
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
-							Value:     swag.String("deadbeef"),
+							Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     conv.Pointer("deadbeef"),
 						},
 					},
 					Signature: &models.HashedrekordV001SchemaSignature{
@@ -689,8 +689,8 @@ func TestInsertable(t *testing.T) {
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
-							Value:     swag.String("deadbeef"),
+							Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     conv.Pointer("deadbeef"),
 						},
 					},
 					Signature: &models.HashedrekordV001SchemaSignature{
@@ -707,8 +707,8 @@ func TestInsertable(t *testing.T) {
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
-							Value:     swag.String("deadbeef"),
+							Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     conv.Pointer("deadbeef"),
 						},
 					},
 					Signature: &models.HashedrekordV001SchemaSignature{
@@ -727,7 +727,7 @@ func TestInsertable(t *testing.T) {
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
 						},
 					},
 					Signature: &models.HashedrekordV001SchemaSignature{
@@ -746,7 +746,7 @@ func TestInsertable(t *testing.T) {
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Value: swag.String("deadbeef"),
+							Value: conv.Pointer("deadbeef"),
 						},
 					},
 					Signature: &models.HashedrekordV001SchemaSignature{
@@ -794,8 +794,8 @@ func TestInsertable(t *testing.T) {
 				HashedRekordObj: models.HashedrekordV001Schema{
 					Data: &models.HashedrekordV001SchemaData{
 						Hash: &models.HashedrekordV001SchemaDataHash{
-							Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
-							Value:     swag.String("deadbeef"),
+							Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
+							Value:     conv.Pointer("deadbeef"),
 						},
 					},
 				},

@@ -25,7 +25,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"go.uber.org/goleak"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -169,7 +169,7 @@ func TestCrossFieldValidation(t *testing.T) {
 
 			v := &V001Entry{}
 			r := models.Helm{
-				APIVersion: swag.String(tc.entry.APIVersion()),
+				APIVersion: conv.Pointer(tc.entry.APIVersion()),
 				Spec:       tc.entry.HelmObj,
 			}
 

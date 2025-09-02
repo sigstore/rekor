@@ -38,7 +38,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
 	slsa "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
@@ -387,12 +387,12 @@ func TestSendingCanonicalizedDSSE(t *testing.T) {
 	dsse_entry := entry.(*models.DSSE)
 	v001 := dsse_entry.Spec.(models.DSSEV001Schema)
 	v001.EnvelopeHash = &models.DSSEV001SchemaEnvelopeHash{
-		Algorithm: swag.String("sha256"),
-		Value:     swag.String(envelopeHashStr),
+		Algorithm: conv.Pointer("sha256"),
+		Value:     conv.Pointer(envelopeHashStr),
 	}
 	v001.PayloadHash = &models.DSSEV001SchemaPayloadHash{
-		Algorithm: swag.String("sha256"),
-		Value:     swag.String(payloadHashStr),
+		Algorithm: conv.Pointer("sha256"),
+		Value:     conv.Pointer(payloadHashStr),
 	}
 	env := &dsse.Envelope{}
 	if err := json.Unmarshal([]byte(*v001.ProposedContent.Envelope), env); err != nil {
@@ -461,12 +461,12 @@ func TestSendingEntryWithClientComputedHashes(t *testing.T) {
 	dsse_entry := entry.(*models.DSSE)
 	v001 := dsse_entry.Spec.(models.DSSEV001Schema)
 	v001.EnvelopeHash = &models.DSSEV001SchemaEnvelopeHash{
-		Algorithm: swag.String("sha256"),
-		Value:     swag.String("8810ad581e59f2bc3928b261707a71308f7e139eb04820366dc4d5c18d980225"),
+		Algorithm: conv.Pointer("sha256"),
+		Value:     conv.Pointer("8810ad581e59f2bc3928b261707a71308f7e139eb04820366dc4d5c18d980225"),
 	}
 	v001.PayloadHash = &models.DSSEV001SchemaPayloadHash{
-		Algorithm: swag.String("sha256"),
-		Value:     swag.String("8810ad581e59f2bc3928b261707a71308f7e139eb04820366dc4d5c18d980225"),
+		Algorithm: conv.Pointer("sha256"),
+		Value:     conv.Pointer("8810ad581e59f2bc3928b261707a71308f7e139eb04820366dc4d5c18d980225"),
 	}
 	dsse_entry.Spec = v001
 
@@ -571,7 +571,7 @@ func TestNoSignature(t *testing.T) {
 		t.Fatalf("error marshalling sorted DSSE envelope")
 	}
 
-	v001.ProposedContent.Envelope = swag.String(string(noSigEnv))
+	v001.ProposedContent.Envelope = conv.Pointer(string(noSigEnv))
 	dsse_entry.Spec = v001
 
 	rc, err := client.GetRekorClient(rekorServer())

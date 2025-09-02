@@ -23,7 +23,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	rclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 
@@ -87,21 +87,21 @@ var logInfoCmd = &cobra.Command{
 
 		// Verify the active tree
 		sth := util.SignedCheckpoint{}
-		signedTreeHead := swag.StringValue(logInfo.SignedTreeHead)
+		signedTreeHead := conv.Value(logInfo.SignedTreeHead)
 		if err := sth.UnmarshalText([]byte(signedTreeHead)); err != nil {
 			return nil, err
 		}
-		treeID := swag.StringValue(logInfo.TreeID)
+		treeID := conv.Value(logInfo.TreeID)
 
 		if err := verifyTree(ctx, rekorClient, signedTreeHead, serverURL, treeID); err != nil {
 			return nil, err
 		}
 
 		cmdOutput := &logInfoCmdOutput{
-			ActiveTreeSize: swag.Int64Value(logInfo.TreeSize),
+			ActiveTreeSize: conv.Value(logInfo.TreeSize),
 			TotalTreeSize:  totalTreeSize(logInfo, logInfo.InactiveShards),
-			RootHash:       swag.StringValue(logInfo.RootHash),
-			TreeID:         swag.StringValue(logInfo.TreeID),
+			RootHash:       conv.Value(logInfo.RootHash),
+			TreeID:         conv.Value(logInfo.TreeID),
 		}
 		return cmdOutput, nil
 	}),
@@ -113,8 +113,8 @@ func verifyInactiveTrees(ctx context.Context, rekorClient *rclient.Rekor, server
 	}
 	log.CliLogger.Infof("Validating inactive shards...")
 	for _, shard := range inactiveShards {
-		signedTreeHead := swag.StringValue(shard.SignedTreeHead)
-		treeID := swag.StringValue(shard.TreeID)
+		signedTreeHead := conv.Value(shard.SignedTreeHead)
+		treeID := conv.Value(shard.TreeID)
 		if err := verifyTree(ctx, rekorClient, signedTreeHead, serverURL, treeID); err != nil {
 			return fmt.Errorf("verifying inactive shard with ID %s: %w", treeID, err)
 		}
@@ -165,7 +165,7 @@ func loadVerifier(rekorClient *rclient.Rekor, treeID string) (signature.Verifier
 	publicKey := viper.GetString("rekor_server_public_key")
 	if publicKey == "" {
 		// fetch key from server
-		keyResp, err := rekorClient.Pubkey.GetPublicKey(pubkey.NewGetPublicKeyParams().WithTreeID(swag.String(treeID)))
+		keyResp, err := rekorClient.Pubkey.GetPublicKey(pubkey.NewGetPublicKeyParams().WithTreeID(conv.Pointer(treeID)))
 		if err != nil {
 			return nil, err
 		}
@@ -186,9 +186,9 @@ func loadVerifier(rekorClient *rclient.Rekor, treeID string) (signature.Verifier
 }
 
 func totalTreeSize(activeShard *models.LogInfo, inactiveShards []*models.InactiveShardLogInfo) int64 {
-	total := swag.Int64Value(activeShard.TreeSize)
+	total := conv.Value(activeShard.TreeSize)
 	for _, i := range inactiveShards {
-		total += swag.Int64Value(i.TreeSize)
+		total += conv.Value(i.TreeSize)
 	}
 	return total
 }

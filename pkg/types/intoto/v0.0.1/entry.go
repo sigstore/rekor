@@ -34,7 +34,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -75,7 +75,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 
 	// add digest over entire DSSE envelope
 	if v.IntotoObj.Content != nil && v.IntotoObj.Content.Hash != nil {
-		hashkey := strings.ToLower(fmt.Sprintf("%s:%s", swag.StringValue(v.IntotoObj.Content.Hash.Algorithm), swag.StringValue(v.IntotoObj.Content.Hash.Value)))
+		hashkey := strings.ToLower(fmt.Sprintf("%s:%s", conv.Value(v.IntotoObj.Content.Hash.Algorithm), conv.Value(v.IntotoObj.Content.Hash.Value)))
 		result = append(result, hashkey)
 	} else {
 		log.Logger.Error("could not find content digest to include in index keys")
@@ -99,7 +99,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 
 	// add digest base64-decoded payload inside of DSSE envelope
 	if v.IntotoObj.Content != nil && v.IntotoObj.Content.PayloadHash != nil {
-		payloadHash := strings.ToLower(fmt.Sprintf("%s:%s", swag.StringValue(v.IntotoObj.Content.PayloadHash.Algorithm), swag.StringValue(v.IntotoObj.Content.PayloadHash.Value)))
+		payloadHash := strings.ToLower(fmt.Sprintf("%s:%s", conv.Value(v.IntotoObj.Content.PayloadHash.Algorithm), conv.Value(v.IntotoObj.Content.PayloadHash.Value)))
 		result = append(result, payloadHash)
 	} else {
 		log.Logger.Error("could not find payload digest to include in index keys")
@@ -277,7 +277,7 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	}
 
 	itObj := models.Intoto{}
-	itObj.APIVersion = swag.String(APIVERSION)
+	itObj.APIVersion = conv.Pointer(APIVERSION)
 	itObj.Spec = &canonicalEntry
 
 	return json.Marshal(&itObj)
@@ -327,14 +327,14 @@ func (v *V001Entry) validate() error {
 	// validation logic complete without errors, hydrate local object
 	attHash := sha256.Sum256(attBytes)
 	v.IntotoObj.Content.PayloadHash = &models.IntotoV001SchemaContentPayloadHash{
-		Algorithm: swag.String(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
-		Value:     swag.String(hex.EncodeToString(attHash[:])),
+		Algorithm: conv.Pointer(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
+		Value:     conv.Pointer(hex.EncodeToString(attHash[:])),
 	}
 
 	h := sha256.Sum256([]byte(v.IntotoObj.Content.Envelope))
 	v.IntotoObj.Content.Hash = &models.IntotoV001SchemaContentHash{
-		Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-		Value:     swag.String(hex.EncodeToString(h[:])),
+		Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
+		Value:     conv.Pointer(hex.EncodeToString(h[:])),
 	}
 	return nil
 }
@@ -401,12 +401,12 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	}
 	h := sha256.Sum256([]byte(re.IntotoObj.Content.Envelope))
 	re.IntotoObj.Content.Hash = &models.IntotoV001SchemaContentHash{
-		Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-		Value:     swag.String(hex.EncodeToString(h[:])),
+		Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
+		Value:     conv.Pointer(hex.EncodeToString(h[:])),
 	}
 
 	returnVal.Spec = re.IntotoObj
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 
 	return &returnVal, nil
 }

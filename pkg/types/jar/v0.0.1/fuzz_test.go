@@ -25,7 +25,7 @@ import (
 
 	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 
 	jarutils "github.com/sassoftware/relic/lib/signjar"
 
@@ -91,7 +91,7 @@ func FuzzJarUnmarshalAndCanonicalize(f *testing.F) {
 		}
 
 		targetEntry := &models.Jar{
-			APIVersion: swag.String(APIVERSION),
+			APIVersion: conv.Pointer(APIVERSION),
 			Spec:       targetV001,
 		}
 

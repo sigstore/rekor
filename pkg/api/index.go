@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/runtime/middleware"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
@@ -58,7 +58,7 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 		}
 	}
 	if params.Query.PublicKey != nil {
-		af, err := pki.NewArtifactFactory(pki.Format(swag.StringValue(params.Query.PublicKey.Format)))
+		af, err := pki.NewArtifactFactory(pki.Format(conv.Value(params.Query.PublicKey.Format)))
 		if err != nil {
 			return handleRekorAPIError(params, http.StatusBadRequest, err, unsupportedPKIFormat)
 		}

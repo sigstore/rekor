@@ -31,7 +31,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -207,7 +207,7 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (pki.PublicKey, pki
 
 	// Validate hash if provided
 	if v.RekordObj.Data.Hash != nil && v.RekordObj.Data.Hash.Value != nil {
-		oldSHA := swag.StringValue(v.RekordObj.Data.Hash.Value)
+		oldSHA := conv.Value(v.RekordObj.Data.Hash.Value)
 		if computedSHA != oldSHA {
 			return nil, nil, &types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)}
 		}
@@ -232,8 +232,8 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (pki.PublicKey, pki
 	// Set computed hash if not provided
 	if v.RekordObj.Data.Hash == nil {
 		v.RekordObj.Data.Hash = &models.RekordV001SchemaDataHash{}
-		v.RekordObj.Data.Hash.Algorithm = swag.String(models.RekordV001SchemaDataHashAlgorithmSha256)
-		v.RekordObj.Data.Hash.Value = swag.String(computedSHA)
+		v.RekordObj.Data.Hash.Algorithm = conv.Pointer(models.RekordV001SchemaDataHashAlgorithmSha256)
+		v.RekordObj.Data.Hash.Value = conv.Pointer(computedSHA)
 	}
 
 	return keyObj, sigObj, nil
@@ -273,7 +273,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	// wrap in valid object with kind and apiVersion set
 	rekordObj := models.Rekord{}
-	rekordObj.APIVersion = swag.String(APIVERSION)
+	rekordObj.APIVersion = conv.Pointer(APIVERSION)
 	rekordObj.Spec = &canonicalEntry
 
 	v.RekordObj = canonicalEntry
@@ -360,13 +360,13 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	re.RekordObj.Signature = &models.RekordV001SchemaSignature{}
 	switch props.PKIFormat {
 	case "pgp":
-		re.RekordObj.Signature.Format = swag.String(models.RekordV001SchemaSignatureFormatPgp)
+		re.RekordObj.Signature.Format = conv.Pointer(models.RekordV001SchemaSignatureFormatPgp)
 	case "minisign":
-		re.RekordObj.Signature.Format = swag.String(models.RekordV001SchemaSignatureFormatMinisign)
+		re.RekordObj.Signature.Format = conv.Pointer(models.RekordV001SchemaSignatureFormatMinisign)
 	case "x509":
-		re.RekordObj.Signature.Format = swag.String(models.RekordV001SchemaSignatureFormatX509)
+		re.RekordObj.Signature.Format = conv.Pointer(models.RekordV001SchemaSignatureFormatX509)
 	case "ssh":
-		re.RekordObj.Signature.Format = swag.String(models.RekordV001SchemaSignatureFormatSSH)
+		re.RekordObj.Signature.Format = conv.Pointer(models.RekordV001SchemaSignatureFormatSSH)
 	default:
 		return nil, fmt.Errorf("unexpected format of public key: %s", props.PKIFormat)
 	}
@@ -409,7 +409,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 	returnVal.Spec = re.RekordObj
 
 	return &returnVal, nil
