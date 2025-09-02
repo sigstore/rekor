@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/go-openapi/runtime"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/theupdateframework/go-tuf/data"
@@ -206,7 +206,7 @@ func TestCrossFieldValidation(t *testing.T) {
 
 			v := &V001Entry{}
 			r := models.TUF{
-				APIVersion: swag.String(tc.entry.APIVersion()),
+				APIVersion: conv.Pointer(tc.entry.APIVersion()),
 				Spec:       tc.entry.TufObj,
 			}
 

@@ -33,7 +33,7 @@ import (
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -246,14 +246,14 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 	payloadHash := sha256.Sum256(decodedPayload)
 	dsseObj.PayloadHash = &models.DSSEV001SchemaPayloadHash{
-		Algorithm: swag.String(models.DSSEV001SchemaPayloadHashAlgorithmSha256),
-		Value:     swag.String(hex.EncodeToString(payloadHash[:])),
+		Algorithm: conv.Pointer(models.DSSEV001SchemaPayloadHashAlgorithmSha256),
+		Value:     conv.Pointer(hex.EncodeToString(payloadHash[:])),
 	}
 
 	envelopeHash := sha256.Sum256([]byte(*dsseObj.ProposedContent.Envelope))
 	dsseObj.EnvelopeHash = &models.DSSEV001SchemaEnvelopeHash{
-		Algorithm: swag.String(models.DSSEV001SchemaEnvelopeHashAlgorithmSha256),
-		Value:     swag.String(hex.EncodeToString(envelopeHash[:])),
+		Algorithm: conv.Pointer(models.DSSEV001SchemaEnvelopeHashAlgorithmSha256),
+		Value:     conv.Pointer(hex.EncodeToString(envelopeHash[:])),
 	}
 
 	// we've gotten through all processing without error, now update the object we're unmarshalling into
@@ -287,7 +287,7 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	})
 
 	itObj := models.DSSE{}
-	itObj.APIVersion = swag.String(APIVERSION)
+	itObj.APIVersion = conv.Pointer(APIVERSION)
 	itObj.Spec = &canonicalEntry
 
 	return json.Marshal(&itObj)
@@ -353,10 +353,10 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		}
 		re.DSSEObj.ProposedContent.Verifiers = append(re.DSSEObj.ProposedContent.Verifiers, strfmt.Base64(canonicalKey))
 	}
-	re.DSSEObj.ProposedContent.Envelope = swag.String(string(artifactBytes))
+	re.DSSEObj.ProposedContent.Envelope = conv.Pointer(string(artifactBytes))
 
 	returnVal.Spec = re.DSSEObj
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 
 	return &returnVal, nil
 }

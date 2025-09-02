@@ -30,7 +30,7 @@ import (
 
 	"github.com/asaskevich/govalidator"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -134,7 +134,7 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	v.HashedRekordObj = canonicalEntry
 	// wrap in valid object with kind and apiVersion set
 	rekordObj := models.Hashedrekord{}
-	rekordObj.APIVersion = swag.String(APIVERSION)
+	rekordObj.APIVersion = conv.Pointer(APIVERSION)
 	rekordObj.Spec = &canonicalEntry
 
 	return json.Marshal(&rekordObj)
@@ -170,12 +170,12 @@ func (v *V001Entry) validate() (pki.Signature, pki.PublicKey, error) {
 	if hash == nil {
 		return nil, nil, &types.InputValidationError{Err: errors.New("missing hash")}
 	}
-	if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
+	if !govalidator.IsHash(conv.Value(hash.Value), conv.Value(hash.Algorithm)) {
 		return nil, nil, &types.InputValidationError{Err: errors.New("invalid value for hash")}
 	}
 
 	var alg crypto.Hash
-	switch swag.StringValue(hash.Algorithm) {
+	switch conv.Value(hash.Algorithm) {
 	case models.HashedrekordV001SchemaDataHashAlgorithmSha384:
 		alg = crypto.SHA384
 	case models.HashedrekordV001SchemaDataHashAlgorithmSha512:
@@ -250,15 +250,15 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	hashAlgorithm, hashValue := util.UnprefixSHA(props.ArtifactHash)
 	re.HashedRekordObj.Signature.PublicKey.Content = strfmt.Base64(publicKeyBytes[0])
 	re.HashedRekordObj.Data.Hash = &models.HashedrekordV001SchemaDataHash{
-		Algorithm: swag.String(getDataHashAlgorithm(hashAlgorithm)),
-		Value:     swag.String(hashValue),
+		Algorithm: conv.Pointer(getDataHashAlgorithm(hashAlgorithm)),
+		Value:     conv.Pointer(hashValue),
 	}
 
 	if _, _, err := re.validate(); err != nil {
 		return nil, err
 	}
 
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 	returnVal.Spec = re.HashedRekordObj
 
 	return &returnVal, nil

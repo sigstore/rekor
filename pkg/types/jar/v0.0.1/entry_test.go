@@ -26,7 +26,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/spf13/viper"
@@ -105,7 +105,7 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 	for _, tc := range testCases {
 		v := &V001Entry{}
 		r := models.Jar{
-			APIVersion: swag.String(tc.entry.APIVersion()),
+			APIVersion: conv.Pointer(tc.entry.APIVersion()),
 			Spec:       tc.entry.JARModel,
 		}
 
@@ -184,7 +184,7 @@ func TestJarMetadataSize(t *testing.T) {
 	}
 
 	r := models.Jar{
-		APIVersion: swag.String(v.APIVersion()),
+		APIVersion: conv.Pointer(v.APIVersion()),
 		Spec:       v.JARModel,
 	}
 

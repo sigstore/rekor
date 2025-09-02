@@ -37,7 +37,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/google/trillian"
 	ttypes "github.com/google/trillian/types"
 	"github.com/spf13/viper"
@@ -102,10 +102,10 @@ func logEntryFromLeaf(ctx context.Context, leaf *trillian.LogLeaf, signedLogRoot
 	}
 
 	logEntryAnon := models.LogEntryAnon{
-		LogID:          swag.String(logRange.LogID),
+		LogID:          conv.Pointer(logRange.LogID),
 		LogIndex:       &virtualIndex,
 		Body:           leaf.LeafValue,
-		IntegratedTime: swag.Int64(leaf.IntegrateTimestamp.AsTime().Unix()),
+		IntegratedTime: conv.Pointer(leaf.IntegrateTimestamp.AsTime().Unix()),
 	}
 
 	signature, err := signEntry(ctx, logRange.Signer, logEntryAnon)
@@ -127,9 +127,9 @@ func logEntryFromLeaf(ctx context.Context, leaf *trillian.LogLeaf, signedLogRoot
 	}
 
 	inclusionProof := models.InclusionProof{
-		TreeSize:   swag.Int64(int64(root.TreeSize)),
-		RootHash:   swag.String(hex.EncodeToString(root.RootHash)),
-		LogIndex:   swag.Int64(proof.GetLeafIndex()),
+		TreeSize:   conv.Pointer(int64(root.TreeSize)),
+		RootHash:   conv.Pointer(hex.EncodeToString(root.RootHash)),
+		LogIndex:   conv.Pointer(proof.GetLeafIndex()),
 		Hashes:     hashes,
 		Checkpoint: stringPointer(sc),
 	}
@@ -381,10 +381,10 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	// The log index should be the virtual log index across all shards
 	virtualIndex := sharding.VirtualLogIndex(queuedLeaf.LeafIndex, api.logRanges.GetActive().TreeID, api.logRanges)
 	logEntryAnon := models.LogEntryAnon{
-		LogID:          swag.String(api.logRanges.GetActive().LogID),
-		LogIndex:       swag.Int64(virtualIndex),
+		LogID:          conv.Pointer(api.logRanges.GetActive().LogID),
+		LogIndex:       conv.Pointer(virtualIndex),
 		Body:           queuedLeaf.GetLeafValue(),
-		IntegratedTime: swag.Int64(queuedLeaf.IntegrateTimestamp.AsTime().Unix()),
+		IntegratedTime: conv.Pointer(queuedLeaf.IntegrateTimestamp.AsTime().Unix()),
 	}
 
 	if indexStorageClient != nil {
@@ -446,11 +446,11 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	}
 
 	inclusionProof := models.InclusionProof{
-		TreeSize:   swag.Int64(int64(root.TreeSize)),
-		RootHash:   swag.String(hex.EncodeToString(root.RootHash)),
-		LogIndex:   swag.Int64(queuedLeaf.LeafIndex),
+		TreeSize:   conv.Pointer(int64(root.TreeSize)),
+		RootHash:   conv.Pointer(hex.EncodeToString(root.RootHash)),
+		LogIndex:   conv.Pointer(queuedLeaf.LeafIndex),
 		Hashes:     hashes,
-		Checkpoint: swag.String(string(scBytes)),
+		Checkpoint: conv.Pointer(string(scBytes)),
 	}
 
 	logEntryAnon.Verification = &models.LogEntryAnonVerification{
@@ -664,7 +664,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 
 	if len(params.Entry.LogIndexes) > 0 {
 		for _, logIndex := range params.Entry.LogIndexes {
-			logEntry, err := retrieveLogEntryByIndex(httpReqCtx, int(swag.Int64Value(logIndex)))
+			logEntry, err := retrieveLogEntryByIndex(httpReqCtx, int(conv.Value(logIndex)))
 			if err != nil && !errors.Is(err, ErrNotFound) {
 				return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
 			} else if err == nil {

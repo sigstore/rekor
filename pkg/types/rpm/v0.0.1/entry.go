@@ -32,7 +32,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	rpmutils "github.com/cavaliercoder/go-rpm"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -127,7 +127,7 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pgp.PublicKey, 
 
 	oldSHA := ""
 	if v.RPMModel.Package.Hash != nil && v.RPMModel.Package.Hash.Value != nil {
-		oldSHA = swag.StringValue(v.RPMModel.Package.Hash.Value)
+		oldSHA = conv.Value(v.RPMModel.Package.Hash.Value)
 	}
 
 	g.Go(func() error {
@@ -224,8 +224,8 @@ func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pgp.PublicKey, 
 	// if we get here, all goroutines succeeded without error
 	if oldSHA == "" {
 		v.RPMModel.Package.Hash = &models.RpmV001SchemaPackageHash{}
-		v.RPMModel.Package.Hash.Algorithm = swag.String(models.RpmV001SchemaPackageHashAlgorithmSha256)
-		v.RPMModel.Package.Hash.Value = swag.String(computedSHA)
+		v.RPMModel.Package.Hash.Algorithm = conv.Pointer(models.RpmV001SchemaPackageHashAlgorithmSha256)
+		v.RPMModel.Package.Hash.Value = conv.Pointer(computedSHA)
 	}
 
 	return keyObj, rpmObj, nil
@@ -274,7 +274,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	// wrap in valid object with kind and apiVersion set
 	rpm := models.Rpm{}
-	rpm.APIVersion = swag.String(APIVERSION)
+	rpm.APIVersion = conv.Pointer(APIVERSION)
 	rpm.Spec = &canonicalEntry
 
 	return json.Marshal(&rpm)
@@ -297,7 +297,7 @@ func (v V001Entry) validate() error {
 
 	hash := pkg.Hash
 	if hash != nil {
-		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
+		if !govalidator.IsHash(conv.Value(hash.Value), conv.Value(hash.Algorithm)) {
 			return errors.New("invalid value for hash")
 		}
 	} else if len(pkg.Content) == 0 {
@@ -365,7 +365,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 	returnVal.Spec = re.RPMModel
 
 	return &returnVal, nil

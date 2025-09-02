@@ -42,7 +42,7 @@ import (
 
 	"github.com/go-openapi/strfmt"
 
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	jarutils "github.com/sassoftware/relic/lib/signjar"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/spf13/viper"
@@ -117,7 +117,7 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, 
 
 	oldSHA := ""
 	if v.JARModel.Archive.Hash != nil && v.JARModel.Archive.Hash.Value != nil {
-		oldSHA = swag.StringValue(v.JARModel.Archive.Hash.Value)
+		oldSHA = conv.Value(v.JARModel.Archive.Hash.Value)
 	}
 
 	dataReadCloser := bytes.NewReader(v.JARModel.Archive.Content)
@@ -186,8 +186,8 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, 
 	// if we get here, all goroutines succeeded without error
 	if oldSHA == "" {
 		v.JARModel.Archive.Hash = &models.JarV001SchemaArchiveHash{
-			Algorithm: swag.String(models.JarV001SchemaArchiveHashAlgorithmSha256),
-			Value:     swag.String(computedSHA),
+			Algorithm: conv.Pointer(models.JarV001SchemaArchiveHashAlgorithmSha256),
+			Value:     conv.Pointer(computedSHA),
 		}
 
 	}
@@ -230,7 +230,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	v.JARModel = canonicalEntry
 	// wrap in valid object with kind and apiVersion set
 	jar := models.Jar{}
-	jar.APIVersion = swag.String(APIVERSION)
+	jar.APIVersion = conv.Pointer(APIVERSION)
 	jar.Spec = &canonicalEntry
 
 	return json.Marshal(&jar)
@@ -252,7 +252,7 @@ func (v *V001Entry) validate() error {
 
 	hash := archive.Hash
 	if hash != nil {
-		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
+		if !govalidator.IsHash(conv.Value(hash.Value), conv.Value(hash.Algorithm)) {
 			return errors.New("invalid value for hash")
 		}
 	}
@@ -331,7 +331,7 @@ func (v *V001Entry) CreateFromArtifactProperties(ctx context.Context, props type
 		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 	returnVal.Spec = re.JARModel
 
 	return &returnVal, nil

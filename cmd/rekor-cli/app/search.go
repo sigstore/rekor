@@ -27,7 +27,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -151,15 +151,15 @@ var searchCmd = &cobra.Command{
 			pkiFormat := viper.GetString("pki-format")
 			switch pkiFormat {
 			case "pgp":
-				params.Query.PublicKey.Format = swag.String(models.SearchIndexPublicKeyFormatPgp)
+				params.Query.PublicKey.Format = conv.Pointer(models.SearchIndexPublicKeyFormatPgp)
 			case "minisign":
-				params.Query.PublicKey.Format = swag.String(models.SearchIndexPublicKeyFormatMinisign)
+				params.Query.PublicKey.Format = conv.Pointer(models.SearchIndexPublicKeyFormatMinisign)
 			case "x509":
-				params.Query.PublicKey.Format = swag.String(models.SearchIndexPublicKeyFormatX509)
+				params.Query.PublicKey.Format = conv.Pointer(models.SearchIndexPublicKeyFormatX509)
 			case "ssh":
-				params.Query.PublicKey.Format = swag.String(models.SearchIndexPublicKeyFormatSSH)
+				params.Query.PublicKey.Format = conv.Pointer(models.SearchIndexPublicKeyFormatSSH)
 			case "tuf":
-				params.Query.PublicKey.Format = swag.String(models.SearchIndexPublicKeyFormatTUF)
+				params.Query.PublicKey.Format = conv.Pointer(models.SearchIndexPublicKeyFormatTUF)
 			default:
 				return nil, fmt.Errorf("unknown pki-format %v", pkiFormat)
 			}

@@ -20,13 +20,13 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime/middleware"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/pubkey"
 )
 
 func GetPublicKeyHandler(params pubkey.GetPublicKeyParams) middleware.Responder {
-	treeID := swag.StringValue(params.TreeID)
+	treeID := conv.Value(params.TreeID)
 	pk, err := api.logRanges.PublicKey(treeID)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusBadRequest, err, "")

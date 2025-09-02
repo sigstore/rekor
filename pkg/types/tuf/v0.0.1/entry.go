@@ -48,7 +48,7 @@ import (
 
 	ptuf "github.com/sigstore/rekor/pkg/pki/tuf"
 
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -270,7 +270,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 	// wrap in valid object with kind and apiVersion set
 	tuf := models.TUF{}
-	tuf.APIVersion = swag.String(APIVERSION)
+	tuf.APIVersion = conv.Pointer(APIVERSION)
 	tuf.Spec = &canonicalEntry
 
 	return json.Marshal(&tuf)
@@ -364,7 +364,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 	returnVal.Spec = re.TufObj
 
 	return &returnVal, nil
