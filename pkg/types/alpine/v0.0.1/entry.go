@@ -18,7 +18,9 @@ package alpine
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -28,7 +30,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/asaskevich/govalidator"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
 	"golang.org/x/sync/errgroup"
@@ -88,13 +89,85 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	return result, nil
 }
 
+// DecodeEntry performs direct JSON unmarshaling without reflection,
+// equivalent to types.DecodeEntry but with better performance for alpine v0.0.1.
+func DecodeEntry(input any, output *models.AlpineV001Schema) error {
+	var m models.AlpineV001Schema
+	switch data := input.(type) {
+	case map[string]any:
+		mp := data
+		if pk, ok := mp["publicKey"].(map[string]any); ok {
+			if cs, ok := pk["content"].(string); ok && cs != "" {
+				outBuf := make([]byte, base64.StdEncoding.DecodedLen(len(cs)))
+				n, err := base64.StdEncoding.Decode(outBuf, []byte(cs))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for public key content: %w", err)
+				}
+				m.PublicKey = &models.AlpineV001SchemaPublicKey{}
+				content := strfmt.Base64(outBuf[:n])
+				m.PublicKey.Content = &content
+			}
+		}
+		if p, ok := mp["package"].(map[string]any); ok {
+			m.Package = &models.AlpineV001SchemaPackage{}
+			if pi, ok := p["pkginfo"].(map[string]any); ok {
+				mm := make(map[string]string, len(pi))
+				for k, vv := range pi {
+					if s, ok := vv.(string); ok {
+						mm[k] = s
+					}
+				}
+				if len(mm) > 0 {
+					m.Package.Pkginfo = mm
+				}
+			}
+			if h, ok := p["hash"].(map[string]any); ok {
+				var alg, val *string
+				if a, ok := h["algorithm"].(string); ok {
+					alg = &a
+				}
+				if s, ok := h["value"].(string); ok {
+					val = &s
+				}
+				if alg != nil || val != nil {
+					m.Package.Hash = &models.AlpineV001SchemaPackageHash{
+						Algorithm: alg,
+						Value:     val,
+					}
+				}
+			}
+			if cs, ok := p["content"].(string); ok && cs != "" {
+				outBuf := make([]byte, base64.StdEncoding.DecodedLen(len(cs)))
+				n, err := base64.StdEncoding.Decode(outBuf, []byte(cs))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for package content: %w", err)
+				}
+				m.Package.Content = strfmt.Base64(outBuf[:n])
+			}
+		}
+		*output = m
+		return nil
+	case *models.AlpineV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.AlpineV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.AlpineV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
+}
+
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	apk, ok := pe.(*models.Alpine)
 	if !ok {
 		return errors.New("cannot unmarshal non Alpine v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(apk.Spec, &v.AlpineModel); err != nil {
+	if err := DecodeEntry(apk.Spec, &v.AlpineModel); err != nil {
 		return err
 	}
 
@@ -277,7 +350,11 @@ func (v V001Entry) validate() error {
 
 	hash := pkg.Hash
 	if hash != nil {
-		if !govalidator.IsHash(conv.Value(hash.Value), conv.Value(hash.Algorithm)) {
+		// Only sha256 is supported for alpine v0.0.1; enforce length accordingly.
+		if hash.Value == nil || len(*hash.Value) != crypto.SHA256.Size()*2 {
+			return errors.New("invalid value for hash")
+		}
+		if _, err := hex.DecodeString(*hash.Value); err != nil {
 			return errors.New("invalid value for hash")
 		}
 	} else if len(pkg.Content) == 0 {

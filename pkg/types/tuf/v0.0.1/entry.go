@@ -129,7 +129,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non tuf v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(tuf.Spec, &v.TufObj); err != nil {
+	if err := DecodeEntry(tuf.Spec, &v.TufObj); err != nil {
 		return err
 	}
 
@@ -140,6 +140,47 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	// cross field validation
 	return v.Validate()
 
+}
+
+// DecodeEntry performs a direct decode for TUF v0.0.1 without reflection-based mapstructure.
+// Supported input shapes:
+// - map[string]any with keys: metadata.root where each has a nested "content" value
+// - *models.TUFV001Schema or models.TUFV001Schema
+// It avoids mutating the output on error.
+func DecodeEntry(input any, output *models.TUFV001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.TUFV001Schema")
+	}
+	var m models.TUFV001Schema
+	switch data := input.(type) {
+	case map[string]any:
+		mm := data
+		if md, ok := mm["metadata"].(map[string]any); ok {
+			m.Metadata = &models.TUFV001SchemaMetadata{}
+			if c, ok := md["content"]; ok {
+				m.Metadata.Content = c
+			}
+		}
+		if rt, ok := mm["root"].(map[string]any); ok {
+			m.Root = &models.TUFV001SchemaRoot{}
+			if c, ok := rt["content"]; ok {
+				m.Root.Content = c
+			}
+		}
+		*output = m
+		return nil
+	case *models.TUFV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.TUFV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.TUFV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
 }
 
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, pki.Signature, error) {
