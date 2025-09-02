@@ -32,7 +32,6 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -179,122 +178,55 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return v.validate()
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*x509.PublicKey, *alpine.Package, error) {
+func (v *V001Entry) fetchExternalEntities(_ context.Context) (*x509.PublicKey, *alpine.Package, error) {
 	if err := v.validate(); err != nil {
 		return nil, nil, &types.InputValidationError{Err: err}
 	}
-
-	g, ctx := errgroup.WithContext(ctx)
-
-	hashR, hashW := io.Pipe()
-	apkR, apkW := io.Pipe()
-	defer hashR.Close()
-	defer apkR.Close()
-
-	closePipesOnError := types.PipeCloser(hashR, hashW, apkR, apkW)
 
 	oldSHA := ""
 	if v.AlpineModel.Package.Hash != nil && v.AlpineModel.Package.Hash.Value != nil {
 		oldSHA = conv.Value(v.AlpineModel.Package.Hash.Value)
 	}
 
-	g.Go(func() error {
-		defer hashW.Close()
-		defer apkW.Close()
+	// Parse public key
+	keyObj, err := x509.NewPublicKey(bytes.NewReader(*v.AlpineModel.PublicKey.Content))
+	if err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
 
-		dataReadCloser := bytes.NewReader(v.AlpineModel.Package.Content)
+	// Parse package and verify hash
+	dataReadCloser := bytes.NewReader(v.AlpineModel.Package.Content)
+	hasher := sha256.New()
 
-		/* #nosec G110 */
-		if _, err := io.Copy(io.MultiWriter(hashW, apkW), dataReadCloser); err != nil {
-			return closePipesOnError(err)
-		}
-		return nil
-	})
-
-	hashResult := make(chan string)
-
-	g.Go(func() error {
-		defer close(hashResult)
-		hasher := sha256.New()
-
-		if _, err := io.Copy(hasher, hashR); err != nil {
-			return closePipesOnError(err)
-		}
-
-		computedSHA := hex.EncodeToString(hasher.Sum(nil))
-		if oldSHA != "" && computedSHA != oldSHA {
-			return closePipesOnError(&types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case hashResult <- computedSHA:
-			return nil
-		}
-	})
-
-	keyResult := make(chan *x509.PublicKey)
-
-	g.Go(func() error {
-		defer close(keyResult)
-		keyReadCloser := bytes.NewReader(*v.AlpineModel.PublicKey.Content)
-
-		keyObj, err := x509.NewPublicKey(keyReadCloser)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case keyResult <- keyObj:
-			return nil
-		}
-	})
-
-	var apkObj *alpine.Package
-	var key *x509.PublicKey
-
-	g.Go(func() error {
-		apk := alpine.Package{}
-		if err := apk.Unmarshal(apkR); err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		key = <-keyResult
-		if key == nil {
-			return closePipesOnError(errors.New("error processing public key"))
-		}
-
-		if err := apk.VerifySignature(key.CryptoPubKey()); err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		apkObj = &apk
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			return nil
-		}
-	})
-
-	computedSHA := <-hashResult
-
-	if err := g.Wait(); err != nil {
+	/* #nosec G110 */
+	packageData := bytes.NewBuffer(nil)
+	if _, err := io.Copy(io.MultiWriter(hasher, packageData), dataReadCloser); err != nil {
 		return nil, nil, err
 	}
 
-	// if we get here, all goroutines succeeded without error
+	computedSHA := hex.EncodeToString(hasher.Sum(nil))
+	if oldSHA != "" && computedSHA != oldSHA {
+		return nil, nil, &types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)}
+	}
+
+	// Parse and verify package
+	apk := alpine.Package{}
+	if err := apk.Unmarshal(packageData); err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	if err := apk.VerifySignature(keyObj.CryptoPubKey()); err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Set hash if not provided
 	if oldSHA == "" {
 		v.AlpineModel.Package.Hash = &models.AlpineV001SchemaPackageHash{}
 		v.AlpineModel.Package.Hash.Algorithm = conv.Pointer(models.AlpineV001SchemaPackageHashAlgorithmSha256)
 		v.AlpineModel.Package.Hash.Value = conv.Pointer(computedSHA)
 	}
 
-	return key, apkObj, nil
+	return keyObj, &apk, nil
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {

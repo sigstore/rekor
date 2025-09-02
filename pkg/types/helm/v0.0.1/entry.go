@@ -38,7 +38,6 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/helm"
 	"github.com/sigstore/rekor/pkg/util"
-	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -190,88 +189,35 @@ func DecodeEntry(input any, output *models.HelmV001Schema) error {
 	}
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*helm.Provenance, *pgp.PublicKey, *pgp.Signature, error) {
+func (v *V001Entry) fetchExternalEntities(_ context.Context) (*helm.Provenance, *pgp.PublicKey, *pgp.Signature, error) {
 	if err := v.validate(); err != nil {
 		return nil, nil, nil, &types.InputValidationError{Err: err}
 	}
 
-	g, ctx := errgroup.WithContext(ctx)
-
-	provenanceR, provenanceW := io.Pipe()
-	defer provenanceR.Close()
-
-	closePipesOnError := types.PipeCloser(provenanceR, provenanceW)
-
-	g.Go(func() error {
-		defer provenanceW.Close()
-
-		dataReadCloser := bytes.NewReader(v.HelmObj.Chart.Provenance.Content)
-
-		/* #nosec G110 */
-		if _, err := io.Copy(provenanceW, dataReadCloser); err != nil {
-			return closePipesOnError(err)
-		}
-		return nil
-	})
-
-	keyResult := make(chan *pgp.PublicKey)
-
-	g.Go(func() error {
-		defer close(keyResult)
-		keyReadCloser := bytes.NewReader(*v.HelmObj.PublicKey.Content)
-
-		keyObj, err := pgp.NewPublicKey(keyReadCloser)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case keyResult <- keyObj:
-			return nil
-		}
-	})
-
-	var key *pgp.PublicKey
-	provenance := &helm.Provenance{}
-	var sig *pgp.Signature
-	g.Go(func() error {
-
-		if err := provenance.Unmarshal(provenanceR); err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		key = <-keyResult
-		if key == nil {
-			return closePipesOnError(errors.New("error processing public key"))
-		}
-
-		// Set signature
-		var err error
-		sig, err = pgp.NewSignature(provenance.Block.ArmoredSignature.Body)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		// Verify signature
-		if err := sig.Verify(bytes.NewReader(provenance.Block.Bytes), key); err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			return nil
-		}
-	})
-
-	if err := g.Wait(); err != nil {
-		return nil, nil, nil, err
+	// Parse public key
+	keyObj, err := pgp.NewPublicKey(bytes.NewReader(*v.HelmObj.PublicKey.Content))
+	if err != nil {
+		return nil, nil, nil, &types.InputValidationError{Err: err}
 	}
 
-	return provenance, key, sig, nil
+	// Parse provenance
+	provenance := &helm.Provenance{}
+	if err := provenance.Unmarshal(bytes.NewReader(v.HelmObj.Chart.Provenance.Content)); err != nil {
+		return nil, nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Create signature
+	sig, err := pgp.NewSignature(provenance.Block.ArmoredSignature.Body)
+	if err != nil {
+		return nil, nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Verify signature
+	if err := sig.Verify(bytes.NewReader(provenance.Block.Bytes), keyObj); err != nil {
+		return nil, nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	return provenance, keyObj, sig, nil
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
