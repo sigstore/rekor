@@ -19,6 +19,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -37,8 +38,6 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/jar"
 	"github.com/sigstore/rekor/pkg/util"
-
-	"github.com/asaskevich/govalidator"
 
 	"github.com/go-openapi/strfmt"
 
@@ -252,7 +251,11 @@ func (v *V001Entry) validate() error {
 
 	hash := archive.Hash
 	if hash != nil {
-		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
+		// Only sha256 is supported for jar v0.0.1; enforce length-by-algorithm like hashedrekord.
+		if hash.Value == nil || len(*hash.Value) != crypto.SHA256.Size()*2 {
+			return errors.New("invalid value for hash")
+		}
+		if _, err := hex.DecodeString(*hash.Value); err != nil {
 			return errors.New("invalid value for hash")
 		}
 	}

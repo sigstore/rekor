@@ -28,7 +28,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/asaskevich/govalidator"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
@@ -170,17 +169,23 @@ func (v *V001Entry) validate() (pki.Signature, pki.PublicKey, error) {
 	if hash == nil {
 		return nil, nil, &types.InputValidationError{Err: errors.New("missing hash")}
 	}
-	if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
-		return nil, nil, &types.InputValidationError{Err: errors.New("invalid value for hash")}
-	}
 
 	var alg crypto.Hash
 	switch swag.StringValue(hash.Algorithm) {
 	case models.HashedrekordV001SchemaDataHashAlgorithmSha384:
+		if len(*hash.Value) != crypto.SHA384.Size()*2 {
+			return nil, nil, &types.InputValidationError{Err: errors.New("invalid value for hash")}
+		}
 		alg = crypto.SHA384
 	case models.HashedrekordV001SchemaDataHashAlgorithmSha512:
+		if len(*hash.Value) != crypto.SHA512.Size()*2 {
+			return nil, nil, &types.InputValidationError{Err: errors.New("invalid value for hash")}
+		}
 		alg = crypto.SHA512
 	default:
+		if len(*hash.Value) != crypto.SHA256.Size()*2 {
+			return nil, nil, &types.InputValidationError{Err: errors.New("invalid value for hash")}
+		}
 		alg = crypto.SHA256
 	}
 
