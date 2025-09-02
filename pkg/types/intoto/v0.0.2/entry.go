@@ -160,6 +160,126 @@ func parseSlsaPredicate(p []byte) (*in_toto.ProvenanceStatement, error) {
 	return &predicate, nil
 }
 
+// DecodeEntry performs direct decode into the provided output pointer
+// without mutating the receiver on error.
+func DecodeEntry(input any, output *models.IntotoV002Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.IntotoV002Schema")
+	}
+	var m models.IntotoV002Schema
+	switch in := input.(type) {
+	case map[string]any:
+		mm := in
+		m.Content = &models.IntotoV002SchemaContent{Envelope: &models.IntotoV002SchemaContentEnvelope{}}
+		if c, ok := mm["content"].(map[string]any); ok {
+			if env, ok := c["envelope"].(map[string]any); ok {
+				if pt, ok := env["payloadType"].(string); ok {
+					m.Content.Envelope.PayloadType = &pt
+				}
+				if p, ok := env["payload"].(string); ok && p != "" {
+					outb := make([]byte, base64.StdEncoding.DecodedLen(len(p)))
+					n, err := base64.StdEncoding.Decode(outb, []byte(p))
+					if err != nil {
+						return fmt.Errorf("failed parsing base64 data for payload: %w", err)
+					}
+					m.Content.Envelope.Payload = strfmt.Base64(outb[:n])
+				}
+				if raw, ok := env["signatures"]; ok {
+					switch sigs := raw.(type) {
+					case []any:
+						m.Content.Envelope.Signatures = make([]*models.IntotoV002SchemaContentEnvelopeSignaturesItems0, 0, len(sigs))
+						for _, s := range sigs {
+							if sm, ok := s.(map[string]any); ok {
+								item := &models.IntotoV002SchemaContentEnvelopeSignaturesItems0{}
+								if kid, ok := sm["keyid"].(string); ok {
+									item.Keyid = kid
+								}
+								if sig, ok := sm["sig"].(string); ok {
+									outb := make([]byte, base64.StdEncoding.DecodedLen(len(sig)))
+									n, err := base64.StdEncoding.Decode(outb, []byte(sig))
+									if err != nil {
+										return fmt.Errorf("failed parsing base64 data for signature: %w", err)
+									}
+									b := strfmt.Base64(outb[:n])
+									item.Sig = &b
+								}
+								if pk, ok := sm["publicKey"].(string); ok {
+									outb := make([]byte, base64.StdEncoding.DecodedLen(len(pk)))
+									n, err := base64.StdEncoding.Decode(outb, []byte(pk))
+									if err != nil {
+										return fmt.Errorf("failed parsing base64 data for public key: %w", err)
+									}
+									b := strfmt.Base64(outb[:n])
+									item.PublicKey = &b
+								}
+								m.Content.Envelope.Signatures = append(m.Content.Envelope.Signatures, item)
+							}
+						}
+					case []map[string]any:
+						m.Content.Envelope.Signatures = make([]*models.IntotoV002SchemaContentEnvelopeSignaturesItems0, 0, len(sigs))
+						for _, sm := range sigs {
+							item := &models.IntotoV002SchemaContentEnvelopeSignaturesItems0{}
+							if kid, ok := sm["keyid"].(string); ok {
+								item.Keyid = kid
+							}
+							if sig, ok := sm["sig"].(string); ok {
+								outb := make([]byte, base64.StdEncoding.DecodedLen(len(sig)))
+								n, err := base64.StdEncoding.Decode(outb, []byte(sig))
+								if err != nil {
+									return fmt.Errorf("failed parsing base64 data for signature: %w", err)
+								}
+								b := strfmt.Base64(outb[:n])
+								item.Sig = &b
+							}
+							if pk, ok := sm["publicKey"].(string); ok {
+								outb := make([]byte, base64.StdEncoding.DecodedLen(len(pk)))
+								n, err := base64.StdEncoding.Decode(outb, []byte(pk))
+								if err != nil {
+									return fmt.Errorf("failed parsing base64 data for public key: %w", err)
+								}
+								b := strfmt.Base64(outb[:n])
+								item.PublicKey = &b
+							}
+							m.Content.Envelope.Signatures = append(m.Content.Envelope.Signatures, item)
+						}
+					}
+				}
+			}
+			if h, ok := c["hash"].(map[string]any); ok {
+				m.Content.Hash = &models.IntotoV002SchemaContentHash{}
+				if alg, ok := h["algorithm"].(string); ok {
+					m.Content.Hash.Algorithm = &alg
+				}
+				if val, ok := h["value"].(string); ok {
+					m.Content.Hash.Value = &val
+				}
+			}
+			if ph, ok := c["payloadHash"].(map[string]any); ok {
+				m.Content.PayloadHash = &models.IntotoV002SchemaContentPayloadHash{}
+				if alg, ok := ph["algorithm"].(string); ok {
+					m.Content.PayloadHash.Algorithm = &alg
+				}
+				if val, ok := ph["value"].(string); ok {
+					m.Content.PayloadHash.Value = &val
+				}
+			}
+		}
+		*output = m
+		return nil
+	case *models.IntotoV002Schema:
+		if in == nil {
+			return fmt.Errorf("nil *models.IntotoV002Schema")
+		}
+		*output = *in
+		return nil
+	case models.IntotoV002Schema:
+		*output = in
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
+}
+
 func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 	it, ok := pe.(*models.Intoto)
 	if !ok {
@@ -167,7 +287,7 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	var err error
-	if err := types.DecodeEntry(it.Spec, &v.IntotoObj); err != nil {
+	if err := DecodeEntry(it.Spec, &v.IntotoObj); err != nil {
 		return err
 	}
 
