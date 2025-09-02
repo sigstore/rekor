@@ -159,6 +159,64 @@ func parseSlsaPredicate(p string) (*in_toto.ProvenanceStatement, error) {
 	return &predicate, nil
 }
 
+// DecodeEntry performs direct decode into the provided output pointer
+// without mutating the receiver on error.
+func DecodeEntry(input any, output *models.IntotoV001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.IntotoV001Schema")
+	}
+	var m models.IntotoV001Schema
+	switch data := input.(type) {
+	case map[string]any:
+		mm := data
+		if c, ok := mm["content"].(map[string]any); ok {
+			m.Content = &models.IntotoV001SchemaContent{}
+			if env, ok := c["envelope"].(string); ok {
+				m.Content.Envelope = env
+			}
+			if h, ok := c["hash"].(map[string]any); ok {
+				m.Content.Hash = &models.IntotoV001SchemaContentHash{}
+				if alg, ok := h["algorithm"].(string); ok {
+					m.Content.Hash.Algorithm = &alg
+				}
+				if val, ok := h["value"].(string); ok {
+					m.Content.Hash.Value = &val
+				}
+			}
+			if ph, ok := c["payloadHash"].(map[string]any); ok {
+				m.Content.PayloadHash = &models.IntotoV001SchemaContentPayloadHash{}
+				if alg, ok := ph["algorithm"].(string); ok {
+					m.Content.PayloadHash.Algorithm = &alg
+				}
+				if val, ok := ph["value"].(string); ok {
+					m.Content.PayloadHash.Value = &val
+				}
+			}
+		}
+		if pk, ok := mm["publicKey"].(string); ok && pk != "" {
+			dec, err := base64.StdEncoding.DecodeString(pk)
+			if err != nil {
+				return fmt.Errorf("failed parsing base64 data for public key: %w", err)
+			}
+			b := strfmt.Base64(dec)
+			m.PublicKey = &b
+		}
+		*output = m
+		return nil
+	case *models.IntotoV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.IntotoV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.IntotoV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
+}
+
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	it, ok := pe.(*models.Intoto)
 	if !ok {
@@ -166,7 +224,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	var err error
-	if err := types.DecodeEntry(it.Spec, &v.IntotoObj); err != nil {
+	if err := DecodeEntry(it.Spec, &v.IntotoObj); err != nil {
 		return err
 	}
 

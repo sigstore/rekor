@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -163,6 +164,104 @@ func parseSlsaPredicate(p []byte) (*in_toto.ProvenanceStatement, error) {
 	return &predicate, nil
 }
 
+// DecodeEntry performs direct decode into the provided output pointer
+// without mutating the receiver on error.
+func DecodeEntry(input any, output *models.DSSEV001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.DSSEV001Schema")
+	}
+	var m models.DSSEV001Schema
+	// Single switch with map fast path
+	switch data := input.(type) {
+	case map[string]any:
+		mm := data
+		if pcRaw, ok := mm["proposedContent"].(map[string]any); ok {
+			m.ProposedContent = &models.DSSEV001SchemaProposedContent{}
+			if env, ok := pcRaw["envelope"].(string); ok {
+				m.ProposedContent.Envelope = &env
+			}
+			if vsIF, ok := pcRaw["verifiers"].([]any); ok {
+				m.ProposedContent.Verifiers = make([]strfmt.Base64, 0, len(vsIF))
+				for _, it := range vsIF {
+					if s, ok := it.(string); ok && s != "" {
+						outb := make([]byte, base64.StdEncoding.DecodedLen(len(s)))
+						n, err := base64.StdEncoding.Decode(outb, []byte(s))
+						if err != nil {
+							return fmt.Errorf("failed parsing base64 data for verifier: %w", err)
+						}
+						m.ProposedContent.Verifiers = append(m.ProposedContent.Verifiers, strfmt.Base64(outb[:n]))
+					}
+				}
+			} else if vsStr, ok := pcRaw["verifiers"].([]string); ok {
+				m.ProposedContent.Verifiers = make([]strfmt.Base64, 0, len(vsStr))
+				for _, s := range vsStr {
+					if s == "" {
+						continue
+					}
+					outb := make([]byte, base64.StdEncoding.DecodedLen(len(s)))
+					n, err := base64.StdEncoding.Decode(outb, []byte(s))
+					if err != nil {
+						return fmt.Errorf("failed parsing base64 data for verifier: %w", err)
+					}
+					m.ProposedContent.Verifiers = append(m.ProposedContent.Verifiers, strfmt.Base64(outb[:n]))
+				}
+			}
+		}
+		if sigs, ok := mm["signatures"].([]any); ok {
+			m.Signatures = make([]*models.DSSEV001SchemaSignaturesItems0, 0, len(sigs))
+			for _, s := range sigs {
+				if sm, ok := s.(map[string]any); ok {
+					item := &models.DSSEV001SchemaSignaturesItems0{}
+					if sig, ok := sm["signature"].(string); ok {
+						item.Signature = &sig
+					}
+					if vr, ok := sm["verifier"].(string); ok && vr != "" {
+						outb := make([]byte, base64.StdEncoding.DecodedLen(len(vr)))
+						n, err := base64.StdEncoding.Decode(outb, []byte(vr))
+						if err != nil {
+							return fmt.Errorf("failed parsing base64 data for signature verifier: %w", err)
+						}
+						b := strfmt.Base64(outb[:n])
+						item.Verifier = &b
+					}
+					m.Signatures = append(m.Signatures, item)
+				}
+			}
+		}
+		if eh, ok := mm["envelopeHash"].(map[string]any); ok {
+			m.EnvelopeHash = &models.DSSEV001SchemaEnvelopeHash{}
+			if alg, ok := eh["algorithm"].(string); ok {
+				m.EnvelopeHash.Algorithm = &alg
+			}
+			if val, ok := eh["value"].(string); ok {
+				m.EnvelopeHash.Value = &val
+			}
+		}
+		if ph, ok := mm["payloadHash"].(map[string]any); ok {
+			m.PayloadHash = &models.DSSEV001SchemaPayloadHash{}
+			if alg, ok := ph["algorithm"].(string); ok {
+				m.PayloadHash.Algorithm = &alg
+			}
+			if val, ok := ph["value"].(string); ok {
+				m.PayloadHash.Value = &val
+			}
+		}
+		*output = m
+		return nil
+	case *models.DSSEV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.DSSEV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.DSSEV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
+}
+
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	it, ok := pe.(*models.DSSE)
 	if !ok {
@@ -171,7 +270,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 	dsseObj := &models.DSSEV001Schema{}
 
-	if err := types.DecodeEntry(it.Spec, dsseObj); err != nil {
+	if err := DecodeEntry(it.Spec, dsseObj); err != nil {
 		return err
 	}
 

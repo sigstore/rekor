@@ -17,10 +17,12 @@ package dsse
 
 import (
 	"context"
+	"encoding/base64"
 	"sync"
 	"testing"
 
 	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
+	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
 	fuzzUtils "github.com/sigstore/rekor/pkg/fuzz"
@@ -95,5 +97,62 @@ func FuzzDSSEUnmarshalAndCanonicalize(f *testing.F) {
 		if _, err := types.CanonicalizeEntry(context.Background(), ei); err != nil {
 			t.Errorf("error canonicalizing unmarshalled entry: %v", err)
 		}
+	})
+}
+
+// New: fuzz the direct decoder map fast-path and raw JSON fallbacks, including signature shape variations
+func FuzzDSSEDecodeEntryDirectMapAndRaw(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		initter.Do(fuzzUtils.SetFuzzLogger)
+		ff := fuzz.NewConsumer(data)
+		choice, _ := ff.GetInt()
+		choice %= 2
+
+		toB64 := func(limit int) string {
+			b, _ := ff.GetBytes()
+			if len(b) > limit {
+				b = b[:limit]
+			}
+			return base64.StdEncoding.EncodeToString(b)
+		}
+
+		var input any
+		switch choice {
+		case 0:
+			m := map[string]any{}
+			if b, _ := ff.GetBool(); b {
+				pc := map[string]any{"envelope": string(append([]byte(`{"payload":"`), []byte(toB64(128))...))}
+				// keep verifiers as []string
+				pc["verifiers"] = []string{toB64(64)}
+				m["proposedContent"] = pc
+			}
+			// signatures slice: either []map or []any
+			if b, _ := ff.GetBool(); b {
+				if b2, _ := ff.GetBool(); b2 {
+					m["signatures"] = []map[string]any{{"signature": "MEUCIQ==", "verifier": toB64(32)}}
+				} else {
+					m["signatures"] = []any{map[string]any{"signature": "MEUCIQ==", "verifier": toB64(32)}}
+				}
+			}
+			// hashes
+			if b, _ := ff.GetBool(); b {
+				m["envelopeHash"] = map[string]any{"algorithm": "sha256", "value": "deadbeef"}
+			}
+			if b, _ := ff.GetBool(); b {
+				m["payloadHash"] = map[string]any{"algorithm": "sha256", "value": "cafebabe"}
+			}
+			input = m
+		case 1:
+			mdl := &models.DSSEV001Schema{}
+			if err := ff.GenerateStruct(mdl); err != nil {
+				t.Skip()
+			}
+			input = mdl
+		}
+		entry := &V001Entry{}
+		if err := DecodeEntry(input, &entry.DSSEObj); err != nil {
+			t.Skip()
+		}
+		_ = entry.DSSEObj.Validate(strfmt.Default)
 	})
 }

@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -102,7 +103,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non Rekord v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(rekord.Spec, &v.RekordObj); err != nil {
+	if err := DecodeEntry(rekord.Spec, &v.RekordObj); err != nil {
 		return err
 	}
 
@@ -114,6 +115,81 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	// cross field validation
 	return v.validate()
 
+}
+
+// DecodeEntry performs direct JSON unmarshaling without reflection,
+// equivalent to types.DecodeEntry but with better performance for Rekord v0.0.1.
+// It avoids mutating the receiver on error.
+func DecodeEntry(input any, output *models.RekordV001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.RekordV001Schema")
+	}
+	var m models.RekordV001Schema
+	// Single switch including map[string]any fast path
+	switch data := input.(type) {
+	case map[string]any:
+		mm := data
+		if s, ok := mm["signature"].(map[string]any); ok {
+			m.Signature = &models.RekordV001SchemaSignature{}
+			if f, ok := s["format"].(string); ok {
+				m.Signature.Format = &f
+			}
+			if c, ok := s["content"].(string); ok && c != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(c))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for signature content: %w", err)
+				}
+				b := strfmt.Base64(outb[:n])
+				m.Signature.Content = &b
+			}
+			if pk, ok := s["publicKey"].(map[string]any); ok {
+				m.Signature.PublicKey = &models.RekordV001SchemaSignaturePublicKey{}
+				if c, ok := pk["content"].(string); ok && c != "" {
+					outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+					n, err := base64.StdEncoding.Decode(outb, []byte(c))
+					if err != nil {
+						return fmt.Errorf("failed parsing base64 data for signature publicKey content: %w", err)
+					}
+					b := strfmt.Base64(outb[:n])
+					m.Signature.PublicKey.Content = &b
+				}
+			}
+		}
+		if d, ok := mm["data"].(map[string]any); ok {
+			m.Data = &models.RekordV001SchemaData{}
+			if h, ok := d["hash"].(map[string]any); ok {
+				m.Data.Hash = &models.RekordV001SchemaDataHash{}
+				if alg, ok := h["algorithm"].(string); ok {
+					m.Data.Hash.Algorithm = &alg
+				}
+				if val, ok := h["value"].(string); ok {
+					m.Data.Hash.Value = &val
+				}
+			}
+			if c, ok := d["content"].(string); ok && c != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(c))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for data content: %w", err)
+				}
+				m.Data.Content = strfmt.Base64(outb[:n])
+			}
+		}
+		*output = m
+		return nil
+	case *models.RekordV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.RekordV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.RekordV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
 }
 
 func (v *V001Entry) fetchExternalEntities(_ context.Context) (pki.PublicKey, pki.Signature, error) {

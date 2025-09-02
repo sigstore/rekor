@@ -17,10 +17,12 @@ package intoto
 
 import (
 	"context"
+	"encoding/base64"
 	"sync"
 	"testing"
 
 	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
+	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
 	fuzzUtils "github.com/sigstore/rekor/pkg/fuzz"
@@ -96,5 +98,62 @@ func FuzzIntotoUnmarshalAndCanonicalize(f *testing.F) {
 		if _, err := types.CanonicalizeEntry(context.Background(), ei); err != nil {
 			t.Errorf("error canonicalizing unmarshalled entry: %v", err)
 		}
+	})
+}
+
+// New: fuzz the direct decoder map fast-path and typed-model inputs
+func FuzzIntotoDecodeEntryDirectMapAndRaw(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		initter.Do(fuzzUtils.SetFuzzLogger)
+		ff := fuzz.NewConsumer(data)
+		choice, _ := ff.GetInt()
+		choice %= 2
+		toB64 := func(limit int) string {
+			b, _ := ff.GetBytes()
+			if len(b) > limit {
+				b = b[:limit]
+			}
+			return base64.StdEncoding.EncodeToString(b)
+		}
+
+		var input any
+		switch choice {
+		case 0:
+			// Construct a minimal map resembling the schema
+			m := map[string]any{}
+			content := map[string]any{}
+			env := map[string]any{}
+			if b, _ := ff.GetBool(); b {
+				env["payloadType"] = "application/vnd.in-toto+json"
+				env["payload"] = toB64(512)
+			}
+			if b, _ := ff.GetBool(); b {
+				env["signatures"] = []any{map[string]any{"keyid": "k", "sig": toB64(128), "publicKey": toB64(256)}}
+			}
+			if len(env) > 0 {
+				content["envelope"] = env
+			}
+			if b, _ := ff.GetBool(); b {
+				content["hash"] = map[string]any{"algorithm": "sha256", "value": "deadbeef"}
+			}
+			if b, _ := ff.GetBool(); b {
+				content["payloadHash"] = map[string]any{"algorithm": "sha256", "value": "deadbeef"}
+			}
+			if len(content) > 0 {
+				m["content"] = content
+			}
+			input = m
+		case 1:
+			mdl := &models.IntotoV002Schema{}
+			if err := ff.GenerateStruct(mdl); err != nil {
+				t.Skip()
+			}
+			input = mdl
+		}
+		entry := &V002Entry{}
+		if err := DecodeEntry(input, &entry.IntotoObj); err != nil {
+			t.Skip()
+		}
+		_ = entry.IntotoObj.Validate(strfmt.Default)
 	})
 }

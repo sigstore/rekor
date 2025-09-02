@@ -22,6 +22,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -154,7 +155,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	var err error
-	if err := types.DecodeEntry(it.Spec, &v.CoseObj); err != nil {
+	if err := DecodeEntry(it.Spec, &v.CoseObj); err != nil {
 		return err
 	}
 
@@ -288,6 +289,79 @@ func (v *V001Entry) AttestationKey() string {
 	return fmt.Sprintf("%s:%s",
 		models.CoseV001SchemaDataEnvelopeHashAlgorithmSha256,
 		hex.EncodeToString(v.envelopeHash))
+}
+
+// DecodeEntry performs direct decode into the provided output pointer
+// without mutating the receiver on error.
+func DecodeEntry(input any, output *models.CoseV001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.CoseV001Schema")
+	}
+	var m models.CoseV001Schema
+	// Typed switch including map fast path
+	switch data := input.(type) {
+	case map[string]any:
+		mm := data
+		if msg, ok := mm["message"].(string); ok && msg != "" {
+			outb := make([]byte, base64.StdEncoding.DecodedLen(len(msg)))
+			n, err := base64.StdEncoding.Decode(outb, []byte(msg))
+			if err != nil {
+				return fmt.Errorf("failed parsing base64 data for message: %w", err)
+			}
+			m.Message = strfmt.Base64(outb[:n])
+		}
+		if pk, ok := mm["publicKey"].(string); ok && pk != "" {
+			outb := make([]byte, base64.StdEncoding.DecodedLen(len(pk)))
+			n, err := base64.StdEncoding.Decode(outb, []byte(pk))
+			if err != nil {
+				return fmt.Errorf("failed parsing base64 data for publicKey: %w", err)
+			}
+			b := strfmt.Base64(outb[:n])
+			m.PublicKey = &b
+		}
+		if d, ok := mm["data"].(map[string]any); ok {
+			m.Data = &models.CoseV001SchemaData{}
+			if ph, ok := d["payloadHash"].(map[string]any); ok {
+				m.Data.PayloadHash = &models.CoseV001SchemaDataPayloadHash{}
+				if alg, ok := ph["algorithm"].(string); ok {
+					m.Data.PayloadHash.Algorithm = &alg
+				}
+				if val, ok := ph["value"].(string); ok {
+					m.Data.PayloadHash.Value = &val
+				}
+			}
+			if eh, ok := d["envelopeHash"].(map[string]any); ok {
+				m.Data.EnvelopeHash = &models.CoseV001SchemaDataEnvelopeHash{}
+				if alg, ok := eh["algorithm"].(string); ok {
+					m.Data.EnvelopeHash.Algorithm = &alg
+				}
+				if val, ok := eh["value"].(string); ok {
+					m.Data.EnvelopeHash.Value = &val
+				}
+			}
+			if aad, ok := d["aad"].(string); ok && aad != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(aad)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(aad))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for aad: %w", err)
+				}
+				m.Data.Aad = strfmt.Base64(outb[:n])
+			}
+		}
+		*output = m
+		return nil
+	case *models.CoseV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.CoseV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.CoseV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
 }
 
 // AttestationKeyValue returns both the key and value to be persisted

@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -103,7 +104,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non Helm v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(helm.Spec, &v.HelmObj); err != nil {
+	if err := DecodeEntry(helm.Spec, &v.HelmObj); err != nil {
 		return err
 	}
 
@@ -114,6 +115,79 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 	// cross field validation
 	return v.validate()
+}
+
+// DecodeEntry performs direct decode into the provided output pointer
+// without mutating the receiver on error.
+func DecodeEntry(input any, output *models.HelmV001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.HelmV001Schema")
+	}
+	var m models.HelmV001Schema
+	// Single switch including map fast path
+	switch data := input.(type) {
+	case map[string]any:
+		mm := data
+		if pk, ok := mm["publicKey"].(map[string]any); ok {
+			m.PublicKey = &models.HelmV001SchemaPublicKey{}
+			if c, ok := pk["content"].(string); ok && c != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(c))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for publicKey content: %w", err)
+				}
+				b := strfmt.Base64(outb[:n])
+				m.PublicKey.Content = &b
+			}
+		}
+		if chart, ok := mm["chart"].(map[string]any); ok {
+			m.Chart = &models.HelmV001SchemaChart{}
+			if h, ok := chart["hash"].(map[string]any); ok {
+				m.Chart.Hash = &models.HelmV001SchemaChartHash{}
+				if alg, ok := h["algorithm"].(string); ok {
+					m.Chart.Hash.Algorithm = &alg
+				}
+				if val, ok := h["value"].(string); ok {
+					m.Chart.Hash.Value = &val
+				}
+			}
+			if prov, ok := chart["provenance"].(map[string]any); ok {
+				m.Chart.Provenance = &models.HelmV001SchemaChartProvenance{}
+				if s, ok := prov["signature"].(map[string]any); ok {
+					m.Chart.Provenance.Signature = &models.HelmV001SchemaChartProvenanceSignature{}
+					if c, ok := s["content"].(string); ok && c != "" {
+						outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+						n, err := base64.StdEncoding.Decode(outb, []byte(c))
+						if err != nil {
+							return fmt.Errorf("failed parsing base64 data for provenance signature content: %w", err)
+						}
+						m.Chart.Provenance.Signature.Content = strfmt.Base64(outb[:n])
+					}
+				}
+				if c, ok := prov["content"].(string); ok && c != "" {
+					outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+					n, err := base64.StdEncoding.Decode(outb, []byte(c))
+					if err != nil {
+						return fmt.Errorf("failed parsing base64 data for provenance content: %w", err)
+					}
+					m.Chart.Provenance.Content = strfmt.Base64(outb[:n])
+				}
+			}
+		}
+		*output = m
+		return nil
+	case *models.HelmV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.HelmV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.HelmV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
 }
 
 func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*helm.Provenance, *pgp.PublicKey, *pgp.Signature, error) {

@@ -17,10 +17,12 @@ package rfc3161
 
 import (
 	"context"
+	"encoding/base64"
 	"sync"
 	"testing"
 
 	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
+	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
 	fuzzUtils "github.com/sigstore/rekor/pkg/fuzz"
@@ -96,5 +98,39 @@ func FuzzRfc3161UnmarshalAndCanonicalize(f *testing.F) {
 		if _, err := types.CanonicalizeEntry(context.Background(), ei); err != nil {
 			t.Errorf("error canonicalizing unmarshalled entry: %v", err)
 		}
+	})
+}
+
+// New: fuzz the direct decoder map fast-path and raw JSON fallbacks
+func FuzzRfc3161DecodeEntryDirectMapAndRaw(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		initter.Do(fuzzUtils.SetFuzzLogger)
+		ff := fuzz.NewConsumer(data)
+		choice, _ := ff.GetInt()
+		choice %= 2
+		toB64 := func(limit int) string {
+			b, _ := ff.GetBytes()
+			if len(b) > limit {
+				b = b[:limit]
+			}
+			return base64.StdEncoding.EncodeToString(b)
+		}
+
+		var input any
+		switch choice {
+		case 0:
+			input = map[string]any{"tsr": map[string]any{"content": toB64(512)}}
+		case 1:
+			mdl := &models.Rfc3161V001Schema{}
+			if err := ff.GenerateStruct(mdl); err != nil {
+				t.Skip()
+			}
+			input = mdl
+		}
+		entry := &V001Entry{}
+		if err := DecodeEntry(input, &entry.Rfc3161Obj); err != nil {
+			t.Skip()
+		}
+		_ = entry.Rfc3161Obj.Validate(strfmt.Default)
 	})
 }

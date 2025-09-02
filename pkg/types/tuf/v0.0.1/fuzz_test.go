@@ -17,10 +17,12 @@ package tuf
 
 import (
 	"context"
+	"encoding/base64"
 	"sync"
 	"testing"
 
 	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
+	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
 	fuzzUtils "github.com/sigstore/rekor/pkg/fuzz"
@@ -96,5 +98,53 @@ func FuzzTufUnmarshalAndCanonicalize(f *testing.F) {
 		if _, err := types.CanonicalizeEntry(context.Background(), ei); err != nil {
 			t.Skip()
 		}
+	})
+}
+
+// New: fuzz the direct decoder map fast-path and typed-model inputs
+func FuzzTufDecodeEntryDirectMapAndRaw(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		initter.Do(fuzzUtils.SetFuzzLogger)
+		ff := fuzz.NewConsumer(data)
+		choice, _ := ff.GetInt()
+		choice %= 2
+		mkB64 := func(limit int) string {
+			b, _ := ff.GetBytes()
+			if len(b) > limit {
+				b = b[:limit]
+			}
+			return base64.StdEncoding.EncodeToString(b)
+		}
+
+		var input any
+		switch choice {
+		case 0:
+			// Build a map that resembles the TUF schema
+			m := map[string]any{}
+			if b, _ := ff.GetBool(); b {
+				// metadata can be an arbitrary object; place either a decoded JSON-like map or base64 string
+				// Here we just drop a small json-like object encoded as a string to flow through parse later
+				m["metadata"] = map[string]any{"content": map[string]any{"signed": map[string]any{"_type": "targets"}}}
+			} else {
+				m["metadata"] = map[string]any{"content": mkB64(256)}
+			}
+			if b, _ := ff.GetBool(); b {
+				m["root"] = map[string]any{"content": map[string]any{"signed": map[string]any{"_type": "root"}}}
+			} else {
+				m["root"] = map[string]any{"content": mkB64(256)}
+			}
+			input = m
+		case 1:
+			mdl := &models.TUFV001Schema{}
+			if err := ff.GenerateStruct(mdl); err != nil {
+				t.Skip()
+			}
+			input = mdl
+		}
+		entry := &V001Entry{}
+		if err := DecodeEntry(input, &entry.TufObj); err != nil {
+			t.Skip()
+		}
+		_ = entry.TufObj.Validate(strfmt.Default)
 	})
 }
