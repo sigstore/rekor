@@ -1,3 +1,17 @@
+# v1.4.2
+
+This release includes some performance optimizations and a bug fix for publishing events to a pub/sub topic.
+
+## Fixes
+
+* use pubsub client to check IAM permissions (#2605)
+* process type contents serially (#2604)
+* move to direct decoding instead of mapstructure (#2598)
+* optimize performance of regex operations (#2603)
+
+## Contributors
+* Bob Callaway
+
 # v1.4.1
 
 This release includes updated dependencies for known CVEs, as well as some optimizations to minimize gRPC traffic between Rekor and Trillian.
