@@ -30,6 +30,7 @@ permissions:
 
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
 
     steps:
@@ -41,6 +42,7 @@ jobs:
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: ${{ env.GOVERSION }}
+          cache: false
 
       - name: Build
         run: make -C $GITHUB_WORKSPACE all
@@ -56,6 +58,7 @@ jobs:
         run: git update-index --refresh && git diff-index --quiet HEAD -- || git diff --exit-code
 
   container-build:
+    name: Container Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -66,6 +69,7 @@ jobs:
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: ${{ env.GOVERSION }}
+          cache: false
 
       - uses: ko-build/setup-ko@d006021bd0c28d1ce33a07e7943d48b079944c8d # v0.9
 
@@ -77,6 +81,7 @@ jobs:
           docker run --rm $(cat indexImagerefs) --version
 
   e2e:
+    name: E2E Tests
     runs-on: ubuntu-latest
     needs: build
 
@@ -95,6 +100,7 @@ jobs:
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: ${{ env.GOVERSION }}
+          cache: false
       - name: install gocovmerge
         run: make gocovmerge
 
@@ -127,6 +133,7 @@ jobs:
           flags: e2etests
 
   backfill:
+    name: Backfill Tests
     runs-on: ubuntu-latest
     needs: build
 
@@ -145,6 +152,7 @@ jobs:
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: ${{ env.GOVERSION }}
+          cache: false
       - name: Install backfill test dependencies
         run: |
           go install ./cmd/rekor-cli
@@ -172,6 +180,7 @@ jobs:
           path: /tmp/docker-compose.log
 
   sharding-e2e:
+    name: Sharding E2E Tests
     runs-on: ubuntu-latest
     needs: build
 
@@ -192,6 +201,7 @@ jobs:
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: ${{ env.GOVERSION }}
+          cache: false
 
       - name: Sharding Test
         run: ./tests/sharding-e2e-test.sh
@@ -203,6 +213,7 @@ jobs:
           path: /tmp/docker-compose.log
 
   issue-872-e2e:
+    name: Issue 872 E2E Test
     runs-on: ubuntu-latest
     needs: build
 
@@ -217,6 +228,7 @@ jobs:
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: ${{ env.GOVERSION }}
+          cache: false
 
       - name: Test for Attestation begin returned that was previously persisted in tlog
         run: ./tests/issue-872-e2e-test.sh
@@ -228,6 +240,7 @@ jobs:
           path: /tmp/*docker-compose.log
 
   client-algorithms-e2e:
+    name: Client Algorithms E2E Tests
     runs-on: ubuntu-latest
     needs: build
 
@@ -242,6 +255,7 @@ jobs:
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: ${{ env.GOVERSION }}
+          cache: false
 
       - name: Test for supported client algorithms
         run: ./tests/client-algos-e2e-test.sh
@@ -253,6 +267,7 @@ jobs:
           path: /tmp/*docker-compose.log
 
   harness:
+    name: Test Harness
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -270,6 +285,7 @@ jobs:
         with:
           go-version: ${{ env.GOVERSION }}
           check-latest: true
+          cache: false
 
       - name: Run test harness
         run: ./tests/rekor-harness.sh
