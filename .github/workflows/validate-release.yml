@@ -26,6 +26,7 @@ permissions: {}
 
 jobs:
   check-signature:
+    name: Check Signature
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/sigstore/cosign/cosign:v2.5.3-dev@sha256:fe84ab87222b60d2d87f5efcb8ef3cfd895897c088fbeb973280689c81aedff1
@@ -40,6 +41,7 @@ jobs:
           TUF_ROOT: /tmp
 
   validate-release-job:
+    name: Validate Release
     runs-on: ubuntu-latest
     needs:
       - check-signature
