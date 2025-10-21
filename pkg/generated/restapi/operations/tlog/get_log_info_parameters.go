@@ -41,7 +41,6 @@ func NewGetLogInfoParams() GetLogInfoParams {
 //
 // swagger:parameters getLogInfo
 type GetLogInfoParams struct {
-
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 }

@@ -62,33 +62,59 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 
 		JSONConsumer: runtime.JSONConsumer(),
 
-		ApplicationXPemFileProducer: runtime.ProducerFunc(func(w io.Writer, data interface{}) error {
+		ApplicationXPemFileProducer: runtime.ProducerFunc(func(w io.Writer, data any) error {
+			_ = w
+			_ = data
+
 			return errors.NotImplemented("applicationXPemFile producer has not yet been implemented")
 		}),
 		JSONProducer: runtime.JSONProducer(),
 
 		EntriesCreateLogEntryHandler: entries.CreateLogEntryHandlerFunc(func(params entries.CreateLogEntryParams) middleware.Responder {
+			_ = params
+
 			return middleware.NotImplemented("operation entries.CreateLogEntry has not yet been implemented")
 		}),
+
 		EntriesGetLogEntryByIndexHandler: entries.GetLogEntryByIndexHandlerFunc(func(params entries.GetLogEntryByIndexParams) middleware.Responder {
+			_ = params
+
 			return middleware.NotImplemented("operation entries.GetLogEntryByIndex has not yet been implemented")
 		}),
+
 		EntriesGetLogEntryByUUIDHandler: entries.GetLogEntryByUUIDHandlerFunc(func(params entries.GetLogEntryByUUIDParams) middleware.Responder {
+			_ = params
+
 			return middleware.NotImplemented("operation entries.GetLogEntryByUUID has not yet been implemented")
 		}),
+
 		TlogGetLogInfoHandler: tlog.GetLogInfoHandlerFunc(func(params tlog.GetLogInfoParams) middleware.Responder {
+			_ = params
+
 			return middleware.NotImplemented("operation tlog.GetLogInfo has not yet been implemented")
 		}),
+
 		TlogGetLogProofHandler: tlog.GetLogProofHandlerFunc(func(params tlog.GetLogProofParams) middleware.Responder {
+			_ = params
+
 			return middleware.NotImplemented("operation tlog.GetLogProof has not yet been implemented")
 		}),
+
 		PubkeyGetPublicKeyHandler: pubkey.GetPublicKeyHandlerFunc(func(params pubkey.GetPublicKeyParams) middleware.Responder {
+			_ = params
+
 			return middleware.NotImplemented("operation pubkey.GetPublicKey has not yet been implemented")
 		}),
+
 		IndexSearchIndexHandler: index.SearchIndexHandlerFunc(func(params index.SearchIndexParams) middleware.Responder {
+			_ = params
+
 			return middleware.NotImplemented("operation index.SearchIndex has not yet been implemented")
 		}),
+
 		EntriesSearchLogQueryHandler: entries.SearchLogQueryHandlerFunc(func(params entries.SearchLogQueryParams) middleware.Responder {
+			_ = params
+
 			return middleware.NotImplemented("operation entries.SearchLogQuery has not yet been implemented")
 		}),
 	}
@@ -163,7 +189,7 @@ type RekorServerAPI struct {
 	CommandLineOptionsGroups []swag.CommandLineOptionsGroup
 
 	// User defined logger function.
-	Logger func(string, ...interface{})
+	Logger func(string, ...any)
 }
 
 // UseRedoc for documentation at /docs
@@ -274,12 +300,12 @@ func (o *RekorServerAPI) Authorizer() runtime.Authorizer {
 }
 
 // ConsumersFor gets the consumers for the specified media types.
+//
 // MIME type parameters are ignored here.
 func (o *RekorServerAPI) ConsumersFor(mediaTypes []string) map[string]runtime.Consumer {
 	result := make(map[string]runtime.Consumer, len(mediaTypes))
 	for _, mt := range mediaTypes {
-		switch mt {
-		case "application/json":
+		if mt == "application/json" {
 			result["application/json"] = o.JSONConsumer
 		}
 
@@ -287,10 +313,12 @@ func (o *RekorServerAPI) ConsumersFor(mediaTypes []string) map[string]runtime.Co
 			result[mt] = c
 		}
 	}
+
 	return result
 }
 
 // ProducersFor gets the producers for the specified media types.
+//
 // MIME type parameters are ignored here.
 func (o *RekorServerAPI) ProducersFor(mediaTypes []string) map[string]runtime.Producer {
 	result := make(map[string]runtime.Producer, len(mediaTypes))
@@ -306,6 +334,7 @@ func (o *RekorServerAPI) ProducersFor(mediaTypes []string) map[string]runtime.Pr
 			result[mt] = p
 		}
 	}
+
 	return result
 }
 

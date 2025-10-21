@@ -45,7 +45,6 @@ func NewGetLogEntryByIndexParams() GetLogEntryByIndexParams {
 //
 // swagger:parameters getLogEntryByIndex
 type GetLogEntryByIndexParams struct {
-
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 
@@ -65,7 +64,6 @@ func (o *GetLogEntryByIndexParams) BindRequest(r *http.Request, route *middlewar
 	var res []error
 
 	o.HTTPRequest = r
-
 	qs := runtime.Values(r.URL.Query())
 
 	qLogIndex, qhkLogIndex, _ := qs.GetOK("logIndex")
@@ -108,7 +106,7 @@ func (o *GetLogEntryByIndexParams) bindLogIndex(rawData []string, hasKey bool, f
 	return nil
 }
 
-// validateLogIndex carries on validations for parameter LogIndex
+// validateLogIndex carries out validations for parameter LogIndex
 func (o *GetLogEntryByIndexParams) validateLogIndex(formats strfmt.Registry) error {
 
 	if err := validate.MinimumInt("logIndex", "query", o.LogIndex, 0, false); err != nil {
