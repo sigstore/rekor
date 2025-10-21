@@ -18,6 +18,8 @@ on:
 
 concurrency: cut-release
 
+permissions: {}
+
 jobs:
   cut-release:
     name: Cut release
