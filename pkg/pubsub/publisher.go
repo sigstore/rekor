@@ -17,12 +17,11 @@ package pubsub
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/sigstore/rekor/pkg/events"
-
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 )
 
 // Publisher provides methods for publishing events to a Pub/Sub topic.
@@ -68,7 +67,7 @@ func Get(ctx context.Context, topicResourceID string) (Publisher, error) {
 
 // SupportedProviders returns list of initialized providers
 func SupportedProviders() []string {
-	names := maps.Keys(providersMap)
+	names := slices.Collect(maps.Keys(providersMap))
 	slices.Sort(names)
 	return names
 }
