@@ -28,6 +28,7 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/trillianclient"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -91,6 +92,8 @@ func init() {
 	rootCmd.PersistentFlags().Uint("trillian_log_server.tlog_id", 0, "Trillian tree id")
 	rootCmd.PersistentFlags().String("trillian_log_server.sharding_config", "", "path to config file for inactive shards, in JSON or YAML")
 	rootCmd.PersistentFlags().String("trillian_log_server.grpc_default_service_config", "", "JSON string used to configure gRPC clients for communicating with Trillian")
+	rootCmd.PersistentFlags().Duration("trillian_log_server.init_latest_root_timeout", trillianclient.DefaultInitLatestRootTimeout, "timeout for fetching the latest root during client initialization")
+	rootCmd.PersistentFlags().Duration("trillian_log_server.updater_wait_timeout", trillianclient.DefaultUpdaterWaitTimeout, "timeout for STH updater polling wait operations")
 
 	rootCmd.PersistentFlags().Uint("publish_frequency", 5, "how often to publish a new checkpoint, in minutes")
 
