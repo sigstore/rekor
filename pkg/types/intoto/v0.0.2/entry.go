@@ -27,12 +27,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/spf13/viper"
-	"golang.org/x/exp/slices"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"

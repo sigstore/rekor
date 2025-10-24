@@ -21,7 +21,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mitchellh/go-homedir"
 	"github.com/sigstore/rekor/pkg/util"
 )
 
@@ -75,7 +74,7 @@ func Load(key string) *util.SignedCheckpoint {
 }
 
 func getRekorDir() (string, error) {
-	home, err := homedir.Dir()
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
