@@ -17,9 +17,9 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -99,7 +99,7 @@ func initConfig(cmd *cobra.Command) error {
 		viper.SetConfigFile(viper.GetString("config"))
 	} else {
 		// Find home directory.
-		home, err := homedir.Dir()
+		home, err := os.UserHomeDir()
 		if err != nil {
 			return err
 		}
