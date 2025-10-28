@@ -19,10 +19,10 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"slices"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
-	"golang.org/x/exp/slices"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor/pkg/indexstorage"

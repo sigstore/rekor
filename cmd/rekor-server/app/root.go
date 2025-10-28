@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/trillianclient"
@@ -200,7 +199,7 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Find home directory.
-		home, err := homedir.Dir()
+		home, err := os.UserHomeDir()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

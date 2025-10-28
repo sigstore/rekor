@@ -19,13 +19,13 @@ package signer
 import (
 	"context"
 	"crypto"
+	"slices"
 	"strings"
 	"time"
 
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
-	"golang.org/x/exp/slices"
 
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
