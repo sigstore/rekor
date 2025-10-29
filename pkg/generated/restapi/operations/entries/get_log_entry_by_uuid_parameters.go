@@ -43,7 +43,6 @@ func NewGetLogEntryByUUIDParams() GetLogEntryByUUIDParams {
 //
 // swagger:parameters getLogEntryByUUID
 type GetLogEntryByUUIDParams struct {
-
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 
@@ -92,7 +91,7 @@ func (o *GetLogEntryByUUIDParams) bindEntryUUID(rawData []string, hasKey bool, f
 	return nil
 }
 
-// validateEntryUUID carries on validations for parameter EntryUUID
+// validateEntryUUID carries out validations for parameter EntryUUID
 func (o *GetLogEntryByUUIDParams) validateEntryUUID(formats strfmt.Registry) error {
 
 	if err := validate.Pattern("entryUUID", "path", o.EntryUUID, `^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$`); err != nil {

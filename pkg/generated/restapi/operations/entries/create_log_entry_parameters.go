@@ -22,6 +22,7 @@ package entries
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
+	stderrors "errors"
 	"io"
 	"net/http"
 
@@ -46,7 +47,6 @@ func NewCreateLogEntryParams() CreateLogEntryParams {
 //
 // swagger:parameters createLogEntry
 type CreateLogEntryParams struct {
-
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 
@@ -67,10 +67,12 @@ func (o *CreateLogEntryParams) BindRequest(r *http.Request, route *middleware.Ma
 	o.HTTPRequest = r
 
 	if runtime.HasBody(r) {
-		defer r.Body.Close()
+		defer func() {
+			_ = r.Body.Close()
+		}()
 		body, err := models.UnmarshalProposedEntry(r.Body, route.Consumer)
 		if err != nil {
-			if err == io.EOF {
+			if stderrors.Is(err, io.EOF) {
 				err = errors.Required("proposedEntry", "body", "")
 			}
 			res = append(res, err)

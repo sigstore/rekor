@@ -22,6 +22,7 @@ package index
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
+	stderrors "errors"
 	"io"
 	"net/http"
 
@@ -46,7 +47,6 @@ func NewSearchIndexParams() SearchIndexParams {
 //
 // swagger:parameters searchIndex
 type SearchIndexParams struct {
-
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 
@@ -67,10 +67,12 @@ func (o *SearchIndexParams) BindRequest(r *http.Request, route *middleware.Match
 	o.HTTPRequest = r
 
 	if runtime.HasBody(r) {
-		defer r.Body.Close()
+		defer func() {
+			_ = r.Body.Close()
+		}()
 		var body models.SearchIndex
 		if err := route.Consumer.Consume(r.Body, &body); err != nil {
-			if err == io.EOF {
+			if stderrors.Is(err, io.EOF) {
 				res = append(res, errors.Required("query", "body", ""))
 			} else {
 				res = append(res, errors.NewParseError("query", "body", "", err))
