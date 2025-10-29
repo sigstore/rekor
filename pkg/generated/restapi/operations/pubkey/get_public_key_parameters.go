@@ -44,7 +44,6 @@ func NewGetPublicKeyParams() GetPublicKeyParams {
 //
 // swagger:parameters getPublicKey
 type GetPublicKeyParams struct {
-
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 
@@ -63,7 +62,6 @@ func (o *GetPublicKeyParams) BindRequest(r *http.Request, route *middleware.Matc
 	var res []error
 
 	o.HTTPRequest = r
-
 	qs := runtime.Values(r.URL.Query())
 
 	qTreeID, qhkTreeID, _ := qs.GetOK("treeID")
@@ -98,7 +96,7 @@ func (o *GetPublicKeyParams) bindTreeID(rawData []string, hasKey bool, formats s
 	return nil
 }
 
-// validateTreeID carries on validations for parameter TreeID
+// validateTreeID carries out validations for parameter TreeID
 func (o *GetPublicKeyParams) validateTreeID(formats strfmt.Registry) error {
 
 	if err := validate.Pattern("treeID", "query", *o.TreeID, `^[0-9]+$`); err != nil {
