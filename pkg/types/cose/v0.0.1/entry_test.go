@@ -27,7 +27,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math/big"
-	"os"
 	"reflect"
 	"testing"
 
@@ -37,7 +36,6 @@ import (
 	"github.com/sigstore/rekor/pkg/pki/identity"
 	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
-	"github.com/spf13/viper"
 	gocose "github.com/veraison/go-cose"
 	"go.uber.org/goleak"
 )
@@ -541,6 +539,8 @@ func TestV001Entry_Attestation(t *testing.T) {
 	}
 
 	t.Run("no storage", func(t *testing.T) {
+		SetMaxAttestationSize(0)
+
 		v := &V001Entry{
 			CoseObj: models.CoseV001Schema{},
 		}
@@ -557,10 +557,7 @@ func TestV001Entry_Attestation(t *testing.T) {
 	})
 
 	t.Run("with storage", func(t *testing.T) {
-		// Need to trick viper to update config so we can return
-		// an attestation
-		os.Setenv("MAX_ATTESTATION_SIZE", "1048576")
-		viper.AutomaticEnv()
+		SetMaxAttestationSize(1048576)
 
 		msgHash := sha256.Sum256(msg)
 		wantKey := fmt.Sprintf("sha256:%s",
