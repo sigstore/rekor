@@ -33,7 +33,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/rs/cors"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
