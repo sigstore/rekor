@@ -30,14 +30,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/secure-systems-lab/go-securesystemslib/dsse"
-
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
-
+	"github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/internal/log"
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
