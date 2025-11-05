@@ -19,9 +19,10 @@
 package tuf
 
 import (
-	"github.com/sigstore/rekor/pkg/util"
 	"path/filepath"
 	"testing"
+
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 func TestTufVerifyUpload(t *testing.T) {
@@ -31,14 +32,14 @@ func TestTufVerifyUpload(t *testing.T) {
 	createTufSignedArtifact(t, artifactPath, rootPath)
 
 	// Now upload to rekor!
-	out := util.RunCli(t, "upload", "--artifact", artifactPath, "--public-key", rootPath, "--type", "tuf")
-	util.OutputContains(t, out, "Created entry at")
+	out := e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--public-key", rootPath, "--type", "tuf")
+	e2eutil.OutputContains(t, out, "Created entry at")
 
-	uuid := util.GetUUIDFromUploadOutput(t, out)
+	uuid := e2eutil.GetUUIDFromUploadOutput(t, out)
 
-	out = util.RunCli(t, "verify", "--artifact", artifactPath, "--public-key", rootPath, "--type", "tuf")
-	util.OutputContains(t, out, "Inclusion Proof")
+	out = e2eutil.RunCli(t, "verify", "--artifact", artifactPath, "--public-key", rootPath, "--type", "tuf")
+	e2eutil.OutputContains(t, out, "Inclusion Proof")
 
-	out = util.RunCli(t, "search", "--public-key", rootPath, "--pki-format", "tuf")
-	util.OutputContains(t, out, uuid)
+	out = e2eutil.RunCli(t, "search", "--public-key", rootPath, "--pki-format", "tuf")
+	e2eutil.OutputContains(t, out, uuid)
 }

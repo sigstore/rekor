@@ -22,8 +22,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
-	"github.com/sigstore/rekor/pkg/util"
+	e2ex509 "github.com/sigstore/rekor/pkg/pki/x509/e2ex509"
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 func TestAPK(t *testing.T) {
@@ -33,16 +33,16 @@ func TestAPK(t *testing.T) {
 	CreateSignedApk(t, artifactPath)
 
 	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
-	if err := ioutil.WriteFile(pubPath, []byte(sigx509.PubKey), 0644); err != nil {
+	if err := ioutil.WriteFile(pubPath, []byte(e2ex509.PubKey), 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	// If we do it twice, it should already exist
-	out := util.RunCli(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", pubPath)
-	util.OutputContains(t, out, "Created entry at")
-	out = util.RunCli(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", pubPath)
-	util.OutputContains(t, out, "Entry already exists")
+	out := e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", pubPath)
+	e2eutil.OutputContains(t, out, "Created entry at")
+	out = e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", pubPath)
+	e2eutil.OutputContains(t, out, "Entry already exists")
 	// pass invalid public key, ensure we see an error with helpful message
-	out = util.RunCliErr(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", artifactPath)
-	util.OutputContains(t, out, "invalid public key")
+	out = e2eutil.RunCliErr(t, "upload", "--artifact", artifactPath, "--type", "alpine", "--public-key", artifactPath)
+	e2eutil.OutputContains(t, out, "invalid public key")
 }
