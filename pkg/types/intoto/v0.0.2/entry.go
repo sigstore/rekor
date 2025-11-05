@@ -32,7 +32,6 @@ import (
 
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"github.com/spf13/viper"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
@@ -55,6 +54,12 @@ func init() {
 	if err := intoto.VersionMap.SetEntryFactory(APIVERSION, NewEntry); err != nil {
 		log.Logger.Panic(err)
 	}
+}
+
+var maxAttestationSize = 100 * 1024
+
+func SetMaxAttestationSize(limit int) {
+	maxAttestationSize = limit
 }
 
 type V002Entry struct {
@@ -392,8 +397,8 @@ func (v *V002Entry) AttestationKey() string {
 // AttestationKeyValue returns both the key and value to be persisted into attestation storage
 func (v *V002Entry) AttestationKeyValue() (string, []byte) {
 	storageSize := base64.StdEncoding.DecodedLen(len(v.env.Payload))
-	if storageSize > viper.GetInt("max_attestation_size") {
-		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, viper.GetInt("max_attestation_size"))
+	if storageSize > maxAttestationSize {
+		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, maxAttestationSize)
 		return "", nil
 	}
 	attBytes, err := base64.StdEncoding.DecodeString(v.env.Payload)
