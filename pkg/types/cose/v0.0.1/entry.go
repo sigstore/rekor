@@ -34,7 +34,6 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
 	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/spf13/viper"
 	gocose "github.com/veraison/go-cose"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -57,6 +56,12 @@ func init() {
 	if err := cose.VersionMap.SetEntryFactory(APIVERSION, NewEntry); err != nil {
 		log.Logger.Panic(err)
 	}
+}
+
+var maxAttestationSize = 100 * 1024
+
+func SetMaxAttestationSize(limit int) {
+	maxAttestationSize = limit
 }
 
 type V001Entry struct {
@@ -368,8 +373,8 @@ func DecodeEntry(input any, output *models.CoseV001Schema) error {
 // into attestation storage
 func (v *V001Entry) AttestationKeyValue() (string, []byte) {
 	storageSize := len(v.CoseObj.Message)
-	if storageSize > viper.GetInt("max_attestation_size") {
-		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, viper.GetInt("max_attestation_size"))
+	if storageSize > maxAttestationSize {
+		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, maxAttestationSize)
 		return "", nil
 	}
 
