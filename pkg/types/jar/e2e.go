@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"github.com/sigstore/rekor/pkg/util"
 	"os"
 	"strings"
 	"testing"
@@ -30,7 +29,8 @@ import (
 	"github.com/sassoftware/relic/lib/certloader"
 	"github.com/sassoftware/relic/lib/signjar"
 	"github.com/sassoftware/relic/lib/zipslicer"
-	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
+	e2ex509 "github.com/sigstore/rekor/pkg/pki/x509/e2ex509"
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 //note: reuses PKI artifacts from x509 tests
@@ -63,7 +63,7 @@ func CreateSignedJar(t *testing.T, artifactPath string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	randManifest := strings.Replace(manifest, "REPLACE", util.RandomSuffix(16), 1)
+	randManifest := strings.Replace(manifest, "REPLACE", e2eutil.RandomSuffix(16), 1)
 	mf.Write([]byte(randManifest))
 	if err := zw.Close(); err != nil {
 		t.Fatal(err)
@@ -78,8 +78,8 @@ func CreateSignedJar(t *testing.T, artifactPath string) {
 	}
 
 	c := certloader.Certificate{
-		PrivateKey: sigx509.CertPrivateKey,
-		Leaf:       sigx509.Certificate,
+		PrivateKey: e2ex509.CertPrivateKey,
+		Leaf:       e2ex509.Certificate,
 	}
 
 	patch, _, err := jd.Sign(context.Background(), &c, "rekor", false, true, false)

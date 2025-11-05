@@ -20,16 +20,16 @@ package main
 import (
 	"testing"
 
-	"github.com/sigstore/rekor/pkg/util"
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 func TestGetNonExistentIndex(t *testing.T) {
 	// this index is extremely likely to not exist
-	out := util.RunCliErr(t, "get", "--log-index", "100000000")
-	util.OutputContains(t, out, "404")
+	out := e2eutil.RunCliErr(t, "get", "--log-index", "100000000")
+	e2eutil.OutputContains(t, out, "404")
 }
 func TestGetNonExistentUUID(t *testing.T) {
 	// this uuid is extremely likely to not exist
-	out := util.RunCliErr(t, "get", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-	util.OutputContains(t, out, "404")
+	out := e2eutil.RunCliErr(t, "get", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+	e2eutil.OutputContains(t, out, "404")
 }

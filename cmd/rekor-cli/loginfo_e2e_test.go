@@ -21,7 +21,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/sigstore/rekor/pkg/util"
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 var (
@@ -30,9 +30,9 @@ var (
 
 func TestLogInfo(t *testing.T) {
 	once.Do(func() {
-		util.SetupTestData(t)
+		e2eutil.SetupTestData(t)
 	})
 	// TODO: figure out some way to check the length, add something, and make sure the length increments!
-	out := util.RunCli(t, "loginfo")
-	util.OutputContains(t, out, "Verification Successful!")
+	out := e2eutil.RunCli(t, "loginfo")
+	e2eutil.OutputContains(t, out, "Verification Successful!")
 }

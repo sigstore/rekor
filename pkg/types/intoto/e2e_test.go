@@ -46,8 +46,8 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 
-	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
-	"github.com/sigstore/rekor/pkg/util"
+	e2ex509 "github.com/sigstore/rekor/pkg/pki/x509/e2ex509"
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 func rekorServer() string {
@@ -63,7 +63,7 @@ func TestIntoto(t *testing.T) {
 	pubKeyPath := filepath.Join(td, "pub.pem")
 
 	// Get some random data so it's unique each run
-	d := util.RandomData(t, 10)
+	d := e2eutil.RandomData(t, 10)
 	id := base64.StdEncoding.EncodeToString(d)
 
 	it := in_toto.ProvenanceStatement{
@@ -91,7 +91,7 @@ func TestIntoto(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pb, _ := pem.Decode([]byte(sigx509.ECDSAPriv))
+	pb, _ := pem.Decode([]byte(e2ex509.ECDSAPriv))
 	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
 	if err != nil {
 		t.Fatal(err)
@@ -102,7 +102,7 @@ func TestIntoto(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer, err := dsse.NewEnvelopeSigner(&sigx509.Verifier{
+	signer, err := dsse.NewEnvelopeSigner(&e2ex509.Verifier{
 		S: s,
 	})
 	if err != nil {
@@ -119,15 +119,15 @@ func TestIntoto(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	util.Write(t, string(eb), attestationPath)
-	util.Write(t, sigx509.ECDSAPub, pubKeyPath)
+	e2eutil.Write(t, string(eb), attestationPath)
+	e2eutil.Write(t, e2ex509.ECDSAPub, pubKeyPath)
 
-	out := util.RunCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
-	util.OutputContains(t, out, "Created entry at")
-	uuid := util.GetUUIDFromUploadOutput(t, out)
+	out := e2eutil.RunCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
+	e2eutil.OutputContains(t, out, "Created entry at")
+	uuid := e2eutil.GetUUIDFromUploadOutput(t, out)
 
-	out = util.RunCli(t, "get", "--uuid", uuid, "--format=json")
-	g := util.GetOut{}
+	out = e2eutil.RunCli(t, "get", "--uuid", uuid, "--format=json")
+	g := e2eutil.GetOut{}
 	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Fatal(err)
 	}
@@ -160,13 +160,13 @@ func TestIntoto(t *testing.T) {
 			*intotoModel.Content.PayloadHash.Value))
 	}
 
-	out = util.RunCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
-	util.OutputContains(t, out, "Entry already exists")
+	out = e2eutil.RunCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", pubKeyPath)
+	e2eutil.OutputContains(t, out, "Entry already exists")
 	// issue1649 check for full UUID in printed Location value from 409 response header
 	if len(uuid) != sharding.EntryIDHexStringLen {
 		t.Fatal("UUID returned instead of entry ID (includes treeID)")
 	}
-	util.OutputContains(t, out, uuid)
+	e2eutil.OutputContains(t, out, uuid)
 }
 
 func TestIntotoMultiSig(t *testing.T) {
@@ -176,7 +176,7 @@ func TestIntotoMultiSig(t *testing.T) {
 	rsapubKeyPath := filepath.Join(td, "rsapub.pem")
 
 	// Get some random data so it's unique each run
-	d := util.RandomData(t, 10)
+	d := e2eutil.RandomData(t, 10)
 	id := base64.StdEncoding.EncodeToString(d)
 
 	it := in_toto.ProvenanceStatement{
@@ -204,9 +204,9 @@ func TestIntotoMultiSig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	evps := []*sigx509.Verifier{}
+	evps := []*e2ex509.Verifier{}
 
-	pb, _ := pem.Decode([]byte(sigx509.ECDSAPriv))
+	pb, _ := pem.Decode([]byte(e2ex509.ECDSAPriv))
 	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
 	if err != nil {
 		t.Fatal(err)
@@ -217,11 +217,11 @@ func TestIntotoMultiSig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	evps = append(evps, &sigx509.Verifier{
+	evps = append(evps, &e2ex509.Verifier{
 		S: signECDSA,
 	})
 
-	pbRSA, _ := pem.Decode([]byte(sigx509.RSAKey))
+	pbRSA, _ := pem.Decode([]byte(e2ex509.RSAKey))
 	rsaPriv, err := x509.ParsePKCS8PrivateKey(pbRSA.Bytes)
 	if err != nil {
 		t.Fatal(err)
@@ -232,7 +232,7 @@ func TestIntotoMultiSig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	evps = append(evps, &sigx509.Verifier{
+	evps = append(evps, &e2ex509.Verifier{
 		S: signRSA,
 	})
 
@@ -251,16 +251,16 @@ func TestIntotoMultiSig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	util.Write(t, string(eb), attestationPath)
-	util.Write(t, sigx509.ECDSAPub, ecdsapubKeyPath)
-	util.Write(t, sigx509.PubKey, rsapubKeyPath)
+	e2eutil.Write(t, string(eb), attestationPath)
+	e2eutil.Write(t, e2ex509.ECDSAPub, ecdsapubKeyPath)
+	e2eutil.Write(t, e2ex509.PubKey, rsapubKeyPath)
 
-	out := util.RunCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
-	util.OutputContains(t, out, "Created entry at")
-	uuid := util.GetUUIDFromUploadOutput(t, out)
+	out := e2eutil.RunCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
+	e2eutil.OutputContains(t, out, "Created entry at")
+	uuid := e2eutil.GetUUIDFromUploadOutput(t, out)
 
-	out = util.RunCli(t, "get", "--uuid", uuid, "--format=json")
-	g := util.GetOut{}
+	out = e2eutil.RunCli(t, "get", "--uuid", uuid, "--format=json")
+	g := e2eutil.GetOut{}
 	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Fatal(err)
 	}
@@ -293,8 +293,8 @@ func TestIntotoMultiSig(t *testing.T) {
 			*intotoV002Model.Content.PayloadHash.Value))
 	}
 
-	out = util.RunCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
-	util.OutputContains(t, out, "Entry already exists")
+	out = e2eutil.RunCli(t, "upload", "--artifact", attestationPath, "--type", "intoto", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
+	e2eutil.OutputContains(t, out, "Entry already exists")
 }
 
 func TestValidationSearchIntotoV002MissingEnvelope(t *testing.T) {
