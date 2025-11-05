@@ -33,15 +33,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sigstore/rekor/pkg/util"
-
-	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
+	e2ex509 "github.com/sigstore/rekor/pkg/pki/x509/e2ex509"
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 func CreateSignedApk(t *testing.T, artifactPath string) {
 	t.Helper()
 
-	data := util.RandomData(t, 100)
+	data := e2eutil.RandomData(t, 100)
 	dataTarBuf := bytes.Buffer{}
 	dataTar := tar.NewWriter(&dataTarBuf)
 	dataTar.WriteHeader(&tar.Header{Name: "random.txt", Size: int64(len(data))})
@@ -56,7 +55,7 @@ func CreateSignedApk(t *testing.T, artifactPath string) {
 	datahash := sha256.Sum256(dataTGZBuf.Bytes())
 
 	ctlData := strings.Builder{}
-	ctlData.WriteString("name = " + util.RandomSuffix(16))
+	ctlData.WriteString("name = " + e2eutil.RandomSuffix(16))
 	ctlData.WriteRune('\n')
 	ctlData.WriteString("datahash = " + hex.EncodeToString(datahash[:]))
 	ctlData.WriteRune('\n')
@@ -73,7 +72,7 @@ func CreateSignedApk(t *testing.T, artifactPath string) {
 	ctlGZ.Close()
 
 	sha1sum := sha1.Sum(ctlTGZBuf.Bytes())
-	sig, _ := rsa.SignPKCS1v15(crand.Reader, sigx509.CertPrivateKey, crypto.SHA1, sha1sum[:])
+	sig, _ := rsa.SignPKCS1v15(crand.Reader, e2ex509.CertPrivateKey, crypto.SHA1, sha1sum[:])
 
 	sigTarBuf := bytes.Buffer{}
 	sigTar := tar.NewWriter(&sigTarBuf)

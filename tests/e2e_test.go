@@ -62,7 +62,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
 	"github.com/sigstore/rekor/pkg/generated/models"
-	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
+	e2ex509 "github.com/sigstore/rekor/pkg/pki/x509/e2ex509"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/rekor/pkg/trillianclient"
@@ -615,14 +615,14 @@ func TestInclusionProofRace(t *testing.T) {
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
 	sigPath := filepath.Join(t.TempDir(), "signature.asc")
 
-	sigx509.CreatedX509SignedArtifact(t, artifactPath, sigPath)
+	e2ex509.CreatedX509SignedArtifact(t, artifactPath, sigPath)
 	dataBytes, _ := ioutil.ReadFile(artifactPath)
 	h := sha256.Sum256(dataBytes)
 	dataSHA := hex.EncodeToString(h[:])
 
 	// Write the public key to a file
 	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
-	if err := ioutil.WriteFile(pubPath, []byte(sigx509.RSACert), 0644); err != nil {
+	if err := ioutil.WriteFile(pubPath, []byte(e2ex509.RSACert), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -635,7 +635,7 @@ func TestInclusionProofRace(t *testing.T) {
 		artifactPath := filepath.Join(t.TempDir(), "artifact")
 		sigPath := filepath.Join(t.TempDir(), "signature.asc")
 
-		sigx509.CreatedX509SignedArtifact(t, artifactPath, sigPath)
+		e2ex509.CreatedX509SignedArtifact(t, artifactPath, sigPath)
 		dataBytes, _ := ioutil.ReadFile(artifactPath)
 		h := sha256.Sum256(dataBytes)
 		dataSHA := hex.EncodeToString(h[:])

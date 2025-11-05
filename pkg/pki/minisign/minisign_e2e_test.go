@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sigstore/rekor/pkg/util"
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 func TestMinisign(t *testing.T) {
@@ -32,40 +32,40 @@ func TestMinisign(t *testing.T) {
 	pubPath := filepath.Join(t.TempDir(), "minisign.pub")
 
 	// Set an empty password, we have to hit enter twice to confirm
-	util.Run(t, "\n\n", "minisign", "-G", "-s", keyPath, "-p", pubPath)
+	e2eutil.Run(t, "\n\n", "minisign", "-G", "-s", keyPath, "-p", pubPath)
 
 	// Create a random artifact and sign it.
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
 	sigPath := filepath.Join(t.TempDir(), "signature.asc")
-	util.CreateArtifact(t, artifactPath)
+	e2eutil.CreateArtifact(t, artifactPath)
 
 	// Send in one empty password over stdin
-	out := util.Run(t, "\n", "minisign", "-S", "-s", keyPath, "-m", artifactPath, "-x", sigPath)
+	out := e2eutil.Run(t, "\n", "minisign", "-S", "-s", keyPath, "-m", artifactPath, "-x", sigPath)
 	t.Log(out)
 
 	// Now upload to the log!
-	out = util.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
+	out = e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", pubPath, "--pki-format", "minisign")
-	util.OutputContains(t, out, "Created entry at")
+	e2eutil.OutputContains(t, out, "Created entry at")
 
-	uuidA := util.GetUUIDFromUploadOutput(t, out)
+	uuidA := e2eutil.GetUUIDFromUploadOutput(t, out)
 
-	out = util.RunCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
+	out = e2eutil.RunCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", pubPath, "--pki-format", "minisign")
-	util.OutputContains(t, out, "Inclusion Proof")
+	e2eutil.OutputContains(t, out, "Inclusion Proof")
 
-	out = util.RunCli(t, "search", "--public-key", pubPath, "--pki-format", "minisign")
-	util.OutputContains(t, out, uuidA)
+	out = e2eutil.RunCli(t, "search", "--public-key", pubPath, "--pki-format", "minisign")
+	e2eutil.OutputContains(t, out, uuidA)
 
 	// crease a second artifact and sign it
 	artifactPath_B := filepath.Join(t.TempDir(), "artifact2")
-	util.CreateArtifact(t, artifactPath_B)
-	out = util.Run(t, "\n", "minisign", "-S", "-s", keyPath, "-m", artifactPath_B, "-x", sigPath)
+	e2eutil.CreateArtifact(t, artifactPath_B)
+	out = e2eutil.Run(t, "\n", "minisign", "-S", "-s", keyPath, "-m", artifactPath_B, "-x", sigPath)
 	// Now upload to the log!
-	out = util.RunCli(t, "upload", "--artifact", artifactPath_B, "--signature", sigPath,
+	out = e2eutil.RunCli(t, "upload", "--artifact", artifactPath_B, "--signature", sigPath,
 		"--public-key", pubPath, "--pki-format", "minisign")
-	util.OutputContains(t, out, "Created entry at")
-	uuidB := util.GetUUIDFromUploadOutput(t, out)
+	e2eutil.OutputContains(t, out, "Created entry at")
+	uuidB := e2eutil.GetUUIDFromUploadOutput(t, out)
 
 	tests := []struct {
 		name               string
@@ -105,7 +105,7 @@ func TestMinisign(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			out = util.RunCli(t, "search", "--public-key", pubPath, "--pki-format", "minisign",
+			out = e2eutil.RunCli(t, "search", "--public-key", pubPath, "--pki-format", "minisign",
 				"--operator", test.operator, "--artifact", test.artifact)
 
 			expected := map[string]int{uuidA: test.expectedUuidACount, uuidB: test.expectedUuidBCount}

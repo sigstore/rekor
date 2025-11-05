@@ -49,8 +49,8 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 
-	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
-	"github.com/sigstore/rekor/pkg/util"
+	e2ex509 "github.com/sigstore/rekor/pkg/pki/x509/e2ex509"
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 func rekorServer() string {
@@ -64,7 +64,7 @@ func GenerateSingleSignedDSSE(t *testing.T) ([]byte, []byte) {
 	t.Helper()
 
 	// Get some random data so it's unique each run
-	d := util.RandomData(t, 10)
+	d := e2eutil.RandomData(t, 10)
 	id := base64.StdEncoding.EncodeToString(d)
 
 	it := in_toto.ProvenanceStatement{
@@ -92,7 +92,7 @@ func GenerateSingleSignedDSSE(t *testing.T) ([]byte, []byte) {
 		t.Fatal(err)
 	}
 
-	pb, _ := pem.Decode([]byte(sigx509.ECDSAPriv))
+	pb, _ := pem.Decode([]byte(e2ex509.ECDSAPriv))
 	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
 	if err != nil {
 		t.Fatal(err)
@@ -103,7 +103,7 @@ func GenerateSingleSignedDSSE(t *testing.T) ([]byte, []byte) {
 		t.Fatal(err)
 	}
 
-	signer, err := dsse.NewEnvelopeSigner(&sigx509.Verifier{
+	signer, err := dsse.NewEnvelopeSigner(&e2ex509.Verifier{
 		S: s,
 	})
 	if err != nil {
@@ -127,7 +127,7 @@ func GenerateDoubleSignedDSSE(t *testing.T) ([]byte, []byte) {
 	t.Helper()
 
 	// Get some random data so it's unique each run
-	d := util.RandomData(t, 10)
+	d := e2eutil.RandomData(t, 10)
 	id := base64.StdEncoding.EncodeToString(d)
 
 	it := in_toto.ProvenanceStatement{
@@ -155,9 +155,9 @@ func GenerateDoubleSignedDSSE(t *testing.T) ([]byte, []byte) {
 		t.Fatal(err)
 	}
 
-	evps := []*sigx509.Verifier{}
+	evps := []*e2ex509.Verifier{}
 
-	pb, _ := pem.Decode([]byte(sigx509.ECDSAPriv))
+	pb, _ := pem.Decode([]byte(e2ex509.ECDSAPriv))
 	priv, err := x509.ParsePKCS8PrivateKey(pb.Bytes)
 	if err != nil {
 		t.Fatal(err)
@@ -168,11 +168,11 @@ func GenerateDoubleSignedDSSE(t *testing.T) ([]byte, []byte) {
 		t.Fatal(err)
 	}
 
-	evps = append(evps, &sigx509.Verifier{
+	evps = append(evps, &e2ex509.Verifier{
 		S: signECDSA,
 	})
 
-	pbRSA, _ := pem.Decode([]byte(sigx509.RSAKey))
+	pbRSA, _ := pem.Decode([]byte(e2ex509.RSAKey))
 	rsaPriv, err := x509.ParsePKCS8PrivateKey(pbRSA.Bytes)
 	if err != nil {
 		t.Fatal(err)
@@ -183,7 +183,7 @@ func GenerateDoubleSignedDSSE(t *testing.T) ([]byte, []byte) {
 		t.Fatal(err)
 	}
 
-	evps = append(evps, &sigx509.Verifier{
+	evps = append(evps, &e2ex509.Verifier{
 		S: signRSA,
 	})
 
@@ -212,15 +212,15 @@ func TestDsse(t *testing.T) {
 
 	b, eb := GenerateSingleSignedDSSE(t)
 
-	util.Write(t, string(eb), attestationPath)
-	util.Write(t, sigx509.ECDSAPub, pubKeyPath)
+	e2eutil.Write(t, string(eb), attestationPath)
+	e2eutil.Write(t, e2ex509.ECDSAPub, pubKeyPath)
 
-	out := util.RunCli(t, "upload", "--artifact", attestationPath, "--type", "dsse", "--public-key", pubKeyPath)
-	util.OutputContains(t, out, "Created entry at")
-	uuid := util.GetUUIDFromUploadOutput(t, out)
+	out := e2eutil.RunCli(t, "upload", "--artifact", attestationPath, "--type", "dsse", "--public-key", pubKeyPath)
+	e2eutil.OutputContains(t, out, "Created entry at")
+	uuid := e2eutil.GetUUIDFromUploadOutput(t, out)
 
-	out = util.RunCli(t, "get", "--uuid", uuid, "--format=json")
-	g := util.GetOut{}
+	out = e2eutil.RunCli(t, "get", "--uuid", uuid, "--format=json")
+	g := e2eutil.GetOut{}
 	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Fatal(err)
 	}
@@ -266,8 +266,8 @@ func TestDsse(t *testing.T) {
 		t.Fatalf("expected one signatures but got %d instead", len(dsseModel.Signatures))
 	}
 
-	out = util.RunCli(t, "upload", "--artifact", attestationPath, "--type", "dsse", "--public-key", pubKeyPath)
-	util.OutputContains(t, out, "Entry already exists")
+	out = e2eutil.RunCli(t, "upload", "--artifact", attestationPath, "--type", "dsse", "--public-key", pubKeyPath)
+	e2eutil.OutputContains(t, out, "Entry already exists")
 }
 func TestDsseMultiSig(t *testing.T) {
 	td := t.TempDir()
@@ -277,16 +277,16 @@ func TestDsseMultiSig(t *testing.T) {
 
 	b, eb := GenerateDoubleSignedDSSE(t)
 
-	util.Write(t, string(eb), attestationPath)
-	util.Write(t, sigx509.ECDSAPub, ecdsapubKeyPath)
-	util.Write(t, sigx509.PubKey, rsapubKeyPath)
+	e2eutil.Write(t, string(eb), attestationPath)
+	e2eutil.Write(t, e2ex509.ECDSAPub, ecdsapubKeyPath)
+	e2eutil.Write(t, e2ex509.PubKey, rsapubKeyPath)
 
-	out := util.RunCli(t, "upload", "--artifact", attestationPath, "--type", "dsse", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
-	util.OutputContains(t, out, "Created entry at")
-	uuid := util.GetUUIDFromUploadOutput(t, out)
+	out := e2eutil.RunCli(t, "upload", "--artifact", attestationPath, "--type", "dsse", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
+	e2eutil.OutputContains(t, out, "Created entry at")
+	uuid := e2eutil.GetUUIDFromUploadOutput(t, out)
 
-	out = util.RunCli(t, "get", "--uuid", uuid, "--format=json")
-	g := util.GetOut{}
+	out = e2eutil.RunCli(t, "get", "--uuid", uuid, "--format=json")
+	g := e2eutil.GetOut{}
 	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Fatal(err)
 	}
@@ -333,8 +333,8 @@ func TestDsseMultiSig(t *testing.T) {
 		t.Fatalf("expected two signatures but got %d instead", len(dsseModel.Signatures))
 	}
 
-	out = util.RunCli(t, "upload", "--artifact", attestationPath, "--type", "dsse", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
-	util.OutputContains(t, out, "Entry already exists")
+	out = e2eutil.RunCli(t, "upload", "--artifact", attestationPath, "--type", "dsse", "--public-key", ecdsapubKeyPath, "--public-key", rsapubKeyPath)
+	e2eutil.OutputContains(t, out, "Entry already exists")
 }
 
 func DecodeV001FromRekorResponse(t *testing.T, resp *entries.CreateLogEntryCreated) *V001Entry {
@@ -374,7 +374,7 @@ func TestSendingCanonicalizedDSSE(t *testing.T) {
 
 	ap := types.ArtifactProperties{
 		ArtifactBytes:  eb,
-		PublicKeyBytes: [][]byte{[]byte(sigx509.ECDSAPub)},
+		PublicKeyBytes: [][]byte{[]byte(e2ex509.ECDSAPub)},
 	}
 
 	ei := NewEntry()
@@ -448,7 +448,7 @@ func TestSendingEntryWithClientComputedHashes(t *testing.T) {
 
 	ap := types.ArtifactProperties{
 		ArtifactBytes:  eb,
-		PublicKeyBytes: [][]byte{[]byte(sigx509.ECDSAPub)},
+		PublicKeyBytes: [][]byte{[]byte(e2ex509.ECDSAPub)},
 	}
 
 	ei := NewEntry()
@@ -500,7 +500,7 @@ func TestMismatchedKeySingleSigner(t *testing.T) {
 
 	ap := types.ArtifactProperties{
 		ArtifactBytes:  eb,
-		PublicKeyBytes: [][]byte{[]byte(sigx509.ECDSAPub)}, // this is the matching key, we will swap it out momentarily
+		PublicKeyBytes: [][]byte{[]byte(e2ex509.ECDSAPub)}, // this is the matching key, we will swap it out momentarily
 	}
 
 	ei := NewEntry()
@@ -513,7 +513,7 @@ func TestMismatchedKeySingleSigner(t *testing.T) {
 	// swap out good public key for mismatched one
 	dsse_entry := entry.(*models.DSSE)
 	v001 := dsse_entry.Spec.(models.DSSEV001Schema)
-	v001.ProposedContent.Verifiers[0] = strfmt.Base64(sigx509.RSACert)
+	v001.ProposedContent.Verifiers[0] = strfmt.Base64(e2ex509.RSACert)
 	dsse_entry.Spec = v001
 
 	rc, err := client.GetRekorClient(rekorServer())
@@ -545,7 +545,7 @@ func TestNoSignature(t *testing.T) {
 
 	ap := types.ArtifactProperties{
 		ArtifactBytes:  eb,
-		PublicKeyBytes: [][]byte{[]byte(sigx509.ECDSAPub)}, //, []byte(sigx509.ECDSAPub)},
+		PublicKeyBytes: [][]byte{[]byte(e2ex509.ECDSAPub)}, //, []byte(e2ex509.ECDSAPub)},
 	}
 
 	ei := NewEntry()
@@ -596,7 +596,7 @@ func TestTwoPublicKeysOneSignature(t *testing.T) {
 
 	ap := types.ArtifactProperties{
 		ArtifactBytes:  eb,
-		PublicKeyBytes: [][]byte{[]byte(sigx509.ECDSAPub), []byte(sigx509.ECDSAPub)},
+		PublicKeyBytes: [][]byte{[]byte(e2ex509.ECDSAPub), []byte(e2ex509.ECDSAPub)},
 	}
 
 	ei := NewEntry()
@@ -635,7 +635,7 @@ func TestTwoPublicKeysTwoSignatures(t *testing.T) {
 
 	ap := types.ArtifactProperties{
 		ArtifactBytes:  eb,
-		PublicKeyBytes: [][]byte{[]byte(sigx509.ECDSAPub), []byte(sigx509.RSACert)}, // missing RSA pub key
+		PublicKeyBytes: [][]byte{[]byte(e2ex509.ECDSAPub), []byte(e2ex509.RSACert)}, // missing RSA pub key
 	}
 
 	ei := NewEntry()
@@ -648,8 +648,8 @@ func TestTwoPublicKeysTwoSignatures(t *testing.T) {
 	// swap out one of the good public keys for a mismatched one
 	dsse_entry := entry.(*models.DSSE)
 	v001 := dsse_entry.Spec.(models.DSSEV001Schema)
-	v001.ProposedContent.Verifiers[0] = strfmt.Base64(sigx509.RSACert)
-	v001.ProposedContent.Verifiers[1] = strfmt.Base64(sigx509.RSACert)
+	v001.ProposedContent.Verifiers[0] = strfmt.Base64(e2ex509.RSACert)
+	v001.ProposedContent.Verifiers[1] = strfmt.Base64(e2ex509.RSACert)
 	dsse_entry.Spec = v001
 
 	rc, err := client.GetRekorClient(rekorServer())
@@ -674,7 +674,7 @@ func TestThreePublicKeysTwoSignatures(t *testing.T) {
 
 	ap := types.ArtifactProperties{
 		ArtifactBytes:  eb,
-		PublicKeyBytes: [][]byte{[]byte(sigx509.ECDSAPub), []byte(sigx509.ECDSAPub), []byte(sigx509.RSACert)},
+		PublicKeyBytes: [][]byte{[]byte(e2ex509.ECDSAPub), []byte(e2ex509.ECDSAPub), []byte(e2ex509.RSACert)},
 	}
 
 	ei := NewEntry()

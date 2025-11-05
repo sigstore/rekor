@@ -25,8 +25,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	sigx509 "github.com/sigstore/rekor/pkg/pki/x509"
-	"github.com/sigstore/rekor/pkg/util"
+	e2ex509 "github.com/sigstore/rekor/pkg/pki/x509/e2ex509"
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 func TestUploadVerifyHashedRekord(t *testing.T) {
@@ -34,7 +34,7 @@ func TestUploadVerifyHashedRekord(t *testing.T) {
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
 	sigPath := filepath.Join(t.TempDir(), "signature.asc")
 
-	sigx509.CreatedX509SignedArtifact(t, artifactPath, sigPath)
+	e2ex509.CreatedX509SignedArtifact(t, artifactPath, sigPath)
 
 	dataBytes, _ := os.ReadFile(artifactPath)
 	h := sha256.Sum256(dataBytes)
@@ -43,45 +43,45 @@ func TestUploadVerifyHashedRekord(t *testing.T) {
 	// Write the public key to a file
 	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
 
-	if err := os.WriteFile(pubPath, []byte(sigx509.RSACert), 0644); err != nil {
+	if err := os.WriteFile(pubPath, []byte(e2ex509.RSACert), 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Verify should fail initially
-	util.RunCliErr(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+	e2eutil.RunCliErr(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
 
 	// It should upload successfully.
-	out := util.RunCli(t, "upload", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
-	util.OutputContains(t, out, "Created entry at")
+	out := e2eutil.RunCli(t, "upload", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+	e2eutil.OutputContains(t, out, "Created entry at")
 
 	// Now we should be able to verify it.
-	out = util.RunCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
-	util.OutputContains(t, out, "Inclusion Proof:")
-	util.OutputContains(t, out, "Checkpoint:")
+	out = e2eutil.RunCli(t, "verify", "--type=hashedrekord", "--pki-format=x509", "--artifact-hash", dataSHA, "--signature", sigPath, "--public-key", pubPath)
+	e2eutil.OutputContains(t, out, "Inclusion Proof:")
+	e2eutil.OutputContains(t, out, "Checkpoint:")
 }
 func TestUploadVerifyRekord(t *testing.T) {
 	// Create a random artifact and sign it.
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
 	sigPath := filepath.Join(t.TempDir(), "signature.asc")
 
-	util.CreatedPGPSignedArtifact(t, artifactPath, sigPath)
+	e2eutil.CreatedPGPSignedArtifact(t, artifactPath, sigPath)
 
 	// Write the public key to a file
 	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
-	if err := ioutil.WriteFile(pubPath, []byte(util.PubKey), 0644); err != nil {
+	if err := ioutil.WriteFile(pubPath, []byte(e2eutil.PubKey), 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Verify should fail initially
-	out := util.RunCliErr(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
-	util.OutputContains(t, out, "entry in log cannot be located")
+	out := e2eutil.RunCliErr(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	e2eutil.OutputContains(t, out, "entry in log cannot be located")
 
 	// It should upload successfully.
-	out = util.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
-	util.OutputContains(t, out, "Created entry at")
+	out = e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	e2eutil.OutputContains(t, out, "Created entry at")
 
 	// Now we should be able to verify it.
-	out = util.RunCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
-	util.OutputContains(t, out, "Inclusion Proof:")
-	util.OutputContains(t, out, "Checkpoint:")
+	out = e2eutil.RunCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	e2eutil.OutputContains(t, out, "Inclusion Proof:")
+	e2eutil.OutputContains(t, out, "Checkpoint:")
 }
