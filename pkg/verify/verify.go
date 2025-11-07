@@ -39,18 +39,31 @@ import (
 // and a second new STH. Callers MUST verify signature on the STHs'.
 func ProveConsistency(ctx context.Context, rClient *client.Rekor,
 	oldSTH *util.SignedCheckpoint, newSTH *util.SignedCheckpoint, treeID string) error {
-	oldTreeSize := int64(oldSTH.Size)
+
+	if oldSTH.Size == 0 {
+		return errors.New("consistency proofs can not be computed starting from an empty log")
+	}
+
+	oldTreeSize, err := util.SafeUint64ToInt64(oldSTH.Size)
+	if err != nil {
+		return err
+	}
+	newTreeSize, err := util.SafeUint64ToInt64(newSTH.Size)
+	if err != nil {
+		return err
+	}
+
 	switch {
 	case oldTreeSize == 0:
 		return errors.New("consistency proofs can not be computed starting from an empty log")
-	case oldTreeSize == int64(newSTH.Size):
+	case oldTreeSize == newTreeSize:
 		if !bytes.Equal(oldSTH.Hash, newSTH.Hash) {
 			return errors.New("old root hash does not match STH hash")
 		}
-	case oldTreeSize < int64(newSTH.Size):
+	case oldTreeSize < newTreeSize:
 		consistencyParams := tlog.NewGetLogProofParamsWithContext(ctx)
-		consistencyParams.FirstSize = &oldTreeSize      // Root size at the old, or trusted state.
-		consistencyParams.LastSize = int64(newSTH.Size) // Root size at the new state to verify against.
+		consistencyParams.FirstSize = &oldTreeSize // Root size at the old, or trusted state.
+		consistencyParams.LastSize = newTreeSize // Root size at the new state to verify against.
 		consistencyParams.TreeID = &treeID
 		consistencyProof, err := rClient.Tlog.GetLogProof(consistencyParams)
 		if err != nil {
@@ -68,7 +81,7 @@ func ProveConsistency(ctx context.Context, rClient *client.Rekor,
 			oldSTH.Size, newSTH.Size, hashes, oldSTH.Hash, newSTH.Hash); err != nil {
 			return err
 		}
-	case oldTreeSize > int64(newSTH.Size):
+	case oldTreeSize > newTreeSize:
 		return errors.New("inclusion proof returned a tree size larger than the verified tree size")
 	}
 	return nil

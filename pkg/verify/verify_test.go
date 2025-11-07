@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"math"
 	"testing"
 
 	"github.com/go-openapi/runtime"
@@ -61,6 +62,7 @@ func TestConsistency(t *testing.T) {
 	root1, _ := hex.DecodeString("59a575f157274702c38de3ab1e1784226f391fb79500ebf9f02b4439fb77574c")
 	root0, _ := hex.DecodeString("1a341bc342ff4e567387de9789ab14000b147124317841489172419874198147")
 	hashes := []string{"d3be742c8d73e2dd3c5635843e987ad3dfb3837616f412a07bf730c3ad73f5cb"}
+	tooBig := uint64(math.MaxInt64) + 1
 	for _, test := range []struct {
 		name    string
 		oldC    util.Checkpoint
@@ -148,6 +150,34 @@ func TestConsistency(t *testing.T) {
 			newC: util.Checkpoint{
 				Origin: "test",
 				Size:   uint64(2),
+				Hash:   root2,
+			},
+			wantErr: true,
+		},
+		{
+			name: "old size too large for int64",
+			oldC: util.Checkpoint{
+				Origin: "test",
+				Size:   tooBig,
+				Hash:   root2,
+			},
+			newC: util.Checkpoint{
+				Origin: "test",
+				Size:   uint64(2),
+				Hash:   root2,
+			},
+			wantErr: true,
+		},
+		{
+			name: "new size too large for int64",
+			oldC: util.Checkpoint{
+				Origin: "test",
+				Size:   uint64(2),
+				Hash:   root2,
+			},
+			newC: util.Checkpoint{
+				Origin: "test",
+				Size:   tooBig,
 				Hash:   root2,
 			},
 			wantErr: true,
