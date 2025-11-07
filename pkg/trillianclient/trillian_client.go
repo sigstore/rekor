@@ -31,6 +31,7 @@ import (
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
 	"github.com/google/trillian/types"
+	"github.com/sigstore/rekor/pkg/util"
 )
 
 // TrillianClient provides a wrapper around the Trillian client
@@ -236,11 +237,19 @@ func (t *TrillianClient) GetLeafAndProofByIndex(ctx context.Context, index int64
 		}
 	}
 
+	treeSize, err := util.SafeUint64ToInt64(root.TreeSize)
+	if err != nil {
+		return &Response{
+			Status: codes.OutOfRange,
+			Err:    status.Error(codes.OutOfRange, err.Error()),
+		}
+	}
+
 	resp, err := t.client.GetEntryAndProof(ctx,
 		&trillian.GetEntryAndProofRequest{
 			LogId:     t.logID,
 			LeafIndex: index,
-			TreeSize:  int64(root.TreeSize),
+			TreeSize:  treeSize,
 		})
 
 	if resp != nil && resp.Proof != nil {
@@ -320,11 +329,19 @@ func (t *TrillianClient) getProofByHash(ctx context.Context, hashValue []byte) *
 		}
 	}
 
+	treeSize, err := util.SafeUint64ToInt64(root.TreeSize)
+	if err != nil {
+		return &Response{
+			Status: codes.OutOfRange,
+			Err:    status.Error(codes.OutOfRange, err.Error()),
+		}
+	}
+
 	resp, err := t.client.GetInclusionProofByHash(ctx,
 		&trillian.GetInclusionProofByHashRequest{
 			LogId:    t.logID,
 			LeafHash: hashValue,
-			TreeSize: int64(root.TreeSize),
+			TreeSize: treeSize,
 		})
 
 	if resp != nil {
