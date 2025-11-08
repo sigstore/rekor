@@ -37,7 +37,7 @@ import (
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
-	"github.com/sigstore/rekor/pkg/pki"
+	pkitypes "github.com/sigstore/rekor/pkg/pki/pkitypes"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/intoto"
@@ -63,7 +63,7 @@ func SetMaxAttestationSize(limit int) {
 
 type V001Entry struct {
 	IntotoObj models.IntotoV001Schema
-	keyObj    pki.PublicKey
+	keyObj    pkitypes.PublicKey
 	env       dsse.Envelope
 }
 
@@ -416,7 +416,7 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
+func (v V001Entry) Verifiers() ([]pkitypes.PublicKey, error) {
 	if v.IntotoObj.PublicKey == nil {
 		return nil, errors.New("intoto v0.0.1 entry not initialized")
 	}
@@ -424,7 +424,7 @@ func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []pki.PublicKey{key}, nil
+	return []pkitypes.PublicKey{key}, nil
 }
 
 func (v V001Entry) ArtifactHash() (string, error) {

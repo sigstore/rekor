@@ -36,7 +36,7 @@ import (
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/internal/log"
-	"github.com/sigstore/rekor/pkg/pki"
+	pkitypes "github.com/sigstore/rekor/pkg/pki/pkitypes"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	dsseType "github.com/sigstore/rekor/pkg/types/dsse"
@@ -506,12 +506,12 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 	return verifierBySig, nil
 }
 
-func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
+func (v V001Entry) Verifiers() ([]pkitypes.PublicKey, error) {
 	if len(v.DSSEObj.Signatures) == 0 {
 		return nil, errors.New("dsse v0.0.1 entry not initialized")
 	}
 
-	var keys []pki.PublicKey
+	var keys []pkitypes.PublicKey
 	for _, s := range v.DSSEObj.Signatures {
 		key, err := x509.NewPublicKey(bytes.NewReader(*s.Verifier))
 		if err != nil {
