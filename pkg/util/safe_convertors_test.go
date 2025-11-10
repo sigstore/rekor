@@ -15,16 +15,17 @@
 package util
 
 import (
+	"fmt"
 	"math"
 	"testing"
 )
 
 func TestSafeUint64ToInt64(t *testing.T) {
 	tests := []struct {
-		name      string
-		input     uint64
-		want      int64
-		wantErr   bool
+		name    string
+		input   uint64
+		want    int64
+		wantErr bool
 	}{
 		{
 			name:    "small positive number",
@@ -64,6 +65,65 @@ func TestSafeUint64ToInt64(t *testing.T) {
 			}
 			if !tt.wantErr && got != tt.want {
 				t.Fatalf("SafeUint64ToInt64(%d) = %d, want %d", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSafeInt64ToUint64(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   int64
+		want    uint64
+		wantErr bool
+	}{
+		{
+			name:    "zero",
+			input:   0,
+			want:    0,
+			wantErr: false,
+		},
+		{
+			name:    "positive value",
+			input:   42,
+			want:    42,
+			wantErr: false,
+		},
+		{
+			name:    "max int64",
+			input:   math.MaxInt64,
+			want:    uint64(math.MaxInt64),
+			wantErr: false,
+		},
+		{
+			name:    "negative value",
+			input:   -1,
+			wantErr: true,
+		},
+		{
+			name:    "large negative",
+			input:   math.MinInt64,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := SafeInt64ToUint64(tt.input)
+
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("SafeInt64ToUint64(%d) error = %v, wantErr %t", tt.input, err, tt.wantErr)
+			}
+
+			if !tt.wantErr && got != tt.want {
+				t.Fatalf("SafeInt64ToUint64(%d) = %d, want %d", tt.input, got, tt.want)
+			}
+
+			if tt.wantErr && err != nil {
+				expectedMsg := fmt.Sprintf("value %d is negative and cannot be converted to uint64", tt.input)
+				if err.Error() != expectedMsg {
+					t.Fatalf("error message = %q, want %q", err.Error(), expectedMsg)
+				}
 			}
 		})
 	}

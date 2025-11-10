@@ -253,7 +253,15 @@ func (t *TrillianClient) GetLeafAndProofByIndex(ctx context.Context, index int64
 		})
 
 	if resp != nil && resp.Proof != nil {
-		if err := proof.VerifyInclusion(rfc6962.DefaultHasher, uint64(index), root.TreeSize, resp.GetLeaf().MerkleLeafHash, resp.Proof.Hashes, root.RootHash); err != nil {
+		u_index, err := util.SafeInt64ToUint64(index)
+		if err != nil {
+			return &Response{
+				Status: codes.OutOfRange,
+				Err:    status.Error(codes.OutOfRange, err.Error()),
+			}
+
+		}
+		if err := proof.VerifyInclusion(rfc6962.DefaultHasher, u_index, root.TreeSize, resp.GetLeaf().MerkleLeafHash, resp.Proof.Hashes, root.RootHash); err != nil {
 			return &Response{
 				Status: status.Code(err),
 				Err:    err,

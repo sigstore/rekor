@@ -63,7 +63,7 @@ func ProveConsistency(ctx context.Context, rClient *client.Rekor,
 	case oldTreeSize < newTreeSize:
 		consistencyParams := tlog.NewGetLogProofParamsWithContext(ctx)
 		consistencyParams.FirstSize = &oldTreeSize // Root size at the old, or trusted state.
-		consistencyParams.LastSize = newTreeSize // Root size at the new state to verify against.
+		consistencyParams.LastSize = newTreeSize   // Root size at the new state to verify against.
 		consistencyParams.TreeID = &treeID
 		consistencyProof, err := rClient.Tlog.GetLogProof(consistencyParams)
 		if err != nil {
@@ -174,8 +174,17 @@ func VerifyInclusion(ctx context.Context, e *models.LogEntryAnon) error {
 	}
 	leafHash := rfc6962.DefaultHasher.HashLeaf(entryBytes)
 
-	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, uint64(*e.Verification.InclusionProof.LogIndex),
-		uint64(*e.Verification.InclusionProof.TreeSize), leafHash, hashes, rootHash); err != nil {
+	logIndex, err := util.SafeInt64ToUint64(*e.Verification.InclusionProof.LogIndex)
+	if err != nil {
+		return err
+	}
+	treeSize, err := util.SafeInt64ToUint64(*e.Verification.InclusionProof.TreeSize)
+	if err != nil {
+		return err
+	}
+
+	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, logIndex,
+		treeSize, leafHash, hashes, rootHash); err != nil {
 		return err
 	}
 

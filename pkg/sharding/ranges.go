@@ -31,6 +31,7 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/signer"
 	"github.com/sigstore/rekor/pkg/trillianclient"
+	"github.com/sigstore/rekor/pkg/util"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -116,7 +117,11 @@ func (l *LogRanges) CompleteInitialization(ctx context.Context, tcm *trilliancli
 		if err := root.UnmarshalBinary(resp.GetLatestResult.SignedLogRoot.LogRoot); err != nil {
 			return nil, err
 		}
-		l.inactive[i].TreeLength = int64(root.TreeSize)
+		treeSize, err := util.SafeUint64ToInt64(root.TreeSize)
+		if err != nil {
+			return nil, err
+		}
+		l.inactive[i].TreeLength = treeSize
 		sthMap[r.TreeID] = root
 	}
 	return sthMap, nil

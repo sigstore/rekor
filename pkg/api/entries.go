@@ -126,8 +126,13 @@ func logEntryFromLeaf(ctx context.Context, leaf *trillian.LogLeaf, signedLogRoot
 		sc = string(scBytes)
 	}
 
+	treeSize, err := util.SafeUint64ToInt64(root.TreeSize)
+	if err != nil {
+		return nil, err
+	}
+
 	inclusionProof := models.InclusionProof{
-		TreeSize:   conv.Pointer(int64(root.TreeSize)),
+		TreeSize:   conv.Pointer(treeSize),
 		RootHash:   conv.Pointer(hex.EncodeToString(root.RootHash)),
 		LogIndex:   conv.Pointer(proof.GetLeafIndex()),
 		Hashes:     hashes,
@@ -445,8 +450,13 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, sthGenerateError)
 	}
 
+	treeSize, err := util.SafeUint64ToInt64(root.TreeSize)
+	if err != nil {
+		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, validationError)
+	}
+
 	inclusionProof := models.InclusionProof{
-		TreeSize:   conv.Pointer(int64(root.TreeSize)),
+		TreeSize:   conv.Pointer(treeSize),
 		RootHash:   conv.Pointer(hex.EncodeToString(root.RootHash)),
 		LogIndex:   conv.Pointer(queuedLeaf.LeafIndex),
 		Hashes:     hashes,

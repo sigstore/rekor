@@ -150,7 +150,11 @@ func NewAPI(treeID int64) (*API, error) {
 		if !ok {
 			return nil, fmt.Errorf("no root found for inactive shard %d", r.TreeID)
 		}
-		cp, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), r.TreeID, uint64(r.TreeLength), root.RootHash, r.Signer)
+		treeLength, err := util.SafeInt64ToUint64(r.TreeLength)
+		if err != nil {
+			return nil, err
+		}
+		cp, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), r.TreeID, treeLength, root.RootHash, r.Signer)
 		if err != nil {
 			return nil, fmt.Errorf("error signing checkpoint for inactive shard %d: %w", r.TreeID, err)
 		}
