@@ -27,7 +27,7 @@ func SafeUint64ToInt64(u uint64) (int64, error) {
 	return int64(u), nil
 }
 
-
+// Converts int64 to uint64 after checking bounds.
 func SafeInt64ToUint64(i int64) (uint64, error) {
 	if i < 0 {
 		return 0, fmt.Errorf("value %d is negative and cannot be converted to uint64", i)
