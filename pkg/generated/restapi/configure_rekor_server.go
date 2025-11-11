@@ -341,8 +341,13 @@ func wrapMetrics(handler http.Handler) http.Handler {
 
 func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
 	ctx := r.Context()
-	if apiErr, ok := err.(errors.Error); ok && apiErr.Code() == http.StatusNotFound {
-		log.ContextLogger(ctx).Warn(err)
+	if apiErr, ok := err.(errors.Error); ok {
+		code := apiErr.Code()
+		if code >= http.StatusBadRequest && code < http.StatusInternalServerError {
+			log.ContextLogger(ctx).Warnw(err.Error(), "code", code)
+		} else {
+			log.ContextLogger(ctx).Errorw(err.Error(), "code", code)
+		}
 	} else {
 		log.ContextLogger(ctx).Error(err)
 	}
