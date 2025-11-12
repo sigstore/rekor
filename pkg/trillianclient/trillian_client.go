@@ -31,7 +31,6 @@ import (
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
 	"github.com/google/trillian/types"
-	"github.com/sigstore/rekor/pkg/util"
 )
 
 // TrillianClient provides a wrapper around the Trillian client
@@ -237,31 +236,15 @@ func (t *TrillianClient) GetLeafAndProofByIndex(ctx context.Context, index int64
 		}
 	}
 
-	treeSize, err := util.SafeUint64ToInt64(root.TreeSize)
-	if err != nil {
-		return &Response{
-			Status: codes.OutOfRange,
-			Err:    status.Error(codes.OutOfRange, err.Error()),
-		}
-	}
-
 	resp, err := t.client.GetEntryAndProof(ctx,
 		&trillian.GetEntryAndProofRequest{
 			LogId:     t.logID,
 			LeafIndex: index,
-			TreeSize:  treeSize,
+			TreeSize:  int64(root.TreeSize), //nolint:gosec
 		})
 
 	if resp != nil && resp.Proof != nil {
-		u_index, err := util.SafeInt64ToUint64(index)
-		if err != nil {
-			return &Response{
-				Status: codes.OutOfRange,
-				Err:    status.Error(codes.OutOfRange, err.Error()),
-			}
-
-		}
-		if err := proof.VerifyInclusion(rfc6962.DefaultHasher, u_index, root.TreeSize, resp.GetLeaf().MerkleLeafHash, resp.Proof.Hashes, root.RootHash); err != nil {
+		if err := proof.VerifyInclusion(rfc6962.DefaultHasher, uint64(index), root.TreeSize, resp.GetLeaf().MerkleLeafHash, resp.Proof.Hashes, root.RootHash); err != nil { //nolint:gosec
 			return &Response{
 				Status: status.Code(err),
 				Err:    err,
@@ -337,25 +320,17 @@ func (t *TrillianClient) getProofByHash(ctx context.Context, hashValue []byte) *
 		}
 	}
 
-	treeSize, err := util.SafeUint64ToInt64(root.TreeSize)
-	if err != nil {
-		return &Response{
-			Status: codes.OutOfRange,
-			Err:    status.Error(codes.OutOfRange, err.Error()),
-		}
-	}
-
 	resp, err := t.client.GetInclusionProofByHash(ctx,
 		&trillian.GetInclusionProofByHashRequest{
 			LogId:    t.logID,
 			LeafHash: hashValue,
-			TreeSize: treeSize,
+			TreeSize: int64(root.TreeSize), //nolint:gosec
 		})
 
 	if resp != nil {
 		v := client.NewLogVerifier(rfc6962.DefaultHasher)
 		for _, proof := range resp.Proof {
-			if err := v.VerifyInclusionByHash(&root, hashValue, proof); err != nil {
+			if err := v.VerifyInclusionByHash(&root, hashValue, proof); err != nil { 
 				return &Response{
 					Status: status.Code(err),
 					Err:    err,

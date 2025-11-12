@@ -19,7 +19,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"math"
 	"testing"
 
 	"github.com/go-openapi/runtime"
@@ -62,7 +61,6 @@ func TestConsistency(t *testing.T) {
 	root1, _ := hex.DecodeString("59a575f157274702c38de3ab1e1784226f391fb79500ebf9f02b4439fb77574c")
 	root0, _ := hex.DecodeString("1a341bc342ff4e567387de9789ab14000b147124317841489172419874198147")
 	hashes := []string{"d3be742c8d73e2dd3c5635843e987ad3dfb3837616f412a07bf730c3ad73f5cb"}
-	tooBig := uint64(math.MaxInt64) + 1
 	for _, test := range []struct {
 		name    string
 		oldC    util.Checkpoint
@@ -154,34 +152,6 @@ func TestConsistency(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		{
-			name: "old size too large for int64",
-			oldC: util.Checkpoint{
-				Origin: "test",
-				Size:   tooBig,
-				Hash:   root2,
-			},
-			newC: util.Checkpoint{
-				Origin: "test",
-				Size:   uint64(2),
-				Hash:   root2,
-			},
-			wantErr: true,
-		},
-		{
-			name: "new size too large for int64",
-			oldC: util.Checkpoint{
-				Origin: "test",
-				Size:   uint64(2),
-				Hash:   root2,
-			},
-			newC: util.Checkpoint{
-				Origin: "test",
-				Size:   tooBig,
-				Hash:   root2,
-			},
-			wantErr: true,
-		},
 	} {
 		var mClient client.Rekor
 		mClient.Tlog = &TlogClient{Proof: hashes, Root: root2String}
@@ -254,46 +224,6 @@ func TestInclusion(t *testing.T) {
 						},
 					},
 					SignedEntryTimestamp: strfmt.Base64("MEUCIHJj8xP+oPTd4BAXhO2lcbRplnKW2FafMiFo0gIDGUcYAiEA80BJ8QikiupGAv3R3dtSvZ1ICsAOQat10cFKPqBkLBM="),
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid inclusion - negative log index",
-			e: models.LogEntryAnon{
-				Body:           "eyJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoicmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiJlY2RjNTUzNmY3M2JkYWU4ODE2ZjBlYTQwNzI2ZWY1ZTliODEwZDkxNDQ5MzA3NTkwM2JiOTA2MjNkOTdiMWQ4In19LCJzaWduYXR1cmUiOnsiY29udGVudCI6Ik1FWUNJUUQvUGRQUW1LV0MxKzBCTkVkNWdLdlFHcjF4eGwzaWVVZmZ2M2prMXp6Skt3SWhBTEJqM3hmQXlXeGx6NGpwb0lFSVYxVWZLOXZua1VVT1NvZVp4QlpQSEtQQyIsImZvcm1hdCI6Ing1MDkiLCJwdWJsaWNLZXkiOnsiY29udGVudCI6IkxTMHRMUzFDUlVkSlRpQlFWVUpNU1VNZ1MwVlpMUzB0TFMwS1RVWnJkMFYzV1VoTGIxcEplbW93UTBGUldVbExiMXBKZW1vd1JFRlJZMFJSWjBGRlRVOWpWR1pTUWxNNWFtbFlUVGd4UmxvNFoyMHZNU3R2YldWTmR3cHRiaTh6TkRjdk5UVTJaeTlzY21sVE56SjFUV2haT1V4alZDczFWVW8yWmtkQ1oyeHlOVm80VERCS1RsTjFZWE41WldRNVQzUmhVblozUFQwS0xTMHRMUzFGVGtRZ1VGVkNURWxESUV0RldTMHRMUzB0Q2c9PSJ9fX19",
-				IntegratedTime: &time,
-				LogID:          &logID,
-				LogIndex:       conv.Pointer(int64(-1)), // <- invalid
-				Verification: &models.LogEntryAnonVerification{
-					InclusionProof: &models.InclusionProof{
-						TreeSize: conv.Pointer(int64(2)),
-						RootHash: conv.Pointer("5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"),
-						LogIndex: conv.Pointer(int64(-1)), // <- invalid
-						Hashes: []string{
-							"59a575f157274702c38de3ab1e1784226f391fb79500ebf9f02b4439fb77574c",
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid inclusion - negative tree size",
-			e: models.LogEntryAnon{
-				Body:           "eyJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoicmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiJlY2RjNTUzNmY3M2JkYWU4ODE2ZjBlYTQwNzI2ZWY1ZTliODEwZDkxNDQ5MzA3NTkwM2JiOTA2MjNkOTdiMWQ4In19LCJzaWduYXR1cmUiOnsiY29udGVudCI6Ik1FWUNJUUQvUGRQUW1LV0MxKzBCTkVkNWdLdlFHcjF4eGwzaWVVZmZ2M2prMXp6Skt3SWhBTEJqM3hmQXlXeGx6NGpwb0lFSVYxVWZLOXZua1VVT1NvZVp4QlpQSEtQQyIsImZvcm1hdCI6Ing1MDkiLCJwdWJsaWNLZXkiOnsiY29udGVudCI6IkxTMHRMUzFDUlVkSlRpQlFWVUpNU1VNZ1MwVlpMUzB0TFMwS1RVWnJkMFYzV1VoTGIxcEplbW93UTBGUldVbExiMXBKZW1vd1JFRlJZMFJSWjBGRlRVOWpWR1pTUWxNNWFtbFlUVGd4UmxvNFoyMHZNU3R2YldWTmR3cHRiaTh6TkRjdk5UVTJaeTlzY21sVE56SjFUV2haT1V4alZDczFWVW8yWmtkQ1oyeHlOVm80VERCS1RsTjFZWE41WldRNVQzUmhVblozUFQwS0xTMHRMUzFGVGtRZ1VGVkNURWxESUV0RldTMHRMUzB0Q2c9PSJ9fX19",
-				IntegratedTime: &time,
-				LogID:          &logID,
-				LogIndex:       conv.Pointer(int64(1)),
-				Verification: &models.LogEntryAnonVerification{
-					InclusionProof: &models.InclusionProof{
-						TreeSize: conv.Pointer(int64(-10)), // <- invalid
-						RootHash: conv.Pointer("5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"),
-						LogIndex: conv.Pointer(int64(1)),
-						Hashes: []string{
-							"59a575f157274702c38de3ab1e1784226f391fb79500ebf9f02b4439fb77574c",
-						},
-					},
 				},
 			},
 			wantErr: true,

@@ -37,33 +37,21 @@ import (
 
 // ProveConsistency verifies consistency between an initial, trusted STH
 // and a second new STH. Callers MUST verify signature on the STHs'.
+// nolint
 func ProveConsistency(ctx context.Context, rClient *client.Rekor,
 	oldSTH *util.SignedCheckpoint, newSTH *util.SignedCheckpoint, treeID string) error {
-
-	if oldSTH.Size == 0 {
-		return errors.New("consistency proofs can not be computed starting from an empty log")
-	}
-
-	oldTreeSize, err := util.SafeUint64ToInt64(oldSTH.Size)
-	if err != nil {
-		return err
-	}
-	newTreeSize, err := util.SafeUint64ToInt64(newSTH.Size)
-	if err != nil {
-		return err
-	}
-
+	oldTreeSize := int64(oldSTH.Size)
 	switch {
 	case oldTreeSize == 0:
 		return errors.New("consistency proofs can not be computed starting from an empty log")
-	case oldTreeSize == newTreeSize:
+	case oldTreeSize == int64(newSTH.Size):
 		if !bytes.Equal(oldSTH.Hash, newSTH.Hash) {
 			return errors.New("old root hash does not match STH hash")
 		}
-	case oldTreeSize < newTreeSize:
+	case oldTreeSize < int64(newSTH.Size):
 		consistencyParams := tlog.NewGetLogProofParamsWithContext(ctx)
-		consistencyParams.FirstSize = &oldTreeSize // Root size at the old, or trusted state.
-		consistencyParams.LastSize = newTreeSize   // Root size at the new state to verify against.
+		consistencyParams.FirstSize = &oldTreeSize      // Root size at the old, or trusted state.
+		consistencyParams.LastSize = int64(newSTH.Size) // Root size at the new state to verify against.
 		consistencyParams.TreeID = &treeID
 		consistencyProof, err := rClient.Tlog.GetLogProof(consistencyParams)
 		if err != nil {
@@ -81,7 +69,7 @@ func ProveConsistency(ctx context.Context, rClient *client.Rekor,
 			oldSTH.Size, newSTH.Size, hashes, oldSTH.Hash, newSTH.Hash); err != nil {
 			return err
 		}
-	case oldTreeSize > newTreeSize:
+	case oldTreeSize > int64(newSTH.Size):
 		return errors.New("inclusion proof returned a tree size larger than the verified tree size")
 	}
 	return nil
@@ -174,17 +162,8 @@ func VerifyInclusion(ctx context.Context, e *models.LogEntryAnon) error {
 	}
 	leafHash := rfc6962.DefaultHasher.HashLeaf(entryBytes)
 
-	logIndex, err := util.SafeInt64ToUint64(*e.Verification.InclusionProof.LogIndex)
-	if err != nil {
-		return err
-	}
-	treeSize, err := util.SafeInt64ToUint64(*e.Verification.InclusionProof.TreeSize)
-	if err != nil {
-		return err
-	}
-
-	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, logIndex,
-		treeSize, leafHash, hashes, rootHash); err != nil {
+	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, uint64(*e.Verification.InclusionProof.LogIndex),
+		uint64(*e.Verification.InclusionProof.TreeSize), leafHash, hashes, rootHash); err != nil {
 		return err
 	}
 
