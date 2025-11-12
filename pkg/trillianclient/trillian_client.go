@@ -330,7 +330,7 @@ func (t *TrillianClient) getProofByHash(ctx context.Context, hashValue []byte) *
 	if resp != nil {
 		v := client.NewLogVerifier(rfc6962.DefaultHasher)
 		for _, proof := range resp.Proof {
-			if err := v.VerifyInclusionByHash(&root, hashValue, proof); err != nil { 
+			if err := v.VerifyInclusionByHash(&root, hashValue, proof); err != nil {
 				return &Response{
 					Status: status.Code(err),
 					Err:    err,
