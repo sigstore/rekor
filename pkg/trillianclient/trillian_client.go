@@ -240,11 +240,11 @@ func (t *TrillianClient) GetLeafAndProofByIndex(ctx context.Context, index int64
 		&trillian.GetEntryAndProofRequest{
 			LogId:     t.logID,
 			LeafIndex: index,
-			TreeSize:  int64(root.TreeSize),
+			TreeSize:  int64(root.TreeSize), //nolint:gosec
 		})
 
 	if resp != nil && resp.Proof != nil {
-		if err := proof.VerifyInclusion(rfc6962.DefaultHasher, uint64(index), root.TreeSize, resp.GetLeaf().MerkleLeafHash, resp.Proof.Hashes, root.RootHash); err != nil {
+		if err := proof.VerifyInclusion(rfc6962.DefaultHasher, uint64(index), root.TreeSize, resp.GetLeaf().MerkleLeafHash, resp.Proof.Hashes, root.RootHash); err != nil { //nolint:gosec
 			return &Response{
 				Status: status.Code(err),
 				Err:    err,
@@ -324,7 +324,7 @@ func (t *TrillianClient) getProofByHash(ctx context.Context, hashValue []byte) *
 		&trillian.GetInclusionProofByHashRequest{
 			LogId:    t.logID,
 			LeafHash: hashValue,
-			TreeSize: int64(root.TreeSize),
+			TreeSize: int64(root.TreeSize), //nolint:gosec
 		})
 
 	if resp != nil {
