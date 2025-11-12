@@ -24,6 +24,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/transparency-dev/merkle/proof"
 	"github.com/transparency-dev/merkle/rfc6962"
 
 	"google.golang.org/grpc/codes"
@@ -460,19 +461,21 @@ func (t *TrillianClient) GetLeafAndProofByIndex(ctx context.Context, index int64
 	root := snap.root
 	signed := snap.signed
 
-	resp, err := t.client.GetEntryAndProof(ctx, &trillian.GetEntryAndProofRequest{
-		LogId:     t.logID,
-		LeafIndex: index,
-		TreeSize:  int64(root.TreeSize),
-	})
+	resp, err := t.client.GetEntryAndProof(ctx,
+		&trillian.GetEntryAndProofRequest{
+			LogId:     t.logID,
+			LeafIndex: index,
+			TreeSize:  int64(root.TreeSize), //nolint:gosec
+		})
 	if err != nil {
 		return &Response{
 			Status: status.Code(err),
 			Err:    err,
 		}
 	}
+
 	if resp != nil && resp.Proof != nil {
-		if err := t.v.VerifyInclusionByHash(&root, resp.GetLeaf().MerkleLeafHash, resp.Proof); err != nil {
+		if err := proof.VerifyInclusion(rfc6962.DefaultHasher, uint64(index), root.TreeSize, resp.GetLeaf().MerkleLeafHash, resp.Proof.Hashes, root.RootHash); err != nil { //nolint:gosec
 			return &Response{
 				Status: status.Code(err),
 				Err:    err,
@@ -544,17 +547,20 @@ func (t *TrillianClient) getProofByHashWithRoot(ctx context.Context, hashValue [
 			Err:    status.Error(codes.NotFound, "tree is empty"),
 		}
 	}
-	resp, err := t.client.GetInclusionProofByHash(ctx, &trillian.GetInclusionProofByHashRequest{
-		LogId:    t.logID,
-		LeafHash: hashValue,
-		TreeSize: int64(root.TreeSize),
-	})
+
+	resp, err := t.client.GetInclusionProofByHash(ctx,
+		&trillian.GetInclusionProofByHashRequest{
+			LogId:    t.logID,
+			LeafHash: hashValue,
+			TreeSize: int64(root.TreeSize), //nolint:gosec
+		})
 	if err != nil {
 		return &Response{
 			Status: status.Code(err),
 			Err:    err,
 		}
 	}
+
 	if resp != nil {
 		for _, p := range resp.Proof {
 			if err := t.v.VerifyInclusionByHash(&root, hashValue, p); err != nil {

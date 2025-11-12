@@ -116,7 +116,7 @@ func (l *LogRanges) CompleteInitialization(ctx context.Context, tcm *trilliancli
 		if err := root.UnmarshalBinary(resp.GetLatestResult.SignedLogRoot.LogRoot); err != nil {
 			return nil, err
 		}
-		l.inactive[i].TreeLength = int64(root.TreeSize)
+		l.inactive[i].TreeLength = int64(root.TreeSize) //nolint:gosec
 		sthMap[r.TreeID] = root
 	}
 	return sthMap, nil
