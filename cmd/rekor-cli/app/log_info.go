@@ -63,17 +63,17 @@ var logInfoCmd = &cobra.Command{
 	Use:   "loginfo",
 	Short: "Rekor loginfo command",
 	Long:  `Prints info about the transparency log`,
-	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
+	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (interface{}, error) {
 		serverURL := viper.GetString("rekor_server")
-		ctx := context.Background()
+		ctx := cmd.Context()
 		rekorClient, err := client.GetRekorClient(serverURL, client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {
 			return nil, err
 		}
 
-		params := tlog.GetLogInfoParams{}
+		params := tlog.NewGetLogInfoParamsWithContext(ctx)
 		params.SetTimeout(viper.GetDuration("timeout"))
-		result, err := rekorClient.Tlog.GetLogInfo(&params)
+		result, err := rekorClient.Tlog.GetLogInfo(params)
 		if err != nil {
 			return nil, err
 		}
@@ -132,7 +132,7 @@ func verifyTree(ctx context.Context, rekorClient *rclient.Rekor, signedTreeHead,
 	if err := sth.UnmarshalText([]byte(signedTreeHead)); err != nil {
 		return err
 	}
-	verifier, err := loadVerifier(rekorClient, treeID)
+	verifier, err := loadVerifier(ctx, rekorClient, treeID)
 	if err != nil {
 		return err
 	}
@@ -161,11 +161,11 @@ func verifyTree(ctx context.Context, rekorClient *rclient.Rekor, signedTreeHead,
 	return nil
 }
 
-func loadVerifier(rekorClient *rclient.Rekor, treeID string) (signature.Verifier, error) {
+func loadVerifier(ctx context.Context, rekorClient *rclient.Rekor, treeID string) (signature.Verifier, error) {
 	publicKey := viper.GetString("rekor_server_public_key")
 	if publicKey == "" {
 		// fetch key from server
-		keyResp, err := rekorClient.Pubkey.GetPublicKey(pubkey.NewGetPublicKeyParams().WithTreeID(conv.Pointer(treeID)))
+		keyResp, err := rekorClient.Pubkey.GetPublicKey(pubkey.NewGetPublicKeyParamsWithContext(ctx).WithTreeID(conv.Pointer(treeID)))
 		if err != nil {
 			return nil, err
 		}
