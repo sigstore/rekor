@@ -1,3 +1,36 @@
+# v1.4.3
+
+This release reduces dependencies for a number of exported packages.
+
+This release also changes the format of the binary and container signature, which is now a
+[Sigstore bundle](https://docs.sigstore.dev/about/bundle/). To verify a release, use the
+latest Cosign 3.x, verifying with
+`cosign verify-blob --bundle <artifact>-keyless.sigstore.json <artifact>`.
+
+## Improvements
+
+* use interruptable context to elegantly handle signals in rekor-cli (#2681)
+* restapi: Don't log client errors as errors (#2680)
+* pkg: separate pki types from implementations (#2668)
+* e2e: don't mix e2e and regular utilities (#2672)
+* pkg: remove viper config from spec definitions (#2669)
+* log: remove zap & go-chi dependecy from pkg/types (#2667)
+* chore: update go-openapi/runtime to v0.29.0 (#2670)
+* chore: remove double imported mapstructure pkg (#2671)
+* remove archived dependency and use stdlib slices (#2650)
+
+## Documentation
+
+* (docs): guard unsafe int/uint conversions flagged by gosec (#2679)
+
+## Contributors
+
+* AdamKorcz
+* Bob Callaway
+* Jussi Kukkonen
+* Sachin Sampras M
+* Tõnis Tiigi
+
 # v1.4.2
 
 This release includes some performance optimizations and a bug fix for publishing events to a pub/sub topic.
@@ -10,6 +43,7 @@ This release includes some performance optimizations and a bug fix for publishin
 * optimize performance of regex operations (#2603)
 
 ## Contributors
+
 * Bob Callaway
 
 # v1.4.1
