@@ -16,9 +16,12 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -53,7 +56,9 @@ var rootCmd = &cobra.Command{
 
 // Execute runs the base CLI
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		log.CliLogger.Fatal(err)
 	}
 }
