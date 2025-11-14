@@ -16,7 +16,6 @@
 package app
 
 import (
-	"context"
 	"encoding/hex"
 	"fmt"
 	"math/bits"
@@ -91,14 +90,14 @@ var verifyCmd = &cobra.Command{
 		}
 		return validateArtifactPFlags(true, true)
 	},
-	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
-		ctx := context.Background()
+	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (interface{}, error) {
+		ctx := cmd.Context()
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {
 			return nil, err
 		}
 
-		searchParams := entries.NewSearchLogQueryParams()
+		searchParams := entries.NewSearchLogQueryParamsWithContext(ctx)
 		searchParams.SetTimeout(viper.GetDuration("timeout"))
 		searchLogQuery := models.SearchLogQuery{}
 
@@ -121,7 +120,7 @@ var verifyCmd = &cobra.Command{
 
 			props := CreatePropsFromPflags()
 
-			entry, err := types.NewProposedEntry(context.Background(), typeStr, versionStr, *props)
+			entry, err := types.NewProposedEntry(ctx, typeStr, versionStr, *props)
 			if err != nil {
 				return nil, fmt.Errorf("error: %w", err)
 			}
@@ -172,7 +171,7 @@ var verifyCmd = &cobra.Command{
 
 		// Get Rekor Pub
 		// TODO(asraa): Replace with sigstore's GetRekorPubs to use TUF.
-		verifier, err := loadVerifier(rekorClient, strconv.FormatInt(treeID, 10))
+		verifier, err := loadVerifier(ctx, rekorClient, strconv.FormatInt(treeID, 10))
 		if err != nil {
 			return nil, err
 		}

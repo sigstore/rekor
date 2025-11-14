@@ -17,7 +17,6 @@ package app
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -80,8 +79,8 @@ var getCmd = &cobra.Command{
 			log.CliLogger.Fatalf("Error initializing cmd line args: %w", err)
 		}
 	},
-	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
-		ctx := context.Background()
+	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (interface{}, error) {
+		ctx := cmd.Context()
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {
 			return nil, err
@@ -94,7 +93,7 @@ var getCmd = &cobra.Command{
 		}
 
 		if logIndex != "" {
-			params := entries.NewGetLogEntryByIndexParams()
+			params := entries.NewGetLogEntryByIndexParamsWithContext(ctx)
 			params.SetTimeout(viper.GetDuration("timeout"))
 			logIndexInt, err := strconv.ParseInt(logIndex, 10, 0)
 			if err != nil {
@@ -113,7 +112,7 @@ var getCmd = &cobra.Command{
 				if err != nil {
 					return nil, err
 				}
-				verifier, err := loadVerifier(rekorClient, strconv.FormatInt(treeID, 10))
+				verifier, err := loadVerifier(ctx, rekorClient, strconv.FormatInt(treeID, 10))
 				if err != nil {
 					return nil, fmt.Errorf("retrieving rekor public key: %w", err)
 				}
@@ -136,7 +135,7 @@ var getCmd = &cobra.Command{
 
 		// Note: this UUID may be an EntryID
 		if uuid != "" {
-			params := entries.NewGetLogEntryByUUIDParams()
+			params := entries.NewGetLogEntryByUUIDParamsWithContext(ctx)
 			params.SetTimeout(viper.GetDuration("timeout"))
 			params.EntryUUID = uuid
 
@@ -152,7 +151,7 @@ var getCmd = &cobra.Command{
 				if err != nil {
 					return nil, err
 				}
-				verifier, err := loadVerifier(rekorClient, strconv.FormatInt(treeID, 10))
+				verifier, err := loadVerifier(ctx, rekorClient, strconv.FormatInt(treeID, 10))
 				if err != nil {
 					return nil, fmt.Errorf("retrieving rekor public key: %w", err)
 				}

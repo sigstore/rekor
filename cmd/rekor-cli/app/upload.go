@@ -66,8 +66,8 @@ var uploadCmd = &cobra.Command{
 		return validateArtifactPFlags(false, false)
 	},
 	Long: `This command takes the public key, signature and URL of the release artifact and uploads it to the rekor server.`,
-	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
-		ctx := context.Background()
+	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (interface{}, error) {
+		ctx := cmd.Context()
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {
 			return nil, err
@@ -104,12 +104,12 @@ var uploadCmd = &cobra.Command{
 
 			props := CreatePropsFromPflags()
 
-			entry, err = types.NewProposedEntry(context.Background(), typeStr, versionStr, *props)
+			entry, err = types.NewProposedEntry(ctx, typeStr, versionStr, *props)
 			if err != nil {
 				return nil, fmt.Errorf("error: %w", err)
 			}
 		}
-		resp, err := tryUpload(rekorClient, entry)
+		resp, err := tryUpload(ctx, rekorClient, entry)
 		if err != nil {
 			switch e := err.(type) {
 			case *entries.CreateLogEntryConflict:
@@ -137,7 +137,7 @@ var uploadCmd = &cobra.Command{
 		}
 
 		// verify log entry
-		verifier, err := loadVerifier(rekorClient, strconv.FormatInt(treeID, 10))
+		verifier, err := loadVerifier(ctx, rekorClient, strconv.FormatInt(treeID, 10))
 		if err != nil {
 			return nil, fmt.Errorf("retrieving rekor public key")
 		}
@@ -163,8 +163,8 @@ var uploadCmd = &cobra.Command{
 	}),
 }
 
-func tryUpload(rekorClient *gen_client.Rekor, entry models.ProposedEntry) (*entries.CreateLogEntryCreated, error) {
-	params := entries.NewCreateLogEntryParams()
+func tryUpload(ctx context.Context, rekorClient *gen_client.Rekor, entry models.ProposedEntry) (*entries.CreateLogEntryCreated, error) {
+	params := entries.NewCreateLogEntryParamsWithContext(ctx)
 	params.SetTimeout(viper.GetDuration("timeout"))
 	if pei, ok := entry.(types.ProposedEntryIterator); ok {
 		params.SetProposedEntry(pei.Get())
@@ -177,7 +177,7 @@ func tryUpload(rekorClient *gen_client.Rekor, entry models.ProposedEntry) (*entr
 			if pei, ok := entry.(types.ProposedEntryIterator); ok {
 				if pei.HasNext() {
 					log.CliLogger.Errorf("failed to upload entry: %v", e)
-					return tryUpload(rekorClient, pei.GetNext())
+					return tryUpload(ctx, rekorClient, pei.GetNext())
 				}
 			}
 		}

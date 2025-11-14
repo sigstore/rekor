@@ -96,14 +96,14 @@ var searchCmd = &cobra.Command{
 			os.Exit(1)
 		}
 	},
-	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
+	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (interface{}, error) {
 		log := log.CliLogger
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log))
 		if err != nil {
 			return nil, err
 		}
 
-		params := index.NewSearchIndexParams()
+		params := index.NewSearchIndexParamsWithContext(cmd.Context())
 		params.SetTimeout(viper.GetDuration("timeout"))
 		params.Query = &models.SearchIndex{}
 
