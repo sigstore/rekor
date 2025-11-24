@@ -52,7 +52,7 @@ jobs:
     - name: Extract version of Go to use
       run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-    - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+    - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
       with:
         go-version: ${{ env.GOVERSION }}
         check-latest: true
@@ -60,12 +60,12 @@ jobs:
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@0499de31b99561a6d14a36a5f662c2a54f91beee # v4.31.2
+      uses: github/codeql-action/init@fdbfb4d2750291e159f0156def62b853c2798ca2 # v4.31.5
       with:
         languages: ${{ matrix.language }}
 
     - name: Autobuild
-      uses: github/codeql-action/autobuild@0499de31b99561a6d14a36a5f662c2a54f91beee # v4.31.2
+      uses: github/codeql-action/autobuild@fdbfb4d2750291e159f0156def62b853c2798ca2 # v4.31.5
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@0499de31b99561a6d14a36a5f662c2a54f91beee # v4.31.2
+      uses: github/codeql-action/analyze@fdbfb4d2750291e159f0156def62b853c2798ca2 # v4.31.5
