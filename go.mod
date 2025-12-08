@@ -6,7 +6,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cavaliercoder/go-rpm v0.0.0-20200122174316-8cb9fd9c31a8
-	github.com/go-openapi/errors v0.22.4
+	github.com/go-openapi/errors v0.22.5
 	github.com/go-openapi/loads v0.23.2
 	github.com/go-openapi/runtime v0.29.2
 	github.com/go-openapi/spec v0.22.1
@@ -25,7 +25,7 @@ require (
 	github.com/sassoftware/relic v7.2.1+incompatible
 	github.com/secure-systems-lab/go-securesystemslib v0.9.1
 	github.com/sigstore/sigstore v1.9.5
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	github.com/theupdateframework/go-tuf v0.7.0
