@@ -47,6 +47,9 @@ jobs:
       - check-signature
     container:
       image: ghcr.io/gythialy/golang-cross:v1.25.4-0@sha256:45ac2d3098413342370c62bd272cfa647c5c0813978719da5b5e31b2ddbf4897
+      volumes:
+        - /usr:/host_usr
+        - /opt:/host_opt
 
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
