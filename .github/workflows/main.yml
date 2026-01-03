@@ -275,6 +275,14 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf "/usr/local/share/boost" || true
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY" || true
+          sudo df -h
+
       - name: Create git branch
         run: git switch -c harness-test-branch
 
