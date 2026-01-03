@@ -64,6 +64,25 @@ jobs:
       # - https://github.com/actions/runner-images/issues/6775
       - run: git config --system --add safe.directory /__w/rekor/rekor
 
+      # note this runs from within the golang-cross container, so if we want to free up space
+      # on the host, we have to reach through the bind mounts to clean up unused content on the runners
+      - name: free up disk space for the release
+        run: |
+          rm -rf /host_usr/share/dotnet || true
+          rm -rf /host_usr/share/swift || true
+          rm -rf /host_usr/local/lib/android || true
+          rm -rf /host_usr/local/.ghcup || true
+          rm -rf /host_usr/local/graalvm/ || true
+          rm -rf /host_usr/local/share/powershell || true
+          rm -rf /host_usr/local/share/chromium || true
+          rm -rf /host_usr/local/lib/node_modules || true
+          rm -rf /host_usr/lib/google-cloud-sdk || true
+          rm -rf /host_usr/local/share/boost || true
+          rm -rf /host_opt/hostedtoolcache/ || true
+          rm -rf /host_opt/ghc || true
+      - name: check disk space
+        run: df -h
+
       - name: goreleaser snapshot
         run: make snapshot
         env:
