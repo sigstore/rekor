@@ -121,7 +121,7 @@ jobs:
         env:
           INDEX_BACKEND: redis
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: failure()
         with:
           name: E2E Docker Compose logs
@@ -173,7 +173,7 @@ jobs:
       - name: Copy index test
         run: ./tests/copy-index-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: failure()
         with:
           name: E2E Docker Compose logs
@@ -206,7 +206,7 @@ jobs:
       - name: Sharding Test
         run: ./tests/sharding-e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: failure()
         with:
           name: Sharding E2E Docker Compose logs
@@ -233,7 +233,7 @@ jobs:
       - name: Test for Attestation begin returned that was previously persisted in tlog
         run: ./tests/issue-872-e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: failure()
         with:
           name: Docker Compose logs
@@ -260,7 +260,7 @@ jobs:
       - name: Test for supported client algorithms
         run: ./tests/client-algos-e2e-test.sh
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: failure()
         with:
           name: Docker Compose logs
@@ -299,7 +299,7 @@ jobs:
         run: ./tests/rekor-harness.sh
 
       - name: Upload logs if they exist
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: failure()
         with:
           name: E2E Docker Compose logs
