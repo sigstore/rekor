@@ -19,10 +19,18 @@
 	we need to backfill missing entries into the database for the search API.
 	It can also be used to populate an index storage backend from scratch.
 
+	The tool supports automatic checkpointing for both Redis and MySQL backends to allow
+	resuming interrupted backfills and to maintain progress across scheduled runs.
+	Use --checkpoint-interval to control how frequently checkpoints are saved
+	(e.g., --checkpoint-interval 100 saves every 100 entries). On subsequent runs,
+	the tool automatically continues from the last checkpoint unless --reset-checkpoint is set.
+	Checkpoints persist indefinitely for scheduled jobs.
+
 	To run:
 	go run cmd/backfill-index/main.go --rekor-address <address> \
-	    --hostname <redis-hostname> --port <redis-port> --concurrency <num-of-workers> \
-		--start <first index to backfill> --end <last index to backfill> [--dry-run]
+	    --redis-hostname <redis-hostname> --redis-port <redis-port> --concurrency <num-of-workers> \
+		--start <first index to backfill> --end <last index to backfill> \
+		[--checkpoint-interval <N>] [--reset-checkpoint] [--checkpoint-key <key>] [--dry-run]
 */
 
 package main
@@ -31,7 +39,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -79,7 +89,15 @@ const (
 		PRIMARY KEY(PK),
 		UNIQUE(EntryKey, EntryUUID)
 	)`
-	maxInsertErrors = 5
+	mysqlCheckpointTableStmt = `CREATE TABLE IF NOT EXISTS BackfillCheckpoint (
+		CheckpointKey VARCHAR(255) NOT NULL,
+		LastCompletedIndex INT NOT NULL,
+		LastUpdated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+		PRIMARY KEY(CheckpointKey)
+	)`
+	mysqlCheckpointSaveStmt   = `REPLACE INTO BackfillCheckpoint (CheckpointKey, LastCompletedIndex) VALUES (:key, :lastIndex)`
+	mysqlCheckpointLoadStmt   = `SELECT LastCompletedIndex, LastUpdated FROM BackfillCheckpoint WHERE CheckpointKey = ?`
+	mysqlCheckpointDeleteStmt = `DELETE FROM BackfillCheckpoint WHERE CheckpointKey = ?`
 )
 
 type provider int
@@ -92,6 +110,10 @@ const (
 
 type indexClient interface {
 	idempotentAddToIndex(ctx context.Context, key, value string) error
+	saveCheckpoint(ctx context.Context, checkpointKey string, state checkpointState) error
+	loadCheckpoint(ctx context.Context, checkpointKey string) (*checkpointState, error)
+	deleteCheckpoint(ctx context.Context, checkpointKey string) error
+	supportsCheckpointing() bool
 }
 
 type redisClient struct {
@@ -100,6 +122,15 @@ type redisClient struct {
 
 type mysqlClient struct {
 	client *sqlx.DB
+}
+
+type checkpointState struct {
+	LastCompletedIndex int       `json:"last_completed_index"`
+	LastUpdated        time.Time `json:"last_updated"`
+}
+
+type checkpointUpdate struct {
+	index int
 }
 
 type headers map[string][]string
@@ -139,6 +170,9 @@ var (
 	versionFlag             = flag.Bool("version", false, "Print the current version of Backfill MySQL")
 	concurrency             = flag.Int("concurrency", 1, "Number of workers to use for backfill")
 	dryRun                  = flag.Bool("dry-run", false, "Dry run - don't actually insert into MySQL")
+	checkpointInterval      = flag.Int("checkpoint-interval", 100, "Save checkpoint every N entries (0 to disable)")
+	resetCheckpoint         = flag.Bool("reset-checkpoint", false, "Clear checkpoint and start from --start value")
+	checkpointKey           = flag.String("checkpoint-key", "", "Custom Redis key for checkpoint (default: \"default\")")
 )
 
 func main() {
@@ -180,6 +214,9 @@ func main() {
 	}
 	if *rekorAddress == "" {
 		log.Fatal("rekor-address must be set")
+	}
+	if *checkpointInterval < 0 {
+		log.Fatal("checkpoint-interval must be >= 0")
 	}
 
 	log.Printf("running backfill index Version: %s GitCommit: %s BuildDate: %s", versionInfo.GitVersion, versionInfo.GitCommit, versionInfo.BuildDate)
@@ -233,6 +270,9 @@ func getIndexClient(backend provider) (indexClient, error) {
 		if _, err = dbClient.Exec(mysqlCreateTableStmt); err != nil {
 			return nil, err
 		}
+		if _, err = dbClient.Exec(mysqlCheckpointTableStmt); err != nil {
+			return nil, err
+		}
 		return &mysqlClient{client: dbClient}, nil
 	default:
 		return nil, fmt.Errorf("could not create client for unexpected provider")
@@ -245,36 +285,95 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) (err erro
 	group, ctx := errgroup.WithContext(ctx)
 	group.SetLimit(*concurrency)
 
-	type result struct {
-		index      int
-		parseErrs  []error
-		insertErrs []error
+	var checkpointKeyName string
+	var checkpointChan chan checkpointUpdate
+	var checkpointDone chan struct{}
+	var useCheckpointing = *checkpointInterval > 0 && indexClient.supportsCheckpointing()
+	originalStartIndex := *startIndex
+
+	if useCheckpointing {
+		checkpointKeyName = *checkpointKey
+		if checkpointKeyName == "" {
+			checkpointKeyName = "default"
+		}
+
+		if *resetCheckpoint {
+			if err := indexClient.deleteCheckpoint(ctx, checkpointKeyName); err != nil {
+				log.Printf("Warning: failed to delete checkpoint: %v", err)
+			} else {
+				log.Println("Checkpoint reset - starting fresh")
+			}
+		} else {
+			checkpoint, err := indexClient.loadCheckpoint(ctx, checkpointKeyName)
+			switch {
+			case err != nil:
+				log.Printf("Warning: failed to load checkpoint: %v", err)
+			case checkpoint != nil:
+				log.Printf("Resuming from checkpoint: last completed index %d", checkpoint.LastCompletedIndex)
+				*startIndex = checkpoint.LastCompletedIndex + 1
+				if *startIndex > *endIndex {
+					log.Printf("Checkpoint at %d is already past end index %d - nothing to do", checkpoint.LastCompletedIndex, *endIndex)
+					return nil
+				}
+				log.Printf("Processing entries from index %d to %d", *startIndex, *endIndex)
+			default:
+				log.Printf("No checkpoint found - starting fresh from index %d to %d", *startIndex, *endIndex)
+			}
+		}
+
+		checkpointChan = make(chan checkpointUpdate, *concurrency*2)
+		checkpointDone = make(chan struct{})
+
+		go func() {
+			defer close(checkpointDone)
+
+			completedIndices := make(map[int]bool)
+			highestCompleted := *startIndex - 1
+			saveCounter := 0
+
+			for update := range checkpointChan {
+				completedIndices[update.index] = true
+
+				// Find highest contiguous completed index
+				if update.index == highestCompleted+1 {
+					for i := update.index; completedIndices[i]; i++ {
+						highestCompleted = i
+						delete(completedIndices, i)
+					}
+				}
+
+				saveCounter++
+
+				if saveCounter >= *checkpointInterval {
+					state := checkpointState{
+						LastCompletedIndex: highestCompleted,
+						LastUpdated:        time.Now(),
+					}
+					saveCtx, saveCancel := context.WithTimeout(context.Background(), 5*time.Second)
+					if err := indexClient.saveCheckpoint(saveCtx, checkpointKeyName, state); err != nil {
+						// If save fails we will try to catch it next time
+						log.Printf("Warning: failed to save checkpoint: %v", err)
+					} else {
+						log.Printf("Checkpoint saved: last completed index %d", highestCompleted)
+					}
+					saveCancel()
+					saveCounter = 0
+				}
+			}
+
+			state := checkpointState{
+				LastCompletedIndex: highestCompleted,
+				LastUpdated:        time.Now(),
+			}
+			saveCtx, saveCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if err := indexClient.saveCheckpoint(saveCtx, checkpointKeyName, state); err != nil {
+				log.Printf("Warning: failed to save final checkpoint: %v", err)
+			} else {
+				log.Printf("Final checkpoint saved: last completed index %d", highestCompleted)
+			}
+			saveCancel()
+		}()
 	}
-	var resultChan = make(chan result)
-	parseErrs := make([]int, 0)
-	insertErrs := make([]int, 0)
-	runningInsertErrs := 0
-
-	go func() {
-		for r := range resultChan {
-			if len(r.parseErrs) > 0 {
-				parseErrs = append(parseErrs, r.index)
-			}
-			if len(r.insertErrs) > 0 {
-				insertErrs = append(insertErrs, r.index)
-			}
-		}
-	}()
-
-	defer func() {
-		close(resultChan)
-		if len(parseErrs) > 0 {
-			err = fmt.Errorf("failed to parse %d entries: %v", len(parseErrs), parseErrs)
-		}
-		if len(insertErrs) > 0 {
-			err = fmt.Errorf("failed to insert/remove %d entries: %v", len(insertErrs), insertErrs)
-		}
-	}()
 
 	for i := *startIndex; i <= *endIndex; i++ {
 		index := i // capture loop variable for closure
@@ -287,69 +386,61 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) (err erro
 				if errors.Is(err, context.Canceled) {
 					return nil
 				}
-				return fmt.Errorf("retrieving log uuid by index: %v", err)
+				return fmt.Errorf("retrieving log uuid by index %d: %w", index, err)
 			}
-			var parseErrs []error
-			var insertErrs []error
-			defer func() {
-				if len(insertErrs) != 0 || len(parseErrs) != 0 {
-					fmt.Printf("Errors with log index %d:\n", index)
-					for _, e := range insertErrs {
-						fmt.Println(e)
-					}
-					for _, e := range parseErrs {
-						fmt.Println(e)
-					}
-				} else {
-					fmt.Printf("Completed log index %d\n", index)
-				}
-			}()
+
 			for uuid, entry := range resp.Payload {
 				// uuid is the global UUID - tree ID and entry UUID
 				e, _, _, err := unmarshalEntryImpl(entry.Body.(string))
 				if err != nil {
-					parseErrs = append(parseErrs, fmt.Errorf("error unmarshalling entry for %s: %w", uuid, err))
-					continue
+					return fmt.Errorf("error unmarshalling entry at index %d for %s: %w", index, uuid, err)
 				}
 				keys, err := e.IndexKeys()
 				if err != nil {
-					parseErrs = append(parseErrs, fmt.Errorf("error building index keys for %s: %w", uuid, err))
-					continue
+					return fmt.Errorf("error building index keys at index %d for %s: %w", index, uuid, err)
 				}
 				for _, key := range keys {
 					if err := indexClient.idempotentAddToIndex(ctx, key, uuid); err != nil {
 						if errors.Is(err, context.Canceled) {
 							return nil
 						}
-						insertErrs = append(insertErrs, fmt.Errorf("error inserting UUID %s with key %s: %w", uuid, key, err))
-						runningInsertErrs++
-						if runningInsertErrs > maxInsertErrors {
-							resultChan <- result{
-								index:      index,
-								parseErrs:  parseErrs,
-								insertErrs: insertErrs,
-							}
-							return fmt.Errorf("too many insertion errors")
-						}
-						continue
+						return fmt.Errorf("error inserting UUID %s with key %s at index %d: %w", uuid, key, index, err)
 					}
 					fmt.Printf("Uploaded entry %s, index %d, key %s\n", uuid, index, key)
 				}
 			}
-			resultChan <- result{
-				index:      index,
-				parseErrs:  parseErrs,
-				insertErrs: insertErrs,
+
+			if useCheckpointing {
+				select {
+				case checkpointChan <- checkpointUpdate{index: index}:
+				case <-ctx.Done():
+					return nil
+				}
 			}
 
+			fmt.Printf("Completed log index %d\n", index)
 			return nil
 		})
 	}
 	err = group.Wait()
-	if err != nil {
-		return fmt.Errorf("error running backfill: %v", err)
+
+	if useCheckpointing {
+		close(checkpointChan)
+		<-checkpointDone
 	}
-	fmt.Println("Backfill complete")
+
+	if err != nil {
+		if useCheckpointing {
+			log.Printf("Backfill failed with error (checkpoint saved, resume from last checkpoint on next run): %v", err)
+		}
+		return fmt.Errorf("error running backfill: %w", err)
+	}
+
+	if useCheckpointing {
+		log.Printf("Backfill complete: processed %d entries, checkpoint persists for next run", *endIndex-originalStartIndex+1)
+	} else {
+		fmt.Println("Backfill complete")
+	}
 	return nil
 }
 
@@ -386,10 +477,120 @@ func (c *redisClient) idempotentAddToIndex(ctx context.Context, key, value strin
 	return err
 }
 
+// formatRedisCheckpointKey generates a Redis-specific key format for checkpoint storage
+func (c *redisClient) formatRedisCheckpointKey(checkpointKey string) string {
+	return fmt.Sprintf("backfill/checkpoint/%s", checkpointKey)
+}
+
+func (c *redisClient) saveCheckpoint(ctx context.Context, checkpointKey string, state checkpointState) error {
+	if *dryRun {
+		return nil
+	}
+	redisKey := c.formatRedisCheckpointKey(checkpointKey)
+	data, err := json.Marshal(state)
+	if err != nil {
+		return fmt.Errorf("marshaling checkpoint state: %w", err)
+	}
+	err = c.client.Set(ctx, redisKey, data, 0).Err()
+	if err != nil {
+		return fmt.Errorf("saving checkpoint to Redis: %w", err)
+	}
+	return nil
+}
+
+func (c *redisClient) loadCheckpoint(ctx context.Context, checkpointKey string) (*checkpointState, error) {
+	redisKey := c.formatRedisCheckpointKey(checkpointKey)
+	data, err := c.client.Get(ctx, redisKey).Result()
+	if err == redis.Nil {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("loading checkpoint from Redis: %w", err)
+	}
+
+	var state checkpointState
+	if err := json.Unmarshal([]byte(data), &state); err != nil {
+		return nil, fmt.Errorf("unmarshaling checkpoint state: %w", err)
+	}
+	return &state, nil
+}
+
+func (c *redisClient) deleteCheckpoint(ctx context.Context, checkpointKey string) error {
+	if *dryRun {
+		return nil
+	}
+	redisKey := c.formatRedisCheckpointKey(checkpointKey)
+	err := c.client.Del(ctx, redisKey).Err()
+	if err != nil {
+		return fmt.Errorf("deleting checkpoint from Redis: %w", err)
+	}
+	log.Printf("Checkpoint deleted: %s", redisKey)
+	return nil
+}
+
+func (c *redisClient) supportsCheckpointing() bool {
+	return true
+}
+
 func (c *mysqlClient) idempotentAddToIndex(ctx context.Context, key, value string) error {
 	if *dryRun {
 		return nil
 	}
 	_, err := c.client.NamedExecContext(ctx, mysqlWriteStmt, map[string]any{"key": key, "uuid": value})
 	return err
+}
+
+func (c *mysqlClient) saveCheckpoint(ctx context.Context, checkpointKey string, state checkpointState) error {
+	if *dryRun {
+		return nil
+	}
+	_, err := c.client.NamedExecContext(ctx, mysqlCheckpointSaveStmt, map[string]any{
+		"key":       checkpointKey,
+		"lastIndex": state.LastCompletedIndex,
+	})
+	if err != nil {
+		return fmt.Errorf("saving checkpoint to MySQL: %w", err)
+	}
+	return nil
+}
+
+func (c *mysqlClient) loadCheckpoint(ctx context.Context, checkpointKey string) (*checkpointState, error) {
+	var state checkpointState
+	var lastUpdatedBytes []byte
+	err := c.client.QueryRowContext(ctx, mysqlCheckpointLoadStmt, checkpointKey).Scan(
+		&state.LastCompletedIndex,
+		&lastUpdatedBytes,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("loading checkpoint from MySQL: %w", err)
+	}
+
+	if len(lastUpdatedBytes) > 0 {
+		parsedTime, err := time.Parse("2006-01-02 15:04:05", string(lastUpdatedBytes))
+		if err != nil {
+			return nil, fmt.Errorf("parsing LastUpdated timestamp: %w", err)
+		}
+		state.LastUpdated = parsedTime
+	}
+
+	return &state, nil
+}
+
+func (c *mysqlClient) deleteCheckpoint(ctx context.Context, checkpointKey string) error {
+	if *dryRun {
+		return nil
+	}
+	_, err := c.client.ExecContext(ctx, mysqlCheckpointDeleteStmt, checkpointKey)
+	if err != nil {
+		return fmt.Errorf("deleting checkpoint from MySQL: %w", err)
+	}
+	log.Printf("Checkpoint deleted: %s", checkpointKey)
+	return nil
+}
+
+func (c *mysqlClient) supportsCheckpointing() bool {
+	return true
 }
