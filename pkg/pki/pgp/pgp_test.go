@@ -354,7 +354,7 @@ func TestEmailAddresses(t *testing.T) {
 
 	var k PublicKey
 	if len(k.Subjects()) != 0 {
-		t.Errorf("Subjects for unitialized key should give empty slice")
+		t.Errorf("Subjects for uninitialized key should give empty slice")
 	}
 	tests := []test{
 		{caseDesc: "Valid armored public key", inputFile: "testdata/valid_armored_public.pgp", subjects: []string{}, keys: 2},
@@ -447,7 +447,7 @@ func TestVerifySignature(t *testing.T) {
 		}
 
 		if err := s.Verify(dataFile, k); (err == nil) != tc.verified {
-			t.Errorf("%v: unexpected result in verifying sigature: %v", tc.caseDesc, err)
+			t.Errorf("%v: unexpected result in verifying signature: %v", tc.caseDesc, err)
 		}
 	}
 

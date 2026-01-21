@@ -391,7 +391,7 @@ func TestVerifySignature(t *testing.T) {
 		}
 
 		if err := s.Verify(dataFile, k); (err == nil) != tc.verified {
-			t.Errorf("%v: unexpected result in verifying sigature: %v", tc.caseDesc, err)
+			t.Errorf("%v: unexpected result in verifying signature: %v", tc.caseDesc, err)
 		}
 	}
 

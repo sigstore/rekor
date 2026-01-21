@@ -83,6 +83,9 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
 	// We add the key, the hash of the overall cose envelope, and the hash of the payload itself as keys.
+	if v.CoseObj.PublicKey == nil {
+		return nil, errors.New("missing public key")
+	}
 	keyObj, err := x509.NewPublicKey(bytes.NewReader(*v.CoseObj.PublicKey))
 	if err != nil {
 		return nil, err
@@ -169,6 +172,9 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
+	if v.CoseObj.PublicKey == nil {
+		return errors.New("missing public key")
+	}
 	v.keyObj, err = x509.NewPublicKey(bytes.NewReader(*v.CoseObj.PublicKey))
 	if err != nil {
 		return err
@@ -199,8 +205,15 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	if v.keyObj == nil {
-		return nil, errors.New("cannot canonicalze empty key")
+		return nil, errors.New("cannot canonicalize empty key")
 	}
+	if v.sign1Msg == nil {
+		return nil, errors.New("signed message uninitialized")
+	}
+	if v.sign1Msg.Payload == nil {
+		return nil, errors.New("payload empty")
+	}
+
 	pk, err := v.keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err

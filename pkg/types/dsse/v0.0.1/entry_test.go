@@ -253,6 +253,15 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "missing envelope with verifiers",
+			it: &models.DSSEV001Schema{
+				ProposedContent: &models.DSSEV001SchemaProposedContent{
+					Verifiers: []strfmt.Base64{[]byte("verifier")},
+				},
+			},
+			wantErr: true,
+		},
+		{
 			env:  envelope(t, key, []byte(validPayload)),
 			name: "valid",
 			it: &models.DSSEV001Schema{
@@ -623,5 +632,11 @@ func TestCanonicalizeHandlesInvalidInput(t *testing.T) {
 	_, err := v.Canonicalize(context.TODO())
 	if err == nil {
 		t.Fatalf("expected error canonicalizing invalid input")
+	}
+
+	v.DSSEObj.Signatures = []*models.DSSEV001SchemaSignaturesItems0{nil}
+	_, err = v.Canonicalize(context.TODO())
+	if err == nil {
+		t.Fatalf("expected error canonicalizing nil signature")
 	}
 }
