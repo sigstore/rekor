@@ -6,7 +6,7 @@ drops support for fetching public keys via URL when querying the search API.
 ## Vulnerability Fixes
 
 * Handle malformed COSE and DSSE entries (#2729)
-* Drop support for fetching public keys by URL in the search index (#2730)
+* Drop support for fetching public keys by URL in the search index (#2731)
 
 ## Features
 
