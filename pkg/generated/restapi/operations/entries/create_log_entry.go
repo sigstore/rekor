@@ -50,7 +50,7 @@ func NewCreateLogEntry(ctx *middleware.Context, handler CreateLogEntryHandler) *
 
 # Creates an entry in the transparency log
 
-Creates an entry in the transparency log for a detached signature, public key, and content. Items can be included in the request or fetched by the server when URLs are specified.
+Creates an entry in the transparency log for a detached signature, public key, and content.
 */
 type CreateLogEntry struct {
 	Context *middleware.Context

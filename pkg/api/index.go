@@ -16,6 +16,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -62,11 +63,7 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 		if err != nil {
 			return handleRekorAPIError(params, http.StatusBadRequest, err, unsupportedPKIFormat)
 		}
-		keyReader, err := util.FileOrURLReadCloser(httpReqCtx, params.Query.PublicKey.URL.String(), params.Query.PublicKey.Content)
-		if err != nil {
-			return handleRekorAPIError(params, http.StatusBadRequest, err, malformedPublicKey)
-		}
-		defer keyReader.Close()
+		keyReader := bytes.NewReader(params.Query.PublicKey.Content)
 
 		key, err := af.NewPublicKey(keyReader)
 		if err != nil {

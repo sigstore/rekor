@@ -140,7 +140,6 @@ paths:
       summary: Creates an entry in the transparency log
       description: >
         Creates an entry in the transparency log for a detached signature, public key, and content.
-        Items can be included in the request or fetched by the server when URLs are specified.
       operationId: createLogEntry
       tags:
         - entries
@@ -496,9 +495,6 @@ definitions:
           content:
             type: string
             format: byte
-          url:
-            type: string
-            format: uri
         required:
           - "format"
       hash:
