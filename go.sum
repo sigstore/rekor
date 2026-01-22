@@ -439,8 +439,8 @@ github.com/shibumi/go-pathspec v1.3.0 h1:QUyMZhFo0Md5B8zV8x2tesohbb5kfbpTi9rBnKh
 github.com/shibumi/go-pathspec v1.3.0/go.mod h1:Xutfslp817l2I1cZvgcfeMQJG5QnU2lh5tVaaMCl3jE=
 github.com/sigstore/protobuf-specs v0.5.0 h1:F8YTI65xOHw70NrvPwJ5PhAzsvTnuJMGLkA4FIkofAY=
 github.com/sigstore/protobuf-specs v0.5.0/go.mod h1:+gXR+38nIa2oEupqDdzg4qSBT0Os+sP7oYv6alWewWc=
-github.com/sigstore/sigstore v1.10.3 h1:s7fBYYOzW/2Vd0nND2ZdpWySb5vRF2u9eix/NZMHJm0=
-github.com/sigstore/sigstore v1.10.3/go.mod h1:T26vXIkpnGEg391v3TaZ8EERcXbnjtZb/1erh5jbIQk=
+github.com/sigstore/sigstore v1.10.4 h1:ytOmxMgLdcUed3w1SbbZOgcxqwMG61lh1TmZLN+WeZE=
+github.com/sigstore/sigstore v1.10.4/go.mod h1:tDiyrdOref3q6qJxm2G+JHghqfmvifB7hw+EReAfnbI=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.3 h1:D/FRl5J9UYAJPGZRAJbP0dH78pfwWnKsyCSBwFBU8CI=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.3/go.mod h1:2GIWuNvTRMvrzd0Nl8RNqxrt9H7X0OBStwOSzGYRjYw=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.3 h1:k5VMLf/ms7hh6MLgVoorM0K+hSMwZLXoywlxh4CXqP8=
