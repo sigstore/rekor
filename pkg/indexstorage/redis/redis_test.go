@@ -100,7 +100,7 @@ func TestUninitializedClient(t *testing.T) {
 func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m,
 		// Ignore goroutine leak from redismock's internal factory client.
-		// See: https://github.com/go-redis/redismock/issues/XXX
+		// See: https://github.com/go-redis/redismock/issues/102
 		goleak.IgnoreTopFunction("github.com/redis/go-redis/v9/maintnotifications.(*CircuitBreakerManager).cleanupLoop"),
 	)
 }
