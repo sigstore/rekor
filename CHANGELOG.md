@@ -1,3 +1,17 @@
+# v1.5.0
+
+This release fixes GHSA-273p-m2cw-6833 and GHSA-4c4x-jm2x-pf9j. Note that this
+drops support for fetching public keys via URL when querying the search API.
+
+## Vulnerability Fixes
+
+* Handle malformed COSE and DSSE entries (#2729)
+* Drop support for fetching public keys by URL in the search index (#2731)
+
+## Features
+
+* Add support for a custom TLS config for clients (#2709)
+
 # v1.4.3
 
 This release reduces dependencies for a number of exported packages.
