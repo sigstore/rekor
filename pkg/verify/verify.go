@@ -145,7 +145,10 @@ func VerifyInclusion(ctx context.Context, e *models.LogEntryAnon) error {
 
 	hashes := [][]byte{}
 	for _, h := range e.Verification.InclusionProof.Hashes {
-		hb, _ := hex.DecodeString(h)
+		hb, err := hex.DecodeString(h)
+		if err != nil {
+			return err
+		}
 		hashes = append(hashes, hb)
 	}
 
