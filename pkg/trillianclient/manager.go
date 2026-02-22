@@ -45,7 +45,7 @@ type ClientManager struct {
 	// Mutex for trillianClients map
 	clientMu sync.RWMutex
 	// trillianClients caches the client wrappers.
-	trillianClients map[int64]TrillianClientInterface
+	trillianClients map[int64]ClientInterface
 	// flag to indicate whether the client manager is shutting down
 	shutdown bool
 
@@ -64,7 +64,7 @@ func NewClientManager(treeIDToConfig map[int64]GRPCConfig, defaultConfig GRPCCon
 		treeIDToConfig:  treeIDToConfig,
 		defaultConfig:   defaultConfig,
 		clientConfig:    clientConfig,
-		trillianClients: make(map[int64]TrillianClientInterface),
+		trillianClients: make(map[int64]ClientInterface),
 	}
 }
 
@@ -123,7 +123,7 @@ func (cm *ClientManager) getConn(treeID int64) (*grpc.ClientConn, error) {
 
 // GetTrillianClient returns a Rekor Trillian client wrapper for the given tree ID.
 // When CacheSTH is enabled, returns a cached STH client; otherwise returns a simple per-RPC client.
-func (cm *ClientManager) GetTrillianClient(treeID int64) (TrillianClientInterface, error) {
+func (cm *ClientManager) GetTrillianClient(treeID int64) (ClientInterface, error) {
 	cm.clientMu.RLock()
 	if cm.shutdown {
 		cm.clientMu.RUnlock()
@@ -150,7 +150,7 @@ func (cm *ClientManager) GetTrillianClient(treeID int64) (TrillianClientInterfac
 		return c, nil
 	}
 
-	var newClient TrillianClientInterface
+	var newClient ClientInterface
 	if cm.clientConfig.CacheSTH {
 		newClient = newTrillianClient(trillian.NewTrillianLogClient(conn), treeID, cm.clientConfig)
 	} else {
@@ -233,7 +233,7 @@ func (cm *ClientManager) Close() error {
 	cm.clientMu.Lock()
 	cm.shutdown = true
 	oldClients := cm.trillianClients
-	cm.trillianClients = make(map[int64]TrillianClientInterface)
+	cm.trillianClients = make(map[int64]ClientInterface)
 	cm.clientMu.Unlock()
 
 	cm.connMu.Lock()

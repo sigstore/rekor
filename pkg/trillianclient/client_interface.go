@@ -23,11 +23,11 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-// TrillianClientInterface defines the public API for interacting with a Trillian log.
+// ClientInterface defines the public API for interacting with a Trillian log.
 // Two implementations exist:
 //   - simpleTrillianClient: stateless, per-RPC client (default)
 //   - TrillianClient: cached STH client with background root updates (experimental, opt-in via CacheSTH)
-type TrillianClientInterface interface {
+type ClientInterface interface {
 	AddLeaf(ctx context.Context, byteValue []byte) *Response
 	GetLatest(ctx context.Context, firstSize int64) *Response
 	GetLeafAndProofByHash(ctx context.Context, hash []byte) *Response
