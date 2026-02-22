@@ -97,10 +97,17 @@ func init() {
 
 // Config holds configuration options for TrillianClient
 type Config struct {
+	// CacheSTH enables the cached STH client with background root updates (experimental).
+	// When false (default), the simple per-RPC client is used.
+	CacheSTH bool
 	// InitLatestRootTimeout is the timeout for fetching the latest root during initialization
 	InitLatestRootTimeout time.Duration
 	// UpdaterWaitTimeout is the timeout for updater polling wait operations
 	UpdaterWaitTimeout time.Duration
+	// FrozenTreeIDs contains tree IDs of frozen (inactive) logs. When CacheSTH is
+	// enabled, cached clients for frozen trees fetch the root once and never start
+	// a background updater.
+	FrozenTreeIDs map[int64]bool
 }
 
 // DefaultConfig returns a config with default timeout values
@@ -111,18 +118,26 @@ func DefaultConfig() Config {
 	}
 }
 
-// TrillianClient provides a wrapper around the Trillian client
+// waiter represents a caller blocked in waitForRootAtLeast.
+type waiter struct {
+	ch   chan struct{}
+	size uint64
+}
+
+// TrillianClient provides a cached STH wrapper around the Trillian client
+// with background root updates and channel-per-caller notification.
 type TrillianClient struct {
 	client trillian.TrillianLogClient
 	logID  int64
 	config Config
+	frozen bool // when true, the tree is frozen; no updater is started
 
 	// shared trillian client/verifier
-	lc   *client.LogClient
-	v    *client.LogVerifier
-	mu   sync.Mutex
-	cond *sync.Cond
-	wg   sync.WaitGroup
+	lc      *client.LogClient
+	v       *client.LogVerifier
+	mu      sync.Mutex
+	waiters []waiter // per-caller notification channels
+	wg      sync.WaitGroup
 
 	// cached root snapshot (atomic for read-heavy paths)
 	snapshot atomic.Value // stores rootSnapshot
@@ -143,54 +158,61 @@ type rootSnapshot struct {
 }
 
 // newTrillianClient creates a TrillianClient with the given Trillian client, log/tree ID, and config.
+// If the tree ID appears in config.FrozenTreeIDs, the client fetches the root once during
+// initialization and never starts the background updater, avoiding wasted RPCs on trees
+// that will never advance.
 func newTrillianClient(logClient trillian.TrillianLogClient, logID int64, config Config) *TrillianClient {
 	t := &TrillianClient{
 		client: logClient,
 		logID:  logID,
 		config: config,
+		frozen: config.FrozenTreeIDs[logID],
 		stopCh: make(chan struct{}),
 	}
 	t.bgCtx, t.bgCancel = context.WithCancel(context.Background())
-	t.cond = sync.NewCond(&t.mu)
 	// initialize atomic snapshot with zero value
 	t.snapshot.Store(rootSnapshot{})
 	return t
 }
 
-// Response includes a status code, an optional error message, and one of the results based on the API call
-type Response struct {
-	// Status is the status code of the response
-	Status codes.Code
-	// Error contains an error on request or client failure
-	Err error
-	// GetAddResult contains the response from queueing a leaf in Trillian
-	GetAddResult *trillian.QueueLeafResponse
-	// GetLeafAndProofResult contains the response for fetching an inclusion proof and leaf
-	GetLeafAndProofResult *trillian.GetEntryAndProofResponse
-	// GetLatestResult contains the response for the latest checkpoint
-	GetLatestResult *trillian.GetLatestSignedLogRootResponse
-	// GetConsistencyProofResult contains the response for a consistency proof between two log sizes
-	GetConsistencyProofResult *trillian.GetConsistencyProofResponse
-	// GetLeavesByRangeResult contains the response for fetching a leaf without an inclusion proof
-	GetLeavesByRangeResult *trillian.GetLeavesByRangeResponse
-	// getProofResult contains the response for an inclusion proof fetched by leaf hash
-	getProofResult *trillian.GetInclusionProofByHashResponse
+// registerWaiter adds a new waiter for the given tree size and returns its channel.
+// Must be called with t.mu held.
+func (t *TrillianClient) registerWaiter(size uint64) chan struct{} {
+	ch := make(chan struct{}, 1)
+	t.waiters = append(t.waiters, waiter{ch: ch, size: size})
+	return ch
 }
 
-func unmarshalLogRoot(logRoot []byte) (types.LogRootV1, error) {
-	var root types.LogRootV1
-	if err := root.UnmarshalBinary(logRoot); err != nil {
-		return types.LogRootV1{}, err
+// removeWaiter removes a waiter by its channel (used for cleanup on context cancellation).
+// Must be called with t.mu held.
+func (t *TrillianClient) removeWaiter(ch chan struct{}) {
+	for i, w := range t.waiters {
+		if w.ch == ch {
+			t.waiters[i] = t.waiters[len(t.waiters)-1]
+			t.waiters = t.waiters[:len(t.waiters)-1]
+			return
+		}
 	}
-	return root, nil
+}
+
+// notifyWaiters closes the channels of all waiters whose requested size
+// is satisfied by newSize, and removes them from the slice.
+// Must be called with t.mu held.
+func (t *TrillianClient) notifyWaiters(newSize uint64) {
+	remaining := t.waiters[:0]
+	for _, w := range t.waiters {
+		if newSize >= w.size {
+			close(w.ch)
+		} else {
+			remaining = append(remaining, w)
+		}
+	}
+	t.waiters = remaining
 }
 
 // ensureStarted initializes the shared LogClient and starts the updater once.
-//
-// Locking strategy: this uses a double-checked initialization gate so network
-// calls do not hold the mutex. Only one goroutine performs the initial RPCs,
-// others wait on the condition variable until initialization completes. This
-// avoids head-of-line blocking while keeping state updates atomic.
+// The mutex serializes concurrent callers so only one performs the initial RPC;
+// subsequent callers return the cached result immediately.
 func (t *TrillianClient) ensureStarted(ctx context.Context) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -198,7 +220,7 @@ func (t *TrillianClient) ensureStarted(ctx context.Context) error {
 		return t.startErr
 	}
 
-	// Perform one-time initialization while holding the lock for simplicity.
+	// Perform one-time initialization while holding the lock.
 	// This blocks other ensureStarted callers until initialization completes.
 	cctx := ctx
 	var cancel context.CancelFunc
@@ -230,12 +252,15 @@ func (t *TrillianClient) ensureStarted(ctx context.Context) error {
 	t.started = true
 	t.startErr = nil
 
-	// Start updater and track it for graceful shutdown.
-	t.wg.Add(1)
-	go func() {
-		defer t.wg.Done()
-		t.updater()
-	}()
+	// Start updater only for non-frozen trees. Frozen trees never advance,
+	// so polling would waste RPCs, goroutines, and pollute error metrics.
+	if !t.frozen {
+		t.wg.Add(1)
+		go func() {
+			defer t.wg.Done()
+			t.updater()
+		}()
+	}
 	return nil
 }
 
@@ -277,8 +302,7 @@ func (t *TrillianClient) updater() {
 		if err != nil {
 			log.Logger.Debugw("trillian root update wait failed after retries", "treeID", t.logID, "err", err)
 			metricUpdaterErrors.WithLabelValues(fmt.Sprintf("%d", t.logID)).Inc()
-			// Reset backoff on persistent failure and continue to next iteration
-			bo.Reset()
+			// Do not reset backoff on error; let it accumulate for persistent failures.
 			continue
 		}
 
@@ -310,7 +334,7 @@ func (t *TrillianClient) updater() {
 		// publish new snapshot and notify waiters
 		t.mu.Lock()
 		t.snapshot.Store(rootSnapshot{root: *nr, signed: slr})
-		t.cond.Broadcast()
+		t.notifyWaiters(nr.TreeSize)
 		t.mu.Unlock()
 
 		// metrics
@@ -320,7 +344,7 @@ func (t *TrillianClient) updater() {
 	}
 }
 
-// Close stops the updater.
+// Close stops the updater and unblocks all waiters.
 func (t *TrillianClient) Close() {
 	t.mu.Lock()
 	// Cancel background operations first to unblock any waits
@@ -332,8 +356,11 @@ func (t *TrillianClient) Close() {
 	default:
 		close(t.stopCh)
 	}
-	// Wake waiters so they can observe shutdown via context or state
-	t.cond.Broadcast()
+	// Close all waiter channels to unblock them
+	for _, w := range t.waiters {
+		close(w.ch)
+	}
+	t.waiters = nil
 	t.mu.Unlock()
 	// Wait for updater to exit
 	t.wg.Wait()
@@ -357,10 +384,25 @@ func (t *TrillianClient) AddLeaf(ctx context.Context, byteValue []byte) *Respons
 		Leaf:  leaf,
 	}
 	resp, err := t.client.QueueLeaf(ctx, rqst)
-	if err != nil || (resp.QueuedLeaf.Status != nil && resp.QueuedLeaf.Status.Code != int32(codes.OK)) {
+	if err != nil {
 		return &Response{
 			Status:       status.Code(err),
 			Err:          err,
+			GetAddResult: resp,
+		}
+	}
+	if resp == nil || resp.QueuedLeaf == nil || resp.QueuedLeaf.Leaf == nil {
+		return &Response{
+			Status: codes.Internal,
+			Err:    fmt.Errorf("unexpected nil in QueueLeaf response"),
+		}
+	}
+	// Non-OK insertion status (e.g. ALREADY_EXISTS) is not a gRPC error.
+	// Return Status: OK with the response so callers can inspect QueuedLeaf.Status
+	// to determine the insertion-level outcome (e.g. HTTP 409 for duplicates).
+	if resp.QueuedLeaf.Status != nil && resp.QueuedLeaf.Status.Code != int32(codes.OK) {
+		return &Response{
+			Status:       codes.OK,
 			GetAddResult: resp,
 		}
 	}
@@ -618,32 +660,71 @@ func (t *TrillianClient) waitForInclusionWithMinSize(ctx context.Context, leafHa
 	}
 }
 
-// waitForRootAtLeast blocks until t.lastRoot.TreeSize >= size, or context/client closes.
+// waitForRootAtLeast blocks until the cached root TreeSize >= size, or context/client closes.
+// For frozen trees, returns immediately with an error if the current size is insufficient,
+// since the tree will never advance.
 func (t *TrillianClient) waitForRootAtLeast(ctx context.Context, size uint64) error {
 	start := time.Now()
+	tree := fmt.Sprintf("%d", t.logID)
+
+	// Fast path: check without lock
+	cur := t.snapshot.Load().(rootSnapshot)
+	if cur.root.TreeSize >= size {
+		elapsed := float64(time.Since(start).Milliseconds())
+		metricWaitForRootAtLeast.WithLabelValues(tree, "true").Observe(elapsed)
+		return nil
+	}
+
+	// Frozen trees will never advance; fail immediately rather than blocking forever.
+	if t.frozen {
+		elapsed := float64(time.Since(start).Milliseconds())
+		metricWaitForRootAtLeast.WithLabelValues(tree, "false").Observe(elapsed)
+		return status.Errorf(codes.FailedPrecondition, "tree %d is frozen at size %d, requested %d", t.logID, cur.root.TreeSize, size)
+	}
+
+	// Register waiter
 	t.mu.Lock()
-	defer t.mu.Unlock()
-	for {
-		if err := ctx.Err(); err != nil {
-			// metrics
-			elapsed := float64(time.Since(start).Milliseconds())
-			metricWaitForRootAtLeast.WithLabelValues(fmt.Sprintf("%d", t.logID), "false").Observe(elapsed)
-			return err
-		}
+	// Re-check under lock (snapshot may have advanced)
+	cur = t.snapshot.Load().(rootSnapshot)
+	if cur.root.TreeSize >= size {
+		t.mu.Unlock()
+		elapsed := float64(time.Since(start).Milliseconds())
+		metricWaitForRootAtLeast.WithLabelValues(tree, "true").Observe(elapsed)
+		return nil
+	}
+	ch := t.registerWaiter(size)
+	t.mu.Unlock()
+
+	// Wait on channel, context, or stop.
+	// When multiple channels fire simultaneously, select picks one
+	// non-deterministically. After receiving from ch, we re-check stopCh
+	// to avoid returning success during shutdown.
+	select {
+	case <-ch:
 		select {
 		case <-t.stopCh:
 			elapsed := float64(time.Since(start).Milliseconds())
-			metricWaitForRootAtLeast.WithLabelValues(fmt.Sprintf("%d", t.logID), "false").Observe(elapsed)
+			metricWaitForRootAtLeast.WithLabelValues(tree, "false").Observe(elapsed)
 			return status.Error(codes.Canceled, "client closed")
 		default:
 		}
-		cur := t.snapshot.Load().(rootSnapshot)
-		if cur.root.TreeSize >= size {
-			elapsed := float64(time.Since(start).Milliseconds())
-			metricWaitForRootAtLeast.WithLabelValues(fmt.Sprintf("%d", t.logID), "true").Observe(elapsed)
-			return nil
-		}
-		t.cond.Wait()
+		elapsed := float64(time.Since(start).Milliseconds())
+		metricWaitForRootAtLeast.WithLabelValues(tree, "true").Observe(elapsed)
+		return nil
+	case <-ctx.Done():
+		t.mu.Lock()
+		t.removeWaiter(ch)
+		t.mu.Unlock()
+		elapsed := float64(time.Since(start).Milliseconds())
+		metricWaitForRootAtLeast.WithLabelValues(tree, "false").Observe(elapsed)
+		return ctx.Err()
+	case <-t.stopCh:
+		t.mu.Lock()
+		t.removeWaiter(ch)
+		t.mu.Unlock()
+		elapsed := float64(time.Since(start).Milliseconds())
+		metricWaitForRootAtLeast.WithLabelValues(tree, "false").Observe(elapsed)
+		return status.Error(codes.Canceled, "client closed")
 	}
 }
 

@@ -94,6 +94,7 @@ func init() {
 	rootCmd.PersistentFlags().String("trillian_log_server.grpc_default_service_config", "", "JSON string used to configure gRPC clients for communicating with Trillian")
 	rootCmd.PersistentFlags().Duration("trillian_log_server.init_latest_root_timeout", trillianclient.DefaultInitLatestRootTimeout, "timeout for fetching the latest root during client initialization")
 	rootCmd.PersistentFlags().Duration("trillian_log_server.updater_wait_timeout", trillianclient.DefaultUpdaterWaitTimeout, "timeout for STH updater polling wait operations")
+	rootCmd.PersistentFlags().Bool("trillian_log_server.cache_sth", false, "enable cached STH client with background root updates (experimental)")
 
 	rootCmd.PersistentFlags().Uint("publish_frequency", 5, "how often to publish a new checkpoint, in minutes")
 

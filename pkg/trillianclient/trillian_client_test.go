@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -55,6 +56,58 @@ func dialMock(t *testing.T, addr string) *grpc.ClientConn {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = conn.Close() })
 	return conn
+}
+
+// advanceRoot updates the cached snapshot and notifies waiters via the channel-per-caller mechanism.
+func advanceRoot(t *testing.T, tc *TrillianClient, size uint64, rootHash []byte) {
+	t.Helper()
+	lr := &types.LogRootV1{TreeSize: size, RootHash: rootHash}
+	b, err := lr.MarshalBinary()
+	require.NoError(t, err)
+	tc.mu.Lock()
+	tc.snapshot.Store(rootSnapshot{root: *lr, signed: &trillian.SignedLogRoot{LogRoot: b}})
+	tc.notifyWaiters(size)
+	tc.mu.Unlock()
+}
+
+type fakeCloseTrackingClient struct {
+	closeCalls int32
+}
+
+func (f *fakeCloseTrackingClient) AddLeaf(_ context.Context, _ []byte) *Response {
+	return &Response{Status: codes.OK}
+}
+
+func (f *fakeCloseTrackingClient) GetLatest(_ context.Context, _ int64) *Response {
+	return &Response{Status: codes.OK}
+}
+
+func (f *fakeCloseTrackingClient) GetLeafAndProofByHash(_ context.Context, _ []byte) *Response {
+	return &Response{Status: codes.OK}
+}
+
+func (f *fakeCloseTrackingClient) GetLeafAndProofByIndex(_ context.Context, _ int64) *Response {
+	return &Response{Status: codes.OK}
+}
+
+func (f *fakeCloseTrackingClient) GetConsistencyProof(_ context.Context, _, _ int64) *Response {
+	return &Response{Status: codes.OK}
+}
+
+func (f *fakeCloseTrackingClient) GetLeavesByRange(_ context.Context, _, _ int64) *Response {
+	return &Response{Status: codes.OK}
+}
+
+func (f *fakeCloseTrackingClient) GetLeafWithoutProof(_ context.Context, _ int64) *Response {
+	return &Response{Status: codes.OK}
+}
+
+func (f *fakeCloseTrackingClient) Close() {
+	atomic.AddInt32(&f.closeCalls, 1)
+}
+
+func (f *fakeCloseTrackingClient) CloseCalls() int32 {
+	return atomic.LoadInt32(&f.closeCalls)
 }
 
 func TestEnsureStartedAndGetLatest(t *testing.T) {
@@ -213,11 +266,7 @@ func TestAddLeaf_HappyPath(t *testing.T) {
 	// Advance snapshot to size=2 after a short delay to release waiters
 	go func() {
 		time.Sleep(20 * time.Millisecond)
-		b, _ := (&types.LogRootV1{TreeSize: 2, RootHash: root2}).MarshalBinary()
-		tc.mu.Lock()
-		tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 2, RootHash: root2}, signed: &trillian.SignedLogRoot{LogRoot: b}})
-		tc.cond.Broadcast()
-		tc.mu.Unlock()
+		advanceRoot(t, tc, 2, root2)
 	}()
 	t.Cleanup(tc.Close)
 
@@ -290,13 +339,14 @@ func TestWaitForRootAtLeast_BroadcastWakesAll(t *testing.T) {
 	tc := newTrillianClient(nil, 100, DefaultConfig())
 	// Start with size 0
 	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 0}})
+	t.Cleanup(tc.Close)
 
-	const waiters = 10
+	const numWaiters = 10
 	var wg sync.WaitGroup
-	wg.Add(waiters)
+	wg.Add(numWaiters)
 
-	errs := make(chan error, waiters)
-	for i := 0; i < waiters; i++ {
+	errs := make(chan error, numWaiters)
+	for i := 0; i < numWaiters; i++ {
 		go func() {
 			defer wg.Done()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -305,14 +355,11 @@ func TestWaitForRootAtLeast_BroadcastWakesAll(t *testing.T) {
 		}()
 	}
 
-	// Give goroutines time to block on cond.Wait
+	// Give goroutines time to register as waiters
 	time.Sleep(20 * time.Millisecond)
 
-	// Publish new root and broadcast
-	tc.mu.Lock()
-	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 5}})
-	tc.cond.Broadcast()
-	tc.mu.Unlock()
+	// Publish new root and notify waiters
+	advanceRoot(t, tc, 5, make([]byte, 32))
 
 	done := make(chan struct{})
 	go func() { wg.Wait(); close(done) }()
@@ -324,7 +371,7 @@ func TestWaitForRootAtLeast_BroadcastWakesAll(t *testing.T) {
 			require.NoError(t, e)
 		}
 	case <-time.After(2 * time.Second):
-		t.Fatal("waiters did not unblock after broadcast")
+		t.Fatal("waiters did not unblock after notification")
 	}
 }
 
@@ -336,13 +383,14 @@ func TestGetLatest_WithFirstSize_BroadcastWakesAll(t *testing.T) {
 	tc.started = true
 	// initial snapshot with size 0
 	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 0}, signed: mkSLR(t, 0, make([]byte, 32))})
+	t.Cleanup(tc.Close)
 
-	const waiters = 8
+	const numWaiters = 8
 	var wg sync.WaitGroup
-	wg.Add(waiters)
+	wg.Add(numWaiters)
 
-	results := make(chan *Response, waiters)
-	for i := 0; i < waiters; i++ {
+	results := make(chan *Response, numWaiters)
+	for i := 0; i < numWaiters; i++ {
 		go func() {
 			defer wg.Done()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -351,17 +399,11 @@ func TestGetLatest_WithFirstSize_BroadcastWakesAll(t *testing.T) {
 		}()
 	}
 
-	// Small delay to let goroutines block
+	// Small delay to let goroutines register waiters
 	time.Sleep(20 * time.Millisecond)
 
-	// Publish root size 5 and broadcast so all GetLatest unblock
-	lr := &types.LogRootV1{TreeSize: 5, RootHash: make([]byte, 32)}
-	b, err := lr.MarshalBinary()
-	require.NoError(t, err)
-	tc.mu.Lock()
-	tc.snapshot.Store(rootSnapshot{root: *lr, signed: &trillian.SignedLogRoot{LogRoot: b}})
-	tc.cond.Broadcast()
-	tc.mu.Unlock()
+	// Publish root size 5 and notify waiters
+	advanceRoot(t, tc, 5, make([]byte, 32))
 
 	done := make(chan struct{})
 	go func() { wg.Wait(); close(done) }()
@@ -375,7 +417,7 @@ func TestGetLatest_WithFirstSize_BroadcastWakesAll(t *testing.T) {
 			require.NotNil(t, r.GetLatestResult)
 		}
 	case <-time.After(2 * time.Second):
-		t.Fatal("GetLatest waiters did not unblock after broadcast")
+		t.Fatal("GetLatest waiters did not unblock after notification")
 	}
 }
 
@@ -395,10 +437,12 @@ func TestEnsureStarted_SingleRPCWithFanIn(t *testing.T) {
 			time.Sleep(30 * time.Millisecond)
 			return &trillian.GetLatestSignedLogRootResponse{SignedLogRoot: slr}, nil
 		},
-	).MinTimes(1)
+	).Times(1)
 
 	conn := dialMock(t, s.Addr)
-	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 222, DefaultConfig())
+	cfg := DefaultConfig()
+	cfg.FrozenTreeIDs = map[int64]bool{222: true} // prevents updater RPC noise
+	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 222, cfg)
 	t.Cleanup(tc.Close)
 
 	const n = 20
@@ -426,12 +470,13 @@ func TestWaitForRootAtLeast_SpuriousBroadcastIgnored(t *testing.T) {
 	t.Cleanup(func() { goleak.VerifyNone(t, opt) })
 	tc := newTrillianClient(nil, 303, DefaultConfig())
 	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 1}})
+	t.Cleanup(tc.Close)
 
-	const waiters = 6
+	const numWaiters = 6
 	var wg sync.WaitGroup
-	wg.Add(waiters)
-	results := make(chan error, waiters)
-	for i := 0; i < waiters; i++ {
+	wg.Add(numWaiters)
+	results := make(chan error, numWaiters)
+	for i := 0; i < numWaiters; i++ {
 		go func() {
 			defer wg.Done()
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -440,21 +485,18 @@ func TestWaitForRootAtLeast_SpuriousBroadcastIgnored(t *testing.T) {
 		}()
 	}
 
-	// Give them time to block
+	// Give them time to register as waiters
 	time.Sleep(20 * time.Millisecond)
 
-	// Broadcast without changing size; wait briefly and ensure nobody finished
-	tc.mu.Lock()
-	tc.cond.Broadcast()
-	tc.mu.Unlock()
+	// With channel-per-caller, there is no "spurious" broadcast; waiters are only
+	// notified when their target size is met. Advance to size 3 (below target 5);
+	// waiters for size 5 should not be notified.
+	advanceRoot(t, tc, 3, make([]byte, 32))
 	time.Sleep(30 * time.Millisecond)
-	require.Zero(t, len(results), "waiters should not exit on spurious broadcast")
+	require.Zero(t, len(results), "waiters should not exit when size is below target")
 
-	// Now increase size and broadcast; everyone should complete
-	tc.mu.Lock()
-	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 5}})
-	tc.cond.Broadcast()
-	tc.mu.Unlock()
+	// Now increase size to 5; everyone should complete
+	advanceRoot(t, tc, 5, make([]byte, 32))
 
 	done := make(chan struct{})
 	go func() { wg.Wait(); close(done) }()
@@ -476,10 +518,11 @@ func TestSnapshotConcurrentReadersWriters_NoDataRace(t *testing.T) {
 	tc.started = true
 	// Provide a minimal signed root so GetLatest can return without NotFound
 	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 0}, signed: mkSLR(t, 0, make([]byte, 32))})
+	t.Cleanup(tc.Close)
 
 	stop := make(chan struct{})
 
-	// Writer rapidly updates snapshot, broadcasting each time
+	// Writer rapidly updates snapshot, notifying waiters each time
 	go func() {
 		ticker := time.NewTicker(1 * time.Millisecond)
 		defer ticker.Stop()
@@ -491,7 +534,7 @@ func TestSnapshotConcurrentReadersWriters_NoDataRace(t *testing.T) {
 			b, _ := lr.MarshalBinary()
 			tc.mu.Lock()
 			tc.snapshot.Store(rootSnapshot{root: *lr, signed: &trillian.SignedLogRoot{LogRoot: b}})
-			tc.cond.Broadcast()
+			tc.notifyWaiters(sz)
 			tc.mu.Unlock()
 		}
 		close(stop)
@@ -535,13 +578,14 @@ func TestEnsureStartedDeadlineRespected(t *testing.T) {
 	require.NoError(t, err)
 	defer closeFn()
 
-	// Server handler sleeps longer than client deadline; client should return DeadlineExceeded
+	// Server handler sleeps longer than client deadline; client should return DeadlineExceeded.
+	// Use AnyTimes because the deadline may expire before the RPC reaches the server.
 	s.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ *trillian.GetLatestSignedLogRootRequest) (*trillian.GetLatestSignedLogRootResponse, error) {
 			time.Sleep(200 * time.Millisecond)
 			return &trillian.GetLatestSignedLogRootResponse{SignedLogRoot: mkSLR(t, 0, make([]byte, 32))}, nil
 		},
-	).MinTimes(1)
+	).AnyTimes()
 
 	conn := dialMock(t, s.Addr)
 	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 606, DefaultConfig())
@@ -552,4 +596,450 @@ func TestEnsureStartedDeadlineRespected(t *testing.T) {
 	resp := tc.GetLatest(ctx, 0)
 	require.Error(t, resp.Err)
 	require.Equal(t, codes.DeadlineExceeded, resp.Status)
+}
+
+// --- New tests for channel-per-caller and edge cases ---
+
+func TestWaitForRootAtLeast_AlreadySatisfied(t *testing.T) {
+	tc := newTrillianClient(nil, 500, DefaultConfig())
+	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 10}})
+	t.Cleanup(tc.Close)
+
+	err := tc.waitForRootAtLeast(context.Background(), 5)
+	require.NoError(t, err)
+
+	err = tc.waitForRootAtLeast(context.Background(), 10)
+	require.NoError(t, err)
+}
+
+func TestWaitForRootAtLeast_ContextCancellation(t *testing.T) {
+	opt := goleak.IgnoreCurrent()
+	t.Cleanup(func() { goleak.VerifyNone(t, opt) })
+	tc := newTrillianClient(nil, 501, DefaultConfig())
+	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 0}})
+	t.Cleanup(tc.Close)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	done := make(chan error, 1)
+	go func() {
+		done <- tc.waitForRootAtLeast(ctx, 100)
+	}()
+
+	// Give the goroutine time to register as a waiter
+	time.Sleep(20 * time.Millisecond)
+
+	// Cancel context - should immediately unblock
+	cancel()
+
+	select {
+	case err := <-done:
+		require.Error(t, err)
+		require.ErrorIs(t, err, context.Canceled)
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("waiter was not unblocked by context cancellation")
+	}
+}
+
+func TestClose_UnblocksAllWaiters(t *testing.T) {
+	opt := goleak.IgnoreCurrent()
+	t.Cleanup(func() { goleak.VerifyNone(t, opt) })
+	tc := newTrillianClient(nil, 502, DefaultConfig())
+	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 0}})
+
+	const numWaiters = 5
+	var wg sync.WaitGroup
+	wg.Add(numWaiters)
+	errs := make(chan error, numWaiters)
+
+	for i := 0; i < numWaiters; i++ {
+		go func() {
+			defer wg.Done()
+			errs <- tc.waitForRootAtLeast(context.Background(), 999)
+		}()
+	}
+
+	// Give goroutines time to register
+	time.Sleep(20 * time.Millisecond)
+	tc.Close()
+
+	done := make(chan struct{})
+	go func() { wg.Wait(); close(done) }()
+
+	select {
+	case <-done:
+		close(errs)
+		for e := range errs {
+			require.Error(t, e)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Close did not unblock all waiters")
+	}
+}
+
+func TestNotifyWaiters_PartialSatisfaction(t *testing.T) {
+	tc := newTrillianClient(nil, 503, DefaultConfig())
+	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 0}})
+	t.Cleanup(tc.Close)
+
+	tc.mu.Lock()
+	ch3 := tc.registerWaiter(3)
+	ch5 := tc.registerWaiter(5)
+	ch10 := tc.registerWaiter(10)
+	tc.mu.Unlock()
+
+	// Notify with size 5: should satisfy waiters for 3 and 5, but not 10
+	tc.mu.Lock()
+	tc.notifyWaiters(5)
+	tc.mu.Unlock()
+
+	// ch3 and ch5 should be closed (readable immediately)
+	select {
+	case <-ch3:
+		// expected
+	default:
+		t.Fatal("waiter for size 3 should have been notified")
+	}
+	select {
+	case <-ch5:
+		// expected
+	default:
+		t.Fatal("waiter for size 5 should have been notified")
+	}
+
+	// ch10 should NOT be closed
+	select {
+	case <-ch10:
+		t.Fatal("waiter for size 10 should NOT have been notified")
+	default:
+		// expected
+	}
+
+	// Verify remaining waiters count
+	tc.mu.Lock()
+	require.Len(t, tc.waiters, 1)
+	require.Equal(t, uint64(10), tc.waiters[0].size)
+	tc.mu.Unlock()
+}
+
+func TestRemoveWaiter_Cleanup(t *testing.T) {
+	tc := newTrillianClient(nil, 504, DefaultConfig())
+	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 0}})
+	t.Cleanup(tc.Close)
+
+	tc.mu.Lock()
+	ch1 := tc.registerWaiter(5)
+	ch2 := tc.registerWaiter(10)
+	require.Len(t, tc.waiters, 2)
+
+	tc.removeWaiter(ch1)
+	require.Len(t, tc.waiters, 1)
+	require.Equal(t, ch2, tc.waiters[0].ch)
+
+	// Remove non-existent channel is a no-op
+	tc.removeWaiter(make(chan struct{}))
+	require.Len(t, tc.waiters, 1)
+	tc.mu.Unlock()
+}
+
+func TestUpdater_RetriesOnTransientErrors(t *testing.T) {
+	opt := goleak.IgnoreCurrent()
+	t.Cleanup(func() { goleak.VerifyNone(t, opt) })
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	s, closeFn, err := testonly.NewMockServer(mockCtl)
+	require.NoError(t, err)
+	defer closeFn()
+
+	rootHash1 := bytes.Repeat([]byte{0x11}, 32)
+
+	var latestCalls int32
+	s.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, _ *trillian.GetLatestSignedLogRootRequest) (*trillian.GetLatestSignedLogRootResponse, error) {
+			atomic.AddInt32(&latestCalls, 1)
+			return nil, status.Error(codes.Unavailable, "transient")
+		},
+	).AnyTimes()
+
+	conn := dialMock(t, s.Addr)
+	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 600, Config{
+		UpdaterWaitTimeout: 50 * time.Millisecond,
+	})
+	t.Cleanup(tc.Close)
+
+	initial := types.LogRootV1{TreeSize: 1, RootHash: rootHash1}
+	tc.v = client.NewLogVerifier(rfc6962.DefaultHasher)
+	tc.lc = client.New(tc.logID, tc.client, tc.v, initial)
+	tc.snapshot.Store(rootSnapshot{root: initial, signed: mkSLR(t, 1, rootHash1)})
+
+	done := make(chan struct{})
+	go func() {
+		tc.updater()
+		close(done)
+	}()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if atomic.LoadInt32(&latestCalls) >= 2 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	require.GreaterOrEqual(t, atomic.LoadInt32(&latestCalls), int32(2), "updater should keep retrying after transient errors")
+
+	tc.Close()
+	select {
+	case <-done:
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("updater did not stop after Close")
+	}
+}
+
+func TestClientManager_CachesClientPerTreeID(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	s, closeFn, err := testonly.NewMockServer(mockCtl)
+	require.NoError(t, err)
+	defer closeFn()
+
+	cfg := Config{CacheSTH: false}
+	cm := NewClientManager(nil, GRPCConfig{Address: s.Addr, Port: 0}, cfg)
+
+	conn := dialMock(t, s.Addr)
+	cm.connMu.Lock()
+	cm.connections[cm.defaultConfig] = conn
+	cm.connMu.Unlock()
+	t.Cleanup(func() { _ = cm.Close() })
+
+	c1, err := cm.GetTrillianClient(7)
+	require.NoError(t, err)
+	c2, err := cm.GetTrillianClient(7)
+	require.NoError(t, err)
+	c3, err := cm.GetTrillianClient(8)
+	require.NoError(t, err)
+
+	require.Same(t, c1, c2, "same tree ID should return cached client instance")
+	require.NotSame(t, c1, c3, "different tree IDs should return distinct client instances")
+}
+
+func TestClientManagerClose_ClosesClients(t *testing.T) {
+	cm := NewClientManager(nil, GRPCConfig{Address: "localhost", Port: 0}, Config{})
+	fake1 := &fakeCloseTrackingClient{}
+	fake2 := &fakeCloseTrackingClient{}
+
+	cm.clientMu.Lock()
+	cm.trillianClients[1] = fake1
+	cm.trillianClients[2] = fake2
+	cm.clientMu.Unlock()
+
+	err := cm.Close()
+	require.NoError(t, err)
+	require.EqualValues(t, 1, fake1.CloseCalls(), "Close should be called on cached client 1")
+	require.EqualValues(t, 1, fake2.CloseCalls(), "Close should be called on cached client 2")
+
+	cm.clientMu.RLock()
+	require.True(t, cm.shutdown)
+	require.Empty(t, cm.trillianClients)
+	cm.clientMu.RUnlock()
+
+	// After Close, GetTrillianClient should fail
+	_, err = cm.GetTrillianClient(1)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "shutting down")
+}
+
+func TestClientManagerGetConn_RejectsDialAfterClose(t *testing.T) {
+	// Verify that getConn refuses to dial after Close has drained connections,
+	// even if the early shutdown check passed before Close ran.
+	cfg := Config{CacheSTH: false}
+	cm := NewClientManager(nil, GRPCConfig{Address: "localhost", Port: 0}, cfg)
+
+	// Close drains connections and sets shutdown.
+	require.NoError(t, cm.Close())
+
+	// getConn must reject the dial attempt despite the connections map being empty.
+	_, err := cm.getConn(1)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "shutting down")
+}
+
+func TestClientManagerGetConn_ConcurrentCloseNeverLeaks(t *testing.T) {
+	opt := goleak.IgnoreCurrent()
+	t.Cleanup(func() { goleak.VerifyNone(t, opt) })
+
+	cfg := Config{CacheSTH: false}
+	cm := NewClientManager(nil, GRPCConfig{Address: "localhost", Port: 0}, cfg)
+
+	// Race getConn against Close. getConn must either succeed (connection
+	// stored and later cleaned up) or return a shutdown error. It must
+	// never leave an orphaned connection.
+	const goroutines = 20
+	errs := make(chan error, goroutines)
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for range goroutines {
+		go func() {
+			defer wg.Done()
+			_, err := cm.getConn(1)
+			errs <- err
+		}()
+	}
+
+	// Close concurrently.
+	closeErr := cm.Close()
+	wg.Wait()
+	close(errs)
+
+	require.NoError(t, closeErr)
+	for e := range errs {
+		if e != nil {
+			require.Contains(t, e.Error(), "shutting down")
+		}
+	}
+
+	// After Close, connections map must be empty (no leaked connections).
+	cm.connMu.RLock()
+	require.Empty(t, cm.connections)
+	cm.connMu.RUnlock()
+}
+
+func TestClientManagerFactory_SimpleClient(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	s, closeFn, err := testonly.NewMockServer(mockCtl)
+	require.NoError(t, err)
+	defer closeFn()
+
+	cfg := Config{CacheSTH: false}
+	cm := NewClientManager(nil, GRPCConfig{Address: s.Addr, Port: 0}, cfg)
+
+	// Manually inject a connection since we can't dial properly in tests
+	conn := dialMock(t, s.Addr)
+	cm.connMu.Lock()
+	cm.connections[cm.defaultConfig] = conn
+	cm.connMu.Unlock()
+	t.Cleanup(func() { _ = cm.Close() })
+
+	c, err := cm.GetTrillianClient(1)
+	require.NoError(t, err)
+	_, ok := c.(*simpleTrillianClient)
+	require.True(t, ok, "expected simpleTrillianClient when CacheSTH=false")
+}
+
+func TestClientManagerFactory_CachedClient(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	s, closeFn, err := testonly.NewMockServer(mockCtl)
+	require.NoError(t, err)
+	defer closeFn()
+
+	cfg := Config{
+		CacheSTH:              true,
+		InitLatestRootTimeout: DefaultInitLatestRootTimeout,
+		UpdaterWaitTimeout:    DefaultUpdaterWaitTimeout,
+	}
+	cm := NewClientManager(nil, GRPCConfig{Address: s.Addr, Port: 0}, cfg)
+
+	// Manually inject a connection
+	conn := dialMock(t, s.Addr)
+	cm.connMu.Lock()
+	cm.connections[cm.defaultConfig] = conn
+	cm.connMu.Unlock()
+	t.Cleanup(func() { _ = cm.Close() })
+
+	c, err := cm.GetTrillianClient(1)
+	require.NoError(t, err)
+	_, ok := c.(*TrillianClient)
+	require.True(t, ok, "expected *TrillianClient when CacheSTH=true")
+}
+
+// --- Frozen tree tests ---
+
+func TestFrozenClient_NoUpdaterStarted(t *testing.T) {
+	opt := goleak.IgnoreCurrent()
+	t.Cleanup(func() { goleak.VerifyNone(t, opt) })
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	s, closeFn, err := testonly.NewMockServer(mockCtl)
+	require.NoError(t, err)
+	defer closeFn()
+
+	slr := mkSLR(t, 10, make([]byte, 32))
+	s.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(
+		&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: slr}, nil,
+	).Times(1) // Only called once during ensureStarted; no updater polling
+
+	conn := dialMock(t, s.Addr)
+	frozenCfg := DefaultConfig()
+	frozenCfg.FrozenTreeIDs = map[int64]bool{700: true}
+	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 700, frozenCfg)
+	t.Cleanup(tc.Close)
+
+	resp := tc.GetLatest(context.Background(), 0)
+	require.NoError(t, resp.Err)
+	require.Equal(t, codes.OK, resp.Status)
+
+	var got types.LogRootV1
+	require.NoError(t, got.UnmarshalBinary(resp.GetLatestResult.SignedLogRoot.LogRoot))
+	require.EqualValues(t, 10, got.TreeSize)
+}
+
+func TestFrozenClient_WaitForRootAtLeast_FailsImmediately(t *testing.T) {
+	frozenCfg := DefaultConfig()
+	frozenCfg.FrozenTreeIDs = map[int64]bool{701: true}
+	tc := newTrillianClient(nil, 701, frozenCfg)
+	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 5}})
+	t.Cleanup(tc.Close)
+
+	// Request satisfied by current size
+	err := tc.waitForRootAtLeast(context.Background(), 5)
+	require.NoError(t, err)
+
+	// Request above frozen size fails immediately
+	err = tc.waitForRootAtLeast(context.Background(), 10)
+	require.Error(t, err)
+	require.Equal(t, codes.FailedPrecondition, status.Code(err))
+	require.Contains(t, err.Error(), "frozen")
+}
+
+func TestClientManagerFactory_FrozenCachedClient(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	s, closeFn, err := testonly.NewMockServer(mockCtl)
+	require.NoError(t, err)
+	defer closeFn()
+
+	cfg := Config{
+		CacheSTH:              true,
+		InitLatestRootTimeout: DefaultInitLatestRootTimeout,
+		UpdaterWaitTimeout:    DefaultUpdaterWaitTimeout,
+		FrozenTreeIDs:         map[int64]bool{42: true},
+	}
+	cm := NewClientManager(nil, GRPCConfig{Address: s.Addr, Port: 0}, cfg)
+
+	conn := dialMock(t, s.Addr)
+	cm.connMu.Lock()
+	cm.connections[cm.defaultConfig] = conn
+	cm.connMu.Unlock()
+	t.Cleanup(func() { _ = cm.Close() })
+
+	c, err := cm.GetTrillianClient(42)
+	require.NoError(t, err)
+	tc, ok := c.(*TrillianClient)
+	require.True(t, ok, "expected *TrillianClient when CacheSTH=true")
+	require.True(t, tc.frozen, "expected frozen=true for tree in frozenTreeIDs")
+
+	// Non-frozen tree should not be frozen
+	c2, err := cm.GetTrillianClient(99)
+	require.NoError(t, err)
+	tc2, ok := c2.(*TrillianClient)
+	require.True(t, ok)
+	require.False(t, tc2.frozen, "expected frozen=false for tree not in frozenTreeIDs")
 }
