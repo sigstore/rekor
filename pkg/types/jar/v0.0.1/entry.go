@@ -19,7 +19,9 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -38,11 +40,9 @@ import (
 	"github.com/sigstore/rekor/pkg/types/jar"
 	"github.com/sigstore/rekor/pkg/util"
 
-	"github.com/asaskevich/govalidator"
-
 	"github.com/go-openapi/strfmt"
 
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	jarutils "github.com/sassoftware/relic/lib/signjar"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/spf13/viper"
@@ -98,7 +98,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non JAR v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(jar.Spec, &v.JARModel); err != nil {
+	if err := DecodeEntry(jar.Spec, &v.JARModel); err != nil {
 		return err
 	}
 
@@ -110,6 +110,75 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return v.validate()
 }
 
+// DecodeEntry performs direct decode into the provided output pointer
+// without mutating the receiver on error.
+func DecodeEntry(input any, output *models.JarV001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.JarV001Schema")
+	}
+	var m models.JarV001Schema
+	switch data := input.(type) {
+	case map[string]any:
+		mm := data
+		if sig, ok := mm["signature"].(map[string]any); ok {
+			m.Signature = &models.JarV001SchemaSignature{}
+			if c, ok := sig["content"].(string); ok && c != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(c))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for signature content: %w", err)
+				}
+				m.Signature.Content = strfmt.Base64(outb[:n])
+			}
+			if pk, ok := sig["publicKey"].(map[string]any); ok {
+				m.Signature.PublicKey = &models.JarV001SchemaSignaturePublicKey{}
+				if c, ok := pk["content"].(string); ok && c != "" {
+					outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+					n, err := base64.StdEncoding.Decode(outb, []byte(c))
+					if err != nil {
+						return fmt.Errorf("failed parsing base64 data for signature publicKey content: %w", err)
+					}
+					b := strfmt.Base64(outb[:n])
+					m.Signature.PublicKey.Content = &b
+				}
+			}
+		}
+		if ar, ok := mm["archive"].(map[string]any); ok {
+			m.Archive = &models.JarV001SchemaArchive{}
+			if h, ok := ar["hash"].(map[string]any); ok {
+				m.Archive.Hash = &models.JarV001SchemaArchiveHash{}
+				if alg, ok := h["algorithm"].(string); ok {
+					m.Archive.Hash.Algorithm = &alg
+				}
+				if val, ok := h["value"].(string); ok {
+					m.Archive.Hash.Value = &val
+				}
+			}
+			if c, ok := ar["content"].(string); ok && c != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(c))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for archive content: %w", err)
+				}
+				m.Archive.Content = strfmt.Base64(outb[:n])
+			}
+		}
+		*output = m
+		return nil
+	case *models.JarV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.JarV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.JarV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
+}
+
 func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, *pkcs7.Signature, error) {
 	if err := v.validate(); err != nil {
 		return nil, nil, &types.InputValidationError{Err: err}
@@ -117,7 +186,7 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, 
 
 	oldSHA := ""
 	if v.JARModel.Archive.Hash != nil && v.JARModel.Archive.Hash.Value != nil {
-		oldSHA = swag.StringValue(v.JARModel.Archive.Hash.Value)
+		oldSHA = conv.Value(v.JARModel.Archive.Hash.Value)
 	}
 
 	dataReadCloser := bytes.NewReader(v.JARModel.Archive.Content)
@@ -186,8 +255,8 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, 
 	// if we get here, all goroutines succeeded without error
 	if oldSHA == "" {
 		v.JARModel.Archive.Hash = &models.JarV001SchemaArchiveHash{
-			Algorithm: swag.String(models.JarV001SchemaArchiveHashAlgorithmSha256),
-			Value:     swag.String(computedSHA),
+			Algorithm: conv.Pointer(models.JarV001SchemaArchiveHashAlgorithmSha256),
+			Value:     conv.Pointer(computedSHA),
 		}
 
 	}
@@ -230,7 +299,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	v.JARModel = canonicalEntry
 	// wrap in valid object with kind and apiVersion set
 	jar := models.Jar{}
-	jar.APIVersion = swag.String(APIVERSION)
+	jar.APIVersion = conv.Pointer(APIVERSION)
 	jar.Spec = &canonicalEntry
 
 	return json.Marshal(&jar)
@@ -252,7 +321,11 @@ func (v *V001Entry) validate() error {
 
 	hash := archive.Hash
 	if hash != nil {
-		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
+		// Only sha256 is supported for jar v0.0.1; enforce length-by-algorithm like hashedrekord.
+		if hash.Value == nil || len(*hash.Value) != crypto.SHA256.Size()*2 {
+			return errors.New("invalid value for hash")
+		}
+		if _, err := hex.DecodeString(*hash.Value); err != nil {
 			return errors.New("invalid value for hash")
 		}
 	}
@@ -331,7 +404,7 @@ func (v *V001Entry) CreateFromArtifactProperties(ctx context.Context, props type
 		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 	returnVal.Spec = re.JARModel
 
 	return &returnVal, nil

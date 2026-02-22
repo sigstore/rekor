@@ -24,14 +24,14 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/sigstore/rekor/pkg/util"
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 func TestTimestampArtifact(t *testing.T) {
 	var out string
-	out = util.RunCli(t, "upload", "--type", "rfc3161", "--artifact", "tests/test.tsr")
-	util.OutputContains(t, out, "Created entry at")
-	uuid := util.GetUUIDFromUploadOutput(t, out)
+	out = e2eutil.RunCli(t, "upload", "--type", "rfc3161", "--artifact", "tests/test.tsr")
+	e2eutil.OutputContains(t, out, "Created entry at")
+	uuid := e2eutil.GetUUIDFromUploadOutput(t, out)
 
 	artifactBytes, err := ioutil.ReadFile("tests/test.tsr")
 	if err != nil {
@@ -39,12 +39,12 @@ func TestTimestampArtifact(t *testing.T) {
 	}
 	sha := sha256.Sum256(artifactBytes)
 
-	out = util.RunCli(t, "upload", "--type", "rfc3161", "--artifact", "tests/test.tsr")
-	util.OutputContains(t, out, "Entry already exists")
+	out = e2eutil.RunCli(t, "upload", "--type", "rfc3161", "--artifact", "tests/test.tsr")
+	e2eutil.OutputContains(t, out, "Entry already exists")
 
-	out = util.RunCli(t, "search", "--artifact", "tests/test.tsr")
-	util.OutputContains(t, out, uuid)
+	out = e2eutil.RunCli(t, "search", "--artifact", "tests/test.tsr")
+	e2eutil.OutputContains(t, out, uuid)
 
-	out = util.RunCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
-	util.OutputContains(t, out, uuid)
+	out = e2eutil.RunCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
+	e2eutil.OutputContains(t, out, uuid)
 }

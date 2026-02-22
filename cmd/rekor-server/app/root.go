@@ -25,10 +25,12 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/trillianclient"
+	cose "github.com/sigstore/rekor/pkg/types/cose/v0.0.1"
+	intoto001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
+	intoto002 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.2"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -201,7 +203,7 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Find home directory.
-		home, err := homedir.Dir()
+		home, err := os.UserHomeDir()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -219,4 +221,9 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		log.Logger.Infof("Using config file: %s", viper.ConfigFileUsed())
 	}
+
+	maxSize := viper.GetInt("max_attestation_size")
+	intoto001.SetMaxAttestationSize(maxSize)
+	intoto002.SetMaxAttestationSize(maxSize)
+	cose.SetMaxAttestationSize(maxSize)
 }

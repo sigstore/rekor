@@ -18,7 +18,9 @@ package rpm
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -29,11 +31,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/asaskevich/govalidator"
 	rpmutils "github.com/cavaliercoder/go-rpm"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
-	"golang.org/x/sync/errgroup"
+	"github.com/go-openapi/swag/conv"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -96,7 +96,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non RPM v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(rpm.Spec, &v.RPMModel); err != nil {
+	if err := DecodeEntry(rpm.Spec, &v.RPMModel); err != nil {
 		return err
 	}
 
@@ -108,124 +108,127 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return v.validate()
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*pgp.PublicKey, *rpmutils.PackageFile, error) {
+// DecodeEntry decodes input into provided output pointer without mutating receiver on error
+func DecodeEntry(input any, output *models.RpmV001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.RpmV001Schema")
+	}
+	var m models.RpmV001Schema
+	// Single switch including map[string]any fast path
+	switch data := input.(type) {
+	case map[string]any:
+		mm := data
+		if pk, ok := mm["publicKey"].(map[string]any); ok {
+			m.PublicKey = &models.RpmV001SchemaPublicKey{}
+			if c, ok := pk["content"].(string); ok && c != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(c))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for publicKey content: %w", err)
+				}
+				b := strfmt.Base64(outb[:n])
+				m.PublicKey.Content = &b
+			}
+		}
+		if pkgRaw, ok := mm["package"].(map[string]any); ok {
+			m.Package = &models.RpmV001SchemaPackage{}
+			if hdrs, ok := pkgRaw["headers"].(map[string]any); ok {
+				m.Package.Headers = make(map[string]string, len(hdrs))
+				for k, v2 := range hdrs {
+					if s, ok := v2.(string); ok {
+						m.Package.Headers[k] = s
+					}
+				}
+			}
+			if hRaw, ok := pkgRaw["hash"].(map[string]any); ok {
+				m.Package.Hash = &models.RpmV001SchemaPackageHash{}
+				if alg, ok := hRaw["algorithm"].(string); ok {
+					m.Package.Hash.Algorithm = &alg
+				}
+				if val, ok := hRaw["value"].(string); ok {
+					m.Package.Hash.Value = &val
+				}
+			}
+			if c, ok := pkgRaw["content"].(string); ok && c != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(c))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for package content: %w", err)
+				}
+				m.Package.Content = strfmt.Base64(outb[:n])
+			}
+		}
+		*output = m
+		return nil
+	case *models.RpmV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.RpmV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.RpmV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
+}
 
+func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pgp.PublicKey, *rpmutils.PackageFile, error) {
 	if err := v.validate(); err != nil {
 		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
-	g, ctx := errgroup.WithContext(ctx)
-
-	hashR, hashW := io.Pipe()
-	sigR, sigW := io.Pipe()
-	rpmR, rpmW := io.Pipe()
-	defer hashR.Close()
-	defer sigR.Close()
-	defer rpmR.Close()
-
-	closePipesOnError := types.PipeCloser(hashR, hashW, sigR, sigW, rpmR, rpmW)
-
 	oldSHA := ""
 	if v.RPMModel.Package.Hash != nil && v.RPMModel.Package.Hash.Value != nil {
-		oldSHA = swag.StringValue(v.RPMModel.Package.Hash.Value)
+		oldSHA = conv.Value(v.RPMModel.Package.Hash.Value)
 	}
 
-	g.Go(func() error {
-		defer hashW.Close()
-		defer sigW.Close()
-		defer rpmW.Close()
+	// Parse public key
+	keyObj, err := pgp.NewPublicKey(bytes.NewReader(*v.RPMModel.PublicKey.Content))
+	if err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
 
-		dataReadCloser := bytes.NewReader(v.RPMModel.Package.Content)
+	// Prepare package data and verify hash
+	dataReadCloser := bytes.NewReader(v.RPMModel.Package.Content)
+	hasher := sha256.New()
 
-		/* #nosec G110 */
-		if _, err := io.Copy(io.MultiWriter(hashW, sigW, rpmW), dataReadCloser); err != nil {
-			return closePipesOnError(err)
-		}
-		return nil
-	})
+	// Create buffers for signature verification and RPM parsing
+	sigBuffer := bytes.NewBuffer(nil)
+	rpmBuffer := bytes.NewBuffer(nil)
 
-	hashResult := make(chan string)
-
-	g.Go(func() error {
-		defer close(hashResult)
-		hasher := sha256.New()
-
-		if _, err := io.Copy(hasher, hashR); err != nil {
-			return closePipesOnError(err)
-		}
-
-		computedSHA := hex.EncodeToString(hasher.Sum(nil))
-		if oldSHA != "" && computedSHA != oldSHA {
-			return closePipesOnError(&types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case hashResult <- computedSHA:
-			return nil
-		}
-	})
-
-	var keyObj *pgp.PublicKey
-	g.Go(func() error {
-		keyReadCloser := bytes.NewReader(*v.RPMModel.PublicKey.Content)
-
-		var err error
-		keyObj, err = pgp.NewPublicKey(keyReadCloser)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		keyring, err := keyObj.KeyRing()
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		if _, err := rpmutils.GPGCheck(sigR, keyring); err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			return nil
-		}
-	})
-
-	var rpmObj *rpmutils.PackageFile
-	g.Go(func() error {
-
-		var err error
-		rpmObj, err = rpmutils.ReadPackageFile(rpmR)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-		// ReadPackageFile does not drain the entire reader so we need to discard the rest
-		if _, err = io.Copy(io.Discard, rpmR); err != nil {
-			return closePipesOnError(err)
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			return nil
-		}
-	})
-
-	computedSHA := <-hashResult
-
-	if err := g.Wait(); err != nil {
+	/* #nosec G110 */
+	if _, err := io.Copy(io.MultiWriter(hasher, sigBuffer, rpmBuffer), dataReadCloser); err != nil {
 		return nil, nil, err
 	}
 
-	// if we get here, all goroutines succeeded without error
+	computedSHA := hex.EncodeToString(hasher.Sum(nil))
+	if oldSHA != "" && computedSHA != oldSHA {
+		return nil, nil, &types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)}
+	}
+
+	// Verify GPG signature
+	keyring, err := keyObj.KeyRing()
+	if err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	if _, err := rpmutils.GPGCheck(sigBuffer, keyring); err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Parse RPM package
+	rpmObj, err := rpmutils.ReadPackageFile(rpmBuffer)
+	if err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Set hash if not provided
 	if oldSHA == "" {
 		v.RPMModel.Package.Hash = &models.RpmV001SchemaPackageHash{}
-		v.RPMModel.Package.Hash.Algorithm = swag.String(models.RpmV001SchemaPackageHashAlgorithmSha256)
-		v.RPMModel.Package.Hash.Value = swag.String(computedSHA)
+		v.RPMModel.Package.Hash.Algorithm = conv.Pointer(models.RpmV001SchemaPackageHashAlgorithmSha256)
+		v.RPMModel.Package.Hash.Value = conv.Pointer(computedSHA)
 	}
 
 	return keyObj, rpmObj, nil
@@ -274,7 +277,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	// wrap in valid object with kind and apiVersion set
 	rpm := models.Rpm{}
-	rpm.APIVersion = swag.String(APIVERSION)
+	rpm.APIVersion = conv.Pointer(APIVERSION)
 	rpm.Spec = &canonicalEntry
 
 	return json.Marshal(&rpm)
@@ -297,7 +300,11 @@ func (v V001Entry) validate() error {
 
 	hash := pkg.Hash
 	if hash != nil {
-		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
+		// Only sha256 is supported for rpm v0.0.1; enforce length accordingly.
+		if hash.Value == nil || len(*hash.Value) != crypto.SHA256.Size()*2 {
+			return errors.New("invalid value for hash")
+		}
+		if _, err := hex.DecodeString(*hash.Value); err != nil {
 			return errors.New("invalid value for hash")
 		}
 	} else if len(pkg.Content) == 0 {
@@ -365,7 +372,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 	returnVal.Spec = re.RPMModel
 
 	return &returnVal, nil

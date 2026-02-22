@@ -18,11 +18,12 @@
 package ssh
 
 import (
-	"github.com/sigstore/rekor/pkg/util"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 func TestSSH(t *testing.T) {
@@ -41,7 +42,7 @@ func TestSSH(t *testing.T) {
 	// Create a random artifact and sign it.
 	artifactPath := filepath.Join(td, "artifact")
 	sigPath := filepath.Join(td, "signature.sig")
-	artifact := util.CreateArtifact(t, artifactPath)
+	artifact := e2eutil.CreateArtifact(t, artifactPath)
 
 	sig := SSHSign(t, strings.NewReader(artifact))
 	if err := ioutil.WriteFile(sigPath, []byte(sig), 0600); err != nil {
@@ -49,16 +50,16 @@ func TestSSH(t *testing.T) {
 	}
 
 	// Now upload to the log!
-	out := util.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
+	out := e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", pubPath, "--pki-format", "ssh")
-	util.OutputContains(t, out, "Created entry at")
+	e2eutil.OutputContains(t, out, "Created entry at")
 
-	uuid := util.GetUUIDFromUploadOutput(t, out)
+	uuid := e2eutil.GetUUIDFromUploadOutput(t, out)
 
-	out = util.RunCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
+	out = e2eutil.RunCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", pubPath, "--pki-format", "ssh")
-	util.OutputContains(t, out, "Inclusion Proof")
+	e2eutil.OutputContains(t, out, "Inclusion Proof")
 
-	out = util.RunCli(t, "search", "--public-key", pubPath, "--pki-format", "ssh")
-	util.OutputContains(t, out, uuid)
+	out = e2eutil.RunCli(t, "search", "--public-key", pubPath, "--pki-format", "ssh")
+	e2eutil.OutputContains(t, out, uuid)
 }

@@ -32,7 +32,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"go.uber.org/goleak"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -158,7 +158,7 @@ func TestCrossFieldValidation(t *testing.T) {
 	for _, tc := range testCases {
 		v := &V001Entry{}
 		ts := models.Rfc3161{
-			APIVersion: swag.String(tc.entry.APIVersion()),
+			APIVersion: conv.Pointer(tc.entry.APIVersion()),
 			Spec:       tc.entry.Rfc3161Obj,
 		}
 

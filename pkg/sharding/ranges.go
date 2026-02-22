@@ -110,13 +110,13 @@ func (l *LogRanges) CompleteInitialization(ctx context.Context, tcm *trilliancli
 		}
 		resp := logClient.GetLatest(ctx, 0)
 		if resp.Err != nil {
-			return nil, fmt.Errorf("getting signed log root for tree %d: %w", r.TreeID, err)
+			return nil, fmt.Errorf("getting signed log root for tree %d: %w", r.TreeID, resp.Err)
 		}
 		var root types.LogRootV1
 		if err := root.UnmarshalBinary(resp.GetLatestResult.SignedLogRoot.LogRoot); err != nil {
 			return nil, err
 		}
-		l.inactive[i].TreeLength = int64(root.TreeSize)
+		l.inactive[i].TreeLength = int64(root.TreeSize) //nolint:gosec
 		sthMap[r.TreeID] = root
 	}
 	return sthMap, nil

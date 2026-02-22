@@ -18,9 +18,10 @@
 package jar
 
 import (
-	"github.com/sigstore/rekor/pkg/util"
 	"path/filepath"
 	"testing"
+
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 func TestJAR(t *testing.T) {
@@ -30,8 +31,8 @@ func TestJAR(t *testing.T) {
 	CreateSignedJar(t, artifactPath)
 
 	// If we do it twice, it should already exist
-	out := util.RunCli(t, "upload", "--artifact", artifactPath, "--type", "jar")
-	util.OutputContains(t, out, "Created entry at")
-	out = util.RunCli(t, "upload", "--artifact", artifactPath, "--type", "jar")
-	util.OutputContains(t, out, "Entry already exists")
+	out := e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--type", "jar")
+	e2eutil.OutputContains(t, out, "Created entry at")
+	out = e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--type", "jar")
+	e2eutil.OutputContains(t, out, "Entry already exists")
 }

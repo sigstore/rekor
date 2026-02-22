@@ -29,6 +29,7 @@ func TestLookupIndices(t *testing.T) {
 	keys := []string{"87c1b129fbadd7b6e9abc0a9ef7695436d767aece042bec198a97e949fcbe14c"}
 	value := []string{"1e1f2c881ae0608ec77ebf88a75c66d3099113a7343238f2f7a0ebb91a4ed335"}
 	redisClient, mock := redismock.NewClientMock()
+	t.Cleanup(func() { redisClient.Close() })
 	mock.Regexp().ExpectLRange(keys[0], 0, -1).SetVal(value)
 
 	isp := IndexStorageProvider{redisClient}
@@ -62,6 +63,7 @@ func TestWriteIndex(t *testing.T) {
 	keys := []string{"87c1b129fbadd7b6e9abc0a9ef7695436d767aece042bec198a97e949fcbe14c"}
 	value := []string{"1e1f2c881ae0608ec77ebf88a75c66d3099113a7343238f2f7a0ebb91a4ed335"}
 	redisClient, mock := redismock.NewClientMock()
+	t.Cleanup(func() { redisClient.Close() })
 	mock.Regexp().ExpectLPush(keys[0], value).SetVal(1)
 
 	isp := IndexStorageProvider{redisClient}
@@ -96,5 +98,9 @@ func TestUninitializedClient(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	goleak.VerifyTestMain(m)
+	goleak.VerifyTestMain(m,
+		// Ignore goroutine leak from redismock's internal factory client.
+		// See: https://github.com/go-redis/redismock/issues/102
+		goleak.IgnoreTopFunction("github.com/redis/go-redis/v9/maintnotifications.(*CircuitBreakerManager).cleanupLoop"),
+	)
 }

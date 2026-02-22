@@ -24,7 +24,7 @@ import (
 	"strconv"
 
 	"github.com/go-openapi/runtime/middleware"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/google/trillian/types"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc/codes"
@@ -65,7 +65,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	}
 
 	hashString := hex.EncodeToString(root.RootHash)
-	treeSize := int64(root.TreeSize)
+	treeSize := int64(root.TreeSize) //nolint:gosec
 
 	scBytes, err := util.CreateAndSignCheckpoint(ctx,
 		viper.GetString("rekor_server.hostname"), api.logRanges.GetActive().TreeID, root.TreeSize, root.RootHash, api.logRanges.GetActive().Signer)
@@ -96,7 +96,7 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 	}
 	ctx := params.HTTPRequest.Context()
 	treeID := api.ActiveTreeID()
-	if treeIDStr := swag.StringValue(params.TreeID); treeIDStr != "" {
+	if treeIDStr := conv.Value(params.TreeID); treeIDStr != "" {
 		id, err := strconv.ParseInt(treeIDStr, 10, 64)
 		if err != nil {
 			errMsg := fmt.Sprintf("invalid tree ID specified: %s", treeIDStr)
@@ -164,7 +164,7 @@ func inactiveShardLogInfo(ctx context.Context, tid int64, cachedCheckpoints map[
 	}
 
 	hashString := hex.EncodeToString(root.RootHash)
-	treeSize := int64(root.TreeSize)
+	treeSize := int64(root.TreeSize) //nolint:gosec
 
 	m := models.InactiveShardLogInfo{
 		RootHash:       &hashString,

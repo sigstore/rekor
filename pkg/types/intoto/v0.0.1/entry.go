@@ -31,14 +31,13 @@ import (
 
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"github.com/spf13/viper"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
-	"github.com/sigstore/rekor/pkg/pki"
+	pkitypes "github.com/sigstore/rekor/pkg/pki/pkitypes"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/intoto"
@@ -56,9 +55,15 @@ func init() {
 	}
 }
 
+var maxAttestationSize = 100 * 1024
+
+func SetMaxAttestationSize(limit int) {
+	maxAttestationSize = limit
+}
+
 type V001Entry struct {
 	IntotoObj models.IntotoV001Schema
-	keyObj    pki.PublicKey
+	keyObj    pkitypes.PublicKey
 	env       dsse.Envelope
 }
 
@@ -75,7 +80,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 
 	// add digest over entire DSSE envelope
 	if v.IntotoObj.Content != nil && v.IntotoObj.Content.Hash != nil {
-		hashkey := strings.ToLower(fmt.Sprintf("%s:%s", swag.StringValue(v.IntotoObj.Content.Hash.Algorithm), swag.StringValue(v.IntotoObj.Content.Hash.Value)))
+		hashkey := strings.ToLower(fmt.Sprintf("%s:%s", conv.Value(v.IntotoObj.Content.Hash.Algorithm), conv.Value(v.IntotoObj.Content.Hash.Value)))
 		result = append(result, hashkey)
 	} else {
 		log.Logger.Error("could not find content digest to include in index keys")
@@ -99,7 +104,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 
 	// add digest base64-decoded payload inside of DSSE envelope
 	if v.IntotoObj.Content != nil && v.IntotoObj.Content.PayloadHash != nil {
-		payloadHash := strings.ToLower(fmt.Sprintf("%s:%s", swag.StringValue(v.IntotoObj.Content.PayloadHash.Algorithm), swag.StringValue(v.IntotoObj.Content.PayloadHash.Value)))
+		payloadHash := strings.ToLower(fmt.Sprintf("%s:%s", conv.Value(v.IntotoObj.Content.PayloadHash.Algorithm), conv.Value(v.IntotoObj.Content.PayloadHash.Value)))
 		result = append(result, payloadHash)
 	} else {
 		log.Logger.Error("could not find payload digest to include in index keys")
@@ -159,6 +164,64 @@ func parseSlsaPredicate(p string) (*in_toto.ProvenanceStatement, error) {
 	return &predicate, nil
 }
 
+// DecodeEntry performs direct decode into the provided output pointer
+// without mutating the receiver on error.
+func DecodeEntry(input any, output *models.IntotoV001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.IntotoV001Schema")
+	}
+	var m models.IntotoV001Schema
+	switch data := input.(type) {
+	case map[string]any:
+		mm := data
+		if c, ok := mm["content"].(map[string]any); ok {
+			m.Content = &models.IntotoV001SchemaContent{}
+			if env, ok := c["envelope"].(string); ok {
+				m.Content.Envelope = env
+			}
+			if h, ok := c["hash"].(map[string]any); ok {
+				m.Content.Hash = &models.IntotoV001SchemaContentHash{}
+				if alg, ok := h["algorithm"].(string); ok {
+					m.Content.Hash.Algorithm = &alg
+				}
+				if val, ok := h["value"].(string); ok {
+					m.Content.Hash.Value = &val
+				}
+			}
+			if ph, ok := c["payloadHash"].(map[string]any); ok {
+				m.Content.PayloadHash = &models.IntotoV001SchemaContentPayloadHash{}
+				if alg, ok := ph["algorithm"].(string); ok {
+					m.Content.PayloadHash.Algorithm = &alg
+				}
+				if val, ok := ph["value"].(string); ok {
+					m.Content.PayloadHash.Value = &val
+				}
+			}
+		}
+		if pk, ok := mm["publicKey"].(string); ok && pk != "" {
+			dec, err := base64.StdEncoding.DecodeString(pk)
+			if err != nil {
+				return fmt.Errorf("failed parsing base64 data for public key: %w", err)
+			}
+			b := strfmt.Base64(dec)
+			m.PublicKey = &b
+		}
+		*output = m
+		return nil
+	case *models.IntotoV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.IntotoV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.IntotoV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
+}
+
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	it, ok := pe.(*models.Intoto)
 	if !ok {
@@ -166,7 +229,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	var err error
-	if err := types.DecodeEntry(it.Spec, &v.IntotoObj); err != nil {
+	if err := DecodeEntry(it.Spec, &v.IntotoObj); err != nil {
 		return err
 	}
 
@@ -219,7 +282,7 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	}
 
 	itObj := models.Intoto{}
-	itObj.APIVersion = swag.String(APIVERSION)
+	itObj.APIVersion = conv.Pointer(APIVERSION)
 	itObj.Spec = &canonicalEntry
 
 	return json.Marshal(&itObj)
@@ -269,14 +332,14 @@ func (v *V001Entry) validate() error {
 	// validation logic complete without errors, hydrate local object
 	attHash := sha256.Sum256(attBytes)
 	v.IntotoObj.Content.PayloadHash = &models.IntotoV001SchemaContentPayloadHash{
-		Algorithm: swag.String(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
-		Value:     swag.String(hex.EncodeToString(attHash[:])),
+		Algorithm: conv.Pointer(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
+		Value:     conv.Pointer(hex.EncodeToString(attHash[:])),
 	}
 
 	h := sha256.Sum256([]byte(v.IntotoObj.Content.Envelope))
 	v.IntotoObj.Content.Hash = &models.IntotoV001SchemaContentHash{
-		Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-		Value:     swag.String(hex.EncodeToString(h[:])),
+		Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
+		Value:     conv.Pointer(hex.EncodeToString(h[:])),
 	}
 	return nil
 }
@@ -292,8 +355,8 @@ func (v *V001Entry) AttestationKey() string {
 // AttestationKeyValue returns both the key and value to be persisted into attestation storage
 func (v *V001Entry) AttestationKeyValue() (string, []byte) {
 	storageSize := base64.StdEncoding.DecodedLen(len(v.env.Payload))
-	if storageSize > viper.GetInt("max_attestation_size") {
-		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, viper.GetInt("max_attestation_size"))
+	if storageSize > maxAttestationSize {
+		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, maxAttestationSize)
 		return "", nil
 	}
 	attBytes, _ := base64.StdEncoding.DecodeString(v.env.Payload)
@@ -343,17 +406,17 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	}
 	h := sha256.Sum256([]byte(re.IntotoObj.Content.Envelope))
 	re.IntotoObj.Content.Hash = &models.IntotoV001SchemaContentHash{
-		Algorithm: swag.String(models.IntotoV001SchemaContentHashAlgorithmSha256),
-		Value:     swag.String(hex.EncodeToString(h[:])),
+		Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
+		Value:     conv.Pointer(hex.EncodeToString(h[:])),
 	}
 
 	returnVal.Spec = re.IntotoObj
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 
 	return &returnVal, nil
 }
 
-func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
+func (v V001Entry) Verifiers() ([]pkitypes.PublicKey, error) {
 	if v.IntotoObj.PublicKey == nil {
 		return nil, errors.New("intoto v0.0.1 entry not initialized")
 	}
@@ -361,7 +424,7 @@ func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []pki.PublicKey{key}, nil
+	return []pkitypes.PublicKey{key}, nil
 }
 
 func (v V001Entry) ArtifactHash() (string, error) {

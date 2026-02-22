@@ -19,10 +19,10 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"slices"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
-	"golang.org/x/exp/slices"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor/pkg/indexstorage"
@@ -165,7 +165,7 @@ func NewAPI(treeID int64) (*API, error) {
 		if !ok {
 			return nil, fmt.Errorf("no root found for inactive shard %d", r.TreeID)
 		}
-		cp, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), r.TreeID, uint64(r.TreeLength), root.RootHash, r.Signer)
+		cp, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), r.TreeID, uint64(r.TreeLength), root.RootHash, r.Signer) //nolint:gosec
 		if err != nil {
 			return nil, fmt.Errorf("error signing checkpoint for inactive shard %d: %w", r.TreeID, err)
 		}

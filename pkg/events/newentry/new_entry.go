@@ -15,11 +15,11 @@
 package newentry
 
 import (
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/sigstore/rekor/pkg/events"
-	"golang.org/x/exp/slices"
 
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 )

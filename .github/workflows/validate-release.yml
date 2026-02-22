@@ -26,28 +26,41 @@ permissions: {}
 
 jobs:
   check-signature:
+    name: Check Signature
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
     container:
-      image: ghcr.io/sigstore/cosign/cosign:v2.5.3-dev@sha256:fe84ab87222b60d2d87f5efcb8ef3cfd895897c088fbeb973280689c81aedff1
+      image: ghcr.io/sigstore/cosign/cosign:v3.0.4-dev@sha256:782e916a04d4b879fdadb94366f9b58fdf13b6b2e24635a9c9b6cbf57799df02
 
     steps:
       - name: Check Signature
         run: |
-          cosign verify ghcr.io/gythialy/golang-cross:v1.24.5-0@sha256:492c51e60ed27ff597511b0a24e6c5acb6e3e2e97bb68d7bd35f81a7e3dfa4d0 \
+          cosign verify ghcr.io/gythialy/golang-cross:v1.25.7-0@sha256:a0387993e09553d95e73e0a0d6e1fc9b4989f5b5eea9759e0a6bbfba464840d2 \
           --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-          --certificate-identity "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.24.5-0"
+          --certificate-identity "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.25.7-0"
         env:
           TUF_ROOT: /tmp
 
   validate-release-job:
+    name: Validate Release
     runs-on: ubuntu-latest
     needs:
       - check-signature
+
+    permissions:
+      contents: read
+
     container:
-      image: ghcr.io/gythialy/golang-cross:v1.24.5-0@sha256:492c51e60ed27ff597511b0a24e6c5acb6e3e2e97bb68d7bd35f81a7e3dfa4d0
+      image: ghcr.io/gythialy/golang-cross:v1.25.7-0@sha256:a0387993e09553d95e73e0a0d6e1fc9b4989f5b5eea9759e0a6bbfba464840d2
+      volumes:
+        - /usr:/host_usr
+        - /opt:/host_opt
 
     steps:
-      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -61,6 +74,25 @@ jobs:
       # - https://github.com/actions/checkout/issues/1048
       # - https://github.com/actions/runner-images/issues/6775
       - run: git config --system --add safe.directory /__w/rekor/rekor
+
+      # note this runs from within the golang-cross container, so if we want to free up space
+      # on the host, we have to reach through the bind mounts to clean up unused content on the runners
+      - name: free up disk space for the release
+        run: |
+          rm -rf /host_usr/share/dotnet || true
+          rm -rf /host_usr/share/swift || true
+          rm -rf /host_usr/local/lib/android || true
+          rm -rf /host_usr/local/.ghcup || true
+          rm -rf /host_usr/local/graalvm/ || true
+          rm -rf /host_usr/local/share/powershell || true
+          rm -rf /host_usr/local/share/chromium || true
+          rm -rf /host_usr/local/lib/node_modules || true
+          rm -rf /host_usr/lib/google-cloud-sdk || true
+          rm -rf /host_usr/local/share/boost || true
+          rm -rf /host_opt/hostedtoolcache/ || true
+          rm -rf /host_opt/ghc || true
+      - name: check disk space
+        run: df -h
 
       - name: goreleaser snapshot
         run: make snapshot

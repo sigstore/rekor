@@ -29,11 +29,11 @@ import (
 
 type CobraCmd func(cmd *cobra.Command, args []string)
 
-type formatCmd func(args []string) (interface{}, error)
+type formatCmd func(cmd *cobra.Command, args []string) (interface{}, error)
 
 func WrapCmd(f formatCmd) CobraCmd {
-	return func(_ *cobra.Command, args []string) {
-		obj, err := f(args)
+	return func(cmd *cobra.Command, args []string) {
+		obj, err := f(cmd, args)
 		if err != nil {
 			log.CliLogger.Fatal(err)
 		}

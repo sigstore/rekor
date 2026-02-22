@@ -22,6 +22,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -31,9 +32,8 @@ import (
 	"strings"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/spf13/viper"
 	gocose "github.com/veraison/go-cose"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -58,6 +58,12 @@ func init() {
 	}
 }
 
+var maxAttestationSize = 100 * 1024
+
+func SetMaxAttestationSize(limit int) {
+	maxAttestationSize = limit
+}
+
 type V001Entry struct {
 	CoseObj      models.CoseV001Schema
 	keyObj       pki.PublicKey
@@ -77,6 +83,9 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
 	// We add the key, the hash of the overall cose envelope, and the hash of the payload itself as keys.
+	if v.CoseObj.PublicKey == nil {
+		return nil, errors.New("missing public key")
+	}
 	keyObj, err := x509.NewPublicKey(bytes.NewReader(*v.CoseObj.PublicKey))
 	if err != nil {
 		return nil, err
@@ -154,7 +163,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	}
 
 	var err error
-	if err := types.DecodeEntry(it.Spec, &v.CoseObj); err != nil {
+	if err := DecodeEntry(it.Spec, &v.CoseObj); err != nil {
 		return err
 	}
 
@@ -163,6 +172,9 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
+	if v.CoseObj.PublicKey == nil {
+		return errors.New("missing public key")
+	}
 	v.keyObj, err = x509.NewPublicKey(bytes.NewReader(*v.CoseObj.PublicKey))
 	if err != nil {
 		return err
@@ -193,8 +205,15 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	if v.keyObj == nil {
-		return nil, errors.New("cannot canonicalze empty key")
+		return nil, errors.New("cannot canonicalize empty key")
 	}
+	if v.sign1Msg == nil {
+		return nil, errors.New("signed message uninitialized")
+	}
+	if v.sign1Msg.Payload == nil {
+		return nil, errors.New("payload empty")
+	}
+
 	pk, err := v.keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err
@@ -207,18 +226,18 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 		PublicKey: &pkb,
 		Data: &models.CoseV001SchemaData{
 			PayloadHash: &models.CoseV001SchemaDataPayloadHash{
-				Algorithm: swag.String(models.CoseV001SchemaDataPayloadHashAlgorithmSha256),
-				Value:     swag.String(hex.EncodeToString(h[:])),
+				Algorithm: conv.Pointer(models.CoseV001SchemaDataPayloadHashAlgorithmSha256),
+				Value:     conv.Pointer(hex.EncodeToString(h[:])),
 			},
 			EnvelopeHash: &models.CoseV001SchemaDataEnvelopeHash{
-				Algorithm: swag.String(models.CoseV001SchemaDataEnvelopeHashAlgorithmSha256),
-				Value:     swag.String(hex.EncodeToString(v.envelopeHash)),
+				Algorithm: conv.Pointer(models.CoseV001SchemaDataEnvelopeHashAlgorithmSha256),
+				Value:     conv.Pointer(hex.EncodeToString(v.envelopeHash)),
 			},
 		},
 	}
 
 	itObj := models.Cose{}
-	itObj.APIVersion = swag.String(APIVERSION)
+	itObj.APIVersion = conv.Pointer(APIVERSION)
 	itObj.Spec = &canonicalEntry
 
 	return json.Marshal(&itObj)
@@ -290,12 +309,85 @@ func (v *V001Entry) AttestationKey() string {
 		hex.EncodeToString(v.envelopeHash))
 }
 
+// DecodeEntry performs direct decode into the provided output pointer
+// without mutating the receiver on error.
+func DecodeEntry(input any, output *models.CoseV001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.CoseV001Schema")
+	}
+	var m models.CoseV001Schema
+	// Typed switch including map fast path
+	switch data := input.(type) {
+	case map[string]any:
+		mm := data
+		if msg, ok := mm["message"].(string); ok && msg != "" {
+			outb := make([]byte, base64.StdEncoding.DecodedLen(len(msg)))
+			n, err := base64.StdEncoding.Decode(outb, []byte(msg))
+			if err != nil {
+				return fmt.Errorf("failed parsing base64 data for message: %w", err)
+			}
+			m.Message = strfmt.Base64(outb[:n])
+		}
+		if pk, ok := mm["publicKey"].(string); ok && pk != "" {
+			outb := make([]byte, base64.StdEncoding.DecodedLen(len(pk)))
+			n, err := base64.StdEncoding.Decode(outb, []byte(pk))
+			if err != nil {
+				return fmt.Errorf("failed parsing base64 data for publicKey: %w", err)
+			}
+			b := strfmt.Base64(outb[:n])
+			m.PublicKey = &b
+		}
+		if d, ok := mm["data"].(map[string]any); ok {
+			m.Data = &models.CoseV001SchemaData{}
+			if ph, ok := d["payloadHash"].(map[string]any); ok {
+				m.Data.PayloadHash = &models.CoseV001SchemaDataPayloadHash{}
+				if alg, ok := ph["algorithm"].(string); ok {
+					m.Data.PayloadHash.Algorithm = &alg
+				}
+				if val, ok := ph["value"].(string); ok {
+					m.Data.PayloadHash.Value = &val
+				}
+			}
+			if eh, ok := d["envelopeHash"].(map[string]any); ok {
+				m.Data.EnvelopeHash = &models.CoseV001SchemaDataEnvelopeHash{}
+				if alg, ok := eh["algorithm"].(string); ok {
+					m.Data.EnvelopeHash.Algorithm = &alg
+				}
+				if val, ok := eh["value"].(string); ok {
+					m.Data.EnvelopeHash.Value = &val
+				}
+			}
+			if aad, ok := d["aad"].(string); ok && aad != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(aad)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(aad))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for aad: %w", err)
+				}
+				m.Data.Aad = strfmt.Base64(outb[:n])
+			}
+		}
+		*output = m
+		return nil
+	case *models.CoseV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.CoseV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.CoseV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
+}
+
 // AttestationKeyValue returns both the key and value to be persisted
 // into attestation storage
 func (v *V001Entry) AttestationKeyValue() (string, []byte) {
 	storageSize := len(v.CoseObj.Message)
-	if storageSize > viper.GetInt("max_attestation_size") {
-		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, viper.GetInt("max_attestation_size"))
+	if storageSize > maxAttestationSize {
+		log.Logger.Infof("Skipping attestation storage, size %d is greater than max %d", storageSize, maxAttestationSize)
 		return "", nil
 	}
 
@@ -346,7 +438,7 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	}
 
 	returnVal.Spec = re.CoseObj
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 
 	return &returnVal, nil
 }

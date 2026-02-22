@@ -16,10 +16,13 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -53,7 +56,9 @@ var rootCmd = &cobra.Command{
 
 // Execute runs the base CLI
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		log.CliLogger.Fatal(err)
 	}
 }
@@ -99,7 +104,7 @@ func initConfig(cmd *cobra.Command) error {
 		viper.SetConfigFile(viper.GetString("config"))
 	} else {
 		// Find home directory.
-		home, err := homedir.Dir()
+		home, err := os.UserHomeDir()
 		if err != nil {
 			return err
 		}

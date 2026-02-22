@@ -32,7 +32,7 @@ import (
 	"github.com/sigstore/rekor/pkg/types/rfc3161"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/sassoftware/relic/lib/pkcs9"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -74,7 +74,7 @@ func NewEntryFromBytes(timestamp []byte) models.ProposedEntry {
 
 	return &models.Rfc3161{
 		Spec:       re.Rfc3161Obj,
-		APIVersion: swag.String(re.APIVersion()),
+		APIVersion: conv.Pointer(re.APIVersion()),
 	}
 }
 
@@ -101,7 +101,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non Rfc3161 v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(rfc3161Resp.Spec, &v.Rfc3161Obj); err != nil {
+	if err := DecodeEntry(rfc3161Resp.Spec, &v.Rfc3161Obj); err != nil {
 		return err
 	}
 
@@ -119,6 +119,42 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return nil
 }
 
+// DecodeEntry decodes input into provided output pointer without mutating receiver on error
+func DecodeEntry(input any, output *models.Rfc3161V001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.Rfc3161V001Schema")
+	}
+	var m models.Rfc3161V001Schema
+	switch data := input.(type) {
+	case map[string]any:
+		if tsr, ok := data["tsr"].(map[string]any); ok {
+			m.Tsr = &models.Rfc3161V001SchemaTsr{}
+			if c, ok := tsr["content"].(string); ok && c != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(c))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for tsr content: %w", err)
+				}
+				b := strfmt.Base64(outb[:n])
+				m.Tsr.Content = &b
+			}
+		}
+		*output = m
+		return nil
+	case *models.Rfc3161V001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.Rfc3161V001Schema")
+		}
+		*output = *data
+		return nil
+	case models.Rfc3161V001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
+}
+
 func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	if v.tsrContent == nil {
 		return nil, &types.InputValidationError{Err: errors.New("tsr content must be set before canonicalizing")}
@@ -131,7 +167,7 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 
 	// wrap in valid object with kind and apiVersion set
 	ref3161Obj := models.Rfc3161{}
-	ref3161Obj.APIVersion = swag.String(APIVERSION)
+	ref3161Obj.APIVersion = conv.Pointer(APIVERSION)
 	ref3161Obj.Spec = &canonicalEntry
 
 	return json.Marshal(&ref3161Obj)
@@ -203,7 +239,7 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	}
 
 	returnVal.Spec = re.Rfc3161Obj
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 
 	return &returnVal, nil
 }

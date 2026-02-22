@@ -27,7 +27,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"go.uber.org/goleak"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -71,7 +71,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format: swag.String("pgp"),
+						Format: conv.Pointer("pgp"),
 					},
 				},
 			},
@@ -83,7 +83,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:  swag.String("pgp"),
+						Format:  conv.Pointer("pgp"),
 						Content: (*strfmt.Base64)(&sigBytes),
 					},
 				},
@@ -96,7 +96,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:    swag.String("pgp"),
+						Format:    conv.Pointer("pgp"),
 						Content:   (*strfmt.Base64)(&sigBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{},
 					},
@@ -110,7 +110,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:  swag.String("pgp"),
+						Format:  conv.Pointer("pgp"),
 						Content: (*strfmt.Base64)(&sigBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: (*strfmt.Base64)(&keyBytes),
@@ -126,7 +126,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:  swag.String("pgp"),
+						Format:  conv.Pointer("pgp"),
 						Content: (*strfmt.Base64)(&sigBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: (*strfmt.Base64)(&keyBytes),
@@ -143,7 +143,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:  swag.String("pgp"),
+						Format:  conv.Pointer("pgp"),
 						Content: (*strfmt.Base64)(&dataBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: (*strfmt.Base64)(&keyBytes),
@@ -163,7 +163,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:  swag.String("pgp"),
+						Format:  conv.Pointer("pgp"),
 						Content: (*strfmt.Base64)(&sigBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: (*strfmt.Base64)(&dataBytes),
@@ -183,7 +183,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:  swag.String("pgp"),
+						Format:  conv.Pointer("pgp"),
 						Content: (*strfmt.Base64)(&sigBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: (*strfmt.Base64)(&keyBytes),
@@ -203,7 +203,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:  swag.String("pgp"),
+						Format:  conv.Pointer("pgp"),
 						Content: (*strfmt.Base64)(&sigBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: (*strfmt.Base64)(&keyBytes),
@@ -223,7 +223,7 @@ func TestCrossFieldValidation(t *testing.T) {
 	for _, tc := range testCases {
 		v := &V001Entry{}
 		r := models.Rekord{
-			APIVersion: swag.String(tc.entry.APIVersion()),
+			APIVersion: conv.Pointer(tc.entry.APIVersion()),
 			Spec:       tc.entry.RekordObj,
 		}
 
@@ -327,7 +327,7 @@ func TestInsertable(t *testing.T) {
 					},
 					Signature: &models.RekordV001SchemaSignature{
 						Content: &sig,
-						Format:  swag.String("format"),
+						Format:  conv.Pointer("format"),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: &pub,
 						},
@@ -345,7 +345,7 @@ func TestInsertable(t *testing.T) {
 					},
 					Signature: &models.RekordV001SchemaSignature{
 						Content:   &sig,
-						Format:    swag.String("format"),
+						Format:    conv.Pointer("format"),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							//Content: &pub,
 						},
@@ -363,7 +363,7 @@ func TestInsertable(t *testing.T) {
 					},
 					Signature: &models.RekordV001SchemaSignature{
 						Content: &sig,
-						Format:  swag.String("format"),
+						Format:  conv.Pointer("format"),
 						/*
 							PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 								Content: &pub,
@@ -383,7 +383,7 @@ func TestInsertable(t *testing.T) {
 					},
 					Signature: &models.RekordV001SchemaSignature{
 						Content: &sig,
-						//Format:  swag.String("format"),
+						//Format:  conv.Pointer("format"),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: &pub,
 						},
@@ -401,7 +401,7 @@ func TestInsertable(t *testing.T) {
 					},
 					Signature: &models.RekordV001SchemaSignature{
 						//Content: &sig,
-						Format: swag.String("format"),
+						Format: conv.Pointer("format"),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: &pub,
 						},
@@ -420,7 +420,7 @@ func TestInsertable(t *testing.T) {
 					/*
 						Signature: &models.RekordV001SchemaSignature{
 							Content: &sig,
-							Format:  swag.String("format"),
+							Format:  conv.Pointer("format"),
 							PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 								Content: &pub,
 							},
@@ -439,7 +439,7 @@ func TestInsertable(t *testing.T) {
 					},
 					Signature: &models.RekordV001SchemaSignature{
 						Content: &sig,
-						Format:  swag.String("format"),
+						Format:  conv.Pointer("format"),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: &pub,
 						},
@@ -459,7 +459,7 @@ func TestInsertable(t *testing.T) {
 					*/
 					Signature: &models.RekordV001SchemaSignature{
 						Content: &sig,
-						Format:  swag.String("format"),
+						Format:  conv.Pointer("format"),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: &pub,
 						},
@@ -478,7 +478,7 @@ func TestInsertable(t *testing.T) {
 						},
 						Signature: &models.RekordV001SchemaSignature{
 							Content: &sig,
-							Format:  swag.String("format"),
+							Format:  conv.Pointer("format"),
 							PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 								Content: &pub,
 							},

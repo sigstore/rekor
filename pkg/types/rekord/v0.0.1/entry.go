@@ -18,7 +18,9 @@ package rekord
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -28,9 +30,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/asaskevich/govalidator"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -102,7 +103,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non Rekord v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(rekord.Spec, &v.RekordObj); err != nil {
+	if err := DecodeEntry(rekord.Spec, &v.RekordObj); err != nil {
 		return err
 	}
 
@@ -114,6 +115,81 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	// cross field validation
 	return v.validate()
 
+}
+
+// DecodeEntry performs direct JSON unmarshaling without reflection,
+// equivalent to types.DecodeEntry but with better performance for Rekord v0.0.1.
+// It avoids mutating the receiver on error.
+func DecodeEntry(input any, output *models.RekordV001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.RekordV001Schema")
+	}
+	var m models.RekordV001Schema
+	// Single switch including map[string]any fast path
+	switch data := input.(type) {
+	case map[string]any:
+		mm := data
+		if s, ok := mm["signature"].(map[string]any); ok {
+			m.Signature = &models.RekordV001SchemaSignature{}
+			if f, ok := s["format"].(string); ok {
+				m.Signature.Format = &f
+			}
+			if c, ok := s["content"].(string); ok && c != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(c))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for signature content: %w", err)
+				}
+				b := strfmt.Base64(outb[:n])
+				m.Signature.Content = &b
+			}
+			if pk, ok := s["publicKey"].(map[string]any); ok {
+				m.Signature.PublicKey = &models.RekordV001SchemaSignaturePublicKey{}
+				if c, ok := pk["content"].(string); ok && c != "" {
+					outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+					n, err := base64.StdEncoding.Decode(outb, []byte(c))
+					if err != nil {
+						return fmt.Errorf("failed parsing base64 data for signature publicKey content: %w", err)
+					}
+					b := strfmt.Base64(outb[:n])
+					m.Signature.PublicKey.Content = &b
+				}
+			}
+		}
+		if d, ok := mm["data"].(map[string]any); ok {
+			m.Data = &models.RekordV001SchemaData{}
+			if h, ok := d["hash"].(map[string]any); ok {
+				m.Data.Hash = &models.RekordV001SchemaDataHash{}
+				if alg, ok := h["algorithm"].(string); ok {
+					m.Data.Hash.Algorithm = &alg
+				}
+				if val, ok := h["value"].(string); ok {
+					m.Data.Hash.Value = &val
+				}
+			}
+			if c, ok := d["content"].(string); ok && c != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(c))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for data content: %w", err)
+				}
+				m.Data.Content = strfmt.Base64(outb[:n])
+			}
+		}
+		*output = m
+		return nil
+	case *models.RekordV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.RekordV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.RekordV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
 }
 
 func (v *V001Entry) fetchExternalEntities(_ context.Context) (pki.PublicKey, pki.Signature, error) {
@@ -131,7 +207,7 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (pki.PublicKey, pki
 
 	// Validate hash if provided
 	if v.RekordObj.Data.Hash != nil && v.RekordObj.Data.Hash.Value != nil {
-		oldSHA := swag.StringValue(v.RekordObj.Data.Hash.Value)
+		oldSHA := conv.Value(v.RekordObj.Data.Hash.Value)
 		if computedSHA != oldSHA {
 			return nil, nil, &types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)}
 		}
@@ -156,8 +232,8 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (pki.PublicKey, pki
 	// Set computed hash if not provided
 	if v.RekordObj.Data.Hash == nil {
 		v.RekordObj.Data.Hash = &models.RekordV001SchemaDataHash{}
-		v.RekordObj.Data.Hash.Algorithm = swag.String(models.RekordV001SchemaDataHashAlgorithmSha256)
-		v.RekordObj.Data.Hash.Value = swag.String(computedSHA)
+		v.RekordObj.Data.Hash.Algorithm = conv.Pointer(models.RekordV001SchemaDataHashAlgorithmSha256)
+		v.RekordObj.Data.Hash.Value = conv.Pointer(computedSHA)
 	}
 
 	return keyObj, sigObj, nil
@@ -197,7 +273,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	// wrap in valid object with kind and apiVersion set
 	rekordObj := models.Rekord{}
-	rekordObj.APIVersion = swag.String(APIVERSION)
+	rekordObj.APIVersion = conv.Pointer(APIVERSION)
 	rekordObj.Spec = &canonicalEntry
 
 	v.RekordObj = canonicalEntry
@@ -235,7 +311,11 @@ func (v V001Entry) validate() error {
 
 	hash := data.Hash
 	if hash != nil {
-		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
+		// Rekord v0.0.1 schema enumerates sha256; enforce length accordingly.
+		if hash.Value == nil || len(*hash.Value) != crypto.SHA256.Size()*2 {
+			return errors.New("invalid value for hash")
+		}
+		if _, err := hex.DecodeString(*hash.Value); err != nil {
 			return errors.New("invalid value for hash")
 		}
 	} else if len(data.Content) == 0 {
@@ -280,13 +360,13 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	re.RekordObj.Signature = &models.RekordV001SchemaSignature{}
 	switch props.PKIFormat {
 	case "pgp":
-		re.RekordObj.Signature.Format = swag.String(models.RekordV001SchemaSignatureFormatPgp)
+		re.RekordObj.Signature.Format = conv.Pointer(models.RekordV001SchemaSignatureFormatPgp)
 	case "minisign":
-		re.RekordObj.Signature.Format = swag.String(models.RekordV001SchemaSignatureFormatMinisign)
+		re.RekordObj.Signature.Format = conv.Pointer(models.RekordV001SchemaSignatureFormatMinisign)
 	case "x509":
-		re.RekordObj.Signature.Format = swag.String(models.RekordV001SchemaSignatureFormatX509)
+		re.RekordObj.Signature.Format = conv.Pointer(models.RekordV001SchemaSignatureFormatX509)
 	case "ssh":
-		re.RekordObj.Signature.Format = swag.String(models.RekordV001SchemaSignatureFormatSSH)
+		re.RekordObj.Signature.Format = conv.Pointer(models.RekordV001SchemaSignatureFormatSSH)
 	default:
 		return nil, fmt.Errorf("unexpected format of public key: %s", props.PKIFormat)
 	}
@@ -329,7 +409,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 	returnVal.Spec = re.RekordObj
 
 	return &returnVal, nil

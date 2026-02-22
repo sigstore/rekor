@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -29,7 +30,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
@@ -37,7 +38,6 @@ import (
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/helm"
 	"github.com/sigstore/rekor/pkg/util"
-	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -103,7 +103,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non Helm v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(helm.Spec, &v.HelmObj); err != nil {
+	if err := DecodeEntry(helm.Spec, &v.HelmObj); err != nil {
 		return err
 	}
 
@@ -116,88 +116,108 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return v.validate()
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*helm.Provenance, *pgp.PublicKey, *pgp.Signature, error) {
+// DecodeEntry performs direct decode into the provided output pointer
+// without mutating the receiver on error.
+func DecodeEntry(input any, output *models.HelmV001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.HelmV001Schema")
+	}
+	var m models.HelmV001Schema
+	// Single switch including map fast path
+	switch data := input.(type) {
+	case map[string]any:
+		mm := data
+		if pk, ok := mm["publicKey"].(map[string]any); ok {
+			m.PublicKey = &models.HelmV001SchemaPublicKey{}
+			if c, ok := pk["content"].(string); ok && c != "" {
+				outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+				n, err := base64.StdEncoding.Decode(outb, []byte(c))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for publicKey content: %w", err)
+				}
+				b := strfmt.Base64(outb[:n])
+				m.PublicKey.Content = &b
+			}
+		}
+		if chart, ok := mm["chart"].(map[string]any); ok {
+			m.Chart = &models.HelmV001SchemaChart{}
+			if h, ok := chart["hash"].(map[string]any); ok {
+				m.Chart.Hash = &models.HelmV001SchemaChartHash{}
+				if alg, ok := h["algorithm"].(string); ok {
+					m.Chart.Hash.Algorithm = &alg
+				}
+				if val, ok := h["value"].(string); ok {
+					m.Chart.Hash.Value = &val
+				}
+			}
+			if prov, ok := chart["provenance"].(map[string]any); ok {
+				m.Chart.Provenance = &models.HelmV001SchemaChartProvenance{}
+				if s, ok := prov["signature"].(map[string]any); ok {
+					m.Chart.Provenance.Signature = &models.HelmV001SchemaChartProvenanceSignature{}
+					if c, ok := s["content"].(string); ok && c != "" {
+						outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+						n, err := base64.StdEncoding.Decode(outb, []byte(c))
+						if err != nil {
+							return fmt.Errorf("failed parsing base64 data for provenance signature content: %w", err)
+						}
+						m.Chart.Provenance.Signature.Content = strfmt.Base64(outb[:n])
+					}
+				}
+				if c, ok := prov["content"].(string); ok && c != "" {
+					outb := make([]byte, base64.StdEncoding.DecodedLen(len(c)))
+					n, err := base64.StdEncoding.Decode(outb, []byte(c))
+					if err != nil {
+						return fmt.Errorf("failed parsing base64 data for provenance content: %w", err)
+					}
+					m.Chart.Provenance.Content = strfmt.Base64(outb[:n])
+				}
+			}
+		}
+		*output = m
+		return nil
+	case *models.HelmV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.HelmV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.HelmV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
+}
+
+func (v *V001Entry) fetchExternalEntities(_ context.Context) (*helm.Provenance, *pgp.PublicKey, *pgp.Signature, error) {
 	if err := v.validate(); err != nil {
 		return nil, nil, nil, &types.InputValidationError{Err: err}
 	}
 
-	g, ctx := errgroup.WithContext(ctx)
-
-	provenanceR, provenanceW := io.Pipe()
-	defer provenanceR.Close()
-
-	closePipesOnError := types.PipeCloser(provenanceR, provenanceW)
-
-	g.Go(func() error {
-		defer provenanceW.Close()
-
-		dataReadCloser := bytes.NewReader(v.HelmObj.Chart.Provenance.Content)
-
-		/* #nosec G110 */
-		if _, err := io.Copy(provenanceW, dataReadCloser); err != nil {
-			return closePipesOnError(err)
-		}
-		return nil
-	})
-
-	keyResult := make(chan *pgp.PublicKey)
-
-	g.Go(func() error {
-		defer close(keyResult)
-		keyReadCloser := bytes.NewReader(*v.HelmObj.PublicKey.Content)
-
-		keyObj, err := pgp.NewPublicKey(keyReadCloser)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case keyResult <- keyObj:
-			return nil
-		}
-	})
-
-	var key *pgp.PublicKey
-	provenance := &helm.Provenance{}
-	var sig *pgp.Signature
-	g.Go(func() error {
-
-		if err := provenance.Unmarshal(provenanceR); err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		key = <-keyResult
-		if key == nil {
-			return closePipesOnError(errors.New("error processing public key"))
-		}
-
-		// Set signature
-		var err error
-		sig, err = pgp.NewSignature(provenance.Block.ArmoredSignature.Body)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		// Verify signature
-		if err := sig.Verify(bytes.NewReader(provenance.Block.Bytes), key); err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			return nil
-		}
-	})
-
-	if err := g.Wait(); err != nil {
-		return nil, nil, nil, err
+	// Parse public key
+	keyObj, err := pgp.NewPublicKey(bytes.NewReader(*v.HelmObj.PublicKey.Content))
+	if err != nil {
+		return nil, nil, nil, &types.InputValidationError{Err: err}
 	}
 
-	return provenance, key, sig, nil
+	// Parse provenance
+	provenance := &helm.Provenance{}
+	if err := provenance.Unmarshal(bytes.NewReader(v.HelmObj.Chart.Provenance.Content)); err != nil {
+		return nil, nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Create signature
+	sig, err := pgp.NewSignature(provenance.Block.ArmoredSignature.Body)
+	if err != nil {
+		return nil, nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Verify signature
+	if err := sig.Verify(bytes.NewReader(provenance.Block.Bytes), keyObj); err != nil {
+		return nil, nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	return provenance, keyObj, sig, nil
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
@@ -244,7 +264,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	// wrap in valid object with kind and apiVersion set
 	helmObj := models.Helm{}
-	helmObj.APIVersion = swag.String(APIVERSION)
+	helmObj.APIVersion = conv.Pointer(APIVERSION)
 	helmObj.Spec = &canonicalEntry
 
 	return json.Marshal(&helmObj)
@@ -343,7 +363,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 	returnVal.Spec = re.HelmObj
 
 	return &returnVal, nil

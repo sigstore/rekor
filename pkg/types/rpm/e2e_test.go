@@ -18,10 +18,11 @@
 package rpm
 
 import (
-	"github.com/sigstore/rekor/pkg/util"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
+
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 var publicKey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -80,13 +81,13 @@ func TestUploadVerifyRpm(t *testing.T) {
 	}
 
 	// Verify should fail initially
-	util.RunCliErr(t, "verify", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
+	e2eutil.RunCliErr(t, "verify", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
 
 	// It should upload successfully.
-	out := util.RunCli(t, "upload", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
-	util.OutputContains(t, out, "Created entry at")
+	out := e2eutil.RunCli(t, "upload", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
+	e2eutil.OutputContains(t, out, "Created entry at")
 
 	// Now we should be able to verify it.
-	out = util.RunCli(t, "verify", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
-	util.OutputContains(t, out, "Inclusion Proof:")
+	out = e2eutil.RunCli(t, "verify", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
+	e2eutil.OutputContains(t, out, "Inclusion Proof:")
 }

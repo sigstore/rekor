@@ -16,7 +16,7 @@
 //go:build e2e
 // +build e2e
 
-package x509
+package e2ex509
 
 import (
 	"bytes"
@@ -31,7 +31,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/sigstore/rekor/pkg/util"
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
@@ -149,7 +149,7 @@ func SignX509Cert(b []byte) ([]byte, error) {
 // CreatedX509SignedArtifact gets the test dir setup correctly with some random artifacts and keys.
 func CreatedX509SignedArtifact(t *testing.T, artifactPath, sigPath string) {
 	t.Helper()
-	artifact := util.CreateArtifact(t, artifactPath)
+	artifact := e2eutil.CreateArtifact(t, artifactPath)
 
 	// Sign it with our key and write that to a file
 	signature, err := SignX509Cert([]byte(artifact))

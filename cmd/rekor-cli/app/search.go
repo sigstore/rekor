@@ -27,7 +27,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -96,14 +96,14 @@ var searchCmd = &cobra.Command{
 			os.Exit(1)
 		}
 	},
-	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
+	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (interface{}, error) {
 		log := log.CliLogger
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log))
 		if err != nil {
 			return nil, err
 		}
 
-		params := index.NewSearchIndexParams()
+		params := index.NewSearchIndexParamsWithContext(cmd.Context())
 		params.SetTimeout(viper.GetDuration("timeout"))
 		params.Query = &models.SearchIndex{}
 
@@ -115,13 +115,12 @@ var searchCmd = &cobra.Command{
 			hasher := sha256.New()
 			var tee io.Reader
 			if isURL(artifactStr) {
-				/* #nosec G107 */
-				resp, err := http.Get(artifactStr)
+				r, err := util.FileOrURLReadCloser(cmd.Context(), artifactStr, nil)
 				if err != nil {
 					return nil, fmt.Errorf("error fetching '%v': %w", artifactStr, err)
 				}
-				defer resp.Body.Close()
-				tee = io.TeeReader(resp.Body, hasher)
+				defer r.Close()
+				tee = io.TeeReader(r, hasher)
 			} else {
 				file, err := os.Open(filepath.Clean(artifactStr))
 				if err != nil {
@@ -151,15 +150,15 @@ var searchCmd = &cobra.Command{
 			pkiFormat := viper.GetString("pki-format")
 			switch pkiFormat {
 			case "pgp":
-				params.Query.PublicKey.Format = swag.String(models.SearchIndexPublicKeyFormatPgp)
+				params.Query.PublicKey.Format = conv.Pointer(models.SearchIndexPublicKeyFormatPgp)
 			case "minisign":
-				params.Query.PublicKey.Format = swag.String(models.SearchIndexPublicKeyFormatMinisign)
+				params.Query.PublicKey.Format = conv.Pointer(models.SearchIndexPublicKeyFormatMinisign)
 			case "x509":
-				params.Query.PublicKey.Format = swag.String(models.SearchIndexPublicKeyFormatX509)
+				params.Query.PublicKey.Format = conv.Pointer(models.SearchIndexPublicKeyFormatX509)
 			case "ssh":
-				params.Query.PublicKey.Format = swag.String(models.SearchIndexPublicKeyFormatSSH)
+				params.Query.PublicKey.Format = conv.Pointer(models.SearchIndexPublicKeyFormatSSH)
 			case "tuf":
-				params.Query.PublicKey.Format = swag.String(models.SearchIndexPublicKeyFormatTUF)
+				params.Query.PublicKey.Format = conv.Pointer(models.SearchIndexPublicKeyFormatTUF)
 			default:
 				return nil, fmt.Errorf("unknown pki-format %v", pkiFormat)
 			}
@@ -167,7 +166,16 @@ var searchCmd = &cobra.Command{
 			splitPubKeyString := strings.Split(publicKeyStr, ",")
 			if len(splitPubKeyString) == 1 {
 				if isURL(splitPubKeyString[0]) {
-					params.Query.PublicKey.URL = strfmt.URI(splitPubKeyString[0])
+					r, err := util.FileOrURLReadCloser(cmd.Context(), splitPubKeyString[0], nil)
+					if err != nil {
+						return nil, fmt.Errorf("error fetching '%v': %w", splitPubKeyString[0], err)
+					}
+					defer r.Close()
+					c, err := io.ReadAll(r)
+					if err != nil {
+						return nil, fmt.Errorf("error reading public key from '%v': %w", splitPubKeyString[0], err)
+					}
+					params.Query.PublicKey.Content = c
 				} else {
 					keyBytes, err := os.ReadFile(filepath.Clean(splitPubKeyString[0]))
 					if err != nil {

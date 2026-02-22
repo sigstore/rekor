@@ -19,10 +19,11 @@ package rpm
 
 import (
 	"bytes"
-	"github.com/sigstore/rekor/pkg/util"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 
 	"github.com/google/rpmpack"
 )
@@ -31,7 +32,7 @@ func CreateSignedRpm(t *testing.T, artifactPath string) {
 	t.Helper()
 
 	rpmMetadata := rpmpack.RPMMetaData{
-		Name:    "test-rpm-" + util.RandomSuffix(16),
+		Name:    "test-rpm-" + e2eutil.RandomSuffix(16),
 		Epoch:   0,
 		Version: "1",
 		Release: "2",
@@ -42,12 +43,12 @@ func CreateSignedRpm(t *testing.T, artifactPath string) {
 		t.Error(err)
 	}
 
-	rpm.SetPGPSigner(util.SignPGP)
+	rpm.SetPGPSigner(e2eutil.SignPGP)
 
-	data := util.RandomData(t, 100)
+	data := e2eutil.RandomData(t, 100)
 
 	rpm.AddFile(rpmpack.RPMFile{
-		Name:  util.RandomSuffix(16),
+		Name:  e2eutil.RandomSuffix(16),
 		Body:  data,
 		Type:  rpmpack.GenericFile,
 		Owner: "testOwner",

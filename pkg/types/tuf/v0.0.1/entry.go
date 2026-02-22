@@ -35,7 +35,6 @@ import (
 	// This will support deprecated ECDSA hex-encoded keys in TUF metadata.
 	// Will be removed when sigstore migrates entirely off hex-encoded.
 	_ "github.com/theupdateframework/go-tuf/pkg/deprecated/set_ecdsa"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types"
@@ -48,7 +47,7 @@ import (
 
 	ptuf "github.com/sigstore/rekor/pkg/pki/tuf"
 
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -129,7 +128,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("cannot unmarshal non tuf v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(tuf.Spec, &v.TufObj); err != nil {
+	if err := DecodeEntry(tuf.Spec, &v.TufObj); err != nil {
 		return err
 	}
 
@@ -142,102 +141,80 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) (pki.PublicKey, pki.Signature, error) {
-	g, ctx := errgroup.WithContext(ctx)
-
-	metaR, metaW := io.Pipe()
-	rootR, rootW := io.Pipe()
-	defer metaR.Close()
-	defer rootR.Close()
-
-	closePipesOnError := types.PipeCloser(metaR, metaW, rootR, rootW)
-
-	// verify artifact signature
-	sigResult := make(chan pki.Signature)
-
-	g.Go(func() error {
-		defer close(sigResult)
-
-		var contentBytes []byte
-		if v.TufObj.Metadata.Content != nil {
-			var err error
-			contentBytes, err = v.parseMetadataContent()
-			if err != nil {
-				return closePipesOnError(err)
+// DecodeEntry performs a direct decode for TUF v0.0.1 without reflection-based mapstructure.
+// Supported input shapes:
+// - map[string]any with keys: metadata.root where each has a nested "content" value
+// - *models.TUFV001Schema or models.TUFV001Schema
+// It avoids mutating the output on error.
+func DecodeEntry(input any, output *models.TUFV001Schema) error {
+	if output == nil {
+		return fmt.Errorf("nil output *models.TUFV001Schema")
+	}
+	var m models.TUFV001Schema
+	switch data := input.(type) {
+	case map[string]any:
+		mm := data
+		if md, ok := mm["metadata"].(map[string]any); ok {
+			m.Metadata = &models.TUFV001SchemaMetadata{}
+			if c, ok := md["content"]; ok {
+				m.Metadata.Content = c
 			}
 		}
-
-		sigReadCloser := bytes.NewReader(contentBytes)
-
-		signature, err := ptuf.NewSignature(sigReadCloser)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case sigResult <- signature:
-			return nil
-		}
-	})
-
-	keyResult := make(chan pki.PublicKey)
-
-	g.Go(func() error {
-		defer close(keyResult)
-
-		var contentBytes []byte
-		if v.TufObj.Root.Content != nil {
-			var err error
-			contentBytes, err = v.parseRootContent()
-			if err != nil {
-				return closePipesOnError(err)
+		if rt, ok := mm["root"].(map[string]any); ok {
+			m.Root = &models.TUFV001SchemaRoot{}
+			if c, ok := rt["content"]; ok {
+				m.Root.Content = c
 			}
 		}
-
-		keyReadCloser := bytes.NewReader(contentBytes)
-
-		key, err := ptuf.NewPublicKey(keyReadCloser)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
+		*output = m
+		return nil
+	case *models.TUFV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.TUFV001Schema")
 		}
+		*output = *data
+		return nil
+	case models.TUFV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
+}
 
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case keyResult <- key:
-			return nil
-		}
-	})
-
-	var (
-		keyObj pki.PublicKey
-		sigObj pki.Signature
-	)
-	// the sigObj contains the signed content.
-	g.Go(func() error {
-		keyObj, sigObj = <-keyResult, <-sigResult
-
-		if keyObj == nil || sigObj == nil {
-			return closePipesOnError(errors.New("failed to read signature or public key"))
-		}
-
+func (v *V001Entry) fetchExternalEntities(_ context.Context) (pki.PublicKey, pki.Signature, error) {
+	// Parse metadata content
+	var contentBytes []byte
+	if v.TufObj.Metadata.Content != nil {
 		var err error
-		if err = sigObj.Verify(nil, keyObj); err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
+		contentBytes, err = v.parseMetadataContent()
+		if err != nil {
+			return nil, nil, err
 		}
+	}
 
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			return nil
+	sigObj, err := ptuf.NewSignature(bytes.NewReader(contentBytes))
+	if err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Parse root content
+	var rootContentBytes []byte
+	if v.TufObj.Root.Content != nil {
+		rootContentBytes, err = v.parseRootContent()
+		if err != nil {
+			return nil, nil, err
 		}
-	})
+	}
 
-	if err := g.Wait(); err != nil {
-		return nil, nil, err
+	keyObj, err := ptuf.NewPublicKey(bytes.NewReader(rootContentBytes))
+	if err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Verify signature
+	if err := sigObj.Verify(nil, keyObj); err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
 	return keyObj, sigObj, nil
@@ -270,7 +247,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	}
 	// wrap in valid object with kind and apiVersion set
 	tuf := models.TUF{}
-	tuf.APIVersion = swag.String(APIVERSION)
+	tuf.APIVersion = conv.Pointer(APIVERSION)
 	tuf.Spec = &canonicalEntry
 
 	return json.Marshal(&tuf)
@@ -364,7 +341,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 	returnVal.Spec = re.TufObj
 
 	return &returnVal, nil

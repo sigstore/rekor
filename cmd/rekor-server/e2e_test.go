@@ -38,34 +38,33 @@ import (
 	"testing"
 
 	"github.com/sigstore/rekor/pkg/sharding"
-
-	"github.com/sigstore/rekor/pkg/util"
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 func TestDuplicates(t *testing.T) {
 	artifactPath := filepath.Join(t.TempDir(), "artifact")
 	sigPath := filepath.Join(t.TempDir(), "signature.asc")
 
-	util.CreatedPGPSignedArtifact(t, artifactPath, sigPath)
+	e2eutil.CreatedPGPSignedArtifact(t, artifactPath, sigPath)
 
 	// Write the public key to a file
 	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
-	if err := ioutil.WriteFile(pubPath, []byte(util.PubKey), 0644); err != nil {
+	if err := ioutil.WriteFile(pubPath, []byte(e2eutil.PubKey), 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	// Now upload to rekor!
-	out := util.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
-	util.OutputContains(t, out, "Created entry at")
+	out := e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	e2eutil.OutputContains(t, out, "Created entry at")
 
 	// Now upload the same one again, we should get a dupe entry.
-	out = util.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
-	util.OutputContains(t, out, "Entry already exists")
+	out = e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	e2eutil.OutputContains(t, out, "Entry already exists")
 
 	// Now do a new one, we should get a new entry
-	util.CreatedPGPSignedArtifact(t, artifactPath, sigPath)
-	out = util.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
-	util.OutputContains(t, out, "Created entry at")
+	e2eutil.CreatedPGPSignedArtifact(t, artifactPath, sigPath)
+	out = e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	e2eutil.OutputContains(t, out, "Created entry at")
 }
 
 // Smoke test to ensure we're publishing and recording metrics when an API is
@@ -143,7 +142,7 @@ func TestEnvVariableValidation(t *testing.T) {
 	os.Setenv("REKOR_FORMAT", "bogus")
 	defer os.Unsetenv("REKOR_FORMAT")
 
-	util.RunCliErr(t, "loginfo")
+	e2eutil.RunCliErr(t, "loginfo")
 }
 func TestGetCLI(t *testing.T) {
 	// Create something and add it to the log
@@ -153,31 +152,31 @@ func TestGetCLI(t *testing.T) {
 		os.Remove(artifactPath)
 		os.Remove(sigPath)
 	})
-	util.CreatedPGPSignedArtifact(t, artifactPath, sigPath)
+	e2eutil.CreatedPGPSignedArtifact(t, artifactPath, sigPath)
 
 	// Write the public key to a file
 	pubPath := filepath.Join(t.TempDir(), "pubKey.asc")
-	if err := ioutil.WriteFile(pubPath, []byte(util.PubKey), 0644); err != nil {
+	if err := ioutil.WriteFile(pubPath, []byte(e2eutil.PubKey), 0644); err != nil {
 		t.Error(err)
 	}
 	t.Cleanup(func() {
 		os.Remove(pubPath)
 	})
-	out := util.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
-	util.OutputContains(t, out, "Created entry at")
+	out := e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	e2eutil.OutputContains(t, out, "Created entry at")
 
-	uuid, err := sharding.GetUUIDFromIDString(util.GetUUIDFromUploadOutput(t, out))
+	uuid, err := sharding.GetUUIDFromIDString(e2eutil.GetUUIDFromUploadOutput(t, out))
 	if err != nil {
 		t.Error(err)
 	}
 
 	// since we at least have 1 valid entry, check the log at index 0
-	util.RunCli(t, "get", "--log-index", "0")
+	e2eutil.RunCli(t, "get", "--log-index", "0")
 
-	out = util.RunCli(t, "get", "--format=json", "--uuid", uuid)
+	out = e2eutil.RunCli(t, "get", "--format=json", "--uuid", uuid)
 
 	// The output here should be in JSON with this structure:
-	g := util.GetOut{}
+	g := e2eutil.GetOut{}
 	if err := json.Unmarshal([]byte(out), &g); err != nil {
 		t.Error(err)
 	}
@@ -186,14 +185,14 @@ func TestGetCLI(t *testing.T) {
 		t.Errorf("Expected IntegratedTime to be set. Got %s", out)
 	}
 	// Get it with the logindex as well
-	util.RunCli(t, "get", "--format=json", "--log-index", strconv.Itoa(g.LogIndex))
+	e2eutil.RunCli(t, "get", "--format=json", "--log-index", strconv.Itoa(g.LogIndex))
 
 	// check index via the file and public key to ensure that the index has updated correctly
-	out = util.RunCli(t, "search", "--artifact", artifactPath)
-	util.OutputContains(t, out, uuid)
+	out = e2eutil.RunCli(t, "search", "--artifact", artifactPath)
+	e2eutil.OutputContains(t, out, uuid)
 
-	out = util.RunCli(t, "search", "--public-key", pubPath)
-	util.OutputContains(t, out, uuid)
+	out = e2eutil.RunCli(t, "search", "--public-key", pubPath)
+	e2eutil.OutputContains(t, out, uuid)
 
 	artifactBytes, err := ioutil.ReadFile(artifactPath)
 	if err != nil {
@@ -201,8 +200,8 @@ func TestGetCLI(t *testing.T) {
 	}
 	sha := sha256.Sum256(artifactBytes)
 
-	out = util.RunCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
-	util.OutputContains(t, out, uuid)
+	out = e2eutil.RunCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
+	e2eutil.OutputContains(t, out, uuid)
 
 	// Exercise GET with the new EntryID (TreeID + UUID)
 	tid := getTreeID(t)
@@ -210,11 +209,11 @@ func TestGetCLI(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	out = util.RunCli(t, "get", "--format=json", "--uuid", entryID.ReturnEntryIDString())
+	out = e2eutil.RunCli(t, "get", "--format=json", "--uuid", entryID.ReturnEntryIDString())
 }
 func getTreeID(t *testing.T) int64 {
 	t.Helper()
-	out := util.RunCli(t, "loginfo")
+	out := e2eutil.RunCli(t, "loginfo")
 	tidStr := strings.TrimSpace(strings.Split(out, "TreeID: ")[1])
 	tid, err := strconv.ParseInt(tidStr, 10, 64)
 	if err != nil {
@@ -224,11 +223,11 @@ func getTreeID(t *testing.T) int64 {
 	return tid
 }
 func TestSearchNoEntriesRC1(t *testing.T) {
-	util.RunCliErr(t, "search", "--email", "noone@internetz.com")
+	e2eutil.RunCliErr(t, "search", "--email", "noone@internetz.com")
 }
 func TestHostnameInSTH(t *testing.T) {
 	// get ID of container
-	c := exec.Command("docker","ps","-q","-f","name=rekor-server")
+	c := exec.Command("docker", "ps", "-q", "-f", "name=rekor-server")
 	b, err := c.CombinedOutput()
 	if err != nil {
 		t.Fatal(err)
@@ -261,19 +260,19 @@ func rekorServer() string {
 func TestSearchSHA512(t *testing.T) {
 	sha512 := "c7694a1112ea1404a3c5852bdda04c2cc224b3567ef6ceb8204dbf2b382daacfc6837ee2ed9d5b82c90b880a3c7289778dbd5a8c2c08193459bcf7bd44581ed0"
 	var out string
-	out = util.RunCli(t, "upload", "--type", "intoto:0.0.2",
+	out = e2eutil.RunCli(t, "upload", "--type", "intoto:0.0.2",
 		"--artifact", "tests/envelope.sha512",
 		"--pki-format", "x509",
 		"--public-key", "tests/test_sha512.pub")
-	util.OutputContains(t, out, "Created entry at")
-	uuid := util.GetUUIDFromTimestampOutput(t, out)
-	out = util.RunCli(t, "search", "--sha", fmt.Sprintf("sha512:%s", sha512))
-	util.OutputContains(t, out, uuid)
+	e2eutil.OutputContains(t, out, "Created entry at")
+	uuid := e2eutil.GetUUIDFromTimestampOutput(t, out)
+	out = e2eutil.RunCli(t, "search", "--sha", fmt.Sprintf("sha512:%s", sha512))
+	e2eutil.OutputContains(t, out, uuid)
 }
 func TestVerifyNonExistentUUID(t *testing.T) {
 	// this uuid is extremely likely to not exist
-	out := util.RunCliErr(t, "verify", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-	util.OutputContains(t, out, "entry in log cannot be located")
+	out := e2eutil.RunCliErr(t, "verify", "--uuid", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+	e2eutil.OutputContains(t, out, "entry in log cannot be located")
 
 	// Check response code
 	tid := getTreeID(t)

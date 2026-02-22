@@ -60,7 +60,7 @@ func (o *GetLogEntryByUUIDURL) Build() (*url.URL, error) {
 
 	entryUUID := o.EntryUUID
 	if entryUUID != "" {
-		_path = strings.Replace(_path, "{entryUUID}", entryUUID, -1)
+		_path = strings.ReplaceAll(_path, "{entryUUID}", entryUUID)
 	} else {
 		return nil, errors.New("entryUuid is required on GetLogEntryByUUIDURL")
 	}

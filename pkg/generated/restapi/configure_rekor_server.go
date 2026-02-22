@@ -33,7 +33,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/rs/cors"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -48,7 +48,7 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/util"
 
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 //go:generate swagger generate server --target ../../generated --name RekorServer --spec ../../../openapi.yaml --principal interface{} --exclude-main
@@ -341,8 +341,13 @@ func wrapMetrics(handler http.Handler) http.Handler {
 
 func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
 	ctx := r.Context()
-	if apiErr, ok := err.(errors.Error); ok && apiErr.Code() == http.StatusNotFound {
-		log.ContextLogger(ctx).Warn(err)
+	if apiErr, ok := err.(errors.Error); ok {
+		code := apiErr.Code()
+		if code >= http.StatusBadRequest && code < http.StatusInternalServerError {
+			log.ContextLogger(ctx).Warnw(err.Error(), "code", code)
+		} else {
+			log.ContextLogger(ctx).Errorw(err.Error(), "code", code)
+		}
 	} else {
 		log.ContextLogger(ctx).Error(err)
 	}

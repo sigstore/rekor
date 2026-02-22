@@ -20,11 +20,11 @@ package main
 import (
 	"testing"
 
-	"github.com/sigstore/rekor/pkg/util"
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 func TestVerifyNonExistentIndex(t *testing.T) {
 	// this index is extremely likely to not exist
-	out := util.RunCliErr(t, "verify", "--log-index", "100000000")
-	util.OutputContains(t, out, "entry in log cannot be located")
+	out := e2eutil.RunCliErr(t, "verify", "--log-index", "100000000")
+	e2eutil.OutputContains(t, out, "entry in log cannot be located")
 }

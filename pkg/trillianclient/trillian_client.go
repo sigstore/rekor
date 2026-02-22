@@ -580,6 +580,7 @@ func (t *TrillianClient) GetConsistencyProof(ctx context.Context, firstSize, las
 }
 
 func (t *TrillianClient) getProofByHashWithRoot(ctx context.Context, hashValue []byte, root types.LogRootV1, signed *trillian.SignedLogRoot) *Response {
+	// issue 1308: if the tree is empty, there's no way we can return a proof
 	if root.TreeSize == 0 {
 		return &Response{
 			Status: codes.NotFound,
@@ -589,7 +590,7 @@ func (t *TrillianClient) getProofByHashWithRoot(ctx context.Context, hashValue [
 	resp, err := t.client.GetInclusionProofByHash(ctx, &trillian.GetInclusionProofByHashRequest{
 		LogId:    t.logID,
 		LeafHash: hashValue,
-		TreeSize: int64(root.TreeSize),
+		TreeSize: int64(root.TreeSize), //nolint:gosec
 	})
 	if err != nil {
 		return &Response{

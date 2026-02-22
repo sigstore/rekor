@@ -18,7 +18,9 @@ package alpine
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -28,10 +30,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/asaskevich/govalidator"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
-	"golang.org/x/sync/errgroup"
+	"github.com/go-openapi/swag/conv"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -88,13 +88,85 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	return result, nil
 }
 
+// DecodeEntry performs direct JSON unmarshaling without reflection,
+// equivalent to types.DecodeEntry but with better performance for alpine v0.0.1.
+func DecodeEntry(input any, output *models.AlpineV001Schema) error {
+	var m models.AlpineV001Schema
+	switch data := input.(type) {
+	case map[string]any:
+		mp := data
+		if pk, ok := mp["publicKey"].(map[string]any); ok {
+			if cs, ok := pk["content"].(string); ok && cs != "" {
+				outBuf := make([]byte, base64.StdEncoding.DecodedLen(len(cs)))
+				n, err := base64.StdEncoding.Decode(outBuf, []byte(cs))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for public key content: %w", err)
+				}
+				m.PublicKey = &models.AlpineV001SchemaPublicKey{}
+				content := strfmt.Base64(outBuf[:n])
+				m.PublicKey.Content = &content
+			}
+		}
+		if p, ok := mp["package"].(map[string]any); ok {
+			m.Package = &models.AlpineV001SchemaPackage{}
+			if pi, ok := p["pkginfo"].(map[string]any); ok {
+				mm := make(map[string]string, len(pi))
+				for k, vv := range pi {
+					if s, ok := vv.(string); ok {
+						mm[k] = s
+					}
+				}
+				if len(mm) > 0 {
+					m.Package.Pkginfo = mm
+				}
+			}
+			if h, ok := p["hash"].(map[string]any); ok {
+				var alg, val *string
+				if a, ok := h["algorithm"].(string); ok {
+					alg = &a
+				}
+				if s, ok := h["value"].(string); ok {
+					val = &s
+				}
+				if alg != nil || val != nil {
+					m.Package.Hash = &models.AlpineV001SchemaPackageHash{
+						Algorithm: alg,
+						Value:     val,
+					}
+				}
+			}
+			if cs, ok := p["content"].(string); ok && cs != "" {
+				outBuf := make([]byte, base64.StdEncoding.DecodedLen(len(cs)))
+				n, err := base64.StdEncoding.Decode(outBuf, []byte(cs))
+				if err != nil {
+					return fmt.Errorf("failed parsing base64 data for package content: %w", err)
+				}
+				m.Package.Content = strfmt.Base64(outBuf[:n])
+			}
+		}
+		*output = m
+		return nil
+	case *models.AlpineV001Schema:
+		if data == nil {
+			return fmt.Errorf("nil *models.AlpineV001Schema")
+		}
+		*output = *data
+		return nil
+	case models.AlpineV001Schema:
+		*output = data
+		return nil
+	default:
+		return fmt.Errorf("unsupported input type %T for DecodeEntry", input)
+	}
+}
+
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	apk, ok := pe.(*models.Alpine)
 	if !ok {
 		return errors.New("cannot unmarshal non Alpine v0.0.1 type")
 	}
 
-	if err := types.DecodeEntry(apk.Spec, &v.AlpineModel); err != nil {
+	if err := DecodeEntry(apk.Spec, &v.AlpineModel); err != nil {
 		return err
 	}
 
@@ -106,122 +178,55 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	return v.validate()
 }
 
-func (v *V001Entry) fetchExternalEntities(ctx context.Context) (*x509.PublicKey, *alpine.Package, error) {
+func (v *V001Entry) fetchExternalEntities(_ context.Context) (*x509.PublicKey, *alpine.Package, error) {
 	if err := v.validate(); err != nil {
 		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
-	g, ctx := errgroup.WithContext(ctx)
-
-	hashR, hashW := io.Pipe()
-	apkR, apkW := io.Pipe()
-	defer hashR.Close()
-	defer apkR.Close()
-
-	closePipesOnError := types.PipeCloser(hashR, hashW, apkR, apkW)
-
 	oldSHA := ""
 	if v.AlpineModel.Package.Hash != nil && v.AlpineModel.Package.Hash.Value != nil {
-		oldSHA = swag.StringValue(v.AlpineModel.Package.Hash.Value)
+		oldSHA = conv.Value(v.AlpineModel.Package.Hash.Value)
 	}
 
-	g.Go(func() error {
-		defer hashW.Close()
-		defer apkW.Close()
+	// Parse public key
+	keyObj, err := x509.NewPublicKey(bytes.NewReader(*v.AlpineModel.PublicKey.Content))
+	if err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
 
-		dataReadCloser := bytes.NewReader(v.AlpineModel.Package.Content)
+	// Parse package and verify hash
+	dataReadCloser := bytes.NewReader(v.AlpineModel.Package.Content)
+	hasher := sha256.New()
 
-		/* #nosec G110 */
-		if _, err := io.Copy(io.MultiWriter(hashW, apkW), dataReadCloser); err != nil {
-			return closePipesOnError(err)
-		}
-		return nil
-	})
-
-	hashResult := make(chan string)
-
-	g.Go(func() error {
-		defer close(hashResult)
-		hasher := sha256.New()
-
-		if _, err := io.Copy(hasher, hashR); err != nil {
-			return closePipesOnError(err)
-		}
-
-		computedSHA := hex.EncodeToString(hasher.Sum(nil))
-		if oldSHA != "" && computedSHA != oldSHA {
-			return closePipesOnError(&types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case hashResult <- computedSHA:
-			return nil
-		}
-	})
-
-	keyResult := make(chan *x509.PublicKey)
-
-	g.Go(func() error {
-		defer close(keyResult)
-		keyReadCloser := bytes.NewReader(*v.AlpineModel.PublicKey.Content)
-
-		keyObj, err := x509.NewPublicKey(keyReadCloser)
-		if err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case keyResult <- keyObj:
-			return nil
-		}
-	})
-
-	var apkObj *alpine.Package
-	var key *x509.PublicKey
-
-	g.Go(func() error {
-		apk := alpine.Package{}
-		if err := apk.Unmarshal(apkR); err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		key = <-keyResult
-		if key == nil {
-			return closePipesOnError(errors.New("error processing public key"))
-		}
-
-		if err := apk.VerifySignature(key.CryptoPubKey()); err != nil {
-			return closePipesOnError(&types.InputValidationError{Err: err})
-		}
-
-		apkObj = &apk
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			return nil
-		}
-	})
-
-	computedSHA := <-hashResult
-
-	if err := g.Wait(); err != nil {
+	/* #nosec G110 */
+	packageData := bytes.NewBuffer(nil)
+	if _, err := io.Copy(io.MultiWriter(hasher, packageData), dataReadCloser); err != nil {
 		return nil, nil, err
 	}
 
-	// if we get here, all goroutines succeeded without error
-	if oldSHA == "" {
-		v.AlpineModel.Package.Hash = &models.AlpineV001SchemaPackageHash{}
-		v.AlpineModel.Package.Hash.Algorithm = swag.String(models.AlpineV001SchemaPackageHashAlgorithmSha256)
-		v.AlpineModel.Package.Hash.Value = swag.String(computedSHA)
+	computedSHA := hex.EncodeToString(hasher.Sum(nil))
+	if oldSHA != "" && computedSHA != oldSHA {
+		return nil, nil, &types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)}
 	}
 
-	return key, apkObj, nil
+	// Parse and verify package
+	apk := alpine.Package{}
+	if err := apk.Unmarshal(packageData); err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	if err := apk.VerifySignature(keyObj.CryptoPubKey()); err != nil {
+		return nil, nil, &types.InputValidationError{Err: err}
+	}
+
+	// Set hash if not provided
+	if oldSHA == "" {
+		v.AlpineModel.Package.Hash = &models.AlpineV001SchemaPackageHash{}
+		v.AlpineModel.Package.Hash.Algorithm = conv.Pointer(models.AlpineV001SchemaPackageHashAlgorithmSha256)
+		v.AlpineModel.Package.Hash.Value = conv.Pointer(computedSHA)
+	}
+
+	return keyObj, &apk, nil
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
@@ -252,7 +257,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	// wrap in valid object with kind and apiVersion set
 	apk := models.Alpine{}
-	apk.APIVersion = swag.String(APIVERSION)
+	apk.APIVersion = conv.Pointer(APIVERSION)
 	apk.Spec = &canonicalEntry
 
 	v.AlpineModel = canonicalEntry
@@ -277,7 +282,11 @@ func (v V001Entry) validate() error {
 
 	hash := pkg.Hash
 	if hash != nil {
-		if !govalidator.IsHash(swag.StringValue(hash.Value), swag.StringValue(hash.Algorithm)) {
+		// Only sha256 is supported for alpine v0.0.1; enforce length accordingly.
+		if hash.Value == nil || len(*hash.Value) != crypto.SHA256.Size()*2 {
+			return errors.New("invalid value for hash")
+		}
+		if _, err := hex.DecodeString(*hash.Value); err != nil {
 			return errors.New("invalid value for hash")
 		}
 	} else if len(pkg.Content) == 0 {
@@ -345,7 +354,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
-	returnVal.APIVersion = swag.String(re.APIVersion())
+	returnVal.APIVersion = conv.Pointer(re.APIVersion())
 	returnVal.Spec = re.AlpineModel
 
 	return &returnVal, nil

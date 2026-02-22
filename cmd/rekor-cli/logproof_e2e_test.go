@@ -20,11 +20,11 @@ package main
 import (
 	"testing"
 
-	"github.com/sigstore/rekor/pkg/util"
+	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )
 
 // TestLogProofLastSizeBiggerThanCurrentLog tests that asking for a consistency proof for a size greater than the current log
 func TestLogProofLastSizeBiggerThanCurrentLog(t *testing.T) {
-	out := util.RunCliErr(t, "logproof", "--last-size", "14212414124124124")
-	util.OutputContains(t, out, "400")
+	out := e2eutil.RunCliErr(t, "logproof", "--last-size", "14212414124124124")
+	e2eutil.OutputContains(t, out, "400")
 }

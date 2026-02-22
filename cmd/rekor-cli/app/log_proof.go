@@ -72,7 +72,7 @@ var logProofCmd = &cobra.Command{
 		}
 		return nil
 	},
-	Run: format.WrapCmd(func(_ []string) (interface{}, error) {
+	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (interface{}, error) {
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {
 			return nil, err
@@ -82,7 +82,7 @@ var logProofCmd = &cobra.Command{
 		lastSize := int64(viper.GetUint64("last-size"))
 		treeID := viper.GetString("tree-id")
 
-		params := tlog.NewGetLogProofParams()
+		params := tlog.NewGetLogProofParamsWithContext(cmd.Context())
 		params.FirstSize = &firstSize
 		params.LastSize = lastSize
 		params.TreeID = &treeID
