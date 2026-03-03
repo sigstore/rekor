@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/sigstore/rekor/pkg/generated/client"
@@ -158,7 +157,7 @@ func VerifyInclusion(ctx context.Context, e *models.LogEntryAnon) error {
 	// Verify the inclusion proof.
 	b, ok := e.Body.(string)
 	if !ok {
-		return fmt.Errorf("entry body must be a string, was %s", reflect.TypeOf(e.Body))
+		return fmt.Errorf("entry body must be a string, was %T", e.Body)
 	}
 	entryBytes, err := base64.StdEncoding.DecodeString(b)
 	if err != nil {
