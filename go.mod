@@ -74,7 +74,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tink-crypto/tink-go-awskms/v2 v2.1.0
 	github.com/tink-crypto/tink-go-gcpkms/v2 v2.2.0
-	github.com/tink-crypto/tink-go/v2 v2.5.0
+	github.com/tink-crypto/tink-go/v2 v2.6.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251222181119-0a764e51fe1b
 )
 
