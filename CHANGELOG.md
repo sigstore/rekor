@@ -1,3 +1,15 @@
+# v1.5.1
+
+## Features
+
+* optimize memory for DSSE v0.0.1 processing (#2766)
+
+## Bug Fixes
+
+* Type assert the entry bundle when verifying inclusion proof (#2755)
+* return correct errors in rare failure situations (#2753)
+* raise error if decoding hash fails during inclusion proof (#2754)
+
 # v1.5.0
 
 This release fixes GHSA-273p-m2cw-6833 and GHSA-4c4x-jm2x-pf9j. Note that this
