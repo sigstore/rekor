@@ -16,12 +16,15 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
@@ -30,6 +33,29 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/tlog"
 	"github.com/sigstore/rekor/pkg/log"
 )
+
+func mapGRPCToHTTP(code int, err error) int {
+	// Only try to be smart if current code is a generic 500
+	if code != http.StatusInternalServerError {
+		return code
+	}
+
+	// Look for a GRPC error (even a wrapped one) to resolve a more useful HTTP code.
+	// The list of handled codes is intentionally limited to specific cases
+	for currErr := err; currErr != nil; currErr = errors.Unwrap(currErr) {
+		if st, ok := status.FromError(currErr); ok {
+			switch st.Code() {
+			case codes.Canceled:
+				return 499 // Client Closed Request
+			case codes.DeadlineExceeded:
+				return http.StatusGatewayTimeout
+			default:
+				return code
+			}
+		}
+	}
+	return code
+}
 
 const (
 	trillianCommunicationError     = "unexpected error communicating with transparency log"
@@ -60,6 +86,8 @@ func errorMsg(message string, code int) *models.Error {
 var re = regexp.MustCompile("^(.*)Params$")
 
 func handleRekorAPIError(params interface{}, code int, err error, message string, fields ...interface{}) middleware.Responder {
+	code = mapGRPCToHTTP(code, err)
+
 	if message == "" {
 		message = http.StatusText(code)
 	}
