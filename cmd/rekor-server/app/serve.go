@@ -131,10 +131,13 @@ var serveCmd = &cobra.Command{
 		api.ConfigureAPI(treeID)
 		server.ConfigureAPI()
 
-		http.Handle("/metrics", promhttp.Handler())
+		utilMux := http.NewServeMux()
+		utilMux.Handle("/metrics", promhttp.Handler())
+		utilHandler := middleware.Heartbeat("/ping")(utilMux)
 		go func() {
 			srv := &http.Server{
 				Addr:         ":2112",
+				Handler:      utilHandler,
 				ReadTimeout:  10 * time.Second,
 				WriteTimeout: 10 * time.Second,
 			}

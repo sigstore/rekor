@@ -131,7 +131,8 @@ services:
       trillian-log-server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/ping"]
+      # health check is on the util port
+      test: ["CMD", "curl", "-f", "http://localhost:2112/ping"]
       interval: 10s
       timeout: 3s
       retries: 15
