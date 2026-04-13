@@ -34,7 +34,14 @@ const url = '/api/v1/log/';
 function update() {
   fetch(url, {headers: {'Accept': 'application/json'}}).then((resp) => {
     resp.json().then((j) => {
-      let count = j.treeSize;
+      // Total across the active shard plus any inactive shards; otherwise
+      // the page under-reports after a shard rotation.
+      let count = Number(j.treeSize) || 0;
+      if (Array.isArray(j.inactiveShards)) {
+        for (const shard of j.inactiveShards) {
+          count += Number(shard.treeSize) || 0;
+        }
+      }
       document.getElementById('count').innerText = count;
     }).catch(console.error);
   }).catch(console.error);
