@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trillianclient
-
 // Package trillianclient provides Rekor wrappers around Trillian's gRPC API.
 //
 // Two client modes are supported:
@@ -39,3 +37,4 @@ package trillianclient
 // This package intentionally focuses on behavior and architecture. Any concrete
 // latency or throughput expectations depend on deployment topology, Trillian
 // configuration, and workload characteristics.
+package trillianclient

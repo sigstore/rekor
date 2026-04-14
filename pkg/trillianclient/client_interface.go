@@ -29,6 +29,17 @@ import (
 //   - TrillianClient: cached STH client with background root updates (experimental, opt-in via CacheSTH)
 type ClientInterface interface {
 	AddLeaf(ctx context.Context, byteValue []byte) *Response
+	// GetLatest returns the latest signed log root.
+	//
+	// firstSize semantics differ between implementations:
+	//   - simpleTrillianClient passes it as FirstTreeSize to Trillian's RPC,
+	//     which may attach a consistency proof to the response. Never blocks.
+	//   - TrillianClient (cached) treats it as a minimum-size gate: blocks
+	//     until the cached root reaches at least firstSize, then returns it.
+	//     No consistency proof is attached.
+	//
+	// All current Rekor callers pass firstSize=0, where both behave identically.
+	// Avoid relying on non-zero firstSize until this divergence is resolved.
 	GetLatest(ctx context.Context, firstSize int64) *Response
 	GetLeafAndProofByHash(ctx context.Context, hash []byte) *Response
 	GetLeafAndProofByIndex(ctx context.Context, index int64) *Response

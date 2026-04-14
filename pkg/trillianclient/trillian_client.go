@@ -118,12 +118,6 @@ func DefaultConfig() Config {
 	}
 }
 
-// waiter represents a caller blocked in waitForRootAtLeast.
-type waiter struct {
-	ch   chan struct{}
-	size uint64
-}
-
 // TrillianClient provides a cached STH wrapper around the Trillian client
 // with background root updates and channel-per-caller notification.
 type TrillianClient struct {
@@ -136,7 +130,7 @@ type TrillianClient struct {
 	lc      *client.LogClient
 	v       *client.LogVerifier
 	mu      sync.Mutex
-	waiters []waiter // per-caller notification channels
+	waiters map[chan struct{}]uint64 // per-caller notification channel → required tree size
 	wg      sync.WaitGroup
 
 	// cached root snapshot (atomic for read-heavy paths)
@@ -163,11 +157,12 @@ type rootSnapshot struct {
 // that will never advance.
 func newTrillianClient(logClient trillian.TrillianLogClient, logID int64, config Config) *TrillianClient {
 	t := &TrillianClient{
-		client: logClient,
-		logID:  logID,
-		config: config,
-		frozen: config.FrozenTreeIDs[logID],
-		stopCh: make(chan struct{}),
+		client:  logClient,
+		logID:   logID,
+		config:  config,
+		frozen:  config.FrozenTreeIDs[logID],
+		stopCh:  make(chan struct{}),
+		waiters: make(map[chan struct{}]uint64),
 	}
 	t.bgCtx, t.bgCancel = context.WithCancel(context.Background())
 	// initialize atomic snapshot with zero value
@@ -178,42 +173,40 @@ func newTrillianClient(logClient trillian.TrillianLogClient, logID int64, config
 // registerWaiter adds a new waiter for the given tree size and returns its channel.
 // Must be called with t.mu held.
 func (t *TrillianClient) registerWaiter(size uint64) chan struct{} {
-	ch := make(chan struct{}, 1)
-	t.waiters = append(t.waiters, waiter{ch: ch, size: size})
+	ch := make(chan struct{})
+	t.waiters[ch] = size
 	return ch
 }
 
 // removeWaiter removes a waiter by its channel (used for cleanup on context cancellation).
-// Must be called with t.mu held.
+// Must be called with t.mu held. O(1).
 func (t *TrillianClient) removeWaiter(ch chan struct{}) {
-	for i, w := range t.waiters {
-		if w.ch == ch {
-			t.waiters[i] = t.waiters[len(t.waiters)-1]
-			t.waiters = t.waiters[:len(t.waiters)-1]
-			return
-		}
-	}
+	delete(t.waiters, ch)
 }
 
 // notifyWaiters closes the channels of all waiters whose requested size
-// is satisfied by newSize, and removes them from the slice.
+// is satisfied by newSize, and removes them from the map.
 // Must be called with t.mu held.
 func (t *TrillianClient) notifyWaiters(newSize uint64) {
-	remaining := t.waiters[:0]
-	for _, w := range t.waiters {
-		if newSize >= w.size {
-			close(w.ch)
-		} else {
-			remaining = append(remaining, w)
+	for ch, size := range t.waiters {
+		if newSize >= size {
+			close(ch)
+			delete(t.waiters, ch)
 		}
 	}
-	t.waiters = remaining
 }
 
 // ensureStarted initializes the shared LogClient and starts the updater once.
 // The mutex serializes concurrent callers so only one performs the initial RPC;
 // subsequent callers return the cached result immediately.
-func (t *TrillianClient) ensureStarted(ctx context.Context) error {
+//
+// Init runs against t.bgCtx with InitLatestRootTimeout, not the caller's
+// context. This prevents an unlucky first caller with a tight deadline from
+// causing init to fail for everyone serialized behind mu. The tradeoff is
+// that the first caller may block for up to InitLatestRootTimeout even if
+// their own deadline is shorter — a one-time cost per tree, per process.
+// bgCtx is canceled on Close(), so init remains abortable on shutdown.
+func (t *TrillianClient) ensureStarted() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.started {
@@ -222,14 +215,8 @@ func (t *TrillianClient) ensureStarted(ctx context.Context) error {
 
 	// Perform one-time initialization while holding the lock.
 	// This blocks other ensureStarted callers until initialization completes.
-	cctx := ctx
-	var cancel context.CancelFunc
-	if _, ok := ctx.Deadline(); !ok {
-		cctx, cancel = context.WithTimeout(ctx, t.config.InitLatestRootTimeout)
-	}
-	if cancel != nil {
-		defer cancel()
-	}
+	cctx, cancel := context.WithTimeout(t.bgCtx, t.config.InitLatestRootTimeout)
+	defer cancel()
 	slr, err := t.client.GetLatestSignedLogRoot(cctx, &trillian.GetLatestSignedLogRootRequest{LogId: t.logID})
 	if err != nil {
 		t.startErr = err
@@ -322,7 +309,16 @@ func (t *TrillianClient) updater() {
 		}
 		log.Logger.Debugw("trillian root advanced", "treeID", t.logID, "oldSize", old.root.TreeSize, "newSize", nr.TreeSize)
 
-		// Marshal parsed root to bytes and synthesize a minimal SignedLogRoot
+		// Marshal parsed root to bytes and synthesize a minimal SignedLogRoot.
+		//
+		// NOTE: WaitForRootUpdate returns a parsed LogRootV1, not the wire-format
+		// SignedLogRoot. We re-marshal the LogRoot bytes here but the resulting
+		// SignedLogRoot has no signature populated. This is acceptable because
+		// Rekor never verifies the Trillian-side signature on this struct — it
+		// only consumes the LogRoot bytes (tree size, root hash, timestamp) and
+		// re-signs checkpoints with its own key. If a future caller needs the
+		// authentic Trillian signature, replace this with a GetLatestSignedLogRoot
+		// round trip per advance (cheap, since advances are already amortized).
 		lrBytes, mErr := nr.MarshalBinary()
 		if mErr != nil {
 			log.Logger.Debugw("failed to marshal updated log root", "treeID", t.logID, "err", mErr)
@@ -357,8 +353,8 @@ func (t *TrillianClient) Close() {
 		close(t.stopCh)
 	}
 	// Close all waiter channels to unblock them
-	for _, w := range t.waiters {
-		close(w.ch)
+	for ch := range t.waiters {
+		close(ch)
 	}
 	t.waiters = nil
 	t.mu.Unlock()
@@ -367,7 +363,7 @@ func (t *TrillianClient) Close() {
 }
 
 func (t *TrillianClient) AddLeaf(ctx context.Context, byteValue []byte) *Response {
-	if err := t.ensureStarted(ctx); err != nil {
+	if err := t.ensureStarted(); err != nil {
 		return &Response{
 			Status: status.Code(err),
 			Err:    err,
@@ -453,7 +449,7 @@ func (t *TrillianClient) AddLeaf(ctx context.Context, byteValue []byte) *Respons
 }
 
 func (t *TrillianClient) GetLeafAndProofByHash(ctx context.Context, hash []byte) *Response {
-	if err := t.ensureStarted(ctx); err != nil {
+	if err := t.ensureStarted(); err != nil {
 		return &Response{
 			Status: status.Code(err),
 			Err:    err,
@@ -492,7 +488,7 @@ func (t *TrillianClient) GetLeafAndProofByHash(ctx context.Context, hash []byte)
 }
 
 func (t *TrillianClient) GetLeafAndProofByIndex(ctx context.Context, index int64) *Response {
-	if err := t.ensureStarted(ctx); err != nil {
+	if err := t.ensureStarted(); err != nil {
 		return &Response{
 			Status: status.Code(err),
 			Err:    err,
@@ -536,7 +532,7 @@ func (t *TrillianClient) GetLeafAndProofByIndex(ctx context.Context, index int64
 }
 
 func (t *TrillianClient) GetLatest(ctx context.Context, firstSize int64) *Response {
-	if err := t.ensureStarted(ctx); err != nil {
+	if err := t.ensureStarted(); err != nil {
 		return &Response{
 			Status: status.Code(err),
 			Err:    err,
@@ -656,6 +652,8 @@ func (t *TrillianClient) waitForInclusionWithMinSize(ctx context.Context, leafHa
 
 		// NotFound: wait for the tree to grow and try again
 		if err := t.waitForRootAtLeast(ctx, root.TreeSize+1); err != nil {
+			elapsed := float64(time.Since(start).Milliseconds())
+			metricInclusionWait.WithLabelValues("false").Observe(elapsed)
 			return &Response{Status: status.Code(err), Err: err}
 		}
 	}

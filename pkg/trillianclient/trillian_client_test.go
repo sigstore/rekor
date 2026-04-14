@@ -18,6 +18,7 @@ package trillianclient
 import (
 	"bytes"
 	"context"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -68,6 +69,25 @@ func advanceRoot(t *testing.T, tc *TrillianClient, size uint64, rootHash []byte)
 	tc.snapshot.Store(rootSnapshot{root: *lr, signed: &trillian.SignedLogRoot{LogRoot: b}})
 	tc.notifyWaiters(size)
 	tc.mu.Unlock()
+}
+
+// waitForWaiters blocks until at least n callers have registered in tc.waiters,
+// or fails the test after a timeout. Replaces fragile time.Sleep registration barriers.
+func waitForWaiters(t *testing.T, tc *TrillianClient, n int) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		tc.mu.Lock()
+		got := len(tc.waiters)
+		tc.mu.Unlock()
+		if got >= n {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for %d waiters to register, got %d", n, got)
+		}
+		runtime.Gosched()
+	}
 }
 
 type fakeCloseTrackingClient struct {
@@ -263,9 +283,9 @@ func TestAddLeaf_HappyPath(t *testing.T) {
 	tc.started = true
 	tc.v = client.NewLogVerifier(rfc6962.DefaultHasher)
 	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 0, RootHash: make([]byte, 32)}, signed: slr0})
-	// Advance snapshot to size=2 after a short delay to release waiters
+	// Advance snapshot to size=2 once AddLeaf has registered its inclusion waiter.
 	go func() {
-		time.Sleep(20 * time.Millisecond)
+		waitForWaiters(t, tc, 1)
 		advanceRoot(t, tc, 2, root2)
 	}()
 	t.Cleanup(tc.Close)
@@ -301,8 +321,7 @@ func TestGetLatestFirstSizeCanceledOnClose(t *testing.T) {
 		done <- tc.GetLatest(context.Background(), 1) // would block until size>=1
 	}()
 
-	// Give it a moment to start waiting
-	time.Sleep(50 * time.Millisecond)
+	waitForWaiters(t, tc, 1)
 	tc.Close()
 
 	select {
@@ -355,8 +374,7 @@ func TestWaitForRootAtLeast_BroadcastWakesAll(t *testing.T) {
 		}()
 	}
 
-	// Give goroutines time to register as waiters
-	time.Sleep(20 * time.Millisecond)
+	waitForWaiters(t, tc, numWaiters)
 
 	// Publish new root and notify waiters
 	advanceRoot(t, tc, 5, make([]byte, 32))
@@ -399,8 +417,7 @@ func TestGetLatest_WithFirstSize_BroadcastWakesAll(t *testing.T) {
 		}()
 	}
 
-	// Small delay to let goroutines register waiters
-	time.Sleep(20 * time.Millisecond)
+	waitForWaiters(t, tc, numWaiters)
 
 	// Publish root size 5 and notify waiters
 	advanceRoot(t, tc, 5, make([]byte, 32))
@@ -485,15 +502,16 @@ func TestWaitForRootAtLeast_SpuriousBroadcastIgnored(t *testing.T) {
 		}()
 	}
 
-	// Give them time to register as waiters
-	time.Sleep(20 * time.Millisecond)
+	waitForWaiters(t, tc, numWaiters)
 
 	// With channel-per-caller, there is no "spurious" broadcast; waiters are only
 	// notified when their target size is met. Advance to size 3 (below target 5);
-	// waiters for size 5 should not be notified.
+	// waiters for size 5 should remain registered.
 	advanceRoot(t, tc, 3, make([]byte, 32))
-	time.Sleep(30 * time.Millisecond)
-	require.Zero(t, len(results), "waiters should not exit when size is below target")
+	tc.mu.Lock()
+	stillWaiting := len(tc.waiters)
+	tc.mu.Unlock()
+	require.Equal(t, numWaiters, stillWaiting, "waiters should remain registered when size is below target")
 
 	// Now increase size to 5; everyone should complete
 	advanceRoot(t, tc, 5, make([]byte, 32))
@@ -570,7 +588,9 @@ func TestSnapshotConcurrentReadersWriters_NoDataRace(t *testing.T) {
 	}
 }
 
-func TestEnsureStartedDeadlineRespected(t *testing.T) {
+func TestEnsureStarted_IgnoresCallerDeadline(t *testing.T) {
+	// Init runs against bgCtx + InitLatestRootTimeout, not the caller's ctx.
+	// A caller with a tight deadline must not cause init to fail for everyone.
 	mockCtl := gomock.NewController(t)
 	defer mockCtl.Finish()
 
@@ -578,24 +598,68 @@ func TestEnsureStartedDeadlineRespected(t *testing.T) {
 	require.NoError(t, err)
 	defer closeFn()
 
-	// Server handler sleeps longer than client deadline; client should return DeadlineExceeded.
-	// Use AnyTimes because the deadline may expire before the RPC reaches the server.
+	// Server takes 100ms — well past the caller's 5ms deadline, but well within
+	// InitLatestRootTimeout. Init must succeed.
 	s.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ *trillian.GetLatestSignedLogRootRequest) (*trillian.GetLatestSignedLogRootResponse, error) {
-			time.Sleep(200 * time.Millisecond)
-			return &trillian.GetLatestSignedLogRootResponse{SignedLogRoot: mkSLR(t, 0, make([]byte, 32))}, nil
+			time.Sleep(100 * time.Millisecond)
+			return &trillian.GetLatestSignedLogRootResponse{SignedLogRoot: mkSLR(t, 7, make([]byte, 32))}, nil
+		},
+	).Times(1) // exactly once: init succeeds, second call hits cache
+
+	conn := dialMock(t, s.Addr)
+	cfg := DefaultConfig()
+	cfg.FrozenTreeIDs = map[int64]bool{606: true} // avoid updater noise
+	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 606, cfg)
+	t.Cleanup(tc.Close)
+
+	// First call: tight deadline that would have killed init under the old behavior.
+	// Now init detaches to bgCtx and succeeds; caller blocks past its own deadline
+	// but gets a result.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+	defer cancel()
+	resp := tc.GetLatest(ctx, 0)
+	require.NoError(t, resp.Err)
+	require.Equal(t, codes.OK, resp.Status)
+	require.True(t, tc.started)
+
+	// Second call hits the cache — no further RPC (Times(1) above enforces this).
+	resp = tc.GetLatest(context.Background(), 0)
+	require.NoError(t, resp.Err)
+}
+
+func TestEnsureStarted_InitTimeoutRespected(t *testing.T) {
+	// InitLatestRootTimeout still bounds init when Trillian is genuinely slow.
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	s, closeFn, err := testonly.NewMockServer(mockCtl)
+	require.NoError(t, err)
+	defer closeFn()
+
+	// Server blocks until the init RPC's deadline fires, then returns the
+	// resulting error. AnyTimes: the timeout may fire before the handler runs.
+	s.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, _ *trillian.GetLatestSignedLogRootRequest) (*trillian.GetLatestSignedLogRootResponse, error) {
+			<-ctx.Done()
+			return nil, ctx.Err()
 		},
 	).AnyTimes()
 
 	conn := dialMock(t, s.Addr)
-	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 606, DefaultConfig())
+	cfg := DefaultConfig()
+	cfg.InitLatestRootTimeout = 50 * time.Millisecond
+	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 607, cfg)
 	t.Cleanup(tc.Close)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
-	defer cancel()
-	resp := tc.GetLatest(ctx, 0)
+	start := time.Now()
+	resp := tc.GetLatest(context.Background(), 0)
+	elapsed := time.Since(start)
+
 	require.Error(t, resp.Err)
 	require.Equal(t, codes.DeadlineExceeded, resp.Status)
+	require.False(t, tc.started, "started must remain false on init failure so retry is possible")
+	require.Less(t, elapsed, 500*time.Millisecond, "init should give up near InitLatestRootTimeout, not hang")
 }
 
 // --- New tests for channel-per-caller and edge cases ---
@@ -626,8 +690,7 @@ func TestWaitForRootAtLeast_ContextCancellation(t *testing.T) {
 		done <- tc.waitForRootAtLeast(ctx, 100)
 	}()
 
-	// Give the goroutine time to register as a waiter
-	time.Sleep(20 * time.Millisecond)
+	waitForWaiters(t, tc, 1)
 
 	// Cancel context - should immediately unblock
 	cancel()
@@ -659,8 +722,7 @@ func TestClose_UnblocksAllWaiters(t *testing.T) {
 		}()
 	}
 
-	// Give goroutines time to register
-	time.Sleep(20 * time.Millisecond)
+	waitForWaiters(t, tc, numWaiters)
 	tc.Close()
 
 	done := make(chan struct{})
@@ -718,7 +780,7 @@ func TestNotifyWaiters_PartialSatisfaction(t *testing.T) {
 	// Verify remaining waiters count
 	tc.mu.Lock()
 	require.Len(t, tc.waiters, 1)
-	require.Equal(t, uint64(10), tc.waiters[0].size)
+	require.Equal(t, uint64(10), tc.waiters[ch10])
 	tc.mu.Unlock()
 }
 
@@ -734,7 +796,10 @@ func TestRemoveWaiter_Cleanup(t *testing.T) {
 
 	tc.removeWaiter(ch1)
 	require.Len(t, tc.waiters, 1)
-	require.Equal(t, ch2, tc.waiters[0].ch)
+	_, ok := tc.waiters[ch2]
+	require.True(t, ok)
+	_, ok = tc.waiters[ch1]
+	require.False(t, ok)
 
 	// Remove non-existent channel is a no-op
 	tc.removeWaiter(make(chan struct{}))

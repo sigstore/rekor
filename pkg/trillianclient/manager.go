@@ -227,8 +227,6 @@ func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStor
 
 // Close stops clients and closes underlying gRPC connections.
 func (cm *ClientManager) Close() error {
-	var err error
-
 	// Lock ordering: clientMu then connMu (same as GetTrillianClient → getConn).
 	cm.clientMu.Lock()
 	cm.shutdown = true
@@ -236,6 +234,15 @@ func (cm *ClientManager) Close() error {
 	cm.trillianClients = make(map[int64]ClientInterface)
 	cm.clientMu.Unlock()
 
+	// Close clients before connections so updater goroutines exit cleanly via
+	// bgCancel/stopCh rather than seeing connection-closed errors mid-RPC and
+	// incrementing metricUpdaterErrors on every shutdown. Done outside locks
+	// since client.Close blocks on wg.Wait().
+	for _, c := range oldClients {
+		c.Close()
+	}
+
+	var err error
 	cm.connMu.Lock()
 	for cfg, conn := range cm.connections {
 		if closeErr := conn.Close(); closeErr != nil {
@@ -245,9 +252,5 @@ func (cm *ClientManager) Close() error {
 	}
 	cm.connMu.Unlock()
 
-	// Close clients outside both locks to avoid deadlock (client.Close may block).
-	for _, c := range oldClients {
-		c.Close()
-	}
 	return err
 }
