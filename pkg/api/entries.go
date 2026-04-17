@@ -747,6 +747,11 @@ func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, e
 func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.LogEntry, error) {
 	log.ContextLogger(ctx).Debugf("Retrieving log entry %v from tree %d", uuid, tid)
 
+	// Validate that the tree ID is one of our configured shards; no need to proceed otherwise
+	if _, err := api.logRanges.GetLogRangeByTreeID(tid); err != nil {
+		return nil, ErrNotFound
+	}
+
 	hashValue, err := hex.DecodeString(uuid)
 	if err != nil {
 		return models.LogEntry{}, &types.InputValidationError{Err: fmt.Errorf("parsing UUID: %w", err)}

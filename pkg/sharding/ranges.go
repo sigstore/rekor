@@ -271,3 +271,9 @@ func (l *LogRanges) PublicKey(treeID string) (string, error) {
 	}
 	return "", fmt.Errorf("%d is not a valid tree ID and doesn't have an associated public key", tid)
 }
+
+// NewLogRangesForTesting creates a LogRanges with the given active tree ID
+// and no inactive shards, without initializing signers. For use in tests only.
+func NewLogRangesForTesting(activeTreeID int64) *LogRanges {
+	return &LogRanges{active: LogRange{TreeID: activeTreeID}}
+}
