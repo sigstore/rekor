@@ -747,6 +747,12 @@ func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, e
 func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.LogEntry, error) {
 	log.ContextLogger(ctx).Debugf("Retrieving log entry %v from tree %d", uuid, tid)
 
+	// Reject tree IDs not in the configured shard set before they reach the
+	// Trillian client cache or backend.
+	if _, err := api.logRanges.GetLogRangeByTreeID(tid); err != nil {
+		return models.LogEntry{}, ErrNotFound
+	}
+
 	hashValue, err := hex.DecodeString(uuid)
 	if err != nil {
 		return models.LogEntry{}, &types.InputValidationError{Err: fmt.Errorf("parsing UUID: %w", err)}
@@ -754,7 +760,7 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 
 	tc, err := api.trillianClientManager.GetTrillianClient(tid)
 	if err != nil {
-		return nil, fmt.Errorf("getting log client for tree %d: %w", tid, err)
+		return models.LogEntry{}, fmt.Errorf("getting log client for tree %d: %w", tid, err)
 	}
 	log.ContextLogger(ctx).Debugf("Attempting to retrieve UUID %v from TreeID %v", uuid, tid)
 
