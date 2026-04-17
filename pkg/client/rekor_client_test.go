@@ -131,3 +131,32 @@ func TestRekorLeakedGoroutine_SearchByHash(t *testing.T) {
 	rekor, _ := GetRekorClient(testServer.URL, WithInsecureTLS(true))
 	rekor.Index.SearchIndex(index.NewSearchIndexParams())
 }
+
+func TestRetryErrorHandlerSurfacesServerResponse(t *testing.T) {
+	// When retries exhaust against a server that keeps returning 5xx,
+	// the final error must include the status code and body — not just
+	// "giving up after N attempt(s)". See sigstore/rekor#2640.
+	testServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte("database unavailable"))
+		}))
+	defer testServer.Close()
+
+	client, err := GetRekorClient(testServer.URL,
+		WithRetryCount(1), WithRetryWaitMin(1*time.Millisecond), WithRetryWaitMax(2*time.Millisecond))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Tlog.GetLogInfo(nil)
+	if err == nil {
+		t.Fatal("expected an error after retries were exhausted")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "status 500") {
+		t.Errorf("expected error to include 'status 500', got: %s", msg)
+	}
+	if !strings.Contains(msg, "database unavailable") {
+		t.Errorf("expected error to include server body 'database unavailable', got: %s", msg)
+	}
+}
