@@ -195,7 +195,7 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 		if errors.Is(err, ErrNotFound) {
 			return handleRekorAPIError(params, http.StatusNotFound, fmt.Errorf("grpc error: %w", err), "")
 		}
-		return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianCommunicationError)
 	}
 	return entries.NewGetLogEntryByIndexOK().WithPayload(logEntry)
 }
@@ -655,7 +655,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 				}
 				logEntry, err := logEntryFromLeaf(httpReqCtx, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof, shard, api.logRanges, api.cachedCheckpoints)
 				if err != nil {
-					return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
+					return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 				}
 				resultPayload = append(resultPayload, logEntry)
 			}
@@ -666,7 +666,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		for _, logIndex := range params.Entry.LogIndexes {
 			logEntry, err := retrieveLogEntryByIndex(httpReqCtx, int(conv.Value(logIndex)))
 			if err != nil && !errors.Is(err, ErrNotFound) {
-				return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
+				return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianCommunicationError)
 			} else if err == nil {
 				resultPayload = append(resultPayload, logEntry)
 			}
