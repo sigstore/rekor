@@ -16,6 +16,9 @@
 package app
 
 import (
+	"bytes"
+	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"math/bits"
@@ -104,6 +107,8 @@ var verifyCmd = &cobra.Command{
 		uuid := viper.GetString("uuid")
 		logIndex := viper.GetString("log-index")
 
+		var proposedEntry models.ProposedEntry
+
 		if uuid != "" {
 			searchLogQuery.EntryUUIDs = append(searchLogQuery.EntryUUIDs, uuid)
 		} else if logIndex != "" {
@@ -120,12 +125,12 @@ var verifyCmd = &cobra.Command{
 
 			props := CreatePropsFromPflags()
 
-			entry, err := types.NewProposedEntry(ctx, typeStr, versionStr, *props)
+			proposedEntry, err = types.NewProposedEntry(ctx, typeStr, versionStr, *props)
 			if err != nil {
 				return nil, fmt.Errorf("error: %w", err)
 			}
 
-			entries := []models.ProposedEntry{entry}
+			entries := []models.ProposedEntry{proposedEntry}
 			searchLogQuery.SetEntries(entries)
 		}
 		searchParams.SetEntry(&searchLogQuery)
@@ -158,8 +163,18 @@ var verifyCmd = &cobra.Command{
 			entry = v
 		}
 
+		if err := verifyBodyMatchesUUID(entry, o.EntryUUID); err != nil {
+			return nil, err
+		}
+
 		if viper.IsSet("uuid") {
 			if err := compareEntryUUIDs(viper.GetString("uuid"), o.EntryUUID); err != nil {
+				return nil, err
+			}
+		}
+
+		if proposedEntry != nil {
+			if err := verifyProposedEntryMatchesBody(ctx, proposedEntry, entry); err != nil {
 				return nil, err
 			}
 		}
@@ -183,6 +198,63 @@ var verifyCmd = &cobra.Command{
 
 		return o, err
 	}),
+}
+
+// verifyBodyMatchesUUID verifies that the entry body's leaf hash matches
+// the UUID in the response. This ensures the server returned an entry
+// whose body is consistent with the claimed entry ID.
+func verifyBodyMatchesUUID(entry models.LogEntryAnon, entryUUID string) error {
+	entryBytes, err := decodeEntryBody(entry)
+	if err != nil {
+		return err
+	}
+	computedLeafHash := rfc6962.DefaultHasher.HashLeaf(entryBytes)
+	responseUUID, err := sharding.GetUUIDFromIDString(entryUUID)
+	if err != nil {
+		return fmt.Errorf("getting UUID from response: %w", err)
+	}
+	if hex.EncodeToString(computedLeafHash) != responseUUID {
+		return fmt.Errorf("entry body hash does not match response UUID: computed %s, got %s",
+			hex.EncodeToString(computedLeafHash), responseUUID)
+	}
+	return nil
+}
+
+// verifyProposedEntryMatchesBody verifies the returned entry matches the
+// locally-computed canonical entry derived from the user's inputs.
+// Without this check, a malicious server could return a valid but
+// unrelated log entry and all other cryptographic checks would pass.
+func verifyProposedEntryMatchesBody(ctx context.Context, proposedEntry models.ProposedEntry, entry models.LogEntryAnon) error {
+	entryImpl, err := types.UnmarshalEntry(proposedEntry)
+	if err != nil {
+		return fmt.Errorf("unmarshalling proposed entry for verification: %w", err)
+	}
+	expectedCanonical, err := types.CanonicalizeEntry(ctx, entryImpl)
+	if err != nil {
+		return fmt.Errorf("canonicalizing proposed entry: %w", err)
+	}
+	entryBytes, err := decodeEntryBody(entry)
+	if err != nil {
+		return err
+	}
+	expectedLeafHash := rfc6962.DefaultHasher.HashLeaf(expectedCanonical)
+	computedLeafHash := rfc6962.DefaultHasher.HashLeaf(entryBytes)
+	if !bytes.Equal(expectedLeafHash, computedLeafHash) {
+		return fmt.Errorf("returned entry does not match provided artifact inputs")
+	}
+	return nil
+}
+
+func decodeEntryBody(entry models.LogEntryAnon) ([]byte, error) {
+	bodyStr, ok := entry.Body.(string)
+	if !ok {
+		return nil, fmt.Errorf("entry body must be a string, was %T", entry.Body)
+	}
+	entryBytes, err := base64.StdEncoding.DecodeString(bodyStr)
+	if err != nil {
+		return nil, fmt.Errorf("decoding entry body: %w", err)
+	}
+	return entryBytes, nil
 }
 
 func init() {
