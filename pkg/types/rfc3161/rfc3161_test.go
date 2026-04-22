@@ -67,8 +67,15 @@ func TestRfc3161Type(t *testing.T) {
 		t.Error("valid semver range was not added to SemVerToFacFnMap")
 	}
 
-	u.Rfc3161.APIVersion = conv.Pointer("2.0.1")
+	u.Rfc3161.APIVersion = nil
 	brt := New()
+
+	// nil api version should return error, not panic
+	if _, err := brt.UnmarshalEntry(&u.Rfc3161); err == nil {
+		t.Error("unexpected success in Unmarshal for nil api version")
+	}
+
+	u.Rfc3161.APIVersion = conv.Pointer("2.0.1")
 
 	// version requested matches implementation in map
 	if _, err := brt.UnmarshalEntry(&u.Rfc3161); err != nil {

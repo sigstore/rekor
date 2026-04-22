@@ -55,6 +55,10 @@ func (btt BaseTimestampType) UnmarshalEntry(pe models.ProposedEntry) (types.Entr
 		return nil, errors.New("cannot unmarshal non-Timestamp types")
 	}
 
+	if rfc3161.APIVersion == nil {
+		return nil, errors.New("api version cannot be nil")
+	}
+
 	return btt.VersionedUnmarshal(rfc3161, *rfc3161.APIVersion)
 }
 

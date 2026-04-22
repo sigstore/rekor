@@ -55,6 +55,10 @@ func (it BaseCOSEType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl,
 		return nil, errors.New("cannot unmarshal non-COSE types")
 	}
 
+	if in.APIVersion == nil {
+		return nil, errors.New("api version cannot be nil")
+	}
+
 	return it.VersionedUnmarshal(in, *in.APIVersion)
 }
 
