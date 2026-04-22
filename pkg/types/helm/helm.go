@@ -55,6 +55,10 @@ func (it BaseHelmType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl,
 		return nil, errors.New("cannot unmarshal non-Rekord types")
 	}
 
+	if in.APIVersion == nil {
+		return nil, errors.New("api version cannot be nil")
+	}
+
 	return it.VersionedUnmarshal(in, *in.APIVersion)
 }
 
