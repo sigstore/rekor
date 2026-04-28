@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -158,12 +159,19 @@ func CreateAndInitTree(ctx context.Context, config GRPCConfig) (*trillian.Tree, 
 }
 
 func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStore bool, serviceConfig string) (*grpc.ClientConn, error) {
-	// Set up and test connection to rpc server
+	// tlsServerName is the bare hostname used for TLS SNI and certificate
+	// verification. When hostname carries a gRPC resolver scheme (e.g.
+	// "dns:///host.svc"), the scheme must be stripped before it reaches the
+	// TLS stack — otherwise gRPC-go sets the x509 ServerName to the scheme
+	// string ("dns"), causing certificate verification to fail with
+	// `x509: certificate is valid for <SANs>, not dns`.
+	cleanHostname := strings.TrimPrefix(hostname, "dns:///")
+
 	var creds credentials.TransportCredentials
 	switch {
 	case useSystemTrustStore:
 		creds = credentials.NewTLS(&tls.Config{
-			ServerName: hostname,
+			ServerName: cleanHostname,
 			MinVersion: tls.VersionTLS12,
 		})
 	case tlsCACertFile != "":
@@ -176,7 +184,7 @@ func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStor
 			return nil, fmt.Errorf("failed to append CA certificate to pool")
 		}
 		creds = credentials.NewTLS(&tls.Config{
-			ServerName: hostname,
+			ServerName: cleanHostname,
 			RootCAs:    certPool,
 			MinVersion: tls.VersionTLS12,
 		})
@@ -184,10 +192,17 @@ func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStor
 		creds = insecure.NewCredentials()
 	}
 
-	opts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(creds),
+		grpc.WithAuthority(cleanHostname),
+	}
+
 	if serviceConfig != "" {
 		opts = append(opts, grpc.WithDefaultServiceConfig(serviceConfig))
 	}
+	// hostname (not cleanHostname) is intentional: the dns:/// scheme must
+	// reach grpc.NewClient so gRPC uses the DNS resolver for client-side
+	// load balancing. TLS and authority are handled separately above.
 	conn, err := grpc.NewClient(fmt.Sprintf("%s:%d", hostname, port), opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to RPC server: %w", err)
