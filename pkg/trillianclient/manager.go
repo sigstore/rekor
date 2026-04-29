@@ -158,14 +158,19 @@ func CreateAndInitTree(ctx context.Context, config GRPCConfig) (*trillian.Tree, 
 	return t, nil
 }
 
+// cleanDialHostname strips gRPC resolver scheme prefixes (e.g. "dns:///")
+// from a hostname, returning the bare hostname suitable for TLS SNI and
+// certificate verification. The original address with its scheme must be
+// preserved for the grpc.NewClient target so the chosen resolver stays active.
+func cleanDialHostname(hostname string) string {
+	return strings.TrimPrefix(hostname, "dns:///")
+}
+
 func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStore bool, serviceConfig string) (*grpc.ClientConn, error) {
-	// tlsServerName is the bare hostname used for TLS SNI and certificate
-	// verification. When hostname carries a gRPC resolver scheme (e.g.
-	// "dns:///host.svc"), the scheme must be stripped before it reaches the
-	// TLS stack — otherwise gRPC-go sets the x509 ServerName to the scheme
-	// string ("dns"), causing certificate verification to fail with
-	// `x509: certificate is valid for <SANs>, not dns`.
-	cleanHostname := strings.TrimPrefix(hostname, "dns:///")
+	// Strip gRPC resolver scheme before TLS: if hostname is e.g.
+	// "dns:///host.svc", passing it raw into tls.Config.ServerName causes
+	// x509 verification to fail with `certificate valid for host.svc, not dns`.
+	cleanHostname := cleanDialHostname(hostname)
 
 	var creds credentials.TransportCredentials
 	switch {
