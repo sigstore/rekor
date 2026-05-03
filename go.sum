@@ -23,8 +23,8 @@ cloud.google.com/go/profiler v0.4.3 h1:IY3QNKlr8VbXwGWHcZbJQsMA/83ZTH6uAHf8jYyj7
 cloud.google.com/go/profiler v0.4.3/go.mod h1:3xFodugWfPIQZWFcXdUmfa+yTiiyQ8fWrdT+d2Sg4J0=
 cloud.google.com/go/pubsub v1.50.2 h1:54Up97HnThdP4H8jjWJSSQ/mnYG2EKon7ZSNETRq0tM=
 cloud.google.com/go/pubsub v1.50.2/go.mod h1:jyCWeZdGFqd4mitSsBERnJcpqaHBsxQoPkNvjj4sp0w=
-cloud.google.com/go/pubsub/v2 v2.4.0 h1:oMKNiBQpXImRWnHYla9uSU66ZzByZwBSCJOEs/pTKVg=
-cloud.google.com/go/pubsub/v2 v2.4.0/go.mod h1:2lS/XQKq5qtOMs6kHBK+WX1ytUC36kLl2ig3zqsGUx8=
+cloud.google.com/go/pubsub/v2 v2.6.0 h1:8pjR0id+GTB+krKx5G6AGJoYrHog58w2Q89PCOrfM64=
+cloud.google.com/go/pubsub/v2 v2.6.0/go.mod h1:4anqvV/w8Pcgu2tO0qr2XgsF3GXHowzryfQ5gOnVmWY=
 cloud.google.com/go/storage v1.58.0 h1:PflFXlmFJjG/nBeR9B7pKddLQWaFaRWx4uUi/LyNxxo=
 cloud.google.com/go/storage v1.58.0/go.mod h1:cMWbtM+anpC74gn6qjLh+exqYcfmB9Hqe5z6adx+CLI=
 cloud.google.com/go/trace v1.11.7 h1:kDNDX8JkaAG3R2nq1lIdkb7FCSi1rCmsEtKVsty7p+U=
