@@ -17,7 +17,10 @@ package pki
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/pem"
 	"io"
+	"os"
 	"testing"
 
 	"github.com/sigstore/rekor/pkg/pki/minisign"
@@ -27,6 +30,15 @@ import (
 	"github.com/sigstore/rekor/pkg/pki/tuf"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 )
+
+// mustRead returns the contents of path or panics; used for seed corpus setup.
+func mustRead(path string) []byte {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
 
 var (
 	fuzzArtifactFactoryMap = map[uint]pkiImpl{
@@ -81,22 +93,126 @@ var (
 	}
 )
 
+// wrapKeyBytes pushes raw fuzzer bytes past the outer framing layer for each
+// PKI format so the mutator spends its budget on the inner ASN.1 / packet /
+// JSON structure rather than rediscovering the envelope every run.
+func wrapKeyBytes(keyType uint, raw []byte) []byte {
+	switch keyType {
+	case 0: // pgp
+		return []byte("-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n" +
+			base64.StdEncoding.EncodeToString(raw) +
+			"\n-----END PGP PUBLIC KEY BLOCK-----\n")
+	case 1: // minisign
+		return []byte("untrusted comment: fuzz\n" + base64.StdEncoding.EncodeToString(raw))
+	case 2: // ssh
+		return []byte("ssh-ed25519 " + base64.StdEncoding.EncodeToString(raw) + " fuzz@rekor")
+	case 3: // x509
+		return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: raw})
+	case 4: // pkcs7
+		return pem.EncodeToMemory(&pem.Block{Type: "PKCS7", Bytes: raw})
+	case 5: // tuf
+		return raw // tuf root.json is plain JSON; let the mutator find structure
+	}
+	return raw
+}
+
 func FuzzKeys(f *testing.F) {
-	f.Fuzz(func(t *testing.T, keyType uint, origSignatureData, verSignatureData, keyData []byte) {
-		s, err := fuzzArtifactFactoryMap[keyType%6].newSignature(bytes.NewReader(origSignatureData))
-		if err == nil && s != nil {
+	msg := []byte("Hello, World!\n")
+	sshMsg := []byte("Hello, ssh world!\n")
+
+	// PGP (keyType 0): armored public key + armored signature
+	f.Add(uint(0), false,
+		mustRead("pgp/testdata/hello_world.txt.asc.sig"),
+		msg,
+		mustRead("pgp/testdata/valid_armored_public.pgp"))
+	// PGP binary format
+	f.Add(uint(0), false,
+		mustRead("pgp/testdata/hello_world.txt.sig"),
+		msg,
+		mustRead("pgp/testdata/valid_binary_public.pgp"))
+
+	// Minisign (keyType 1): standard signature + key with comment
+	f.Add(uint(1), false,
+		mustRead("minisign/testdata/hello_world.txt.minisig"),
+		msg,
+		mustRead("minisign/testdata/minisign.pub"))
+	// Minisign: prehashed signature (exercises blake2b path)
+	f.Add(uint(1), false,
+		mustRead("minisign/testdata/hello_world_hashed.txt.minisig"),
+		msg,
+		mustRead("minisign/testdata/minisign_hashed.pub"))
+
+	// SSH (keyType 2): RSA key + signature
+	f.Add(uint(2), false,
+		mustRead("ssh/testdata/hello_world.txt.sig"),
+		sshMsg,
+		mustRead("ssh/testdata/id_rsa.pub"))
+
+	// X509 (keyType 3): EC public key + signature
+	f.Add(uint(3), false,
+		mustRead("x509/testdata/hello_world.txt.sig"),
+		msg,
+		mustRead("x509/testdata/ec.pub"))
+
+	// PKCS7 (keyType 4): signed JAR manifest with embedded cert chain.
+	// Note: PKCS7 NewPublicKey has a known round-trip inconsistency
+	// (CanonicalValue returns CERTIFICATE PEM, but NewPublicKey rejects
+	// non-PKCS7 PEM), so we supply the same blob for both signature and
+	// key to exercise the maximum parse depth.
+	f.Add(uint(4), false,
+		mustRead("pkcs7/testdata/sig.pkcs7.pem"),
+		[]byte{},
+		mustRead("pkcs7/testdata/sig.pkcs7.pem"))
+
+	// TUF (keyType 5): root.json as key, timestamp.json as "signature"
+	f.Add(uint(5), false,
+		mustRead("tuf/testdata/timestamp.json"),
+		[]byte("{}"),
+		mustRead("tuf/testdata/1.root.json"))
+
+	f.Fuzz(func(t *testing.T, keyType uint, wrap bool, origSignatureData, verSignatureData, keyData []byte) {
+		impl := fuzzArtifactFactoryMap[keyType%6]
+
+		s, sigErr := impl.newSignature(bytes.NewReader(origSignatureData))
+		if sigErr == nil && s != nil {
 			b, err := s.CanonicalValue()
 			if err == nil {
-				_, err = fuzzArtifactFactoryMap[keyType%6].newSignature(bytes.NewReader(b))
-				if err != nil {
-					t.Fatal("Could not create a signature from valid key data")
+				if _, err := impl.newSignature(bytes.NewReader(b)); err != nil {
+					t.Fatalf("could not re-parse canonical signature: %v", err)
 				}
 			}
-			pub, err := fuzzArtifactFactoryMap[keyType%6].newPubKey(bytes.NewReader(keyData))
-			if err != nil {
-				t.Skip()
+		}
+
+		keyBytes := keyData
+		if wrap {
+			keyBytes = wrapKeyBytes(keyType%6, keyData)
+		}
+		pub, err := impl.newPubKey(bytes.NewReader(keyBytes))
+		if err != nil || pub == nil {
+			return
+		}
+
+		// Exercise the full PublicKey surface; these feed IndexKeys() in the
+		// API write path and contain non-trivial cert/SAN/packet parsing.
+		_ = pub.EmailAddresses() //nolint:staticcheck // deprecated but still exported/reachable
+		_ = pub.Subjects()
+		_, _ = pub.Identities()
+
+		if cv, err := pub.CanonicalValue(); err == nil {
+			if _, err := impl.newPubKey(bytes.NewReader(cv)); err != nil {
+				// Log but don't fail: some implementations (e.g. PKCS7)
+				// have a known round-trip inconsistency where
+				// CanonicalValue returns a different PEM type than
+				// NewPublicKey accepts.
+				t.Logf("canonical public key re-parse failed: %v", err)
 			}
-			s.Verify(bytes.NewReader(verSignatureData), pub)
+		}
+
+		// Only call Verify with a successfully-parsed signature; some
+		// implementations return a typed-nil pointer on error which is a
+		// non-nil interface value and would panic on a value-receiver call.
+		if sigErr == nil && s != nil {
+			_ = s.Verify(bytes.NewReader(verSignatureData), pub)
 		}
 	})
 }
