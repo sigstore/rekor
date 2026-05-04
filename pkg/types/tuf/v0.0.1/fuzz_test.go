@@ -95,9 +95,11 @@ func FuzzTufUnmarshalAndCanonicalize(f *testing.F) {
 			t.Skip()
 		}
 
-		if _, err := types.CanonicalizeEntry(context.Background(), ei); err != nil {
+		canonical, err := types.CanonicalizeEntry(context.Background(), ei)
+		if err != nil {
 			t.Skip()
 		}
+		fuzzUtils.AssertCanonicalIdempotent(context.Background(), t, canonical)
 	})
 }
 
@@ -107,7 +109,7 @@ func FuzzTufDecodeEntryDirectMapAndRaw(f *testing.F) {
 		initter.Do(fuzzUtils.SetFuzzLogger)
 		ff := fuzz.NewConsumer(data)
 		choice, _ := ff.GetInt()
-		choice %= 2
+		choice %= 3
 		mkB64 := func(limit int) string {
 			b, _ := ff.GetBytes()
 			if len(b) > limit {
@@ -140,6 +142,13 @@ func FuzzTufDecodeEntryDirectMapAndRaw(f *testing.F) {
 				t.Skip()
 			}
 			input = mdl
+		case 2:
+			mdl := &models.TUFV001Schema{}
+			if err := ff.GenerateStruct(mdl); err != nil {
+				t.Skip()
+			}
+			fuzzUtils.AssertDecodeEntryEquivalent(t, mdl, DecodeEntry)
+			return
 		}
 		entry := &V001Entry{}
 		if err := DecodeEntry(input, &entry.TufObj); err != nil {

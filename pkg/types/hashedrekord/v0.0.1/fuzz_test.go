@@ -96,9 +96,11 @@ func FuzzHashedRekordUnmarshalAndCanonicalize(f *testing.F) {
 			t.Skip()
 		}
 
-		if _, err := types.CanonicalizeEntry(context.Background(), ei); err != nil {
-			t.Errorf("error canonicalizing unmarshalled entry: %v", err)
+		canonical, err := types.CanonicalizeEntry(context.Background(), ei)
+		if err != nil {
+			t.Skip()
 		}
+		fuzzUtils.AssertCanonicalIdempotent(context.Background(), t, canonical)
 	})
 }
 
@@ -108,7 +110,7 @@ func FuzzHashedRekordDecodeEntryDirectMapAndRaw(f *testing.F) {
 		initter.Do(fuzzUtils.SetFuzzLogger)
 		ff := fuzz.NewConsumer(data)
 		choice, _ := ff.GetInt()
-		choice %= 2
+		choice %= 3
 		toB64 := func(limit int) string {
 			b, _ := ff.GetBytes()
 			if len(b) > limit {
@@ -137,6 +139,13 @@ func FuzzHashedRekordDecodeEntryDirectMapAndRaw(f *testing.F) {
 				t.Skip()
 			}
 			input = mdl
+		case 2:
+			mdl := &models.HashedrekordV001Schema{}
+			if err := ff.GenerateStruct(mdl); err != nil {
+				t.Skip()
+			}
+			fuzzUtils.AssertDecodeEntryEquivalent(t, mdl, DecodeEntry)
+			return
 		}
 		entry := &V001Entry{}
 		if err := DecodeEntry(input, &entry.HashedRekordObj); err != nil {

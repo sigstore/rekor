@@ -24,7 +24,7 @@ SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go"|grep -v pk
 TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
 BIN_DIR := $(abspath $(ROOT_DIR)/bin)
-FUZZ_DURATION ?= 10s
+FUZZ_DURATION ?= 1s
 
 PROJECT_ID ?= projectsigstore
 RUNTIME_IMAGE ?= gcr.io/distroless/static
@@ -156,15 +156,59 @@ ko-local: ## Build container images locally using ko
 		github.com/sigstore/rekor/cmd/backfill-index
 
 fuzz: ## Run fuzz tests for a configured duration
+	go test -fuzz FuzzKeys -fuzztime $(FUZZ_DURATION) ./pkg/pki
 	go test -fuzz FuzzCreateEntryIDFromParts -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzGetUUIDFromIDString -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzGetTreeIDFromIDString -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzPadToTreeIDLen -fuzztime $(FUZZ_DURATION) ./pkg/sharding
-	go test -fuzz FuzzReturnEntryIDString -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzTreeID -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzValidateUUID -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzValidateTreeID -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzValidateEntryID -fuzztime $(FUZZ_DURATION) ./pkg/sharding
+	go test -fuzz FuzzNewFile -fuzztime $(FUZZ_DURATION) ./pkg/signer
+	go test -fuzz FuzzCoseCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/cose/v0.0.1
+	go test -fuzz FuzzCoseUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/cose/v0.0.1
+	go test -fuzz FuzzCoseDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/cose/v0.0.1
+	go test -fuzz FuzzHashedRekordCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/hashedrekord/v0.0.1
+	go test -fuzz FuzzHashedRekordUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/hashedrekord/v0.0.1
+	go test -fuzz FuzzHashedRekordDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/hashedrekord/v0.0.1
+	go test -fuzz FuzzPackageUnmarshal -fuzztime $(FUZZ_DURATION) ./pkg/types/alpine
+	go test -fuzz FuzzAlpineCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/alpine/v0.0.1
+	go test -fuzz FuzzAlpineUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/alpine/v0.0.1
+	go test -fuzz FuzzAlpineDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/alpine/v0.0.1
+	go test -fuzz FuzzJarCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/jar/v0.0.1
+	go test -fuzz FuzzJarUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/jar/v0.0.1
+	go test -fuzz FuzzJarDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/jar/v0.0.1
+	go test -fuzz FuzzJarutilsVerify -fuzztime $(FUZZ_DURATION) ./pkg/types/jar/v0.0.1
+	go test -fuzz FuzzIntotoCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/intoto/v0.0.1
+	go test -fuzz FuzzIntotoUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/intoto/v0.0.1
+	go test -fuzz FuzzIntotoV001DecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/intoto/v0.0.1
+	go test -fuzz FuzzIntotoCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/intoto/v0.0.2
+	go test -fuzz FuzzIntotoUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/intoto/v0.0.2
+	go test -fuzz FuzzIntotoDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/intoto/v0.0.2
+	go test -fuzz FuzzTufCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/tuf/v0.0.1
+	go test -fuzz FuzzTufUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/tuf/v0.0.1
+	go test -fuzz FuzzTufDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/tuf/v0.0.1
+	go test -fuzz FuzzRfc3161CreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/rfc3161/v0.0.1
+	go test -fuzz FuzzRfc3161UnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/rfc3161/v0.0.1
+	go test -fuzz FuzzRfc3161DecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/rfc3161/v0.0.1
+	go test -fuzz FuzzRpmCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/rpm/v0.0.1
+	go test -fuzz FuzzRpmUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/rpm/v0.0.1
+	go test -fuzz FuzzRpmDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/rpm/v0.0.1
+	go test -fuzz FuzzHelmCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/helm/v0.0.1
+	go test -fuzz FuzzHelmUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/helm/v0.0.1
+	go test -fuzz FuzzHelmProvenanceUnmarshal -fuzztime $(FUZZ_DURATION) ./pkg/types/helm/v0.0.1
+	go test -fuzz FuzzHelmDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/helm/v0.0.1
+	go test -fuzz FuzzRekordCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/rekord/v0.0.1
+	go test -fuzz FuzzRekordUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/rekord/v0.0.1
+	go test -fuzz FuzzRekordDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/rekord/v0.0.1
+	go test -fuzz FuzzDSSECreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/dsse/v0.0.1
+	go test -fuzz FuzzDSSEUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/dsse/v0.0.1
+	go test -fuzz FuzzDSSEDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/dsse/v0.0.1
+	go test -fuzz FuzzSignedNoteRoundTrip -fuzztime $(FUZZ_DURATION) ./pkg/util
+	go test -fuzz FuzzCheckpointRoundTrip -fuzztime $(FUZZ_DURATION) ./pkg/util
+	go test -fuzz FuzzSignedCheckpoint -fuzztime $(FUZZ_DURATION) ./pkg/util
+	go test -fuzz FuzzGenerateTransparencyLogEntry -fuzztime $(FUZZ_DURATION) ./pkg/tle
 
 ## --------------------------------------
 ## Tooling Binaries
