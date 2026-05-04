@@ -69,10 +69,10 @@ func FuzzGetTreeIDFromIDString(f *testing.F) {
 }
 
 func FuzzPadToTreeIDLen(f *testing.F) {
-	f.Add("1")                  // short, needs padding
-	f.Add("0000000000000001")   // already correct length
-	f.Add("ffffffffffffffff")   // max value
-	f.Add("00000000000000001")  // too long by one
+	f.Add("1")                 // short, needs padding
+	f.Add("0000000000000001")  // already correct length
+	f.Add("ffffffffffffffff")  // max value
+	f.Add("00000000000000001") // too long by one
 
 	f.Fuzz(func(t *testing.T, treeID string) {
 		if _, err := PadToTreeIDLen(treeID); err != nil {
@@ -94,8 +94,8 @@ func FuzzTreeID(f *testing.F) {
 
 func FuzzValidateUUID(f *testing.F) {
 	f.Add("a9b9c5e3f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3") // valid 64 hex
-	f.Add("0000000000000000000000000000000000000000000000000000000000000000")     // all zeros
-	f.Add("AABBCCDD")                                                              // too short
+	f.Add("0000000000000000000000000000000000000000000000000000000000000000") // all zeros
+	f.Add("AABBCCDD")                                                         // too short
 
 	f.Fuzz(func(t *testing.T, uuid string) {
 		if err := ValidateUUID(uuid); err != nil {
@@ -105,9 +105,9 @@ func FuzzValidateUUID(f *testing.F) {
 }
 
 func FuzzValidateTreeID(f *testing.F) {
-	f.Add("0000000000000001")   // valid
-	f.Add("0000000000000000")   // zero — should fail
-	f.Add("ffffffffffffffff")   // max
+	f.Add("0000000000000001") // valid
+	f.Add("0000000000000000") // zero — should fail
+	f.Add("ffffffffffffffff") // max
 
 	f.Fuzz(func(t *testing.T, treeID string) {
 		if err := ValidateTreeID(treeID); err != nil {
