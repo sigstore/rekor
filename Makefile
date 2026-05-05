@@ -24,7 +24,7 @@ SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go"|grep -v pk
 TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
 BIN_DIR := $(abspath $(ROOT_DIR)/bin)
-FUZZ_DURATION ?= 1s
+FUZZ_DURATION ?= 10s
 
 PROJECT_ID ?= projectsigstore
 RUNTIME_IMAGE ?= gcr.io/distroless/static
