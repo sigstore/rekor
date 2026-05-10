@@ -53,10 +53,10 @@ var helloWorldMinisignHashedSig []byte
 var validMinisignPub []byte
 
 //go:embed ssh/testdata/hello_world.txt.sig
-var helloWorldSshSig []byte
+var helloWorldSSHSig []byte
 
 //go:embed ssh/testdata/id_rsa.pub
-var validSshPub []byte
+var validSSHPub []byte
 
 //go:embed x509/testdata/hello_world.txt.sig
 var helloWorldX509Sig []byte
@@ -175,9 +175,9 @@ func FuzzKeys(f *testing.F) {
 		validMinisignPub)
 	// SSH (keyType 2): RSA key + signature
 	f.Add(uint(2), false,
-		helloWorldSshSig,
+		helloWorldSSHSig,
 		sshMsg,
-		validSshPub)
+		validSSHPub)
 	// X509 (keyType 3): EC public key + signature
 	f.Add(uint(3), false,
 		helloWorldX509Sig,
