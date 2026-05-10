@@ -17,10 +17,10 @@ package pki
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/base64"
 	"encoding/pem"
 	"io"
-	"os"
 	"testing"
 
 	"github.com/sigstore/rekor/pkg/pki/minisign"
@@ -31,14 +31,47 @@ import (
 	"github.com/sigstore/rekor/pkg/pki/x509"
 )
 
-// mustRead returns the contents of path or panics; used for seed corpus setup.
-func mustRead(path string) []byte {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
+//go:embed pgp/testdata/hello_world.txt.asc.sig
+var helloWorldPgpSig []byte
+
+//go:embed pgp/testdata/hello_world.txt.sig
+var helloWorldPgpBinarySig []byte
+
+//go:embed pgp/testdata/valid_armored_public.pgp
+var validArmoredPgpPub []byte
+
+//go:embed pgp/testdata/valid_binary_public.pgp
+var validBinaryPgpPub []byte
+
+//go:embed minisign/testdata/hello_world.txt.minisig
+var helloWorldMinisignSig []byte
+
+//go:embed minisign/testdata/hello_world_hashed.txt.minisig
+var helloWorldMinisignHashedSig []byte
+
+//go:embed minisign/testdata/minisign.pub
+var validMinisignPub []byte
+
+//go:embed ssh/testdata/hello_world.txt.sig
+var helloWorldSshSig []byte
+
+//go:embed ssh/testdata/id_rsa.pub
+var validSshPub []byte
+
+//go:embed x509/testdata/hello_world.txt.sig
+var helloWorldX509Sig []byte
+
+//go:embed x509/testdata/ec.pub
+var validX509Pub []byte
+
+//go:embed pkcs7/testdata/sig.pkcs7.pem
+var pkcs7SigAndCert []byte
+
+//go:embed tuf/testdata/timestamp.json
+var tufTimestamp []byte
+
+//go:embed tuf/testdata/1.root.json
+var tufRoot []byte
 
 var (
 	fuzzArtifactFactoryMap = map[uint]pkiImpl{
@@ -122,53 +155,48 @@ func FuzzKeys(f *testing.F) {
 
 	// PGP (keyType 0): armored public key + armored signature
 	f.Add(uint(0), false,
-		mustRead("pgp/testdata/hello_world.txt.asc.sig"),
+		helloWorldPgpSig,
 		msg,
-		mustRead("pgp/testdata/valid_armored_public.pgp"))
+		validArmoredPgpPub)
 	// PGP binary format
 	f.Add(uint(0), false,
-		mustRead("pgp/testdata/hello_world.txt.sig"),
+		helloWorldPgpBinarySig,
 		msg,
-		mustRead("pgp/testdata/valid_binary_public.pgp"))
-
+		validBinaryPgpPub)
 	// Minisign (keyType 1): standard signature + key with comment
 	f.Add(uint(1), false,
-		mustRead("minisign/testdata/hello_world.txt.minisig"),
+		helloWorldMinisignSig,
 		msg,
-		mustRead("minisign/testdata/minisign.pub"))
+		validMinisignPub)
 	// Minisign: prehashed signature (exercises blake2b path)
 	f.Add(uint(1), false,
-		mustRead("minisign/testdata/hello_world_hashed.txt.minisig"),
+		helloWorldMinisignHashedSig,
 		msg,
-		mustRead("minisign/testdata/minisign_hashed.pub"))
-
+		validMinisignPub)
 	// SSH (keyType 2): RSA key + signature
 	f.Add(uint(2), false,
-		mustRead("ssh/testdata/hello_world.txt.sig"),
+		helloWorldSshSig,
 		sshMsg,
-		mustRead("ssh/testdata/id_rsa.pub"))
-
+		validSshPub)
 	// X509 (keyType 3): EC public key + signature
 	f.Add(uint(3), false,
-		mustRead("x509/testdata/hello_world.txt.sig"),
+		helloWorldX509Sig,
 		msg,
-		mustRead("x509/testdata/ec.pub"))
-
+		validX509Pub)
 	// PKCS7 (keyType 4): signed JAR manifest with embedded cert chain.
 	// Note: PKCS7 NewPublicKey has a known round-trip inconsistency
 	// (CanonicalValue returns CERTIFICATE PEM, but NewPublicKey rejects
 	// non-PKCS7 PEM), so we supply the same blob for both signature and
 	// key to exercise the maximum parse depth.
 	f.Add(uint(4), false,
-		mustRead("pkcs7/testdata/sig.pkcs7.pem"),
+		pkcs7SigAndCert,
 		[]byte{},
-		mustRead("pkcs7/testdata/sig.pkcs7.pem"))
-
+		pkcs7SigAndCert)
 	// TUF (keyType 5): root.json as key, timestamp.json as "signature"
 	f.Add(uint(5), false,
-		mustRead("tuf/testdata/timestamp.json"),
+		tufTimestamp,
 		[]byte("{}"),
-		mustRead("tuf/testdata/1.root.json"))
+		tufRoot)
 
 	f.Fuzz(func(t *testing.T, keyType uint, wrap bool, origSignatureData, verSignatureData, keyData []byte) {
 		impl := fuzzArtifactFactoryMap[keyType%6]

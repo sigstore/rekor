@@ -26,7 +26,7 @@ func FuzzCreateEntryIDFromParts(f *testing.F) {
 	f.Fuzz(func(t *testing.T, treeID, uuid string) {
 		e, err := CreateEntryIDFromParts(treeID, uuid)
 		if err != nil {
-			t.Skipf("failed to create entryID from %v + %v: %v", treeID, uuid, err)
+			return
 		}
 		// Round-trip: an accepted (treeID, uuid) pair must serialize to an
 		// entryID string that the inverse parsers also accept and that
@@ -53,7 +53,7 @@ func FuzzGetUUIDFromIDString(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, entryID string) {
 		if _, err := GetUUIDFromIDString(entryID); err != nil {
-			t.Skipf("error getting UUID from %v: %v", entryID, err)
+			return
 		}
 	})
 }
@@ -63,7 +63,7 @@ func FuzzGetTreeIDFromIDString(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, entryID string) {
 		if _, err := GetTreeIDFromIDString(entryID); err != nil {
-			t.Skipf("error getting treeID from %v: %v", entryID, err)
+			return
 		}
 	})
 }
@@ -76,7 +76,7 @@ func FuzzPadToTreeIDLen(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, treeID string) {
 		if _, err := PadToTreeIDLen(treeID); err != nil {
-			t.Skipf("error padding %v: %v", treeID, err)
+			return
 		}
 	})
 }
@@ -87,7 +87,7 @@ func FuzzTreeID(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, treeID string) {
 		if _, err := TreeID(treeID); err != nil {
-			t.Skipf("error creating treeID %v: %v", treeID, err)
+			return
 		}
 	})
 }
@@ -99,7 +99,7 @@ func FuzzValidateUUID(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, uuid string) {
 		if err := ValidateUUID(uuid); err != nil {
-			t.Skipf("error validating UUID %v: %v", uuid, err)
+			return
 		}
 	})
 }
@@ -111,7 +111,7 @@ func FuzzValidateTreeID(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, treeID string) {
 		if err := ValidateTreeID(treeID); err != nil {
-			t.Skipf("error validating treeID %v: %v", treeID, err)
+			return
 		}
 	})
 }
@@ -121,7 +121,7 @@ func FuzzValidateEntryID(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, entryID string) {
 		if err := ValidateEntryID(entryID); err != nil {
-			t.Skipf("error validating entryID %v: %v", entryID, err)
+			return
 		}
 	})
 }
