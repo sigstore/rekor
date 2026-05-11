@@ -26,7 +26,7 @@ func FuzzCreateEntryIDFromParts(f *testing.F) {
 	f.Fuzz(func(t *testing.T, treeID, uuid string) {
 		e, err := CreateEntryIDFromParts(treeID, uuid)
 		if err != nil {
-			t.Skipf("failed to create entryID from %v + %v: %v", treeID, uuid, err)
+			return
 		}
 		// Round-trip: an accepted (treeID, uuid) pair must serialize to an
 		// entryID string that the inverse parsers also accept and that
@@ -51,9 +51,9 @@ func FuzzGetUUIDFromIDString(f *testing.F) {
 	// 64-char UUID-only
 	f.Add("a9b9c5e3f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3")
 
-	f.Fuzz(func(t *testing.T, entryID string) {
+	f.Fuzz(func(_ *testing.T, entryID string) {
 		if _, err := GetUUIDFromIDString(entryID); err != nil {
-			t.Skipf("error getting UUID from %v: %v", entryID, err)
+			return
 		}
 	})
 }
@@ -61,9 +61,9 @@ func FuzzGetUUIDFromIDString(f *testing.F) {
 func FuzzGetTreeIDFromIDString(f *testing.F) {
 	f.Add("0000000000000001a9b9c5e3f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3")
 
-	f.Fuzz(func(t *testing.T, entryID string) {
+	f.Fuzz(func(_ *testing.T, entryID string) {
 		if _, err := GetTreeIDFromIDString(entryID); err != nil {
-			t.Skipf("error getting treeID from %v: %v", entryID, err)
+			return
 		}
 	})
 }
@@ -74,9 +74,9 @@ func FuzzPadToTreeIDLen(f *testing.F) {
 	f.Add("ffffffffffffffff")  // max value
 	f.Add("00000000000000001") // too long by one
 
-	f.Fuzz(func(t *testing.T, treeID string) {
+	f.Fuzz(func(_ *testing.T, treeID string) {
 		if _, err := PadToTreeIDLen(treeID); err != nil {
-			t.Skipf("error padding %v: %v", treeID, err)
+			return
 		}
 	})
 }
@@ -85,9 +85,9 @@ func FuzzTreeID(f *testing.F) {
 	f.Add("1234")
 	f.Add("0")
 
-	f.Fuzz(func(t *testing.T, treeID string) {
+	f.Fuzz(func(_ *testing.T, treeID string) {
 		if _, err := TreeID(treeID); err != nil {
-			t.Skipf("error creating treeID %v: %v", treeID, err)
+			return
 		}
 	})
 }
@@ -97,9 +97,9 @@ func FuzzValidateUUID(f *testing.F) {
 	f.Add("0000000000000000000000000000000000000000000000000000000000000000") // all zeros
 	f.Add("AABBCCDD")                                                         // too short
 
-	f.Fuzz(func(t *testing.T, uuid string) {
+	f.Fuzz(func(_ *testing.T, uuid string) {
 		if err := ValidateUUID(uuid); err != nil {
-			t.Skipf("error validating UUID %v: %v", uuid, err)
+			return
 		}
 	})
 }
@@ -109,9 +109,9 @@ func FuzzValidateTreeID(f *testing.F) {
 	f.Add("0000000000000000") // zero — should fail
 	f.Add("ffffffffffffffff") // max
 
-	f.Fuzz(func(t *testing.T, treeID string) {
+	f.Fuzz(func(_ *testing.T, treeID string) {
 		if err := ValidateTreeID(treeID); err != nil {
-			t.Skipf("error validating treeID %v: %v", treeID, err)
+			return
 		}
 	})
 }
@@ -119,9 +119,9 @@ func FuzzValidateTreeID(f *testing.F) {
 func FuzzValidateEntryID(f *testing.F) {
 	f.Add("0000000000000001a9b9c5e3f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3") // valid 80 hex
 
-	f.Fuzz(func(t *testing.T, entryID string) {
+	f.Fuzz(func(_ *testing.T, entryID string) {
 		if err := ValidateEntryID(entryID); err != nil {
-			t.Skipf("error validating entryID %v: %v", entryID, err)
+			return
 		}
 	})
 }
