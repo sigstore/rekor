@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -157,13 +158,25 @@ func CreateAndInitTree(ctx context.Context, config GRPCConfig) (*trillian.Tree, 
 	return t, nil
 }
 
+// cleanDialHostname strips gRPC resolver scheme prefixes (e.g. "dns:///")
+// from a hostname, returning the bare hostname suitable for TLS SNI and
+// certificate verification. The original address with its scheme must be
+// preserved for the grpc.NewClient target so the chosen resolver stays active.
+func cleanDialHostname(hostname string) string {
+	return strings.TrimPrefix(hostname, "dns:///")
+}
+
 func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStore bool, serviceConfig string) (*grpc.ClientConn, error) {
-	// Set up and test connection to rpc server
+	// Strip gRPC resolver scheme before TLS: if hostname is e.g.
+	// "dns:///host.svc", passing it raw into tls.Config.ServerName causes
+	// x509 verification to fail with `certificate valid for host.svc, not dns`.
+	cleanHostname := cleanDialHostname(hostname)
+
 	var creds credentials.TransportCredentials
 	switch {
 	case useSystemTrustStore:
 		creds = credentials.NewTLS(&tls.Config{
-			ServerName: hostname,
+			ServerName: cleanHostname,
 			MinVersion: tls.VersionTLS12,
 		})
 	case tlsCACertFile != "":
@@ -176,7 +189,7 @@ func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStor
 			return nil, fmt.Errorf("failed to append CA certificate to pool")
 		}
 		creds = credentials.NewTLS(&tls.Config{
-			ServerName: hostname,
+			ServerName: cleanHostname,
 			RootCAs:    certPool,
 			MinVersion: tls.VersionTLS12,
 		})
@@ -184,10 +197,17 @@ func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStor
 		creds = insecure.NewCredentials()
 	}
 
-	opts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(creds),
+		grpc.WithAuthority(cleanHostname),
+	}
+
 	if serviceConfig != "" {
 		opts = append(opts, grpc.WithDefaultServiceConfig(serviceConfig))
 	}
+	// hostname (not cleanHostname) is intentional: the dns:/// scheme must
+	// reach grpc.NewClient so gRPC uses the DNS resolver for client-side
+	// load balancing. TLS and authority are handled separately above.
 	conn, err := grpc.NewClient(fmt.Sprintf("%s:%d", hostname, port), opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to RPC server: %w", err)
