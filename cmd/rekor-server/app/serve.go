@@ -17,7 +17,10 @@ package app
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
+	"sort"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/profiler"
@@ -32,6 +35,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/restapi"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/types/alpine"
 	alpine_v001 "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/cose"
@@ -100,11 +104,9 @@ var serveCmd = &cobra.Command{
 				log.Logger.Error(err)
 			}
 		}()
-		//TODO: make this a config option for server to load via viper field
-		//TODO: add command line option to print versions supported in binary
-
-		// these trigger loading of package and therefore init() methods to run
-		pluggableTypeMap := map[string][]string{
+		// These trigger loading of the package and therefore init() methods to run,
+		// which registers each type's constructor in types.TypeMap.
+		entryTypeMap := map[string][]string{
 			rekord.KIND:       {rekord_v001.APIVERSION},
 			rpm.KIND:          {rpm_v001.APIVERSION},
 			jar.KIND:          {jar_v001.APIVERSION},
@@ -117,9 +119,20 @@ var serveCmd = &cobra.Command{
 			hashedrekord.KIND: {hashedrekord_v001.APIVERSION},
 			dsse.KIND:         {dsse_v001.APIVERSION},
 		}
-		for k, v := range pluggableTypeMap {
-			log.Logger.Infof("Loading support for pluggable type '%v'", k)
-			log.Logger.Infof("Loading version '%v' for pluggable type '%v'", v, k)
+
+		// Using --enabled_entry_types, restrict which kinds the server will
+		// accept for new submissions. By default, support every type compiled
+		// into the binary.
+		requestedTypes := viper.GetStringSlice("enabled_entry_types")
+		enabledTypes, err := filterEntryTypes(entryTypeMap, requestedTypes)
+		if err != nil {
+			log.Logger.Fatalf("invalid --enabled_entry_types flag: %v", err)
+		}
+		types.SetAllowedKindsForSubmission(enabledTypes)
+
+		for _, k := range enabledTypes {
+			log.Logger.Infof("Loading support for entry type '%v'", k)
+			log.Logger.Infof("Loading version '%v' for entry type '%v'", entryTypeMap[k], k)
 		}
 
 		server.Host = viper.GetString("rekor_server.address")
@@ -149,4 +162,30 @@ var serveCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
+}
+
+// filterEntryTypes filters the list of compiled-in entry types
+// down to the set requested via the --enabled_entry_types flag.
+// If any requested type is not present, an error is returned.
+// Note that filtering only affects the write path, not the read paths.
+func filterEntryTypes(allTypes map[string][]string, requestedTypes []string) ([]string, error) {
+	enabled := make(map[string]struct{})
+	for _, kind := range requestedTypes {
+		_, ok := allTypes[kind]
+		if !ok {
+			known := make([]string, 0, len(allTypes))
+			for k := range allTypes {
+				known = append(known, k)
+			}
+			sort.Strings(known)
+			return nil, fmt.Errorf("unknown entry type %q; compiled-in types are: %s",
+				kind, strings.Join(known, ", "))
+		}
+		enabled[kind] = struct{}{}
+	}
+	enabledKinds := make([]string, 0, len(enabled))
+	for k := range enabled {
+		enabledKinds = append(enabledKinds, k)
+	}
+	return enabledKinds, nil
 }
