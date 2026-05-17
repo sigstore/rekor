@@ -72,7 +72,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.5
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.5
 	github.com/stretchr/testify v1.11.1
-	github.com/tink-crypto/tink-go-awskms/v2 v2.1.0
+	github.com/tink-crypto/tink-go-awskms/v3 v3.0.0
 	github.com/tink-crypto/tink-go-gcpkms/v2 v2.2.0
 	github.com/tink-crypto/tink-go/v2 v2.6.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401001100-f93e5f3e9f0f
@@ -96,7 +96,6 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.54.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.54.0 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
-	github.com/aws/aws-sdk-go v1.55.8 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.41.6 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.8 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.32.14 // indirect
@@ -150,7 +149,6 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.7 // indirect
 	github.com/hashicorp/vault/api v1.22.0 // indirect
 	github.com/jellydator/ttlcache/v3 v3.4.0 // indirect
-	github.com/jmespath/go-jmespath v0.4.1-0.20220621161143-b0104c826a24 // indirect
 	github.com/klauspost/compress v1.18.1 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect

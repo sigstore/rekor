@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	tinkUtils "github.com/sigstore/sigstore/pkg/signature/tink"
-	"github.com/tink-crypto/tink-go-awskms/v2/integration/awskms"
+	"github.com/tink-crypto/tink-go-awskms/v3/integration/awskms"
 	"github.com/tink-crypto/tink-go-gcpkms/v2/integration/gcpkms"
 	"github.com/tink-crypto/tink-go/v2/core/registry"
 	"github.com/tink-crypto/tink-go/v2/keyset"
@@ -79,7 +79,7 @@ func getKeyEncryptionKey(ctx context.Context, kmsKey string) (tink.AEAD, error) 
 		registry.RegisterKMSClient(gcpClient)
 		return gcpClient.GetAEAD(kmsKey)
 	case strings.HasPrefix(kmsKey, "aws-kms://"):
-		awsClient, err := awskms.NewClientWithOptions(kmsKey)
+		awsClient, err := awskms.NewClientWithOptions(ctx, kmsKey)
 		if err != nil {
 			return nil, err
 		}
