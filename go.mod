@@ -10,7 +10,7 @@ require (
 	github.com/go-openapi/loads v0.23.3
 	github.com/go-openapi/runtime v0.29.4
 	github.com/go-openapi/spec v0.22.4
-	github.com/go-openapi/strfmt v0.26.1
+	github.com/go-openapi/strfmt v0.26.2
 	github.com/go-openapi/swag v0.26.0
 	github.com/go-openapi/validate v0.25.2
 	github.com/google/go-cmp v0.7.0
@@ -24,7 +24,7 @@ require (
 	github.com/rs/cors v1.11.1
 	github.com/sassoftware/relic v7.2.1+incompatible
 	github.com/secure-systems-lab/go-securesystemslib v0.11.0
-	github.com/sigstore/sigstore v1.10.5
+	github.com/sigstore/sigstore v1.10.6
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
@@ -42,7 +42,7 @@ require (
 	google.golang.org/genproto v0.0.0-20260319201613-d00831a3d3e7 // indirect
 	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
-	gopkg.in/ini.v1 v1.67.1
+	gopkg.in/ini.v1 v1.67.2
 	sigs.k8s.io/release-utils v0.12.4
 	sigs.k8s.io/yaml v1.6.0
 )
@@ -67,10 +67,10 @@ require (
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/sassoftware/relic/v7 v7.6.2
 	github.com/sigstore/protobuf-specs v0.5.1
-	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.5
-	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.5
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.5
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.5
+	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.6
+	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.6
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.6
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.6
 	github.com/stretchr/testify v1.11.1
 	github.com/tink-crypto/tink-go-awskms/v3 v3.0.0
 	github.com/tink-crypto/tink-go-gcpkms/v2 v2.2.0
