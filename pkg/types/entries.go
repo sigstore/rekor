@@ -81,6 +81,9 @@ func SetAllowedKindsForSubmission(kinds []string) {
 // into the log via CreateVersionedEntry.
 func isKindAllowedForSubmission(kind string) bool {
 	m := allowedKindsForSubmission.Load()
+	if m == nil {
+		return true
+	}
 	_, ok := (*m)[kind]
 	return ok
 }
