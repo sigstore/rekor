@@ -356,7 +356,7 @@ func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
 		for _, embeddedErr := range compErr.Errors {
 			var maxBytesError *http.MaxBytesError
 			if go_errors.As(embeddedErr, &maxBytesError) {
-				err = errors.New(http.StatusRequestEntityTooLarge, "Request Entity Too Large. Limit set to %v bytes.", maxBytesError.Limit)
+				err = errors.New(http.StatusRequestEntityTooLarge, "request Entity Too Large. Limit set to %v bytes", maxBytesError.Limit)
 				break
 			}
 		}
