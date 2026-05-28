@@ -10,10 +10,11 @@ on:
         default: ''
 
 jobs:
-  generate-token:
+  sync:
     runs-on: ubuntu-latest
-    outputs:
-      token: ${{ steps.app-token.outputs.token }}
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/create-github-app-token@v1
         id: app-token
@@ -21,12 +22,9 @@ jobs:
           app-id: ${{ vars.SYNC_APP_ID }}
           private-key: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
 
-  sync:
-    needs: generate-token
-    uses: securesign/actions/.github/workflows/sync-upstream.yaml@main
-    with:
-      upstream_repo: https://github.com/sigstore/rekor
-      upstream_ref: ${{ inputs.upstream_ref || '' }}
-      target_branch: main
-    secrets:
-      token: ${{ needs.generate-token.outputs.token }}
+      - uses: securesign/actions/sync-upstream@main
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          upstream_repo: https://github.com/sigstore/rekor
+          upstream_ref: ${{ inputs.upstream_ref || '' }}
+          target_branch: main
