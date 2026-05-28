@@ -21,6 +21,7 @@ jobs:
         with:
           app-id: ${{ vars.SYNC_APP_ID }}
           private-key: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
 
       - uses: securesign/actions/sync-upstream@main
         with:
