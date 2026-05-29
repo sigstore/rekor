@@ -30,6 +30,8 @@ permissions:
 jobs:
   build:
     name: build
+    # RHTAS - Skipping due to auth with google
+    if: github.repository == 'sigstore/rekor'
     runs-on: ubuntu-latest
 
     permissions:
@@ -63,9 +65,11 @@ jobs:
           service_account: 'github-actions-rekor@projectsigstore.iam.gserviceaccount.com'
 
       - name: creds
+        if: false # securesign/rekor we dont have access to this gcp resource so this will always fail, this skips the step
         run: gcloud auth configure-docker --quiet
 
       - name: container
+        if: false # securesign/rekor we dont have access to this gcp resource so this will always fail, this skips the step
         run: KO_PREFIX=gcr.io/projectsigstore/rekor/ci/rekor make sign-keyless-ci
         env:
           COSIGN_YES: true

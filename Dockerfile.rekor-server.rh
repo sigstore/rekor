@@ -1,0 +1,81 @@
+#
+# Copyright 2021 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+FROM registry.redhat.io/ubi9/go-toolset:9.7-1774499506@sha256:2830e4bd1c394ed506c00a9abbb4d00445e2e72e8ef4e3cd51e0da0db66dee12 AS build-env
+
+RUN mkdir -p /opt/app-root && mkdir -p /opt/app-root/src && mkdir -p /opt/app-root/src/cmd && mkdir -p /opt/app-root/src/pkg && git config --global --add safe.directory /opt/app-root/src
+
+ENV APP_ROOT=/opt/app-root
+ENV GOPATH=$APP_ROOT
+ENV GOEXPERIMENT=strictfipsruntime
+ENV CGO_ENABLED=1
+
+WORKDIR $APP_ROOT/src/
+ADD go.mod go.sum $APP_ROOT/src/
+RUN go mod download
+
+# Add source code
+ADD ./cmd/ $APP_ROOT/src/cmd/
+ADD ./pkg/ $APP_ROOT/src/pkg/
+
+ARG SERVER_LDFLAGS
+RUN go build -ldflags "${SERVER_LDFLAGS}" -mod=readonly ./cmd/rekor-server
+RUN go build -gcflags "all=-N -l" -ldflags "${SERVER_LDFLAGS}" -o rekor-server_debug -mod=readonly ./cmd/rekor-server
+RUN go test -c -ldflags "${SERVER_LDFLAGS}" -cover -covermode=count -coverpkg=./... -o rekor-server_test -mod=readonly ./cmd/rekor-server
+
+# debug compile options & debugger
+FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder@sha256:2e38fae8c9caa7a0e23c54f6d612bd3a4a4fc170514be7eb24f44ea1ff7861c9 as debug
+RUN go install github.com/go-delve/delve/cmd/dlv@v1.8.0
+
+# overwrite server and include debugger
+COPY --from=build-env /opt/app-root/src/rekor-server_debug /usr/local/bin/rekor-server
+
+FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder@sha256:2e38fae8c9caa7a0e23c54f6d612bd3a4a4fc170514be7eb24f44ea1ff7861c9 as test
+
+USER root
+
+# Extract the x86_64 minisign binary to /usr/local/bin/
+RUN curl -LO https://github.com/jedisct1/minisign/releases/download/0.11/minisign-0.11-linux.tar.gz && \
+    tar -xzf minisign-0.11-linux.tar.gz minisign-linux/x86_64/minisign -O > /usr/local/bin/minisign && \
+    chmod +x /usr/local/bin/minisign && \
+    rm minisign-0.11-linux.tar.gz
+
+# Create test directory
+RUN mkdir -p /var/run/attestations && \
+    touch /var/run/attestations/attestation.json && \
+    chmod 777 /var/run/attestations/attestation.json
+
+# overwrite server with test build with code coverage
+COPY --from=build-env /opt/app-root/src/rekor-server_test /usr/local/bin/rekor-server
+
+# Multi-Stage production build
+FROM registry.access.redhat.com/ubi9/ubi-minimal@sha256:83006d535923fcf1345067873524a3980316f51794f01d8655be55d6e9387183 as deploy
+
+LABEL description="Rekor aims to provide an immutable, tamper-resistant ledger of metadata generated within a software project’s supply chain."
+LABEL io.k8s.description="Rekor-Server provides a tamper resistant ledger."
+LABEL io.k8s.display-name="Rekor-Server container image for Red Hat Trusted Signer"
+LABEL io.openshift.tags="rekor-server trusted-signer"
+LABEL summary="Provides the rekor Server binary for running Rekor-Server"
+LABEL com.redhat.component="rekor-server"
+LABEL name="rhtas/rekor-server-rhel9"
+
+# Retrieve the binary from the previous stage
+COPY --from=build-env /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
+COPY LICENSE /licenses/license.txt
+
+USER 65532:65532
+
+# Set the binary as the entrypoint of the container
+ENTRYPOINT ["rekor-server"]

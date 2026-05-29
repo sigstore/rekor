@@ -1,0 +1,80 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations:
+    build.appstudio.openshift.io/build-nudge-files: "Dockerfile.clients.rh,Dockerfile.cli-stack.rh"
+    build.appstudio.openshift.io/repo: https://github.com/securesign/rekor?rev={{revision}}
+    build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/target_branch: '{{target_branch}}'
+    pipelinesascode.tekton.dev/max-keep-runs: "3"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
+      == "main" && ( "Dockerfile.rekor-cli.rh".pathChanged() || ".tekton/rekor-cli-push.yaml".pathChanged()
+      || "trigger-konflux-builds.txt".pathChanged() || "go.mod".pathChanged() || "go.sum".pathChanged()
+      || "cmd/rekor-cli".pathChanged() || "pkg".pathChanged() || "Makefile".pathChanged()
+      || "Build.mak".pathChanged() )
+  creationTimestamp: null
+  labels:
+    appstudio.openshift.io/application: tas-tools
+    appstudio.openshift.io/component: rekor-cli
+    pipelines.appstudio.openshift.io/type: build
+  name: rekor-cli-on-push
+  namespace: rhtas-tenant
+spec:
+  params:
+  - name: release-version
+    value: "1.4.0"
+  - name: dockerfile
+    value: Dockerfile.rekor-cli.rh
+  - name: git-url
+    value: '{{repo_url}}'
+  - name: output-image
+    value: quay.io/securesign/rekor-cli:{{revision}}
+  - name: path-context
+    value: .
+  - name: revision
+    value: '{{revision}}'
+  - name: prefetch-input
+    value: '[{"type": "gomod", "path": "."}, {"type": "gomod", "path": "hack/tools"}]'
+  - name: hermetic
+    value: "true"
+  - name: build-source-image
+    value: "true"
+  - name: go_unit_test
+    value: "true"
+  - name: build-platforms
+    value:
+      - linux/x86_64
+      - linux/arm64
+      - linux/ppc64le
+      - linux/s390x
+  - name: fips-check
+    value: "true"
+  pipelineRef:
+    params:
+    - name: url
+      value: https://github.com/securesign/pipelines.git
+    - name: revision
+      value: main
+    - name: pathInRepo
+      value: pipelines/docker-build-multi-platform-oci-ta.yaml
+    resolver: git
+  taskRunSpecs:
+  - pipelineTaskName: prefetch-dependencies
+    stepSpecs:
+    - computeResources:
+        limits:
+          memory: 3Gi
+      name: prefetch-dependencies
+  - pipelineTaskName: run-unit-test
+    stepSpecs:
+    - computeResources:
+        limits:
+          memory: 5Gi
+      name: run-tests
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-rekor-cli
+  workspaces:
+  - name: git-auth
+    secret:
+      secretName: '{{ git_auth_secret }}'
+status: {}

@@ -1,0 +1,11 @@
+name: Trigger Konflux build
+on:
+  workflow_dispatch:
+
+jobs:
+  trigger-konflux-build:
+    uses: securesign/actions/.github/workflows/trigger-konflux-build.yaml@main
+    with:
+      branch: main
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}

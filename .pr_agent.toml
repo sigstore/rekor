@@ -1,0 +1,33 @@
+[config]
+git_provider="github"
+ignore_pr_authors = ["renovate","openshift-cherrypick-robot","red-hat-konflux"]
+
+[github_app]
+handle_pr_actions = ['opened', 'reopened', 'ready_for_review']
+
+# What runs automatically when PR is opened
+pr_commands = [
+    "/agentic_describe",
+    "/agentic_review"
+]
+
+# Do NOT auto-trigger on push (avoid noise)
+handle_push_trigger = false
+
+# If you later want re-review on new commits, enable:
+# handle_push_trigger = true
+# push_commands = ["/agentic_review"]
+
+[review_agent]
+comments_location_policy = "both"
+inline_comments_severity_threshold = 3
+
+[review_agent_ux]
+expand_description = true
+expand_code = true
+
+[pr_code_suggestions]
+enable_chat_in_code_suggestions = true
+
+[rag_arguments]
+enable_rag=true

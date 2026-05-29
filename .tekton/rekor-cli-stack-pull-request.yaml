@@ -1,0 +1,52 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations:
+    build.appstudio.openshift.io/repo: https://github.com/securesign/rekor?rev={{revision}}
+    build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/pull_request_number: '{{pull_request_number}}'
+    build.appstudio.redhat.com/target_branch: '{{target_branch}}'
+    pipelinesascode.tekton.dev/max-keep-runs: "3"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch
+      == "main"
+  creationTimestamp: null
+  labels:
+    appstudio.openshift.io/application: cli-stacks
+    appstudio.openshift.io/component: rekor-cli-stack
+    pipelines.appstudio.openshift.io/type: build
+  name: rekor-cli-stack-on-pull-request
+  namespace: rhtas-tenant
+spec:
+  params:
+  - name: dockerfile
+    value: Dockerfile.cli-stack.rh
+  - name: git-url
+    value: '{{repo_url}}'
+  - name: image-expires-after
+    value: 5d
+  - name: output-image
+    value: quay.io/securesign/rekor-cli-stack:on-pr-{{revision}}
+  - name: path-context
+    value: .
+  - name: revision
+    value: '{{revision}}'
+  - name: hermetic
+    value: "false"
+  - name: build-source-image
+    value: "true"
+  pipelineRef:
+    params:
+    - name: url
+      value: https://github.com/securesign/pipelines.git
+    - name: revision
+      value: main
+    - name: pathInRepo
+      value: pipelines/docker-build-oci-ta.yaml
+    resolver: git
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-rekor-cli-stack
+  workspaces:
+  - name: git-auth
+    secret:
+      secretName: '{{ git_auth_secret }}'
+status: {}

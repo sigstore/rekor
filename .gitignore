@@ -27,3 +27,4 @@ signature
 rekor.pub
 *~
 *.test
+vendor/

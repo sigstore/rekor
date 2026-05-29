@@ -1,0 +1,74 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations:
+    build.appstudio.openshift.io/build-nudge-files: ".*.env, .*.yml, .*README.md"
+    build.appstudio.openshift.io/repo: https://github.com/securesign/rekor?rev={{revision}}
+    build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/target_branch: '{{target_branch}}'
+    pipelinesascode.tekton.dev/max-keep-runs: "3"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
+      == "main" && ( "Dockerfile.rekor-server.rh".pathChanged() || ".tekton/rekor-server-push.yaml".pathChanged()
+      || "trigger-konflux-builds.txt".pathChanged() || "go.mod".pathChanged() || "go.sum".pathChanged()
+      || "cmd/rekor-server".pathChanged() || "pkg".pathChanged() || "Makefile".pathChanged()
+      )
+  creationTimestamp: null
+  labels:
+    appstudio.openshift.io/application: tas-components
+    appstudio.openshift.io/component: rekor-server
+    pipelines.appstudio.openshift.io/type: build
+  name: rekor-server-on-push
+  namespace: rhtas-tenant
+spec:
+  params:
+  - name: release-version
+    value: "1.4.0"
+  - name: dockerfile
+    value: Dockerfile.rekor-server.rh
+  - name: git-url
+    value: '{{repo_url}}'
+  - name: output-image
+    value: quay.io/securesign/rekor-server:{{revision}}
+  - name: path-context
+    value: .
+  - name: revision
+    value: '{{revision}}'
+  - name: build-source-image
+    value: "true"
+  - name: hermetic
+    value: "true"
+  - name: prefetch-input
+    value: '[{"path":".","type":"gomod"},{"path":"./hack/tools","type":"gomod"}]'
+  - name: go_unit_test
+    value: "true"
+  - name: fips-check
+    value: "true"
+  pipelineRef:
+    params:
+    - name: url
+      value: https://github.com/securesign/pipelines.git
+    - name: revision
+      value: main
+    - name: pathInRepo
+      value: pipelines/docker-build-oci-ta.yaml
+    resolver: git
+  taskRunSpecs:
+  - pipelineTaskName: prefetch-dependencies
+    stepSpecs:
+    - computeResources:
+        limits:
+          memory: 3Gi
+      name: prefetch-dependencies
+  - pipelineTaskName: run-unit-test
+    stepSpecs:
+    - computeResources:
+        limits:
+          memory: 5Gi
+      name: run-tests
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-rekor-server
+  workspaces:
+  - name: git-auth
+    secret:
+      secretName: '{{ git_auth_secret }}'
+status: {}

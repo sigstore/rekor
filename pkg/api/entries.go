@@ -501,7 +501,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 }
 
 func publishEvent(ctx context.Context, publisher pubsub.Publisher, event *events.Event, contentType events.EventContentType) {
-	err := publisher.Publish(context.WithoutCancel(ctx), event, contentType)
+	err := publisher.Publish(ctx, event, contentType)
 	incPublishEvent(event.Type().Name(), contentType, err == nil)
 	if err != nil {
 		log.ContextLogger(ctx).Error(err)

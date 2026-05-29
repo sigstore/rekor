@@ -1,0 +1,62 @@
+#Build stage#
+FROM registry.redhat.io/ubi9/go-toolset:9.7-1774499506@sha256:2830e4bd1c394ed506c00a9abbb4d00445e2e72e8ef4e3cd51e0da0db66dee12 AS build-env
+ENV APP_ROOT=/opt/app-root \
+    GOPATH=/opt/app-root \
+    CGO_ENABLED=1 \
+    GOFLAGS="-buildvcs=false" \
+    GOEXPERIMENT=strictfipsruntime
+
+USER root
+
+RUN mkdir -p /opt/app-root && mkdir -p /opt/app-root/src && git config --global --add safe.directory /opt/app-root/src
+
+WORKDIR /opt/app-root/src
+
+COPY . .
+
+WORKDIR /opt/app-root/src/hack/tools
+RUN go mod vendor
+
+WORKDIR /opt/app-root/src
+RUN set -euo pipefail; \
+    git update-index --assume-unchanged Dockerfile.rekor-cli.rh; \
+    GIT_VERSION="$(git describe --tags --always --dirty)"; \
+    GIT_HASH="$(git rev-parse HEAD)"; \
+    GIT_TREESTATE=clean \
+    BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"; \
+    REKOR_LDFLAGS="-X sigs.k8s.io/release-utils/version.gitVersion=${GIT_VERSION} \
+                   -X sigs.k8s.io/release-utils/version.gitCommit=${GIT_HASH} \
+                   -X sigs.k8s.io/release-utils/version.gitTreeState=${GIT_TREESTATE} \
+                   -X sigs.k8s.io/release-utils/version.buildDate=${BUILD_DATE}"; \
+    CLI_LDFLAGS="${REKOR_LDFLAGS}"; \
+    go mod vendor; \
+    make Makefile.swagger; \
+    go build -o rekor_cli_linux -trimpath -ldflags "${CLI_LDFLAGS} -w -s" ./cmd/rekor-cli; \
+    gzip -k rekor_cli_linux; \
+    make -f Build.mak cross-platform; \
+    gzip -k rekor_cli_darwin_amd64; \
+    gzip -k rekor_cli_windows_amd64.exe; \
+    gzip -k rekor_cli_darwin_arm64; \
+    git update-index --no-assume-unchanged Dockerfile.rekor-cli.rh
+
+#Install stage
+FROM registry.access.redhat.com/ubi9/ubi-minimal@sha256:83006d535923fcf1345067873524a3980316f51794f01d8655be55d6e9387183
+
+LABEL description="Rekor-cli is a command line interface (CLI) tool used to interact with a rekor server."
+LABEL io.k8s.description="Rekor-cli is a command line interface (CLI) tool used to interact with a rekor server."
+LABEL io.k8s.display-name="Rekor-cli container image for Red Hat Trusted Signer"
+LABEL io.openshift.tags="rekor-cli trusted-signer"
+LABEL summary="Provides the rekor CLI binary for interacting with a rekor server"
+LABEL com.redhat.component="rekor-cli"
+LABEL name="rhtas/rekor-cli-rhel9"
+
+COPY --from=build-env /opt/app-root/src/rekor_cli_linux.gz /usr/local/bin/rekor_cli_linux.gz
+COPY --from=build-env /opt/app-root/src/rekor_cli_linux /usr/local/bin/rekor_cli_linux
+COPY --from=build-env /opt/app-root/src/rekor_cli_darwin_amd64.gz /usr/local/bin/rekor_cli_darwin_amd64.gz
+COPY --from=build-env /opt/app-root/src/rekor_cli_darwin_arm64.gz /usr/local/bin/rekor_cli_darwin_arm64.gz
+COPY --from=build-env /opt/app-root/src/rekor_cli_windows_amd64.exe.gz /usr/local/bin/rekor_cli_windows_amd64.exe.gz
+
+COPY LICENSE /licenses/license.txt
+WORKDIR /opt/app-root/src/home
+
+USER 65532:65532

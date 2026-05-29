@@ -1,0 +1,14 @@
+# These are Tekton bundles containing custom tasks that we want EC to permit
+task-bundles:
+  quay.io/securesign/rekor-unit-test:
+  - digest: sha256:307f0109abd7721fa341314cc8c6a704b06154c010daf1f4b4548af178e7ff5a
+    tag: latest
+
+  quay.io/securesign/rekor-build-test-image:
+  - digest: sha256:9fe4986c084cfd221f966954507c5e4d2748738f24733a89f4129ab3ce98ca54
+    tag: latest
+
+  quay.io/securesign/rekor-e2e-test:
+  - digest: sha256:76536c4b3235415bb6285890e8bc72848525a24bc6dacb36b4a360f3af825c59
+    tag: latest
+
