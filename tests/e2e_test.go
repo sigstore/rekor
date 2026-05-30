@@ -368,27 +368,38 @@ func TestDialE2E(t *testing.T) {
 
 	tests := []struct {
 		name          string
+		hostname      string
 		tlsCACert     string
 		useSystemTLS  bool
 		expectedError bool
 	}{
 		{
 			name:          "Connection with custom CA cert",
+			hostname:      "localhost",
 			tlsCACert:     serverCertPath,
 			useSystemTLS:  false,
 			expectedError: false,
 		},
 		{
 			name:          "Connection with system TLS",
+			hostname:      "localhost",
 			tlsCACert:     "",
 			useSystemTLS:  true,
 			expectedError: true,
 		},
 		{
 			name:          "Insecure connection attempt",
+			hostname:      "localhost",
 			tlsCACert:     "",
 			useSystemTLS:  false,
 			expectedError: true,
+		},
+		{
+			name:          "Connection with dns:/// scheme and custom CA cert",
+			hostname:      "dns:///localhost",
+			tlsCACert:     serverCertPath,
+			useSystemTLS:  false,
+			expectedError: false,
 		},
 	}
 
@@ -398,7 +409,7 @@ func TestDialE2E(t *testing.T) {
 			viper.Set("trillian_log_server.tls_ca_cert", tt.tlsCACert)
 			viper.Set("trillian_log_server.tls", tt.useSystemTLS)
 
-			conn, _ := trillianclient.TestDial("localhost", uint16(listener.Addr().(*net.TCPAddr).Port), tt.tlsCACert, tt.useSystemTLS)
+			conn, _ := trillianclient.TestDial(tt.hostname, uint16(listener.Addr().(*net.TCPAddr).Port), tt.tlsCACert, tt.useSystemTLS)
 			require.NotNil(t, conn)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)

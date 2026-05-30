@@ -112,6 +112,13 @@ func init() {
 	}
 }
 
+// defaultManifest is a minimal valid JAR manifest that passes
+// signjar.ParseManifest. The fuzzer rarely produces bytes that
+// satisfy the manifest grammar, so we fall back to this when
+// the fuzzer-supplied bytes fail parsing. This guarantees the
+// signing/digest code in tarfilesToJar is actually exercised.
+var defaultManifest = []byte("Manifest-Version: 1.0\r\nCreated-By: fuzz\r\n\r\n")
+
 // Creates jar artifact files.
 func createJarArtifactFiles(ff *fuzz.ConsumeFuzzer) ([]*fuzz.TarFile, error) {
 	var files []*fuzz.TarFile
@@ -120,7 +127,29 @@ func createJarArtifactFiles(ff *fuzz.ConsumeFuzzer) ([]*fuzz.TarFile, error) {
 		return files, err
 	}
 	if len(files) <= 1 {
-		return files, err
+		// TarFiles rarely produces >1 files. Synthesize a minimal
+		// set so the fuzzer reaches the JAR signing path.
+		body, err := ff.GetBytes()
+		if err != nil || len(body) == 0 {
+			body = []byte("fuzz")
+		}
+		files = []*fuzz.TarFile{{
+			Hdr: &tar.Header{
+				Name:    "com/example/Fuzz.class",
+				Size:    int64(len(body)),
+				Mode:    0o644,
+				ModTime: time.Unix(123, 0),
+			},
+			Body: body,
+		}, {
+			Hdr: &tar.Header{
+				Name:    "com/example/Other.class",
+				Size:    int64(len(body)),
+				Mode:    0o644,
+				ModTime: time.Unix(123, 0),
+			},
+			Body: body,
+		}}
 	}
 	for _, file := range files {
 		if len(file.Body) == 0 {
@@ -131,14 +160,13 @@ func createJarArtifactFiles(ff *fuzz.ConsumeFuzzer) ([]*fuzz.TarFile, error) {
 	// add "META-INF/MANIFEST.MF"
 	mfContents, err := ff.GetBytes()
 	if err != nil {
-		return files, err
+		mfContents = nil
 	}
 
-	// check the manifest early. This is an inexpensive check,
-	// so we want to call it before compressing.
-	_, err = signjar.ParseManifest(mfContents)
-	if err != nil {
-		return files, err
+	// Try the fuzzer-supplied bytes first; fall back to a known-good
+	// manifest so that the signing code path is always reachable.
+	if _, parseErr := signjar.ParseManifest(mfContents); parseErr != nil {
+		mfContents = defaultManifest
 	}
 
 	files = append(files, &fuzz.TarFile{
@@ -155,12 +183,13 @@ func createJarArtifactFiles(ff *fuzz.ConsumeFuzzer) ([]*fuzz.TarFile, error) {
 
 func tarfilesToJar(artifactFiles []*fuzz.TarFile) ([]byte, error) {
 	var jarBytes []byte
-	f, err := os.Create("artifactFile")
+	f, err := os.CreateTemp("", "artifactFile")
 	if err != nil {
 		return jarBytes, err
 	}
+	artifactPath := f.Name()
 	defer f.Close()
-	defer os.Remove("artifactFile")
+	defer os.Remove(artifactPath)
 	zw := zip.NewWriter(f)
 	for _, zipFile := range artifactFiles {
 		jw, err := zw.Create(zipFile.Hdr.Name)
@@ -186,7 +215,6 @@ func tarfilesToJar(artifactFiles []*fuzz.TarFile) ([]byte, error) {
 
 	jd, err := signjar.DigestJarStream(&buf, crypto.SHA256)
 	if err != nil {
-		os.Remove("artifactFile")
 		return jarBytes, err
 	}
 	c := certloader.Certificate{
@@ -199,12 +227,12 @@ func tarfilesToJar(artifactFiles []*fuzz.TarFile) ([]byte, error) {
 		return jarBytes, err
 	}
 
-	if err := patch.Apply(f, "artifactFile"); err != nil {
+	if err := patch.Apply(f, artifactPath); err != nil {
 		return jarBytes, err
 	}
 	f.Close()
 
-	artifactBytes, err := os.ReadFile("artifactFile")
+	artifactBytes, err := os.ReadFile(artifactPath)
 	if err != nil {
 		return jarBytes, err
 	}

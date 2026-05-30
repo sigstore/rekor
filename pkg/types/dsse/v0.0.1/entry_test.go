@@ -253,6 +253,15 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "missing envelope with verifiers",
+			it: &models.DSSEV001Schema{
+				ProposedContent: &models.DSSEV001SchemaProposedContent{
+					Verifiers: []strfmt.Base64{[]byte("verifier")},
+				},
+			},
+			wantErr: true,
+		},
+		{
 			env:  envelope(t, key, []byte(validPayload)),
 			name: "valid",
 			it: &models.DSSEV001Schema{
@@ -361,9 +370,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 				if !reflect.DeepEqual(got, want) {
 					t.Errorf("V001Entry.IndexKeys() = %v, want %v", got, want)
 				}
-				payloadBytes, _ := v.env.DecodeB64Payload()
-				payloadSha := sha256.Sum256(payloadBytes)
-				payloadHash := hex.EncodeToString(payloadSha[:])
+				payloadHash := hex.EncodeToString(h[:])
 
 				canonicalBytes, err := v.Canonicalize(context.Background())
 				if err != nil {
@@ -515,11 +522,16 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 				keyHash := sha256.Sum256(*sig.Verifier)
 				want = append(want, "sha256:"+hex.EncodeToString(keyHash[:]))
 			}
-			decodedPayload, _ := base64.StdEncoding.DecodeString(v.env.Payload)
+			spec := pe.Spec.(*models.DSSEV001Schema)
+			env := &dsse.Envelope{}
+			if err := json.Unmarshal([]byte(*spec.ProposedContent.Envelope), env); err != nil {
+				t.Error(err)
+			}
+			decodedPayload, _ := env.DecodeB64Payload()
 			h := sha256.Sum256(decodedPayload)
 			want = append(want, "sha256:"+hex.EncodeToString(h[:]))
 
-			envHashBytes := sha256.Sum256([]byte(*v.DSSEObj.ProposedContent.Envelope))
+			envHashBytes := sha256.Sum256([]byte(*spec.ProposedContent.Envelope))
 			envHash := hex.EncodeToString(envHashBytes[:])
 
 			hashkey := strings.ToLower(fmt.Sprintf("sha256:%s", envHash))
@@ -623,5 +635,11 @@ func TestCanonicalizeHandlesInvalidInput(t *testing.T) {
 	_, err := v.Canonicalize(context.TODO())
 	if err == nil {
 		t.Fatalf("expected error canonicalizing invalid input")
+	}
+
+	v.DSSEObj.Signatures = []*models.DSSEV001SchemaSignaturesItems0{nil}
+	_, err = v.Canonicalize(context.TODO())
+	if err == nil {
+		t.Fatalf("expected error canonicalizing nil signature")
 	}
 }

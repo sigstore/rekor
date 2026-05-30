@@ -141,7 +141,7 @@ func init() {
         }
       },
       "post": {
-        "description": "Creates an entry in the transparency log for a detached signature, public key, and content. Items can be included in the request or fetched by the server when URLs are specified.\n",
+        "description": "Creates an entry in the transparency log for a detached signature, public key, and content.\n",
         "tags": [
           "entries"
         ],
@@ -586,10 +586,6 @@ func init() {
                 "ssh",
                 "tuf"
               ]
-            },
-            "url": {
-              "type": "string",
-              "format": "uri"
             }
           }
         }
@@ -1071,7 +1067,7 @@ func init() {
         }
       },
       "post": {
-        "description": "Creates an entry in the transparency log for a detached signature, public key, and content. Items can be included in the request or fetched by the server when URLs are specified.\n",
+        "description": "Creates an entry in the transparency log for a detached signature, public key, and content.\n",
         "tags": [
           "entries"
         ],
@@ -2716,10 +2712,6 @@ func init() {
                 "ssh",
                 "tuf"
               ]
-            },
-            "url": {
-              "type": "string",
-              "format": "uri"
             }
           }
         }
@@ -2744,10 +2736,6 @@ func init() {
             "ssh",
             "tuf"
           ]
-        },
-        "url": {
-          "type": "string",
-          "format": "uri"
         }
       }
     },

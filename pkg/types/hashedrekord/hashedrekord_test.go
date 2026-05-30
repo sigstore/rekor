@@ -71,8 +71,15 @@ func TestRekordType(t *testing.T) {
 		t.Error("valid semver range was not added to SemVerToFacFnMap")
 	}
 
-	u.Hashedrekord.APIVersion = conv.Pointer("2.0.1")
+	u.Hashedrekord.APIVersion = nil
 	brt := New()
+
+	// nil api version should return error, not panic
+	if _, err := brt.UnmarshalEntry(&u.Hashedrekord); err == nil {
+		t.Error("unexpected success in Unmarshal for nil api version")
+	}
+
+	u.Hashedrekord.APIVersion = conv.Pointer("2.0.1")
 
 	// version requested matches implementation in map
 	if _, err := brt.UnmarshalEntry(&u.Hashedrekord); err != nil {

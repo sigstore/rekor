@@ -55,6 +55,10 @@ func (bjt *BaseJARType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl
 		return nil, errors.New("cannot unmarshal non-JAR types")
 	}
 
+	if jar.APIVersion == nil {
+		return nil, errors.New("api version cannot be nil")
+	}
+
 	return bjt.VersionedUnmarshal(jar, *jar.APIVersion)
 }
 

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 /*
-	cleanup-index checks what index entries are in the MySQL table and deletes those entries from the Redis databse.
+	cleanup-index checks what index entries are in the MySQL table and deletes those entries from the Redis database.
 	It does not go the other way
 
 	To run:

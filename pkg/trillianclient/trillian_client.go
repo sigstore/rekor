@@ -231,8 +231,8 @@ func (t *TrillianClient) GetLeafAndProofByIndex(ctx context.Context, index int64
 	root, err := unmarshalLogRoot(rootResp.GetLatestResult.SignedLogRoot.LogRoot)
 	if err != nil {
 		return &Response{
-			Status: status.Code(rootResp.Err),
-			Err:    rootResp.Err,
+			Status: status.Code(err),
+			Err:    err,
 		}
 	}
 
@@ -307,8 +307,8 @@ func (t *TrillianClient) getProofByHash(ctx context.Context, hashValue []byte) *
 	root, err := unmarshalLogRoot(rootResp.GetLatestResult.SignedLogRoot.LogRoot)
 	if err != nil {
 		return &Response{
-			Status: status.Code(rootResp.Err),
-			Err:    rootResp.Err,
+			Status: status.Code(err),
+			Err:    err,
 		}
 	}
 

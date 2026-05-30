@@ -228,6 +228,27 @@ func TestInclusion(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "invalid inclusion - body not string",
+			e: models.LogEntryAnon{
+				Body:           123,
+				IntegratedTime: &time,
+				LogID:          &logID,
+				LogIndex:       conv.Pointer(int64(1)),
+				Verification: &models.LogEntryAnonVerification{
+					InclusionProof: &models.InclusionProof{
+						TreeSize: conv.Pointer(int64(2)),
+						RootHash: conv.Pointer("5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"),
+						LogIndex: conv.Pointer(int64(1)),
+						Hashes: []string{
+							"59a575f157274702c38de3ab1e1784226f391fb79500ebf9f02b4439fb77574c",
+						},
+					},
+					SignedEntryTimestamp: strfmt.Base64("MEUCIHJj8xP+oPTd4BAXhO2lcbRplnKW2FafMiFo0gIDGUcYAiEA80BJ8QikiupGAv3R3dtSvZ1ICsAOQat10cFKPqBkLBM="),
+				},
+			},
+			wantErr: true,
+		},
 	} {
 		t.Run(string(test.name), func(t *testing.T) {
 			ctx := context.Background()
@@ -235,7 +256,7 @@ func TestInclusion(t *testing.T) {
 			gotErr := VerifyInclusion(ctx, &test.e)
 
 			if (gotErr != nil) != test.wantErr {
-				t.Fatalf("VerifyInclusion = %t, wantErr %t", gotErr, test.wantErr)
+				t.Fatalf("VerifyInclusion = %s, wantErr %t", gotErr.Error(), test.wantErr)
 			}
 		})
 	}
