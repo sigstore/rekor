@@ -341,6 +341,14 @@ func wrapMetrics(handler http.Handler) http.Handler {
 
 func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
 	ctx := r.Context()
+	// If the request body exceeded max_request_body_size, surface a clear
+	// 413 Request Entity Too Large that names the limit instead of letting the
+	// MaxBytesReader error fall through to an opaque 500. The conversion happens
+	// before logging so the request is logged as the client error it is.
+	if maxBytesErr := asMaxBytesError(err); maxBytesErr != nil {
+		err = errors.New(http.StatusRequestEntityTooLarge,
+			"request body exceeds max_request_body_size limit of %d bytes", maxBytesErr.Limit)
+	}
 	if apiErr, ok := err.(errors.Error); ok {
 		code := apiErr.Code()
 		if code >= http.StatusBadRequest && code < http.StatusInternalServerError {
@@ -351,21 +359,53 @@ func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
 	} else {
 		log.ContextLogger(ctx).Error(err)
 	}
-	if compErr, ok := err.(*errors.CompositeError); ok {
-		// iterate over composite error looking for something more specific
-		for _, embeddedErr := range compErr.Errors {
-			var maxBytesError *http.MaxBytesError
-			if parseErr, ok := embeddedErr.(*errors.ParseError); ok && go_errors.As(parseErr.Reason, &maxBytesError) {
-				err = errors.New(http.StatusRequestEntityTooLarge, "Request Entity Too Large")
-				break
-			}
-		}
-	}
 	requestFields := map[string]interface{}{}
 	if decodeErr := mapstructure.Decode(r, &requestFields); decodeErr == nil {
 		log.ContextLogger(ctx).Debug(requestFields)
 	}
 	errors.ServeError(w, r, err)
+}
+
+// asMaxBytesError reports whether err was caused by the request body exceeding
+// the http.MaxBytesReader limit set by the maxBodySize middleware, returning the
+// underlying *http.MaxBytesError (which carries the configured Limit) if so.
+//
+// The error can reach here in a few shapes. A bare *http.MaxBytesError, or one
+// nested anywhere that unwraps (for example a CompositeError, which implements
+// Unwrap), is caught by errors.As. go-openapi consumers instead wrap the read
+// failure in a *errors.ParseError, whose Reason holds the original error but is
+// not reachable through errors.As because ParseError does not implement Unwrap;
+// that case is handled explicitly, both when the ParseError is the top-level
+// error and when it is a member of a CompositeError.
+func asMaxBytesError(err error) *http.MaxBytesError {
+	var maxBytesError *http.MaxBytesError
+	if go_errors.As(err, &maxBytesError) {
+		return maxBytesError
+	}
+	if mbErr := maxBytesFromParseError(err); mbErr != nil {
+		return mbErr
+	}
+	var compErr *errors.CompositeError
+	if go_errors.As(err, &compErr) {
+		for _, embeddedErr := range compErr.Errors {
+			if mbErr := maxBytesFromParseError(embeddedErr); mbErr != nil {
+				return mbErr
+			}
+		}
+	}
+	return nil
+}
+
+// maxBytesFromParseError returns the *http.MaxBytesError held in a
+// *errors.ParseError's Reason, or nil if err is not such a ParseError. This is
+// needed because ParseError does not implement Unwrap, so errors.As cannot reach
+// its Reason on its own.
+func maxBytesFromParseError(err error) *http.MaxBytesError {
+	var maxBytesError *http.MaxBytesError
+	if parseErr, ok := err.(*errors.ParseError); ok && go_errors.As(parseErr.Reason, &maxBytesError) {
+		return maxBytesError
+	}
+	return nil
 }
 
 //go:embed rekorHomePage.html
