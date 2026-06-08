@@ -6,11 +6,11 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cavaliercoder/go-rpm v0.0.0-20200122174316-8cb9fd9c31a8
-	github.com/go-openapi/errors v0.22.7
-	github.com/go-openapi/loads v0.23.3
+	github.com/go-openapi/errors v0.22.8
+	github.com/go-openapi/loads v0.24.0
 	github.com/go-openapi/runtime v0.32.2
-	github.com/go-openapi/spec v0.22.4
-	github.com/go-openapi/strfmt v0.26.2
+	github.com/go-openapi/spec v0.22.5
+	github.com/go-openapi/strfmt v0.26.3
 	github.com/go-openapi/swag v0.26.0
 	github.com/go-openapi/validate v0.25.2
 	github.com/google/go-cmp v0.7.0
@@ -55,7 +55,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7
 	github.com/go-chi/chi/v5 v5.2.5
-	github.com/go-openapi/swag/conv v0.26.0
+	github.com/go-openapi/swag/conv v0.26.1
 	github.com/go-redis/redismock/v9 v9.2.0
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/go-viper/mapstructure/v2 v2.5.0
@@ -130,14 +130,14 @@ require (
 	github.com/go-openapi/runtime/server-middleware v0.30.0 // indirect
 	github.com/go-openapi/swag/cmdutils v0.26.0 // indirect
 	github.com/go-openapi/swag/fileutils v0.26.0 // indirect
-	github.com/go-openapi/swag/jsonname v0.26.0 // indirect
-	github.com/go-openapi/swag/jsonutils v0.26.0 // indirect
-	github.com/go-openapi/swag/loading v0.26.0 // indirect
-	github.com/go-openapi/swag/mangling v0.26.0 // indirect
+	github.com/go-openapi/swag/jsonname v0.26.1 // indirect
+	github.com/go-openapi/swag/jsonutils v0.26.1 // indirect
+	github.com/go-openapi/swag/loading v0.26.1 // indirect
+	github.com/go-openapi/swag/mangling v0.26.1 // indirect
 	github.com/go-openapi/swag/netutils v0.26.0 // indirect
-	github.com/go-openapi/swag/stringutils v0.26.0 // indirect
-	github.com/go-openapi/swag/typeutils v0.26.0 // indirect
-	github.com/go-openapi/swag/yamlutils v0.26.0 // indirect
+	github.com/go-openapi/swag/stringutils v0.26.1 // indirect
+	github.com/go-openapi/swag/typeutils v0.26.1 // indirect
+	github.com/go-openapi/swag/yamlutils v0.26.1 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/google/pprof v0.0.0-20260402051712-545e8a4df936 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
@@ -197,9 +197,9 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
-	github.com/go-openapi/analysis v0.25.0 // indirect
+	github.com/go-openapi/analysis v0.25.2 // indirect
 	github.com/go-openapi/jsonpointer v0.23.1 // indirect
-	github.com/go-openapi/jsonreference v0.21.5 // indirect
+	github.com/go-openapi/jsonreference v0.21.6 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/go-containerregistry v0.20.7 // indirect
 	github.com/google/uuid v1.6.0 // indirect
