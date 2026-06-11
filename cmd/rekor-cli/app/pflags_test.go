@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -554,6 +555,7 @@ func TestSearchPFlags(t *testing.T) {
 		publicKey             string
 		sha                   string
 		email                 string
+		subject               string
 		pkiFormat             string
 		expectParseSuccess    bool
 		expectValidateSuccess bool
@@ -704,7 +706,19 @@ func TestSearchPFlags(t *testing.T) {
 			expectValidateSuccess: false,
 		},
 		{
-			caseDesc:              "no flags when either artifact, sha, public key, or email are needed",
+			caseDesc:              "valid GitHub OIDC SAN subject",
+			subject:               "https://github.com/owner/repo/.github/workflows/build.yml@refs/heads/main",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "subject exceeding 2048 byte cap",
+			subject:               strings.Repeat("a", 2049),
+			expectParseSuccess:    false,
+			expectValidateSuccess: false,
+		},
+		{
+			caseDesc:              "no flags when either artifact, sha, public key, email, or subject are needed",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
@@ -733,6 +747,9 @@ func TestSearchPFlags(t *testing.T) {
 		}
 		if tc.email != "" {
 			args = append(args, "--email", tc.email)
+		}
+		if tc.subject != "" {
+			args = append(args, "--subject", tc.subject)
 		}
 
 		if err := blankCmd.ParseFlags(args); (err == nil) != tc.expectParseSuccess {

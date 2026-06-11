@@ -40,6 +40,7 @@ const (
 	uuidFlag           FlagType = "uuid"
 	shaFlag            FlagType = "sha"
 	emailFlag          FlagType = "email"
+	subjectFlag        FlagType = "subject"
 	operatorFlag       FlagType = "operator"
 	logIndexFlag       FlagType = "logIndex"
 	pkiFormatFlag      FlagType = "pkiFormat"
@@ -92,6 +93,19 @@ func initializePFlagMap() {
 				return nil
 			}
 			return valueFactory(emailFlag, emailValidator, "")
+		},
+		subjectFlag: func() pflag.Value {
+			// non-empty SAN value; cap mirrors openapi maxLength on SearchIndex.subject
+			subjectValidator := func(val string) error {
+				if val == "" {
+					return errors.New("subject must not be empty")
+				}
+				if len(val) > 2048 {
+					return fmt.Errorf("subject exceeds maximum length of 2048 bytes")
+				}
+				return nil
+			}
+			return valueFactory(subjectFlag, subjectValidator, "")
 		},
 		logIndexFlag: func() pflag.Value {
 			// this checks for a valid integer >= 0
