@@ -83,7 +83,9 @@ func (v *verifyCmdOutput) String() string {
 
 // verifyCmd represents the get command
 var verifyCmd = &cobra.Command{
-	Use:   "verify",
+	Use: "verify",
+	Example: `  rekor-cli verify --uuid <entry-uuid>
+  rekor-cli verify --artifact <path> --signature <path> --public-key <path>`,
 	Short: "Rekor verify command",
 	Long:  `Verifies an entry exists in the transparency log through an inclusion proof`,
 	PreRunE: func(cmd *cobra.Command, _ []string) error {

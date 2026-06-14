@@ -56,8 +56,9 @@ func (u *uploadCmdOutput) String() string {
 
 // uploadCmd represents the upload command
 var uploadCmd = &cobra.Command{
-	Use:   "upload",
-	Short: "Upload an artifact to Rekor",
+	Use:     "upload",
+	Example: `  rekor-cli upload --artifact <path-or-url> --signature <path> --public-key <path>`,
+	Short:   "Upload an artifact to Rekor",
 	PreRunE: func(cmd *cobra.Command, _ []string) error {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
