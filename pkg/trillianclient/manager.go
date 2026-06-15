@@ -30,6 +30,7 @@ import (
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
 	"github.com/sigstore/rekor/pkg/log"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -200,6 +201,7 @@ func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStor
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(creds),
 		grpc.WithAuthority(cleanHostname),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 	}
 
 	if serviceConfig != "" {

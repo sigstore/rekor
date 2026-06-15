@@ -155,6 +155,11 @@ Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().String("http-request-id-header-name", middleware.RequestIDHeader, "name of HTTP Request Header to use as request correlation ID")
 	rootCmd.PersistentFlags().String("trace-string-prefix", "", "if set, this will be used to prefix the 'trace' field when outputting structured logs")
 
+	rootCmd.PersistentFlags().Bool("tracing.enabled", false, "enable OpenTelemetry tracing")
+	rootCmd.PersistentFlags().String("tracing.endpoint", "", "OTLP gRPC collector endpoint (default: localhost:4317 via OTEL_EXPORTER_OTLP_ENDPOINT)")
+	rootCmd.PersistentFlags().Bool("tracing.insecure", true, "use insecure gRPC connection to the collector")
+	rootCmd.PersistentFlags().Bool("tracing.stdout", false, "export traces to stdout instead of OTLP (for debugging)")
+
 	keyAlgorithmTypes := []string{}
 	for _, keyAlgorithm := range api.AllowedClientSigningAlgorithms {
 		keyFlag, err := signature.FormatSignatureAlgorithmFlag(keyAlgorithm)
