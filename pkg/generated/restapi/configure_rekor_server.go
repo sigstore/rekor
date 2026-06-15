@@ -36,6 +36,7 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/rs/cors"
 	"github.com/spf13/viper"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -268,7 +269,7 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 
 	returnHandler = wrapMetrics(returnHandler)
 
-	return middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	requestIDHandler := middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		r = r.WithContext(log.WithRequestID(ctx, middleware.GetReqID(ctx)))
 		defer func() {
@@ -277,6 +278,7 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 
 		returnHandler.ServeHTTP(w, r)
 	}))
+	return otelhttp.NewHandler(requestIDHandler, "rekor-server")
 }
 
 // Populates the the apiToRecord for this method/path so metrics are emitted.
