@@ -17,11 +17,13 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sort"
 	"testing"
 
+	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -95,12 +97,16 @@ func testEqualNoOrder(t *testing.T, expected, actual []string) bool {
 type fakeIndexStorage struct {
 	keyToUUIDs map[string][]string
 	lookups    [][]string
+	err        error
 }
 
 func (f *fakeIndexStorage) LookupIndices(_ context.Context, keys []string) ([]string, error) {
 	captured := make([]string, len(keys))
 	copy(captured, keys)
 	f.lookups = append(f.lookups, captured)
+	if f.err != nil {
+		return nil, f.err
+	}
 	var out []string
 	for _, k := range keys {
 		out = append(out, f.keyToUUIDs[k]...)
@@ -191,6 +197,24 @@ func TestSearchIndexHandler_SubjectAndShaAndOperator(t *testing.T) {
 	got := okPayload(t, resp)
 	if len(got) != 1 || got[0] != "shared" {
 		t.Fatalf("AND intersection: want [shared], got %v", got)
+	}
+}
+
+func TestSearchIndexHandler_SubjectStorageError(t *testing.T) {
+	const sanURI = "https://github.com/o/r/.github/workflows/x.yml@refs/heads/main"
+	fake := &fakeIndexStorage{err: errors.New("boom")}
+	swapIndexStorage(t, fake)
+
+	// "and" forces an immediate lookup so the storage error surfaces.
+	resp := SearchIndexHandler(newSearchParams(t, models.SearchIndex{
+		Subject:  sanURI,
+		Operator: "and",
+	}))
+
+	rec := httptest.NewRecorder()
+	resp.WriteResponse(rec, runtime.JSONProducer())
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, rec.Code)
 	}
 }
 

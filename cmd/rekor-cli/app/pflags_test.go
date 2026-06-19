@@ -767,6 +767,27 @@ func TestSearchPFlags(t *testing.T) {
 	}
 }
 
+func TestSubjectFlagValidation(t *testing.T) {
+	tests := []struct {
+		caseDesc    string
+		value       string
+		expectError bool
+	}{
+		{caseDesc: "valid SAN URI", value: "https://github.com/owner/repo/.github/workflows/build.yml@refs/heads/main", expectError: false},
+		{caseDesc: "empty", value: "", expectError: true},
+		{caseDesc: "max length", value: strings.Repeat("a", 2048), expectError: false},
+		{caseDesc: "over max length", value: strings.Repeat("a", 2049), expectError: true},
+	}
+
+	for _, tc := range tests {
+		initializePFlagMap()
+		v := NewFlagValue(subjectFlag, "")
+		if err := v.Set(tc.value); (err != nil) != tc.expectError {
+			t.Errorf("%s: unexpected validation result: %v", tc.caseDesc, err)
+		}
+	}
+}
+
 func TestParseTypeFlag(t *testing.T) {
 	type test struct {
 		caseDesc      string
