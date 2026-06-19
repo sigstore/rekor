@@ -58,6 +58,8 @@ func addSearchPFlags(cmd *cobra.Command) error {
 
 	cmd.Flags().Var(NewFlagValue(emailFlag, ""), "email", "email associated with the public key's subject")
 
+	cmd.Flags().Var(NewFlagValue(subjectFlag, ""), "subject", "Subject Alternative Name (URI, DNS, or OtherName) stored on the entry — e.g. a GitHub OIDC SAN like https://github.com/owner/repo/.github/workflows/build.yml@refs/heads/main. Lookup is case-insensitive.")
+
 	cmd.Flags().Var(NewFlagValue(operatorFlag, ""), "operator", "operator to use for the search. supported values are 'and' and 'or'")
 	return nil
 }
@@ -68,9 +70,10 @@ func validateSearchPFlags() error {
 	publicKey := viper.GetString("public-key")
 	sha := viper.GetString("sha")
 	email := viper.GetString("email")
+	subject := viper.GetString("subject")
 
-	if artifactStr == "" && publicKey == "" && sha == "" && email == "" {
-		return errors.New("either 'sha' or 'artifact' or 'public-key' or 'email' must be specified")
+	if artifactStr == "" && publicKey == "" && sha == "" && email == "" && subject == "" {
+		return errors.New("either 'sha' or 'artifact' or 'public-key' or 'email' or 'subject' must be specified")
 	}
 	if publicKey != "" {
 		if viper.GetString("pki-format") == "" {
@@ -84,7 +87,7 @@ func validateSearchPFlags() error {
 var searchCmd = &cobra.Command{
 	Use:   "search",
 	Short: "Rekor search command",
-	Long:  `Searches the Rekor index to find entries by sha, artifact,  public key, or e-mail`,
+	Long:  `Searches the Rekor index to find entries by sha, artifact, public key, e-mail, or SAN subject`,
 	PreRun: func(cmd *cobra.Command, _ []string) {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
@@ -191,6 +194,10 @@ var searchCmd = &cobra.Command{
 		emailStr := viper.GetString("email")
 		if emailStr != "" {
 			params.Query.Email = strfmt.Email(emailStr)
+		}
+		subjectStr := viper.GetString("subject")
+		if subjectStr != "" {
+			params.Query.Subject = subjectStr
 		}
 		resp, err := rekorClient.Index.SearchIndex(params)
 		if err != nil {
