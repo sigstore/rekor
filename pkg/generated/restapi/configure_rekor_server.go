@@ -22,9 +22,12 @@ import (
 	"crypto/tls"
 	go_errors "errors"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"strconv"
+	"syscall"
 	"time"
 
 	// using embed to add the static html page duing build time
@@ -397,7 +400,22 @@ func recoverer(next http.Handler) http.Handler {
 					fields = append(fields, zap.ByteString("request_headers", request))
 				}
 
-				log.ContextLogger(ctx).With(fields...).Errorf("panic detected: %v", rvr)
+				// Check if the panic is due to a connection issue: Don't log these
+				// cases as serious errors
+				isNetworkError := false
+				if err, ok := rvr.(error); ok {
+					if go_errors.Is(err, io.EOF) || go_errors.Is(err, syscall.EPIPE) || go_errors.Is(err, syscall.ECONNRESET) {
+						isNetworkError = true
+					} else if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+						isNetworkError = true
+					}
+				}
+
+				if isNetworkError {
+					log.ContextLogger(ctx).With(fields...).Debugf("client connection closed: %v", rvr)
+				} else {
+					log.ContextLogger(ctx).With(fields...).Errorf("panic detected: %v", rvr)
+				}
 
 				errors.ServeError(w, r, nil)
 			}
