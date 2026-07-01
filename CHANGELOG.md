@@ -1,3 +1,33 @@
+# v1.5.3
+
+## Features
+
+* return 499 when clients disconnect instead of 500 (#2870)
+
+## Improvements
+
+* Change max upperbound on latency metrics (#2868)
+
+# v1.5.2
+
+## Features
+
+* Support restricting kinds on insertion (#2814)
+
+## Bug Fixes
+
+* alpine: Enforce max size limit on decompression (#2831)
+* fix(trillianclient): strip dns:/// scheme from TLS ServerName in gRPC dial (#2812)
+* Fix internal error detail leakage in 500 responses (#2801)
+* add checks to ensure returned entries match client inputs to rekor-cli (#2799)
+* add defensive check to ensure tid is in config ahead of getting client (#2795)
+* add nil pointer check to resolve fuzzing crash (#2807)
+
+## Improvements
+
+* restapi: include inactiveShards in the homepage total count (#2797)
+* client: surface last-response details after retries are exhausted (#2796)
+
 # v1.5.1
 
 ## Features
