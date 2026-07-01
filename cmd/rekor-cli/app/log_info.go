@@ -60,9 +60,10 @@ TreeID:                 %s
 
 // logInfoCmd represents the current information about the transparency log
 var logInfoCmd = &cobra.Command{
-	Use:   "loginfo",
-	Short: "Rekor loginfo command",
-	Long:  `Prints info about the transparency log`,
+	Use:     "loginfo",
+	Example: `  rekor-cli loginfo`,
+	Short:   "Rekor loginfo command",
+	Long:    `Prints info about the transparency log`,
 	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (interface{}, error) {
 		serverURL := viper.GetString("rekor_server")
 		ctx := cmd.Context()

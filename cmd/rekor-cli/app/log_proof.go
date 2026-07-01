@@ -50,7 +50,9 @@ func (l *logProofOutput) String() string {
 
 // logProof represents the consistency proof
 var logProofCmd = &cobra.Command{
-	Use:   "logproof",
+	Use: "logproof",
+	Example: `  rekor-cli logproof --last-size 10
+  rekor-cli logproof --first-size 5 --last-size 10`,
 	Short: "Rekor logproof command",
 	Long:  `Prints information required to compute the consistency proof of the transparency log`,
 	PreRunE: func(cmd *cobra.Command, _ []string) error {
