@@ -1,0 +1,47 @@
+# Copyright 2026 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Fuzzing
+
+on:
+  push:
+    branches:
+      - main
+      - 'release-**'
+  pull_request:
+    branches:
+      - main
+      - 'release-**'
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    name: Fuzz Testing
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Extract version of Go to use
+        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: ${{ env.GOVERSION }}
+          cache: false
+
+      - name: Fuzz-Build
+        run: GOMAXPROCS=1 make -C $GITHUB_WORKSPACE fuzz
