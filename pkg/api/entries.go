@@ -785,6 +785,11 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 
 	case codes.NotFound:
 		return models.LogEntry{}, ErrNotFound
+	case codes.Canceled:
+		// If the client disconnected, trillian will return Canceled — surface
+		// that up the stack rather than logging it as an unexpected error.
+		// handleRekorAPIError rewrites this to a 499 response.
+		return models.LogEntry{}, ctx.Err()
 	default:
 		log.ContextLogger(ctx).Errorf("Unexpected response code while attempting to retrieve UUID %v from TreeID %v: %v", uuid, tid, resp.Status)
 		return models.LogEntry{}, errors.New("unexpected error")
