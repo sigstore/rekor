@@ -340,3 +340,39 @@ func TestCheckpoint(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckpointRootHashCaseFolding(t *testing.T) {
+	signer, _, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var rootHash [32]byte
+	for i := range rootHash {
+		rootHash[i] = byte(i) + 1
+	}
+	rootHash[0] = 'A'
+
+	scBytes, err := util.CreateAndSignCheckpoint(context.Background(), "rekor.localhost", 123, 42, rootHash[:], signer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Same bytes except an ASCII letter in different case: not equal, but equal
+	// under case folding.
+	mismatch := rootHash
+	mismatch[0] = 'a'
+
+	e := models.LogEntryAnon{
+		Verification: &models.LogEntryAnonVerification{
+			InclusionProof: &models.InclusionProof{
+				RootHash:   conv.Pointer(hex.EncodeToString(mismatch[:])),
+				Checkpoint: conv.Pointer(string(scBytes)),
+			},
+		},
+	}
+
+	if err := VerifyCheckpointSignature(&e, signer); err == nil {
+		t.Fatal("VerifyCheckpointSignature accepted a root hash that does not match the signed tree head")
+	}
+}
