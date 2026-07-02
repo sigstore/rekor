@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -923,6 +924,37 @@ func TestParseTypeFlag(t *testing.T) {
 	for _, tc := range tests {
 		if _, _, err := ParseTypeFlag(tc.typeStr); (err == nil) != tc.expectSuccess {
 			t.Fatalf("unexpected error parsing type flag in '%v': %v", tc.caseDesc, err)
+		}
+	}
+}
+
+func TestValidateFileOrURL(t *testing.T) {
+	tests := []struct {
+		caseDesc  string
+		value     string
+		expectErr bool
+		errSubstr string
+	}{
+		{caseDesc: "valid local file", value: "tests/test_file.txt", expectErr: false},
+		{caseDesc: "valid https url", value: "https://example.com/artifact", expectErr: false},
+		{caseDesc: "missing file reports the file error, not the url error", value: "tests/not_a_file", expectErr: true, errSubstr: "not_a_file"},
+		{caseDesc: "malformed http url reports the url error", value: "http://", expectErr: true, errSubstr: "is not a valid url"},
+	}
+	for _, tc := range tests {
+		err := validateFileOrURL(tc.value)
+		if tc.expectErr {
+			if err == nil {
+				t.Errorf("%s: expected an error, got nil", tc.caseDesc)
+				continue
+			}
+			if tc.errSubstr != "" && !strings.Contains(err.Error(), tc.errSubstr) {
+				t.Errorf("%s: expected error containing %q, got %q", tc.caseDesc, tc.errSubstr, err.Error())
+			}
+			if !strings.HasPrefix(tc.value, "http") && strings.Contains(err.Error(), "is not a valid url") {
+				t.Errorf("%s: file error was masked by the url error: %q", tc.caseDesc, err.Error())
+			}
+		} else if err != nil {
+			t.Errorf("%s: expected no error, got %q", tc.caseDesc, err.Error())
 		}
 	}
 }

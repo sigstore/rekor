@@ -280,12 +280,23 @@ func validateSHAValue(v string) error {
 
 // validateFileOrURL ensures the provided string is either a valid file path that can be opened or a valid URL
 func validateFileOrURL(v string) error {
-	valGen := pflagValueFuncMap[fileFlag]
-	if valGen().Set(v) == nil {
+	fileErr := pflagValueFuncMap[fileFlag]().Set(v)
+	if fileErr == nil {
 		return nil
 	}
-	valGen = pflagValueFuncMap[urlFlag]
-	return valGen().Set(v)
+	urlErr := pflagValueFuncMap[urlFlag]().Set(v)
+	if urlErr == nil {
+		return nil
+	}
+	// Neither a readable file nor a valid URL. Return the error for whichever
+	// the input was most likely intended to be, so the message is actionable:
+	// a value with an http(s) scheme is treated as a URL, anything else as a
+	// file path. Previously the file error (e.g. "no such file or directory")
+	// was always masked by the "is not a valid url" error.
+	if strings.HasPrefix(v, "http://") || strings.HasPrefix(v, "https://") {
+		return urlErr
+	}
+	return fileErr
 }
 
 // validateID ensures the ID is either an EntryID (TreeID + UUID) or a UUID
