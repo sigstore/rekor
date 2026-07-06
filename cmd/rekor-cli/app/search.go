@@ -82,7 +82,11 @@ func validateSearchPFlags() error {
 
 // searchCmd represents the get command
 var searchCmd = &cobra.Command{
-	Use:   "search",
+	Use: "search",
+	Example: `  rekor-cli search --artifact <path-or-url>
+  rekor-cli search --public-key <path> --pki-format=x509
+  rekor-cli search --email <email>
+  rekor-cli search --sha <sha256>`,
 	Short: "Rekor search command",
 	Long:  `Searches the Rekor index to find entries by sha, artifact,  public key, or e-mail`,
 	PreRun: func(cmd *cobra.Command, _ []string) {
