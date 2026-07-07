@@ -311,8 +311,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		})
 	}
 
-
-
 	// extraction of index keys - done here so we can clear the huge strings from memory
 	if env.PayloadType == in_toto.PayloadType {
 		var extract indexKeyExtract
