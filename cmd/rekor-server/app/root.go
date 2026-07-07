@@ -28,6 +28,7 @@ import (
 	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/trillianclient"
+	"github.com/sigstore/rekor/pkg/types"
 	cose "github.com/sigstore/rekor/pkg/types/cose/v0.0.1"
 	intoto001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	intoto002 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.2"
@@ -138,6 +139,11 @@ Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().Int("max_attestation_size", 100*1024, "max size for attestation storage, in bytes")
 
 	rootCmd.PersistentFlags().StringSlice("enabled_api_endpoints", operationIDs, "list of API endpoints to enable using operationId from openapi.yaml")
+
+	rootCmd.PersistentFlags().StringSlice("enabled_entry_types", types.ListSupportedKinds(),
+		"comma-separated list of entry type kinds to enable on the server (e.g. rekord,intoto,dsse,hashedrekord). "+
+			"If unset (default), all types compiled into the binary are enabled. Any kind specified here must be compiled "+
+			"into the binary; unknown kinds will cause startup to fail.")
 
 	rootCmd.PersistentFlags().Uint64("max_request_body_size", 0, "maximum size for HTTP request body, in bytes; set to 0 for unlimited")
 	rootCmd.PersistentFlags().Uint64("max_jar_metadata_size", 1048576, "maximum permitted size for jar META-INF/ files, in bytes; set to 0 for unlimited")

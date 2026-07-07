@@ -82,7 +82,11 @@ func validateSearchPFlags() error {
 
 // searchCmd represents the get command
 var searchCmd = &cobra.Command{
-	Use:   "search",
+	Use: "search",
+	Example: `  rekor-cli search --artifact <path-or-url>
+  rekor-cli search --public-key <path> --pki-format=x509
+  rekor-cli search --email <email>
+  rekor-cli search --sha <sha256>`,
 	Short: "Rekor search command",
 	Long:  `Searches the Rekor index to find entries by sha, artifact,  public key, or e-mail`,
 	PreRun: func(cmd *cobra.Command, _ []string) {
@@ -115,13 +119,12 @@ var searchCmd = &cobra.Command{
 			hasher := sha256.New()
 			var tee io.Reader
 			if isURL(artifactStr) {
-				/* #nosec G107 */
-				resp, err := http.Get(artifactStr)
+				r, err := util.FileOrURLReadCloser(cmd.Context(), artifactStr, nil)
 				if err != nil {
 					return nil, fmt.Errorf("error fetching '%v': %w", artifactStr, err)
 				}
-				defer resp.Body.Close()
-				tee = io.TeeReader(resp.Body, hasher)
+				defer r.Close()
+				tee = io.TeeReader(r, hasher)
 			} else {
 				file, err := os.Open(filepath.Clean(artifactStr))
 				if err != nil {
@@ -167,7 +170,16 @@ var searchCmd = &cobra.Command{
 			splitPubKeyString := strings.Split(publicKeyStr, ",")
 			if len(splitPubKeyString) == 1 {
 				if isURL(splitPubKeyString[0]) {
-					params.Query.PublicKey.URL = strfmt.URI(splitPubKeyString[0])
+					r, err := util.FileOrURLReadCloser(cmd.Context(), splitPubKeyString[0], nil)
+					if err != nil {
+						return nil, fmt.Errorf("error fetching '%v': %w", splitPubKeyString[0], err)
+					}
+					defer r.Close()
+					c, err := io.ReadAll(r)
+					if err != nil {
+						return nil, fmt.Errorf("error reading public key from '%v': %w", splitPubKeyString[0], err)
+					}
+					params.Query.PublicKey.Content = c
 				} else {
 					keyBytes, err := os.ReadFile(filepath.Clean(splitPubKeyString[0]))
 					if err != nil {

@@ -923,3 +923,53 @@ func TestInsertable(t *testing.T) {
 		})
 	}
 }
+
+func TestV001Entry_IndexKeys_MissingPublicKey(t *testing.T) {
+	v := V001Entry{
+		CoseObj: models.CoseV001Schema{
+			Data:      &models.CoseV001SchemaData{},
+			PublicKey: nil,
+		},
+	}
+	_, err := v.IndexKeys()
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if err.Error() != "missing public key" {
+		t.Errorf("expected 'missing public key' error, got %v", err)
+	}
+}
+
+func TestCanonicalizeHandlesInvalidInput(t *testing.T) {
+	v := &V001Entry{}
+
+	// 1. Missing keyObj
+	_, err := v.Canonicalize(context.TODO())
+	if err == nil || err.Error() != "cannot canonicalize empty key" {
+		t.Fatalf("expected error 'cannot canonicalize empty key', got %v", err)
+	}
+
+	// Setup valid keyObj for subsequent tests
+	priv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	der, _ := x509.MarshalPKIXPublicKey(&priv.PublicKey)
+	pub := pem.EncodeToMemory(&pem.Block{
+		Bytes: der,
+		Type:  "PUBLIC KEY",
+	})
+	keyObj, _ := sigx509.NewPublicKey(bytes.NewReader(pub))
+	v.keyObj = keyObj
+
+	// 2. Missing sign1Msg
+	_, err = v.Canonicalize(context.TODO())
+	if err == nil || err.Error() != "signed message uninitialized" {
+		t.Fatalf("expected error 'signed message uninitialized', got %v", err)
+	}
+
+	// 3. Missing Payload in sign1Msg
+	v.sign1Msg = gocose.NewSign1Message()
+	v.sign1Msg.Payload = nil
+	_, err = v.Canonicalize(context.TODO())
+	if err == nil || err.Error() != "payload empty" {
+		t.Fatalf("expected error 'payload empty', got %v", err)
+	}
+}

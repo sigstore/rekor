@@ -56,6 +56,10 @@ func (btt BaseTufType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl,
 		return nil, fmt.Errorf("cannot unmarshal non-tuf types %+v", pe)
 	}
 
+	if tuf.APIVersion == nil {
+		return nil, errors.New("api version cannot be nil")
+	}
+
 	return btt.VersionedUnmarshal(tuf, *tuf.APIVersion)
 }
 

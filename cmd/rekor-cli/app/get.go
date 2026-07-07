@@ -70,7 +70,9 @@ func (g *getCmdOutput) String() string {
 
 // getCmd represents the get command
 var getCmd = &cobra.Command{
-	Use:   "get",
+	Use: "get",
+	Example: `  rekor-cli get --uuid <entry-uuid>
+  rekor-cli get --log-index 0`,
 	Short: "Rekor get command",
 	Long:  `Get information regarding entries in the transparency log`,
 	PreRun: func(cmd *cobra.Command, _ []string) {

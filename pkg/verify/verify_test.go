@@ -228,6 +228,27 @@ func TestInclusion(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "invalid inclusion - body not string",
+			e: models.LogEntryAnon{
+				Body:           123,
+				IntegratedTime: &time,
+				LogID:          &logID,
+				LogIndex:       conv.Pointer(int64(1)),
+				Verification: &models.LogEntryAnonVerification{
+					InclusionProof: &models.InclusionProof{
+						TreeSize: conv.Pointer(int64(2)),
+						RootHash: conv.Pointer("5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"),
+						LogIndex: conv.Pointer(int64(1)),
+						Hashes: []string{
+							"59a575f157274702c38de3ab1e1784226f391fb79500ebf9f02b4439fb77574c",
+						},
+					},
+					SignedEntryTimestamp: strfmt.Base64("MEUCIHJj8xP+oPTd4BAXhO2lcbRplnKW2FafMiFo0gIDGUcYAiEA80BJ8QikiupGAv3R3dtSvZ1ICsAOQat10cFKPqBkLBM="),
+				},
+			},
+			wantErr: true,
+		},
 	} {
 		t.Run(string(test.name), func(t *testing.T) {
 			ctx := context.Background()
@@ -235,7 +256,7 @@ func TestInclusion(t *testing.T) {
 			gotErr := VerifyInclusion(ctx, &test.e)
 
 			if (gotErr != nil) != test.wantErr {
-				t.Fatalf("VerifyInclusion = %t, wantErr %t", gotErr, test.wantErr)
+				t.Fatalf("VerifyInclusion = %s, wantErr %t", gotErr.Error(), test.wantErr)
 			}
 		})
 	}
@@ -317,5 +338,41 @@ func TestCheckpoint(t *testing.T) {
 				t.Fatalf("VerifyCheckpointSignature = %t, wantErr %t", gotErr, test.wantErr)
 			}
 		})
+	}
+}
+
+func TestCheckpointRootHashCaseFolding(t *testing.T) {
+	signer, _, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var rootHash [32]byte
+	for i := range rootHash {
+		rootHash[i] = byte(i) + 1
+	}
+	rootHash[0] = 'A'
+
+	scBytes, err := util.CreateAndSignCheckpoint(context.Background(), "rekor.localhost", 123, 42, rootHash[:], signer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Same bytes except an ASCII letter in different case: not equal, but equal
+	// under case folding.
+	mismatch := rootHash
+	mismatch[0] = 'a'
+
+	e := models.LogEntryAnon{
+		Verification: &models.LogEntryAnonVerification{
+			InclusionProof: &models.InclusionProof{
+				RootHash:   conv.Pointer(hex.EncodeToString(mismatch[:])),
+				Checkpoint: conv.Pointer(string(scBytes)),
+			},
+		},
+	}
+
+	if err := VerifyCheckpointSignature(&e, signer); err == nil {
+		t.Fatal("VerifyCheckpointSignature accepted a root hash that does not match the signed tree head")
 	}
 }

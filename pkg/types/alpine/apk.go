@@ -106,15 +106,17 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 
 	// GZIP headers/footers are left unmodified; Tar footers are removed on first two archives
 	// signature.tar.gz | control.tar.gz | data.tar.gz
+	maxBufSize := viper.GetUint64("max_apk_metadata_size")
+	if maxBufSize == 0 {
+		maxBufSize = 20 * 1024 * 1024
+	}
 	sigBuf := bytes.Buffer{}
-	for {
-		_, err := io.CopyN(&sigBuf, gzipReader, 1024)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return fmt.Errorf("reading signature.tar.gz: %w", err)
-		}
+	if _, err := io.Copy(&sigBuf, io.LimitReader(gzipReader, int64(maxBufSize)+1)); err != nil {
+		return fmt.Errorf("reading signature.tar.gz: %w", err)
+	}
+	if sigBuf.Len() > int(maxBufSize) {
+		return fmt.Errorf("decompressed size (%d) for signature.tar.gz exceeds max allowed size %d",
+			sigBuf.Len(), maxBufSize)
 	}
 
 	// the SHA1 sum used in the signature is over the entire file control.tar.gz so we need to

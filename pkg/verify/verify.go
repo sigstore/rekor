@@ -126,7 +126,7 @@ func VerifyCheckpointSignature(e *models.LogEntryAnon, verifier signature.Verifi
 		return errors.New("decoding inclusion proof root has")
 	}
 
-	if !bytes.EqualFold(rootHash, sth.Hash) {
+	if !bytes.Equal(rootHash, sth.Hash) {
 		return fmt.Errorf("proof root hash does not match signed tree head, expected %s got %s",
 			*e.Verification.InclusionProof.RootHash,
 			hex.EncodeToString(sth.Hash))
@@ -145,7 +145,10 @@ func VerifyInclusion(ctx context.Context, e *models.LogEntryAnon) error {
 
 	hashes := [][]byte{}
 	for _, h := range e.Verification.InclusionProof.Hashes {
-		hb, _ := hex.DecodeString(h)
+		hb, err := hex.DecodeString(h)
+		if err != nil {
+			return err
+		}
 		hashes = append(hashes, hb)
 	}
 
@@ -155,7 +158,11 @@ func VerifyInclusion(ctx context.Context, e *models.LogEntryAnon) error {
 	}
 
 	// Verify the inclusion proof.
-	entryBytes, err := base64.StdEncoding.DecodeString(e.Body.(string))
+	b, ok := e.Body.(string)
+	if !ok {
+		return fmt.Errorf("entry body must be a string, was %T", e.Body)
+	}
+	entryBytes, err := base64.StdEncoding.DecodeString(b)
 	if err != nil {
 		return err
 	}

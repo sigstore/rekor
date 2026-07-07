@@ -195,7 +195,7 @@ func GetLogEntryByIndexHandler(params entries.GetLogEntryByIndexParams) middlewa
 		if errors.Is(err, ErrNotFound) {
 			return handleRekorAPIError(params, http.StatusNotFound, fmt.Errorf("grpc error: %w", err), "")
 		}
-		return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
+		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianCommunicationError)
 	}
 	return entries.NewGetLogEntryByIndexOK().WithPayload(logEntry)
 }
@@ -655,7 +655,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 				}
 				logEntry, err := logEntryFromLeaf(httpReqCtx, leafResp.Leaf, leafResp.SignedLogRoot, leafResp.Proof, shard, api.logRanges, api.cachedCheckpoints)
 				if err != nil {
-					return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
+					return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 				}
 				resultPayload = append(resultPayload, logEntry)
 			}
@@ -666,7 +666,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		for _, logIndex := range params.Entry.LogIndexes {
 			logEntry, err := retrieveLogEntryByIndex(httpReqCtx, int(conv.Value(logIndex)))
 			if err != nil && !errors.Is(err, ErrNotFound) {
-				return handleRekorAPIError(params, http.StatusInternalServerError, err, err.Error())
+				return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianCommunicationError)
 			} else if err == nil {
 				resultPayload = append(resultPayload, logEntry)
 			}
@@ -679,8 +679,6 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 var ErrNotFound = errors.New("grpc returned 0 leaves with success code")
 
 func retrieveLogEntryByIndex(ctx context.Context, logIndex int) (models.LogEntry, error) {
-	log.ContextLogger(ctx).Infof("Retrieving log entry by index %d", logIndex)
-
 	tid, resolvedIndex := api.logRanges.ResolveVirtualIndex(logIndex)
 	tc, err := api.trillianClientManager.GetTrillianClient(tid)
 	if err != nil {
@@ -747,6 +745,12 @@ func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, e
 func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.LogEntry, error) {
 	log.ContextLogger(ctx).Debugf("Retrieving log entry %v from tree %d", uuid, tid)
 
+	// Reject tree IDs not in the configured shard set before they reach the
+	// Trillian client cache or backend.
+	if _, err := api.logRanges.GetLogRangeByTreeID(tid); err != nil {
+		return models.LogEntry{}, ErrNotFound
+	}
+
 	hashValue, err := hex.DecodeString(uuid)
 	if err != nil {
 		return models.LogEntry{}, &types.InputValidationError{Err: fmt.Errorf("parsing UUID: %w", err)}
@@ -754,7 +758,7 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 
 	tc, err := api.trillianClientManager.GetTrillianClient(tid)
 	if err != nil {
-		return nil, fmt.Errorf("getting log client for tree %d: %w", tid, err)
+		return models.LogEntry{}, fmt.Errorf("getting log client for tree %d: %w", tid, err)
 	}
 	log.ContextLogger(ctx).Debugf("Attempting to retrieve UUID %v from TreeID %v", uuid, tid)
 
@@ -779,6 +783,11 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 
 	case codes.NotFound:
 		return models.LogEntry{}, ErrNotFound
+	case codes.Canceled:
+		// If the client disconnected, trillian will return Canceled — surface
+		// that up the stack rather than logging it as an unexpected error.
+		// handleRekorAPIError rewrites this to a 499 response.
+		return models.LogEntry{}, ctx.Err()
 	default:
 		log.ContextLogger(ctx).Errorf("Unexpected response code while attempting to retrieve UUID %v from TreeID %v: %v", uuid, tid, resp.Status)
 		return models.LogEntry{}, errors.New("unexpected error")

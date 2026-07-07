@@ -16,6 +16,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -34,6 +35,7 @@ import (
 const (
 	trillianCommunicationError     = "unexpected error communicating with transparency log"
 	trillianUnexpectedResult       = "unexpected result from transparency log"
+	clientDisconnected             = "client disconnected during request"
 	validationError                = "error processing entry: %v"
 	failedToGenerateCanonicalEntry = "error generating canonicalized entry"
 	entryAlreadyExists             = "an equivalent entry already exists in the transparency log with UUID %v"
@@ -69,6 +71,15 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 
 	logMsg := func(r *http.Request, inputs ...interface{}) {
 		ctx := r.Context()
+		// If the client disconnected before we could respond, rewrite the
+		// status to 499 (nginx-style "client closed request") so that the
+		// response, request log, and metrics all agree that this wasn't a
+		// server-side error we could have prevented. Also replace the
+		// client-facing message so the JSON body reflects the true cause.
+		if code >= 500 && ctx.Err() == context.Canceled {
+			code = 499
+			message = clientDisconnected
+		}
 		fields := append([]interface{}{"handler", handler, "statusCode", code, "clientMessage", message}, fields...)
 		if code >= 500 {
 			fields = append(fields, inputs...)

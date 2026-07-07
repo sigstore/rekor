@@ -1,3 +1,59 @@
+# v1.5.3
+
+## Features
+
+* return 499 when clients disconnect instead of 500 (#2870)
+
+## Improvements
+
+* Change max upperbound on latency metrics (#2868)
+
+# v1.5.2
+
+## Features
+
+* Support restricting kinds on insertion (#2814)
+
+## Bug Fixes
+
+* alpine: Enforce max size limit on decompression (#2831)
+* fix(trillianclient): strip dns:/// scheme from TLS ServerName in gRPC dial (#2812)
+* Fix internal error detail leakage in 500 responses (#2801)
+* add checks to ensure returned entries match client inputs to rekor-cli (#2799)
+* add defensive check to ensure tid is in config ahead of getting client (#2795)
+* add nil pointer check to resolve fuzzing crash (#2807)
+
+## Improvements
+
+* restapi: include inactiveShards in the homepage total count (#2797)
+* client: surface last-response details after retries are exhausted (#2796)
+
+# v1.5.1
+
+## Features
+
+* optimize memory for DSSE v0.0.1 processing (#2766)
+
+## Bug Fixes
+
+* Type assert the entry bundle when verifying inclusion proof (#2755)
+* return correct errors in rare failure situations (#2753)
+* raise error if decoding hash fails during inclusion proof (#2754)
+
+# v1.5.0
+
+This release fixes GHSA-273p-m2cw-6833 and GHSA-4c4x-jm2x-pf9j. Note that this
+drops support for fetching public keys via URL when querying the search API.
+
+## Vulnerability Fixes
+
+* Handle malformed COSE and DSSE entries (#2729)
+* Drop support for fetching public keys by URL in the search index (#2731)
+
+## Features
+
+* Add support for a custom TLS config for clients (#2709)
+
 # v1.4.3
 
 This release reduces dependencies for a number of exported packages.
