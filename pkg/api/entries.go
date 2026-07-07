@@ -679,8 +679,6 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 var ErrNotFound = errors.New("grpc returned 0 leaves with success code")
 
 func retrieveLogEntryByIndex(ctx context.Context, logIndex int) (models.LogEntry, error) {
-	log.ContextLogger(ctx).Infof("Retrieving log entry by index %d", logIndex)
-
 	tid, resolvedIndex := api.logRanges.ResolveVirtualIndex(logIndex)
 	tc, err := api.trillianClientManager.GetTrillianClient(tid)
 	if err != nil {
