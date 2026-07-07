@@ -95,17 +95,17 @@ func init() {
 	)
 }
 
-// TrillianClientConfig holds configuration options for TrillianClient
-type TrillianClientConfig struct {
+// Config holds configuration options for TrillianClient
+type Config struct {
 	// InitLatestRootTimeout is the timeout for fetching the latest root during initialization
 	InitLatestRootTimeout time.Duration
 	// UpdaterWaitTimeout is the timeout for updater polling wait operations
 	UpdaterWaitTimeout time.Duration
 }
 
-// DefaultTrillianClientConfig returns a config with default timeout values
-func DefaultTrillianClientConfig() TrillianClientConfig {
-	return TrillianClientConfig{
+// DefaultConfig returns a config with default timeout values
+func DefaultConfig() Config {
+	return Config{
 		InitLatestRootTimeout: DefaultInitLatestRootTimeout,
 		UpdaterWaitTimeout:    DefaultUpdaterWaitTimeout,
 	}
@@ -115,7 +115,7 @@ func DefaultTrillianClientConfig() TrillianClientConfig {
 type TrillianClient struct {
 	client trillian.TrillianLogClient
 	logID  int64
-	config TrillianClientConfig
+	config Config
 
 	// shared trillian client/verifier
 	lc   *client.LogClient
@@ -143,7 +143,7 @@ type rootSnapshot struct {
 }
 
 // newTrillianClient creates a TrillianClient with the given Trillian client, log/tree ID, and config.
-func newTrillianClient(logClient trillian.TrillianLogClient, logID int64, config TrillianClientConfig) *TrillianClient {
+func newTrillianClient(logClient trillian.TrillianLogClient, logID int64, config Config) *TrillianClient {
 	t := &TrillianClient{
 		client: logClient,
 		logID:  logID,

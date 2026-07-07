@@ -111,7 +111,7 @@ func NewAPI(treeID int64) (*API, error) {
 	}
 
 	// Read timeout configuration from command line flags/config
-	clientConfig := trillianclient.TrillianClientConfig{
+	clientConfig := trillianclient.Config{
 		InitLatestRootTimeout: viper.GetDuration("trillian_log_server.init_latest_root_timeout"),
 		UpdaterWaitTimeout:    viper.GetDuration("trillian_log_server.updater_wait_timeout"),
 	}
