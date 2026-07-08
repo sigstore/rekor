@@ -588,6 +588,12 @@ func init() {
               ]
             }
           }
+        },
+        "subject": {
+          "description": "A SAN value (URI, DNS, IP, OtherName) as stored on the entry. Lookup is case-insensitive — e.g. a GitHub OIDC SAN such as ` + "`" + `https://github.com/owner/repo/.github/workflows/build.yml@refs/heads/main` + "`" + `.",
+          "type": "string",
+          "maxLength": 512,
+          "minLength": 1
         }
       }
     },
@@ -2714,6 +2720,12 @@ func init() {
               ]
             }
           }
+        },
+        "subject": {
+          "description": "A SAN value (URI, DNS, IP, OtherName) as stored on the entry. Lookup is case-insensitive — e.g. a GitHub OIDC SAN such as ` + "`" + `https://github.com/owner/repo/.github/workflows/build.yml@refs/heads/main` + "`" + `.",
+          "type": "string",
+          "maxLength": 512,
+          "minLength": 1
         }
       }
     },

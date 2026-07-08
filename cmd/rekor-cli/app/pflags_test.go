@@ -555,6 +555,7 @@ func TestSearchPFlags(t *testing.T) {
 		publicKey             string
 		sha                   string
 		email                 string
+		subject               string
 		pkiFormat             string
 		expectParseSuccess    bool
 		expectValidateSuccess bool
@@ -705,7 +706,19 @@ func TestSearchPFlags(t *testing.T) {
 			expectValidateSuccess: false,
 		},
 		{
-			caseDesc:              "no flags when either artifact, sha, public key, or email are needed",
+			caseDesc:              "valid GitHub OIDC SAN subject",
+			subject:               "https://github.com/owner/repo/.github/workflows/build.yml@refs/heads/main",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "subject exceeding 512 byte cap",
+			subject:               strings.Repeat("a", 513),
+			expectParseSuccess:    false,
+			expectValidateSuccess: false,
+		},
+		{
+			caseDesc:              "no flags when either artifact, sha, public key, email, or subject are needed",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
@@ -735,6 +748,9 @@ func TestSearchPFlags(t *testing.T) {
 		if tc.email != "" {
 			args = append(args, "--email", tc.email)
 		}
+		if tc.subject != "" {
+			args = append(args, "--subject", tc.subject)
+		}
 
 		if err := blankCmd.ParseFlags(args); (err == nil) != tc.expectParseSuccess {
 			t.Errorf("unexpected result parsing '%v': %v", tc.caseDesc, err)
@@ -747,6 +763,27 @@ func TestSearchPFlags(t *testing.T) {
 		if err := validateSearchPFlags(); (err == nil) != tc.expectValidateSuccess {
 			t.Errorf("unexpected result validating '%v': %v", tc.caseDesc, err)
 			continue
+		}
+	}
+}
+
+func TestSubjectFlagValidation(t *testing.T) {
+	tests := []struct {
+		caseDesc    string
+		value       string
+		expectError bool
+	}{
+		{caseDesc: "valid SAN URI", value: "https://github.com/owner/repo/.github/workflows/build.yml@refs/heads/main", expectError: false},
+		{caseDesc: "empty", value: "", expectError: true},
+		{caseDesc: "max length", value: strings.Repeat("a", 512), expectError: false},
+		{caseDesc: "over max length", value: strings.Repeat("a", 513), expectError: true},
+	}
+
+	for _, tc := range tests {
+		initializePFlagMap()
+		v := NewFlagValue(subjectFlag, "")
+		if err := v.Set(tc.value); (err != nil) != tc.expectError {
+			t.Errorf("%s: unexpected validation result: %v", tc.caseDesc, err)
 		}
 	}
 }
