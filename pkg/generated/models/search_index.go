@@ -50,7 +50,7 @@ type SearchIndex struct {
 	PublicKey *SearchIndexPublicKey `json:"publicKey,omitempty"`
 
 	// A SAN value (URI, DNS, IP, OtherName) as stored on the entry. Lookup is case-insensitive — e.g. a GitHub OIDC SAN such as `https://github.com/owner/repo/.github/workflows/build.yml@refs/heads/main`.
-	// Max Length: 2048
+	// Max Length: 512
 	// Min Length: 1
 	Subject string `json:"subject,omitempty"`
 }
@@ -183,7 +183,7 @@ func (m *SearchIndex) validateSubject(formats strfmt.Registry) error {
 		return err
 	}
 
-	if err := validate.MaxLength("subject", "body", m.Subject, 2048); err != nil {
+	if err := validate.MaxLength("subject", "body", m.Subject, 512); err != nil {
 		return err
 	}
 

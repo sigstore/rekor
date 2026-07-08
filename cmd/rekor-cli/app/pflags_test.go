@@ -712,8 +712,8 @@ func TestSearchPFlags(t *testing.T) {
 			expectValidateSuccess: true,
 		},
 		{
-			caseDesc:              "subject exceeding 2048 byte cap",
-			subject:               strings.Repeat("a", 2049),
+			caseDesc:              "subject exceeding 512 byte cap",
+			subject:               strings.Repeat("a", 513),
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
@@ -775,8 +775,8 @@ func TestSubjectFlagValidation(t *testing.T) {
 	}{
 		{caseDesc: "valid SAN URI", value: "https://github.com/owner/repo/.github/workflows/build.yml@refs/heads/main", expectError: false},
 		{caseDesc: "empty", value: "", expectError: true},
-		{caseDesc: "max length", value: strings.Repeat("a", 2048), expectError: false},
-		{caseDesc: "over max length", value: strings.Repeat("a", 2049), expectError: true},
+		{caseDesc: "max length", value: strings.Repeat("a", 512), expectError: false},
+		{caseDesc: "over max length", value: strings.Repeat("a", 513), expectError: true},
 	}
 
 	for _, tc := range tests {

@@ -96,12 +96,13 @@ func initializePFlagMap() {
 		},
 		subjectFlag: func() pflag.Value {
 			// non-empty SAN value; cap mirrors openapi maxLength on SearchIndex.subject
+			// and the mysql EntryKey varchar(512) column width
 			subjectValidator := func(val string) error {
 				if val == "" {
 					return errors.New("subject must not be empty")
 				}
-				if len(val) > 2048 {
-					return fmt.Errorf("subject exceeds maximum length of 2048 bytes")
+				if len(val) > 512 {
+					return fmt.Errorf("subject exceeds maximum length of 512 bytes")
 				}
 				return nil
 			}

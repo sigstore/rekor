@@ -489,7 +489,7 @@ definitions:
       subject:
         type: string
         minLength: 1
-        maxLength: 2048
+        maxLength: 512
         description: A SAN value (URI, DNS, IP, OtherName) as stored on the entry. Lookup is case-insensitive — e.g. a GitHub OIDC SAN such as `https://github.com/owner/repo/.github/workflows/build.yml@refs/heads/main`.
       publicKey:
         type: object
