@@ -27,8 +27,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sassoftware/relic/lib/pkcs7"
-	"github.com/sassoftware/relic/lib/pkcs9"
+	"github.com/sassoftware/relic/v8/lib/pkcs7"
+	"github.com/sassoftware/relic/v8/lib/pkcs9"
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"

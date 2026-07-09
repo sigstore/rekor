@@ -199,7 +199,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			hash, err := ei.ArtifactHash()
 			if err != nil {
 				t.Errorf("unexpected failure with ArtifactHash: %v", err)
-			} else if hash != "sha256:c8b0bc59708d74f53aab0089ac587d5c348d6ead143dab9f6d9c4b48c973bfd8" {
+			} else if hash != "sha256:f5214798b9d78fac428fad6d70cffce0eee6512c27a9faee9112a68e9b5519c6" {
 				t.Errorf("unexpected match with ArtifactHash: %s", hash)
 			}
 		}

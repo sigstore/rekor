@@ -27,7 +27,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
 
-	jarutils "github.com/sassoftware/relic/lib/signjar"
+	jarutils "github.com/sassoftware/relic/v8/lib/signjar"
 
 	fuzzUtils "github.com/sigstore/rekor/pkg/fuzz"
 	"github.com/sigstore/rekor/pkg/generated/models"

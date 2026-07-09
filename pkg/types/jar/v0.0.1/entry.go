@@ -43,7 +43,7 @@ import (
 	"github.com/go-openapi/strfmt"
 
 	"github.com/go-openapi/swag/conv"
-	jarutils "github.com/sassoftware/relic/lib/signjar"
+	jarutils "github.com/sassoftware/relic/v8/lib/signjar"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/spf13/viper"
 )

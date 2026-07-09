@@ -30,9 +30,9 @@ import (
 
 	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
 
-	"github.com/sassoftware/relic/lib/zipslicer"
-	"github.com/sassoftware/relic/v7/lib/certloader"
-	"github.com/sassoftware/relic/v7/lib/signjar"
+	"github.com/sassoftware/relic/v8/lib/certloader"
+	"github.com/sassoftware/relic/v8/lib/signjar"
+	"github.com/sassoftware/relic/v8/lib/zipslicer"
 )
 
 var (

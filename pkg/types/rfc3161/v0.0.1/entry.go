@@ -33,7 +33,7 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
-	"github.com/sassoftware/relic/lib/pkcs9"
+	"github.com/sassoftware/relic/v8/lib/pkcs9"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types"
