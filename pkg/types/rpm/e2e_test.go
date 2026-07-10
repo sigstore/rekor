@@ -81,13 +81,13 @@ func TestUploadVerifyRpm(t *testing.T) {
 	}
 
 	// Verify should fail initially
-	e2eutil.RunCliErr(t, "verify", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
+	e2eutil.RunCliErr(t, "verify", "--type=rpm", "--pki-format=pgp", "--artifact", rpmPath, "--public-key", pubPath)
 
 	// It should upload successfully.
-	out := e2eutil.RunCli(t, "upload", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
+	out := e2eutil.RunCli(t, "upload", "--type=rpm", "--pki-format=pgp", "--artifact", rpmPath, "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, "Created entry at")
 
 	// Now we should be able to verify it.
-	out = e2eutil.RunCli(t, "verify", "--type=rpm", "--artifact", rpmPath, "--public-key", pubPath)
+	out = e2eutil.RunCli(t, "verify", "--type=rpm", "--pki-format=pgp", "--artifact", rpmPath, "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, "Inclusion Proof:")
 }

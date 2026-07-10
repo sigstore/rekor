@@ -50,13 +50,13 @@ func TestSSH(t *testing.T) {
 	}
 
 	// Now upload to the log!
-	out := e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
+	out := e2eutil.RunCli(t, "upload", "--type=rekord", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", pubPath, "--pki-format", "ssh")
 	e2eutil.OutputContains(t, out, "Created entry at")
 
 	uuid := e2eutil.GetUUIDFromUploadOutput(t, out)
 
-	out = e2eutil.RunCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
+	out = e2eutil.RunCli(t, "verify", "--type=rekord", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", pubPath, "--pki-format", "ssh")
 	e2eutil.OutputContains(t, out, "Inclusion Proof")
 

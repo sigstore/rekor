@@ -127,16 +127,16 @@ func TestDuplicates(t *testing.T) {
 	}
 
 	// Now upload to rekor!
-	out := runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out := runCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
 
 	// Now upload the same one again, we should get a dupe entry.
-	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out = runCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Entry already exists")
 
 	// Now do a new one, we should get a new entry
 	createdPGPSignedArtifact(t, artifactPath, sigPath)
-	out = runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out = runCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
 }
 
@@ -160,7 +160,7 @@ func TestGetCLI(t *testing.T) {
 	if err := ioutil.WriteFile(pubPath, []byte(publicKey), 0644); err != nil {
 		t.Fatal(err)
 	}
-	out := runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out := runCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
 
 	uuid, err := sharding.GetUUIDFromIDString(getUUIDFromUploadOutput(t, out))
@@ -189,7 +189,7 @@ func TestGetCLI(t *testing.T) {
 	out = runCli(t, "search", "--artifact", artifactPath)
 	outputContains(t, out, uuid)
 
-	out = runCli(t, "search", "--public-key", pubPath)
+	out = runCli(t, "search", "--pki-format=pgp", "--public-key", pubPath)
 	outputContains(t, out, uuid)
 
 	artifactBytes, err := ioutil.ReadFile(artifactPath)
@@ -752,7 +752,7 @@ func TestSearchValidateTreeID(t *testing.T) {
 	if err := ioutil.WriteFile(pubPath, []byte(publicKey), 0644); err != nil {
 		t.Fatal(err)
 	}
-	out := runCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out := runCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	outputContains(t, out, "Created entry at")
 
 	uuid, err := sharding.GetUUIDFromIDString(getUUIDFromUploadOutput(t, out))
@@ -857,8 +857,8 @@ func TestSearchLogQuerySingleShard(t *testing.T) {
 	}
 
 	// Now upload them to rekor!
-	firstOut := runCli(t, "upload", "--artifact", firstArtifactPath, "--signature", firstSigPath, "--public-key", pubPath)
-	secondOut := runCli(t, "upload", "--artifact", secondArtifactPath, "--signature", secondSigPath, "--public-key", pubPath)
+	firstOut := runCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", firstArtifactPath, "--signature", firstSigPath, "--public-key", pubPath)
+	secondOut := runCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", secondArtifactPath, "--signature", secondSigPath, "--public-key", pubPath)
 
 	firstEntryID := getUUIDFromUploadOutput(t, firstOut)
 	firstUUID, _ := sharding.GetUUIDFromIDString(firstEntryID)
