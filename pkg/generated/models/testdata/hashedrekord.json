@@ -1,0 +1,18 @@
+{
+  "apiVersion": "0.0.1",
+  "kind": "hashedrekord",
+  "spec": {
+    "data": {
+      "hash": {
+        "algorithm": "sha256",
+        "value": "c98c24b677eff44860afea6f493bbaec5bb1c4cbb209c6fc2bbb47f66ff2ad31"
+      }
+    },
+    "signature": {
+      "content": "MEYCIQDiFwPAGqJa++V9r+poXTz/pSsC5RseGJIbh5RImy1IEwIhAI2fsry4mQzqWKB/byojL4nsCW8pTaUYt+z3IdS/8QYk",
+      "publicKey": {
+        "content": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFSXhhQWMrVGF4WW9RVTBYOU5OVUpnV2ZmYm42aApqdW9FRFBRUW44MG5YL0V1czlJL3QwMGNjTnBjU3JVdzErSVB5R3AxcDlmZ21MMERsQmYwNUJORk5RPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg=="
+      }
+    }
+  }
+}

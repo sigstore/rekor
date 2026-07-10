@@ -78,107 +78,65 @@ func UnmarshalProposedEntrySlice(reader io.Reader, consumer runtime.Consumer) ([
 }
 
 // UnmarshalProposedEntry unmarshals polymorphic ProposedEntry
-func UnmarshalProposedEntry(reader io.Reader, consumer runtime.Consumer) (ProposedEntry, error) {
-	// we need to read this twice, so first into a buffer
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, err
-	}
-	return unmarshalProposedEntry(data, consumer)
+func UnmarshalProposedEntry(reader io.Reader, _ runtime.Consumer) (ProposedEntry, error) {
+	return fastUnmarshalTargetedProposedEntryReader(reader)
 }
 
-func unmarshalProposedEntry(data []byte, consumer runtime.Consumer) (ProposedEntry, error) {
-	buf := bytes.NewBuffer(data)
-	buf2 := bytes.NewBuffer(data)
+type targetedProposedEntry struct {
+	Kind       string  `json:"kind"`
+	APIVersion *string `json:"apiVersion"`
+	Spec       any     `json:"spec"`
+}
 
-	// the first time this is read is to fetch the value of the kind property.
-	var getType struct {
-		Kind string `json:"kind"`
-	}
-	if err := consumer.Consume(buf, &getType); err != nil {
+func fastUnmarshalTargetedProposedEntryReader(reader io.Reader) (ProposedEntry, error) {
+	var parsed targetedProposedEntry
+	dec := json.NewDecoder(reader)
+	dec.UseNumber()
+
+	if err := dec.Decode(&parsed); err != nil {
 		return nil, err
 	}
 
-	if err := validate.RequiredString("kind", "body", getType.Kind); err != nil {
+	if err := validate.RequiredString("kind", "body", parsed.Kind); err != nil {
 		return nil, err
 	}
 
-	// The value of kind is used to determine which type to create and unmarshal the data into
-	switch getType.Kind {
+	switch parsed.Kind {
 	case "ProposedEntry":
-		var result proposedEntry
-		if err := consumer.Consume(buf2, &result); err != nil {
-			return nil, err
-		}
-		return &result, nil
+		return &proposedEntry{kindField: parsed.Kind}, nil
 	case "alpine":
-		var result Alpine
-		if err := consumer.Consume(buf2, &result); err != nil {
-			return nil, err
-		}
-		return &result, nil
+		return &Alpine{APIVersion: parsed.APIVersion, Spec: parsed.Spec}, nil
 	case "cose":
-		var result Cose
-		if err := consumer.Consume(buf2, &result); err != nil {
-			return nil, err
-		}
-		return &result, nil
+		return &Cose{APIVersion: parsed.APIVersion, Spec: parsed.Spec}, nil
 	case "dsse":
-		var result DSSE
-		if err := consumer.Consume(buf2, &result); err != nil {
-			return nil, err
-		}
-		return &result, nil
+		return &DSSE{APIVersion: parsed.APIVersion, Spec: parsed.Spec}, nil
 	case "hashedrekord":
-		var result Hashedrekord
-		if err := consumer.Consume(buf2, &result); err != nil {
-			return nil, err
-		}
-		return &result, nil
+		return &Hashedrekord{APIVersion: parsed.APIVersion, Spec: parsed.Spec}, nil
 	case "helm":
-		var result Helm
-		if err := consumer.Consume(buf2, &result); err != nil {
-			return nil, err
-		}
-		return &result, nil
+		return &Helm{APIVersion: parsed.APIVersion, Spec: parsed.Spec}, nil
 	case "intoto":
-		var result Intoto
-		if err := consumer.Consume(buf2, &result); err != nil {
-			return nil, err
-		}
-		return &result, nil
+		return &Intoto{APIVersion: parsed.APIVersion, Spec: parsed.Spec}, nil
 	case "jar":
-		var result Jar
-		if err := consumer.Consume(buf2, &result); err != nil {
-			return nil, err
-		}
-		return &result, nil
+		return &Jar{APIVersion: parsed.APIVersion, Spec: parsed.Spec}, nil
 	case "rekord":
-		var result Rekord
-		if err := consumer.Consume(buf2, &result); err != nil {
-			return nil, err
-		}
-		return &result, nil
+		return &Rekord{APIVersion: parsed.APIVersion, Spec: parsed.Spec}, nil
 	case "rfc3161":
-		var result Rfc3161
-		if err := consumer.Consume(buf2, &result); err != nil {
-			return nil, err
-		}
-		return &result, nil
+		return &Rfc3161{APIVersion: parsed.APIVersion, Spec: parsed.Spec}, nil
 	case "rpm":
-		var result Rpm
-		if err := consumer.Consume(buf2, &result); err != nil {
-			return nil, err
-		}
-		return &result, nil
+		return &Rpm{APIVersion: parsed.APIVersion, Spec: parsed.Spec}, nil
 	case "tuf":
-		var result TUF
-		if err := consumer.Consume(buf2, &result); err != nil {
-			return nil, err
-		}
-		return &result, nil
+		return &TUF{APIVersion: parsed.APIVersion, Spec: parsed.Spec}, nil
+	default:
+		return nil, errors.New(422, "invalid kind value: %q", parsed.Kind)
 	}
-	return nil, errors.New(422, "invalid kind value: %q", getType.Kind)
+}
+
+func fastUnmarshalTargetedProposedEntry(data []byte) (ProposedEntry, error) {
+	return fastUnmarshalTargetedProposedEntryReader(bytes.NewReader(data))
+}
+
+func unmarshalProposedEntry(data []byte, _ runtime.Consumer) (ProposedEntry, error) {
+	return fastUnmarshalTargetedProposedEntry(data)
 }
 
 // Validate validates this proposed entry
