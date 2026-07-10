@@ -441,6 +441,6 @@ func SetupTestData(t *testing.T) {
 	}
 
 	// Now upload to rekor!
-	out := RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out := RunCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	OutputContains(t, out, "Created entry at")
 }

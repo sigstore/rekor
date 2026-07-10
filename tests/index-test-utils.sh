@@ -27,6 +27,7 @@ make_entries() {
         echo test${i} > $testdir/blob${i}
         minisign -S -s $testdir/mini${i}.key -m $testdir/blob${i}
         local rekor_out=$(rekor-cli --rekor_server $REKOR_ADDRESS upload \
+            --type=rekord \
             --artifact $testdir/blob${i} \
             --pki-format=minisign \
             --public-key $testdir/mini${i}.pub \
@@ -43,6 +44,7 @@ make_entries() {
         set -e
         minisign -S -s $testdir/mini${key_index}.key -m $testdir/blob${i}
         rekor_out=$(rekor-cli --rekor_server $REKOR_ADDRESS upload \
+            --type=rekord \
             --artifact $testdir/blob${i} \
             --pki-format=minisign \
             --public-key $testdir/mini${key_index}.pub \

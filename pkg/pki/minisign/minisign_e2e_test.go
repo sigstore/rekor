@@ -44,13 +44,13 @@ func TestMinisign(t *testing.T) {
 	t.Log(out)
 
 	// Now upload to the log!
-	out = e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath,
+	out = e2eutil.RunCli(t, "upload", "--type=rekord", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", pubPath, "--pki-format", "minisign")
 	e2eutil.OutputContains(t, out, "Created entry at")
 
 	uuidA := e2eutil.GetUUIDFromUploadOutput(t, out)
 
-	out = e2eutil.RunCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath,
+	out = e2eutil.RunCli(t, "verify", "--type=rekord", "--artifact", artifactPath, "--signature", sigPath,
 		"--public-key", pubPath, "--pki-format", "minisign")
 	e2eutil.OutputContains(t, out, "Inclusion Proof")
 
@@ -59,10 +59,11 @@ func TestMinisign(t *testing.T) {
 
 	// crease a second artifact and sign it
 	artifactPath_B := filepath.Join(t.TempDir(), "artifact2")
+	sigPath_B := filepath.Join(t.TempDir(), "signature2.asc")
 	e2eutil.CreateArtifact(t, artifactPath_B)
-	out = e2eutil.Run(t, "\n", "minisign", "-S", "-s", keyPath, "-m", artifactPath_B, "-x", sigPath)
+	out = e2eutil.Run(t, "\n", "minisign", "-S", "-s", keyPath, "-m", artifactPath_B, "-x", sigPath_B)
 	// Now upload to the log!
-	out = e2eutil.RunCli(t, "upload", "--artifact", artifactPath_B, "--signature", sigPath,
+	out = e2eutil.RunCli(t, "upload", "--type=rekord", "--artifact", artifactPath_B, "--signature", sigPath_B,
 		"--public-key", pubPath, "--pki-format", "minisign")
 	e2eutil.OutputContains(t, out, "Created entry at")
 	uuidB := e2eutil.GetUUIDFromUploadOutput(t, out)
