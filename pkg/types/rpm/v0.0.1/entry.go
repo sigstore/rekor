@@ -258,12 +258,15 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	if md5sum, err := rpmObj.GetBytes(rpmutils.SIG_MD5); err == nil && len(md5sum) > 0 {
 		canonicalEntry.Package.Headers["RPMSIGTAG_MD5"] = hex.EncodeToString(md5sum)
 	}
-	if sha1sum, err := rpmObj.GetStrings(rpmutils.SIG_SHA1); err == nil && len(sha1sum) > 0 {
-		canonicalEntry.Package.Headers["RPMSIGTAG_SHA1"] = sha1sum[0]
-	}
-	if sha256sum, err := rpmObj.GetStrings(rpmutils.SIG_SHA256); err == nil && len(sha256sum) > 0 {
-		canonicalEntry.Package.Headers["RPMSIGTAG_SHA256"] = sha256sum[0]
-	}
+	// Do not emit RPMSIGTAG_SHA1 / RPMSIGTAG_SHA256. Those digests are not part
+	// of canonicalized RPM entries; adding them would change leaf hashes used
+	// for inclusion proofs.
+	// if sha1sum, err := rpmObj.GetStrings(rpmutils.SIG_SHA1); err == nil && len(sha1sum) > 0 {
+	// 	canonicalEntry.Package.Headers["RPMSIGTAG_SHA1"] = sha1sum[0]
+	// }
+	// if sha256sum, err := rpmObj.GetStrings(rpmutils.SIG_SHA256); err == nil && len(sha256sum) > 0 {
+	// 	canonicalEntry.Package.Headers["RPMSIGTAG_SHA256"] = sha256sum[0]
+	// }
 
 	// wrap in valid object with kind and apiVersion set
 	rpm := models.Rpm{}
