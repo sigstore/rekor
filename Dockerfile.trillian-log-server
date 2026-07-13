@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ghcr.io/sigstore/scaffolding/trillian_log_server:v1.7.2@sha256:d953a8eb3f9311e55ebee754de234f1f63e4db2d5e76c15326c288fb0887bb11 AS server
+FROM ghcr.io/sigstore/scaffolding/trillian_log_server:v1.7.3@sha256:5a878e4e4f03790d2dda4b07a551ff9832128b307447d4156255c73690aa2da3 AS server
 
-FROM golang:1.26.4@sha256:f96cc555eb8db430159a3aa6797cd5bae561945b7b0fe7d0e284c63a3b291609 AS deploy
+FROM golang:1.26.5@sha256:079e59808d2d252516e27e3f3a9c003740dee7f75e55aa71528766d52bcfc16a AS deploy
 
 COPY --from=server /ko-app/trillian_log_server /usr/local/bin/trillian-log-server
 
