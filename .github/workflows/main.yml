@@ -86,7 +86,7 @@ jobs:
     steps:
       - name: Set up Homebrew
         id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@40e9946c182a64b3db1bf51be0dcb915f7802aa9
+        uses: Homebrew/actions/setup-homebrew@18fcb8e3e06b4247c676c506750dc95ea7226479
       - name: download minisign
         run: |
           brew install minisign
@@ -138,7 +138,7 @@ jobs:
     steps:
       - name: Set up Homebrew
         id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@40e9946c182a64b3db1bf51be0dcb915f7802aa9
+        uses: Homebrew/actions/setup-homebrew@18fcb8e3e06b4247c676c506750dc95ea7226479
       - name: download minisign
         run: |
           brew install minisign
@@ -185,7 +185,7 @@ jobs:
     steps:
       - name: Set up Homebrew
         id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@40e9946c182a64b3db1bf51be0dcb915f7802aa9
+        uses: Homebrew/actions/setup-homebrew@18fcb8e3e06b4247c676c506750dc95ea7226479
       - name: download minisign
         run: |
           brew install minisign
