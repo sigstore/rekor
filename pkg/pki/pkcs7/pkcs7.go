@@ -29,7 +29,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/sassoftware/relic/lib/pkcs7"
+	"github.com/sassoftware/relic/v8/lib/pkcs7"
 	"github.com/sigstore/rekor/pkg/pki/identity"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"

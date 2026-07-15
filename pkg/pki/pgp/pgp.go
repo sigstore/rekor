@@ -27,13 +27,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/asaskevich/govalidator"
-
-	//TODO: https://github.com/sigstore/rekor/issues/286
-	"golang.org/x/crypto/openpgp"        //nolint:staticcheck
-	"golang.org/x/crypto/openpgp/armor"  //nolint:staticcheck
-	"golang.org/x/crypto/openpgp/packet" //nolint:staticcheck
 
 	"github.com/sigstore/rekor/pkg/pki/identity"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -80,9 +79,7 @@ func NewSignature(r io.Reader) (*Signature, error) {
 	}
 
 	if _, ok := sigPkt.(*packet.Signature); !ok {
-		if _, ok := sigPkt.(*packet.SignatureV3); !ok {
-			return nil, errors.New("valid PGP signature was not detected")
-		}
+		return nil, errors.New("valid PGP signature was not detected")
 	}
 
 	s.signature = inputBuffer.Bytes()
@@ -153,12 +150,44 @@ func (s Signature) Verify(r io.Reader, k interface{}, _ ...sigsig.VerifyOption) 
 		return errors.New("PGP public key has not been initialized")
 	}
 
-	verifyFn := openpgp.CheckDetachedSignature
+	sigReader := bytes.NewReader(s.signature)
+	var (
+		sigPkt packet.Packet
+		err    error
+	)
 	if s.isArmored {
-		verifyFn = openpgp.CheckArmoredDetachedSignature
+		block, decodeErr := armor.Decode(sigReader)
+		if decodeErr != nil {
+			return fmt.Errorf("error decoding armored PGP signature: %w", decodeErr)
+		}
+		sigPkt, err = packet.Read(block.Body)
+	} else {
+		sigPkt, err = packet.Read(sigReader)
+	}
+	if err != nil {
+		return fmt.Errorf("error reading PGP signature: %w", err)
+	}
+	sig, ok := sigPkt.(*packet.Signature)
+	if !ok {
+		return errors.New("valid PGP signature was not detected")
 	}
 
-	if _, err := verifyFn(key.key, r, bytes.NewReader(s.signature)); err != nil {
+	// ProtonMail's verifier checks key validity against Config.Time (default:
+	// now). Use the signature creation time so historically valid signatures
+	// still verify after key expiry, matching prior x/crypto/openpgp behavior
+	// needed for transparency-log replay and existing fixtures.
+	cfg := &packet.Config{
+		Time: func() time.Time { return sig.CreationTime },
+	}
+	if _, err := sigReader.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+	if s.isArmored {
+		_, err = openpgp.CheckArmoredDetachedSignature(key.key, r, sigReader, cfg)
+	} else {
+		_, err = openpgp.CheckDetachedSignature(key.key, r, sigReader, cfg)
+	}
+	if err != nil {
 		return err
 	}
 
@@ -281,12 +310,18 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 	return canonicalBuffer.Bytes(), nil
 }
 
-func (k PublicKey) KeyRing() (openpgp.KeyRing, error) {
+// Entities returns the underlying OpenPGP entity list.
+func (k PublicKey) Entities() (openpgp.EntityList, error) {
 	if k.key == nil {
 		return nil, errors.New("PGP public key has not been initialized")
 	}
 
 	return k.key, nil
+}
+
+// KeyRing returns the underlying OpenPGP key ring.
+func (k PublicKey) KeyRing() (openpgp.KeyRing, error) {
+	return k.Entities()
 }
 
 // EmailAddresses implements the pki.PublicKey interface
@@ -334,7 +369,7 @@ func (k PublicKey) Identities() ([]identity.Identity, error) {
 			ids = append(ids, identity.Identity{
 				Crypto:      pubKey,
 				Raw:         pkixKey,
-				Fingerprint: hex.EncodeToString(pk.Fingerprint[:]),
+				Fingerprint: hex.EncodeToString(pk.Fingerprint),
 			})
 		}
 	}

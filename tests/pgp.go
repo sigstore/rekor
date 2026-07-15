@@ -23,8 +23,10 @@ import (
 	"io/ioutil"
 	"strings"
 	"testing"
+	"time"
 
-	"golang.org/x/crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 )
 
 // This was generated with gpg --gen-key, and all defaults.
@@ -167,7 +169,13 @@ func init() {
 
 func SignPGP(b []byte) ([]byte, error) {
 	var buf bytes.Buffer
-	if err := openpgp.DetachSign(&buf, keys[0], bytes.NewReader(b), nil); err != nil {
+	// The embedded e2e key expired in 2023. ProtonMail's DetachSign checks
+	// key validity against Config.Time (default: now), so sign as of a time
+	// when the key was still valid.
+	cfg := &packet.Config{
+		Time: func() time.Time { return keys[0].PrimaryKey.CreationTime.Add(time.Hour) },
+	}
+	if err := openpgp.DetachSign(&buf, keys[0], bytes.NewReader(b), cfg); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil

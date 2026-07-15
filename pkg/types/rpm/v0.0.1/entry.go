@@ -28,12 +28,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
-	rpmutils "github.com/cavaliercoder/go-rpm"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
+	"github.com/sassoftware/go-rpmutils"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -174,7 +173,7 @@ func DecodeEntry(input any, output *models.RpmV001Schema) error {
 	}
 }
 
-func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pgp.PublicKey, *rpmutils.PackageFile, error) {
+func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pgp.PublicKey, *rpmutils.RpmHeader, error) {
 	if err := v.validate(); err != nil {
 		return nil, nil, &types.InputValidationError{Err: err}
 	}
@@ -190,45 +189,32 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pgp.PublicKey, *r
 		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
-	// Prepare package data and verify hash
-	dataReadCloser := bytes.NewReader(v.RPMModel.Package.Content)
-	hasher := sha256.New()
-
-	// Create buffers for signature verification and RPM parsing
-	sigBuffer := bytes.NewBuffer(nil)
-	rpmBuffer := bytes.NewBuffer(nil)
-
-	/* #nosec G110 */
-	if _, err := io.Copy(io.MultiWriter(hasher, sigBuffer, rpmBuffer), dataReadCloser); err != nil {
-		return nil, nil, err
-	}
-
-	computedSHA := hex.EncodeToString(hasher.Sum(nil))
-	if oldSHA != "" && computedSHA != oldSHA {
-		return nil, nil, &types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHA, oldSHA)}
-	}
-
-	// Verify GPG signature
-	keyring, err := keyObj.KeyRing()
+	keyring, err := keyObj.Entities()
 	if err != nil {
 		return nil, nil, &types.InputValidationError{Err: err}
 	}
 
-	if _, err := rpmutils.GPGCheck(sigBuffer, keyring); err != nil {
-		return nil, nil, &types.InputValidationError{Err: err}
+	pkgBytes := v.RPMModel.Package.Content
+	computedSHA := sha256.Sum256(pkgBytes)
+	computedSHAHex := hex.EncodeToString(computedSHA[:])
+	if oldSHA != "" && computedSHAHex != oldSHA {
+		return nil, nil, &types.InputValidationError{Err: fmt.Errorf("SHA mismatch: %s != %s", computedSHAHex, oldSHA)}
 	}
 
-	// Parse RPM package
-	rpmObj, err := rpmutils.ReadPackageFile(rpmBuffer)
+	// Verify GPG signature and parse RPM headers
+	rpmObj, sigs, err := rpmutils.Verify(bytes.NewReader(pkgBytes), keyring)
 	if err != nil {
 		return nil, nil, &types.InputValidationError{Err: err}
+	}
+	if len(sigs) == 0 {
+		return nil, nil, &types.InputValidationError{Err: errors.New("no supported PGP signature found in RPM")}
 	}
 
 	// Set hash if not provided
 	if oldSHA == "" {
 		v.RPMModel.Package.Hash = &models.RpmV001SchemaPackageHash{}
 		v.RPMModel.Package.Hash.Algorithm = conv.Pointer(models.RpmV001SchemaPackageHashAlgorithmSha256)
-		v.RPMModel.Package.Hash.Value = conv.Pointer(computedSHA)
+		v.RPMModel.Package.Hash.Value = conv.Pointer(computedSHAHex)
 	}
 
 	return keyObj, rpmObj, nil
@@ -259,21 +245,28 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	// data content is not set deliberately
 
 	// set NEVRA headers
+	nevra, err := rpmObj.GetNEVRA()
+	if err != nil {
+		return nil, err
+	}
 	canonicalEntry.Package.Headers = make(map[string]string)
-	canonicalEntry.Package.Headers["Name"] = rpmObj.Name()
-	canonicalEntry.Package.Headers["Epoch"] = strconv.Itoa(rpmObj.Epoch())
-	canonicalEntry.Package.Headers["Version"] = rpmObj.Version()
-	canonicalEntry.Package.Headers["Release"] = rpmObj.Release()
-	canonicalEntry.Package.Headers["Architecture"] = rpmObj.Architecture()
-	if md5sum := rpmObj.GetBytes(0, 1004); md5sum != nil {
+	canonicalEntry.Package.Headers["Name"] = nevra.Name
+	canonicalEntry.Package.Headers["Epoch"] = nevra.Epoch
+	canonicalEntry.Package.Headers["Version"] = nevra.Version
+	canonicalEntry.Package.Headers["Release"] = nevra.Release
+	canonicalEntry.Package.Headers["Architecture"] = nevra.Arch
+	if md5sum, err := rpmObj.GetBytes(rpmutils.SIG_MD5); err == nil && len(md5sum) > 0 {
 		canonicalEntry.Package.Headers["RPMSIGTAG_MD5"] = hex.EncodeToString(md5sum)
 	}
-	if sha1sum := rpmObj.GetBytes(0, 1012); sha1sum != nil {
-		canonicalEntry.Package.Headers["RPMSIGTAG_SHA1"] = hex.EncodeToString(sha1sum)
-	}
-	if sha256sum := rpmObj.GetBytes(0, 1016); sha256sum != nil {
-		canonicalEntry.Package.Headers["RPMSIGTAG_SHA256"] = hex.EncodeToString(sha256sum)
-	}
+	// Do not emit RPMSIGTAG_SHA1 / RPMSIGTAG_SHA256. Those digests are not part
+	// of canonicalized RPM entries; adding them would change leaf hashes used
+	// for inclusion proofs.
+	// if sha1sum, err := rpmObj.GetStrings(rpmutils.SIG_SHA1); err == nil && len(sha1sum) > 0 {
+	// 	canonicalEntry.Package.Headers["RPMSIGTAG_SHA1"] = sha1sum[0]
+	// }
+	// if sha256sum, err := rpmObj.GetStrings(rpmutils.SIG_SHA256); err == nil && len(sha256sum) > 0 {
+	// 	canonicalEntry.Package.Headers["RPMSIGTAG_SHA256"] = sha256sum[0]
+	// }
 
 	// wrap in valid object with kind and apiVersion set
 	rpm := models.Rpm{}

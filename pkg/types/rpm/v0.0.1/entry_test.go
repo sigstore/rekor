@@ -18,6 +18,7 @@ package rpm
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"reflect"
@@ -199,7 +200,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			hash, err := ei.ArtifactHash()
 			if err != nil {
 				t.Errorf("unexpected failure with ArtifactHash: %v", err)
-			} else if hash != "sha256:c8b0bc59708d74f53aab0089ac587d5c348d6ead143dab9f6d9c4b48c973bfd8" {
+			} else if hash != "sha256:f5214798b9d78fac428fad6d70cffce0eee6512c27a9faee9112a68e9b5519c6" {
 				t.Errorf("unexpected match with ArtifactHash: %s", hash)
 			}
 		}
@@ -321,5 +322,55 @@ func TestInsertable(t *testing.T) {
 				t.Errorf("unexpected result calling Insertable: %v", err)
 			}
 		})
+	}
+}
+
+func TestCanonicalHeadersOmitSigSHADigests(t *testing.T) {
+	keyBytes, err := os.ReadFile("../tests/test_rpm_public_key.key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dataBytes, err := os.ReadFile("../tests/test.rpm")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entry := V001Entry{
+		RPMModel: models.RpmV001Schema{
+			PublicKey: &models.RpmV001SchemaPublicKey{
+				Content: (*strfmt.Base64)(&keyBytes),
+			},
+			Package: &models.RpmV001SchemaPackage{
+				Content: strfmt.Base64(dataBytes),
+			},
+		},
+	}
+	canonical, err := entry.Canonicalize(context.TODO())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var parsed struct {
+		Spec struct {
+			Package struct {
+				Headers map[string]string `json:"headers"`
+			} `json:"package"`
+		} `json:"spec"`
+	}
+	if err := json.Unmarshal(canonical, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	headers := parsed.Spec.Package.Headers
+	for _, k := range []string{"Name", "Epoch", "Version", "Release", "Architecture"} {
+		if _, ok := headers[k]; !ok {
+			t.Errorf("expected canonical header %q", k)
+		}
+	}
+	// SIG_SHA1 / SIG_SHA256 must never appear in canonical headers, even when
+	// present on the RPM, so leaf hashes used for inclusion proofs stay stable.
+	for _, k := range []string{"RPMSIGTAG_SHA1", "RPMSIGTAG_SHA256"} {
+		if _, ok := headers[k]; ok {
+			t.Errorf("canonical headers must omit %q for leaf-hash stability", k)
+		}
 	}
 }
