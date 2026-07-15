@@ -223,11 +223,21 @@ func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStor
 func (cm *ClientManager) Close() error {
 	var err error
 
-	// set shutdown flag to true and clear cache of clients
 	cm.clientMu.Lock()
 	cm.shutdown = true
+	clients := cm.trillianClients
 	cm.trillianClients = make(map[int64]*TrillianClient)
 	cm.clientMu.Unlock()
+
+	// Stop each TrillianClient's updater goroutine before dropping its gRPC
+	// connection; otherwise the updater keeps looping on a broken conn. Run in
+	// parallel so shutdown scales with the number of trees rather than N * the
+	// worst-case updater wait.
+	var wg sync.WaitGroup
+	for _, c := range clients {
+		wg.Go(c.Close)
+	}
+	wg.Wait()
 
 	cm.connMu.Lock()
 	for cfg, conn := range cm.connections {

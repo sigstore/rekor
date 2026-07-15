@@ -85,10 +85,6 @@ func TestEnsureStartedAndGetLatest(t *testing.T) {
 	require.EqualValues(t, 0, got.TreeSize)
 }
 
-// Note: waiting for an advance via client.WaitForRootUpdate is exercised indirectly
-// in other tests (AddLeaf), and is hard to deterministically simulate across
-// environments with the mock server; we avoid a direct "firstSize" wait test here.
-
 func TestGetLeafAndProofByIndex_VerifiesProof(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	defer mockCtl.Finish()
@@ -207,15 +203,15 @@ func TestAddLeaf_HappyPath(t *testing.T) {
 	conn := dialMock(t, s.Addr)
 	tc := newTrillianClient(trillian.NewTrillianLogClient(conn), 21, DefaultConfig())
 	// Pre-initialize
-	tc.started = true
+	tc.started.Store(true)
 	tc.v = client.NewLogVerifier(rfc6962.DefaultHasher)
-	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 0, RootHash: make([]byte, 32)}, signed: slr0})
+	tc.snapshot.Store(&rootSnapshot{root: types.LogRootV1{TreeSize: 0, RootHash: make([]byte, 32)}, serialized: slr0})
 	// Advance snapshot to size=2 after a short delay to release waiters
 	go func() {
 		time.Sleep(20 * time.Millisecond)
 		b, _ := (&types.LogRootV1{TreeSize: 2, RootHash: root2}).MarshalBinary()
 		tc.mu.Lock()
-		tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 2, RootHash: root2}, signed: &trillian.SignedLogRoot{LogRoot: b}})
+		tc.snapshot.Store(&rootSnapshot{root: types.LogRootV1{TreeSize: 2, RootHash: root2}, serialized: &trillian.SignedLogRoot{LogRoot: b}})
 		tc.cond.Broadcast()
 		tc.mu.Unlock()
 	}()
@@ -289,7 +285,7 @@ func TestWaitForRootAtLeast_BroadcastWakesAll(t *testing.T) {
 	t.Cleanup(func() { goleak.VerifyNone(t, opt) })
 	tc := newTrillianClient(nil, 100, DefaultConfig())
 	// Start with size 0
-	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 0}})
+	tc.snapshot.Store(&rootSnapshot{root: types.LogRootV1{TreeSize: 0}})
 
 	const waiters = 10
 	var wg sync.WaitGroup
@@ -310,7 +306,7 @@ func TestWaitForRootAtLeast_BroadcastWakesAll(t *testing.T) {
 
 	// Publish new root and broadcast
 	tc.mu.Lock()
-	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 5}})
+	tc.snapshot.Store(&rootSnapshot{root: types.LogRootV1{TreeSize: 5}})
 	tc.cond.Broadcast()
 	tc.mu.Unlock()
 
@@ -333,9 +329,9 @@ func TestGetLatest_WithFirstSize_BroadcastWakesAll(t *testing.T) {
 	t.Cleanup(func() { goleak.VerifyNone(t, opt) })
 	tc := newTrillianClient(nil, 101, DefaultConfig())
 	// Mark as started to bypass network init in GetLatest
-	tc.started = true
+	tc.started.Store(true)
 	// initial snapshot with size 0
-	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 0}, signed: mkSLR(t, 0, make([]byte, 32))})
+	tc.snapshot.Store(&rootSnapshot{root: types.LogRootV1{TreeSize: 0}, serialized: mkSLR(t, 0, make([]byte, 32))})
 
 	const waiters = 8
 	var wg sync.WaitGroup
@@ -359,7 +355,7 @@ func TestGetLatest_WithFirstSize_BroadcastWakesAll(t *testing.T) {
 	b, err := lr.MarshalBinary()
 	require.NoError(t, err)
 	tc.mu.Lock()
-	tc.snapshot.Store(rootSnapshot{root: *lr, signed: &trillian.SignedLogRoot{LogRoot: b}})
+	tc.snapshot.Store(&rootSnapshot{root: *lr, serialized: &trillian.SignedLogRoot{LogRoot: b}})
 	tc.cond.Broadcast()
 	tc.mu.Unlock()
 
@@ -425,7 +421,7 @@ func TestWaitForRootAtLeast_SpuriousBroadcastIgnored(t *testing.T) {
 	opt := goleak.IgnoreCurrent()
 	t.Cleanup(func() { goleak.VerifyNone(t, opt) })
 	tc := newTrillianClient(nil, 303, DefaultConfig())
-	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 1}})
+	tc.snapshot.Store(&rootSnapshot{root: types.LogRootV1{TreeSize: 1}})
 
 	const waiters = 6
 	var wg sync.WaitGroup
@@ -452,7 +448,7 @@ func TestWaitForRootAtLeast_SpuriousBroadcastIgnored(t *testing.T) {
 
 	// Now increase size and broadcast; everyone should complete
 	tc.mu.Lock()
-	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 5}})
+	tc.snapshot.Store(&rootSnapshot{root: types.LogRootV1{TreeSize: 5}})
 	tc.cond.Broadcast()
 	tc.mu.Unlock()
 
@@ -473,9 +469,9 @@ func TestSnapshotConcurrentReadersWriters_NoDataRace(t *testing.T) {
 	opt := goleak.IgnoreCurrent()
 	t.Cleanup(func() { goleak.VerifyNone(t, opt) })
 	tc := newTrillianClient(nil, 404, DefaultConfig())
-	tc.started = true
+	tc.started.Store(true)
 	// Provide a minimal signed root so GetLatest can return without NotFound
-	tc.snapshot.Store(rootSnapshot{root: types.LogRootV1{TreeSize: 0}, signed: mkSLR(t, 0, make([]byte, 32))})
+	tc.snapshot.Store(&rootSnapshot{root: types.LogRootV1{TreeSize: 0}, serialized: mkSLR(t, 0, make([]byte, 32))})
 
 	stop := make(chan struct{})
 
@@ -490,7 +486,7 @@ func TestSnapshotConcurrentReadersWriters_NoDataRace(t *testing.T) {
 			lr := &types.LogRootV1{TreeSize: sz}
 			b, _ := lr.MarshalBinary()
 			tc.mu.Lock()
-			tc.snapshot.Store(rootSnapshot{root: *lr, signed: &trillian.SignedLogRoot{LogRoot: b}})
+			tc.snapshot.Store(&rootSnapshot{root: *lr, serialized: &trillian.SignedLogRoot{LogRoot: b}})
 			tc.cond.Broadcast()
 			tc.mu.Unlock()
 		}
@@ -552,4 +548,14 @@ func TestEnsureStartedDeadlineRespected(t *testing.T) {
 	resp := tc.GetLatest(ctx, 0)
 	require.Error(t, resp.Err)
 	require.Equal(t, codes.DeadlineExceeded, resp.Status)
+}
+
+func TestEnsureStartedClosedClient(t *testing.T) {
+	tc := newTrillianClient(nil, 707, DefaultConfig())
+	tc.Close()
+
+	resp := tc.GetLatest(context.Background(), 0)
+	require.Error(t, resp.Err)
+	require.Equal(t, codes.Canceled, resp.Status)
+	require.Contains(t, resp.Err.Error(), "client closed")
 }

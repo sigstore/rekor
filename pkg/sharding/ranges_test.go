@@ -644,6 +644,19 @@ func setupMockServer(t *testing.T, mockCtl *gomock.Controller) (*testonly.MockSe
 	return s, closeFn
 }
 
+// newMockBackend starts a mock Trillian server, registers cleanup, and returns
+// the server plus its port.
+func newMockBackend(t *testing.T, mockCtl *gomock.Controller) (*testonly.MockServer, uint16) {
+	t.Helper()
+	s, closeFn := setupMockServer(t, mockCtl)
+	t.Cleanup(closeFn)
+	_, portStr, err := net.SplitHostPort(s.Addr)
+	require.NoError(t, err)
+	port, err := strconv.Atoi(portStr)
+	require.NoError(t, err)
+	return s, uint16(port) //nolint:gosec // port is always in the uint16 range
+}
+
 func TestCompleteInitialization_Scenarios(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	defer mockCtl.Finish()
@@ -676,20 +689,9 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 				inactive2, _ := initializeRange(context.Background(), LogRange{TreeID: 102, SigningConfig: activeSC})
 				logRanges.inactive = Ranges{inactive1, inactive2}
 
-				// Create isolated servers for this scenario
-				sA, closeA := setupMockServer(t, mockCtl)
-				t.Cleanup(closeA)
-				addrA := sA.Addr
-				portA, err := strconv.Atoi(addrA[strings.LastIndex(addrA, ":")+1:])
-				require.NoError(t, err)
+				sA, portA := newMockBackend(t, mockCtl)
+				sB, portB := newMockBackend(t, mockCtl)
 
-				sB, closeB := setupMockServer(t, mockCtl)
-				t.Cleanup(closeB)
-				addrB := sB.Addr
-				portB, err := strconv.Atoi(addrB[strings.LastIndex(addrB, ":")+1:])
-				require.NoError(t, err)
-
-				// Mock responses from each server
 				root1 := &types.LogRootV1{TreeSize: 42}
 				rootBytes1, _ := root1.MarshalBinary()
 				sA.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: &trillian.SignedLogRoot{LogRoot: rootBytes1}}, nil).MinTimes(1)
@@ -698,10 +700,9 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 				rootBytes2, _ := root2.MarshalBinary()
 				sB.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: &trillian.SignedLogRoot{LogRoot: rootBytes2}}, nil).MinTimes(1)
 
-				// Configure client manager to route to the correct servers
 				grpcConfigs := map[int64]trillianclient.GRPCConfig{
-					101: {Address: "localhost", Port: uint16(portA)},
-					102: {Address: "localhost", Port: uint16(portB)},
+					101: {Address: "localhost", Port: portA},
+					102: {Address: "localhost", Port: portB},
 				}
 				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{}, trillianclient.DefaultConfig())
 			},
@@ -722,19 +723,14 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 				inactive, _ := initializeRange(context.Background(), LogRange{TreeID: 201, SigningConfig: activeSC})
 				logRanges.inactive = Ranges{inactive}
 
-				// Create a dedicated default backend for this scenario
-				sDef, closeDef := setupMockServer(t, mockCtl)
-				t.Cleanup(closeDef)
-				addr := sDef.Addr
-				port, err := strconv.Atoi(addr[strings.LastIndex(addr, ":")+1:])
-				require.NoError(t, err)
+				sDef, port := newMockBackend(t, mockCtl)
 
 				root := &types.LogRootV1{TreeSize: 99}
 				rootBytes, _ := root.MarshalBinary()
 				sDef.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(&trillian.GetLatestSignedLogRootResponse{SignedLogRoot: &trillian.SignedLogRoot{LogRoot: rootBytes}}, nil).MinTimes(1)
 
 				// No specific config for tree 201, so it should use the default
-				defaultConfig := trillianclient.GRPCConfig{Address: "localhost", Port: uint16(port)}
+				defaultConfig := trillianclient.GRPCConfig{Address: "localhost", Port: port}
 				*tcm = trillianclient.NewClientManager(map[int64]trillianclient.GRPCConfig{}, defaultConfig, trillianclient.DefaultConfig())
 			},
 			expectErr: false,
@@ -779,18 +775,11 @@ func TestCompleteInitialization_Scenarios(t *testing.T) {
 				inactive, _ := initializeRange(context.Background(), LogRange{TreeID: 501, SigningConfig: activeSC})
 				logRanges.inactive = Ranges{inactive}
 
-				// Create a dedicated backend that returns an error
-				sErr, closeErr := setupMockServer(t, mockCtl)
-				t.Cleanup(closeErr)
-				addr := sErr.Addr
-				port, err := strconv.Atoi(addr[strings.LastIndex(addr, ":")+1:])
-				require.NoError(t, err)
-
-				// Mock an error from the Trillian server
+				sErr, port := newMockBackend(t, mockCtl)
 				sErr.Log.EXPECT().GetLatestSignedLogRoot(gomock.Any(), gomock.Any()).Return(nil, status.Error(codes.NotFound, "tree not found")).MinTimes(1)
 
 				grpcConfigs := map[int64]trillianclient.GRPCConfig{
-					501: {Address: "localhost", Port: uint16(port)},
+					501: {Address: "localhost", Port: port},
 				}
 				*tcm = trillianclient.NewClientManager(grpcConfigs, trillianclient.GRPCConfig{}, trillianclient.DefaultConfig())
 			},

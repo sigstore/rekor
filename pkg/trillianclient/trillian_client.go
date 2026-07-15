@@ -24,7 +24,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/transparency-dev/merkle/rfc6962"
 
 	"google.golang.org/grpc/codes"
@@ -32,74 +31,30 @@ import (
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
-	"github.com/google/trillian/client/backoff"
 	"github.com/google/trillian/types"
 	"github.com/sigstore/rekor/pkg/log"
 )
 
-// Default timeouts for initialization and updater polling.
-// These can be overridden via TrillianClientConfig.
 const (
 	DefaultInitLatestRootTimeout = 3 * time.Second
 	DefaultUpdaterWaitTimeout    = 3 * time.Second
-)
 
-var (
-	metricRootAdvance = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "rekor_trillian_root_advance_total",
-			Help: "Number of root advances observed by the Trillian client.",
-		},
-		[]string{"tree"},
-	)
-	metricUpdaterErrors = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "rekor_trillian_updater_errors_total",
-			Help: "Total updater errors (wait/fetch/marshal).",
-		},
-		[]string{"tree"},
-	)
-	metricLatestTreeSize = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "rekor_trillian_latest_tree_size",
-			Help: "Latest observed tree size per tree.",
-		},
-		[]string{"tree"},
-	)
-	metricWaitForRootAtLeast = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "rekor_trillian_wait_for_root_ms",
-			Help:    "Time spent waiting for the root to reach at least a given size (ms).",
-			Buckets: prometheus.ExponentialBuckets(1, 2, 12),
-		},
-		[]string{"tree", "success"},
-	)
-	metricInclusionWait = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "rekor_trillian_inclusion_wait_ms",
-			Help:    "Time to obtain an inclusion proof (ms).",
-			Buckets: prometheus.ExponentialBuckets(1, 2, 12),
-		},
-		[]string{"success"},
-	)
+	// updaterMinErrorBackoff and updaterMaxErrorBackoff bound the exponential
+	// sleep between updater retries on non-retryable errors returned by
+	// WaitForRootUpdate. WaitForRootUpdate retries Unavailable/NotFound/
+	// FailedPrecondition itself; all other error codes propagate up and would
+	// otherwise spin the loop at RPC-completion rate.
+	updaterMinErrorBackoff = 100 * time.Millisecond
+	updaterMaxErrorBackoff = 30 * time.Second
 )
-
-func init() {
-	// Register metrics once.
-	prometheus.MustRegister(
-		metricRootAdvance,
-		metricUpdaterErrors,
-		metricLatestTreeSize,
-		metricWaitForRootAtLeast,
-		metricInclusionWait,
-	)
-}
 
 // Config holds configuration options for TrillianClient
 type Config struct {
 	// InitLatestRootTimeout is the timeout for fetching the latest root during initialization
 	InitLatestRootTimeout time.Duration
-	// UpdaterWaitTimeout is the timeout for updater polling wait operations
+	// UpdaterWaitTimeout bounds each WaitForRootUpdate call so the updater
+	// periodically wakes to observe shutdown; DeadlineExceeded from this timeout
+	// is treated as normal on a quiet tree, not an error.
 	UpdaterWaitTimeout time.Duration
 }
 
@@ -125,21 +80,24 @@ type TrillianClient struct {
 	wg   sync.WaitGroup
 
 	// cached root snapshot (atomic for read-heavy paths)
-	snapshot atomic.Value // stores rootSnapshot
+	snapshot atomic.Pointer[rootSnapshot]
 
-	// lifecycle
-	started  bool
-	startErr error
-	stopCh   chan struct{}
+	// started is atomic so read paths can fast-path past the mutex;
+	// only the first successful ensureStarted transitions it to true, and all
+	// initialization state (lc, v, snapshot) is published before that store.
+	started atomic.Bool
 
-	// bgCtx is canceled on Close to interrupt long waits in the updater.
+	// bgCtx is canceled on Close to interrupt long waits in the updater and
+	// wake blocked waiters in waitForRootAtLeast.
 	bgCtx    context.Context
 	bgCancel context.CancelFunc
 }
 
 type rootSnapshot struct {
-	root   types.LogRootV1
-	signed *trillian.SignedLogRoot
+	root types.LogRootV1
+	// serialized holds the LogRoot bytes for the current snapshot.
+	// Trillian no longer acts as a trust boundary, so this never contains a signature.
+	serialized *trillian.SignedLogRoot
 }
 
 // newTrillianClient creates a TrillianClient with the given Trillian client, log/tree ID, and config.
@@ -148,12 +106,10 @@ func newTrillianClient(logClient trillian.TrillianLogClient, logID int64, config
 		client: logClient,
 		logID:  logID,
 		config: config,
-		stopCh: make(chan struct{}),
 	}
 	t.bgCtx, t.bgCancel = context.WithCancel(context.Background())
 	t.cond = sync.NewCond(&t.mu)
-	// initialize atomic snapshot with zero value
-	t.snapshot.Store(rootSnapshot{})
+	t.snapshot.Store(&rootSnapshot{})
 	return t
 }
 
@@ -185,152 +141,130 @@ func unmarshalLogRoot(logRoot []byte) (types.LogRootV1, error) {
 	return root, nil
 }
 
-// ensureStarted initializes the shared LogClient and starts the updater once.
-//
-// Locking strategy: this uses a double-checked initialization gate so network
-// calls do not hold the mutex. Only one goroutine performs the initial RPCs,
-// others wait on the condition variable until initialization completes. This
-// avoids head-of-line blocking while keeping state updates atomic.
+// ensureStarted performs one-time initialization of the shared LogClient and
+// starts the updater goroutine. The fast path is a single atomic load; the
+// cold path takes t.mu so concurrent first-callers serialize on initialization.
+// A failed init leaves started=false so the next caller retries.
 func (t *TrillianClient) ensureStarted(ctx context.Context) error {
+	if t.started.Load() {
+		return nil
+	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if t.started {
-		return t.startErr
+	if t.started.Load() {
+		return nil
+	}
+	if err := t.bgCtx.Err(); err != nil {
+		return status.Error(codes.Canceled, "client closed")
 	}
 
-	// Perform one-time initialization while holding the lock for simplicity.
-	// This blocks other ensureStarted callers until initialization completes.
+	// If the caller already supplied a deadline, honor it; otherwise cap
+	// initialization at InitLatestRootTimeout so a stuck Trillian can't wedge
+	// startup.
 	cctx := ctx
-	var cancel context.CancelFunc
 	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
 		cctx, cancel = context.WithTimeout(ctx, t.config.InitLatestRootTimeout)
-	}
-	if cancel != nil {
 		defer cancel()
 	}
+	// Ensure Close() can interrupt an in-flight init RPC via bgCtx cancellation
+	// even though we hold t.mu here.
+	cctx, cancelOnClose := context.WithCancel(cctx)
+	defer cancelOnClose()
+	defer context.AfterFunc(t.bgCtx, cancelOnClose)()
 	slr, err := t.client.GetLatestSignedLogRoot(cctx, &trillian.GetLatestSignedLogRootRequest{LogId: t.logID})
 	if err != nil {
-		t.startErr = err
 		return err
 	}
 	if slr == nil || slr.SignedLogRoot == nil {
-		err = fmt.Errorf("nil signed log root")
-		t.startErr = err
-		return err
+		return fmt.Errorf("nil signed log root")
 	}
-	r, uerr := unmarshalLogRoot(slr.SignedLogRoot.LogRoot)
-	if uerr != nil {
-		t.startErr = uerr
-		return uerr
+	r, err := unmarshalLogRoot(slr.SignedLogRoot.LogRoot)
+	if err != nil {
+		return err
 	}
 
 	t.v = client.NewLogVerifier(rfc6962.DefaultHasher)
 	t.lc = client.New(t.logID, t.client, t.v, r)
-	t.snapshot.Store(rootSnapshot{root: r, signed: slr.SignedLogRoot})
-	t.started = true
-	t.startErr = nil
+	t.snapshot.Store(&rootSnapshot{root: r, serialized: slr.SignedLogRoot})
+	// Publish started only after all init state is committed so lock-free
+	// readers on the fast path never see a partially initialized client.
+	t.started.Store(true)
 
-	// Start updater and track it for graceful shutdown.
-	t.wg.Add(1)
-	go func() {
-		defer t.wg.Done()
-		t.updater()
-	}()
+	t.wg.Go(t.updater)
 	return nil
 }
 
 // updater waits for root changes using the LogClient and notifies waiters.
-// It uses the parsed root from WaitForRootUpdate and synthesizes a minimal
-// SignedLogRoot (LogRoot bytes only) to avoid an extra network round trip
-// per advancement.
+// Each WaitForRootUpdate call is bounded by UpdaterWaitTimeout so shutdown is
+// observed promptly; DeadlineExceeded from that timeout is normal on a quiet
+// tree, not a failure. The parsed root is re-marshaled into a synthetic
+// SignedLogRoot to avoid an extra GetLatestSignedLogRoot RPC per advancement.
 func (t *TrillianClient) updater() {
-	// Create backoff for retry logic with reasonable defaults
-	bo := backoff.Backoff{
-		Min:    100 * time.Millisecond, // Start with 100ms
-		Max:    30 * time.Second,       // Cap at 30s
-		Factor: 2.0,                    // Double each time
-		Jitter: true,                   // Add randomization
-	}
-
+	errBackoff := updaterMinErrorBackoff
 	for {
-		// Wrap the WaitForRootUpdate call with backoff retry
-		var nr *types.LogRootV1
-		err := bo.Retry(t.bgCtx, func() error {
-			select {
-			case <-t.stopCh:
-				return fmt.Errorf("client stopped")
-			default:
-			}
-
-			ctx, cancel := context.WithTimeout(t.bgCtx, t.config.UpdaterWaitTimeout)
-			defer cancel()
-
-			var waitErr error
-			nr, waitErr = t.lc.WaitForRootUpdate(ctx)
-			return waitErr
-		})
-
-		select {
-		case <-t.stopCh:
+		if t.bgCtx.Err() != nil {
 			return
-		default:
 		}
 
+		ctx, cancel := context.WithTimeout(t.bgCtx, t.config.UpdaterWaitTimeout)
+		nr, err := t.lc.WaitForRootUpdate(ctx)
+		cancel()
+
+		if t.bgCtx.Err() != nil {
+			return
+		}
 		if err != nil {
-			log.Logger.Debugw("trillian root update wait failed after retries", "treeID", t.logID, "err", err)
-			// Reset backoff on persistent failure and continue to next iteration
-			bo.Reset()
+			if status.Code(err) != codes.DeadlineExceeded {
+				log.Logger.Debugw("trillian root update wait failed", "treeID", t.logID, "err", err, "backoff", errBackoff)
+				timer := time.NewTimer(errBackoff)
+				select {
+				case <-t.bgCtx.Done():
+					timer.Stop()
+					return
+				case <-timer.C:
+				}
+				if errBackoff *= 2; errBackoff > updaterMaxErrorBackoff {
+					errBackoff = updaterMaxErrorBackoff
+				}
+			}
 			continue
 		}
-
-		// Success - reset backoff for next potential failure
-		bo.Reset()
+		errBackoff = updaterMinErrorBackoff
 
 		if nr == nil {
 			continue
 		}
 
-		// compute change against current snapshot
-		old := t.snapshot.Load().(rootSnapshot)
-		changed := nr.TreeSize != old.root.TreeSize || !bytes.Equal(nr.RootHash, old.root.RootHash)
-		if !changed {
-			// nothing to publish
+		old := t.snapshot.Load()
+		if nr.TreeSize == old.root.TreeSize && bytes.Equal(nr.RootHash, old.root.RootHash) {
 			continue
 		}
 		log.Logger.Debugw("trillian root advanced", "treeID", t.logID, "oldSize", old.root.TreeSize, "newSize", nr.TreeSize)
 
-		// Marshal parsed root to bytes and synthesize a minimal SignedLogRoot
 		lrBytes, mErr := nr.MarshalBinary()
 		if mErr != nil {
 			log.Logger.Debugw("failed to marshal updated log root", "treeID", t.logID, "err", mErr)
 			continue
 		}
-		slr := &trillian.SignedLogRoot{LogRoot: lrBytes}
 
-		// publish new snapshot and notify waiters
 		t.mu.Lock()
-		t.snapshot.Store(rootSnapshot{root: *nr, signed: slr})
+		t.snapshot.Store(&rootSnapshot{root: *nr, serialized: &trillian.SignedLogRoot{LogRoot: lrBytes}})
 		t.cond.Broadcast()
 		t.mu.Unlock()
 	}
 }
 
-// Close stops the updater.
+// Close stops the updater and wakes any blocked waiters so they can observe
+// shutdown via bgCtx.
 func (t *TrillianClient) Close() {
+	// Cancel bgCtx before taking t.mu: an in-flight ensureStarted holds t.mu
+	// across its GetLatestSignedLogRoot RPC, and that RPC's context is tied to
+	// bgCtx via AfterFunc so this cancel unblocks it.
+	t.bgCancel()
 	t.mu.Lock()
-	// Cancel background operations first to unblock any waits
-	if t.bgCancel != nil {
-		t.bgCancel()
-	}
-	select {
-	case <-t.stopCh:
-	default:
-		close(t.stopCh)
-	}
-	// Wake waiters so they can observe shutdown via context or state
 	t.cond.Broadcast()
 	t.mu.Unlock()
-	// Wait for updater to exit
 	t.wg.Wait()
 }
 
@@ -342,8 +276,7 @@ func (t *TrillianClient) AddLeaf(ctx context.Context, byteValue []byte) *Respons
 		}
 	}
 	// Capture baseline tree size before queueing to set the first gate correctly.
-	preSnap, _ := t.snapshot.Load().(rootSnapshot)
-	baselineSize := preSnap.root.TreeSize
+	baselineSize := t.snapshot.Load().root.TreeSize
 	leaf := &trillian.LogLeaf{
 		LeafValue: byteValue,
 	}
@@ -412,9 +345,9 @@ func (t *TrillianClient) GetLeafAndProofByHash(ctx context.Context, hash []byte)
 			Err:    err,
 		}
 	}
-	snap, _ := t.snapshot.Load().(rootSnapshot)
+	snap := t.snapshot.Load()
 	root := snap.root
-	signed := snap.signed
+	signed := snap.serialized
 	proofResp := t.getProofByHashWithRoot(ctx, hash, root, signed)
 	if proofResp.Err != nil {
 		return &Response{
@@ -451,9 +384,9 @@ func (t *TrillianClient) GetLeafAndProofByIndex(ctx context.Context, index int64
 			Err:    err,
 		}
 	}
-	snap, _ := t.snapshot.Load().(rootSnapshot)
+	snap := t.snapshot.Load()
 	root := snap.root
-	signed := snap.signed
+	signed := snap.serialized
 
 	resp, err := t.client.GetEntryAndProof(ctx,
 		&trillian.GetEntryAndProofRequest{
@@ -505,8 +438,8 @@ func (t *TrillianClient) GetLatest(ctx context.Context, firstSize int64) *Respon
 			}
 		}
 	}
-	snap, _ := t.snapshot.Load().(rootSnapshot)
-	signed := snap.signed
+	snap := t.snapshot.Load()
+	signed := snap.serialized
 	if signed == nil {
 		return &Response{
 			Status: codes.NotFound,
@@ -592,9 +525,9 @@ func (t *TrillianClient) waitForInclusionWithMinSize(ctx context.Context, leafHa
 		if err := ctx.Err(); err != nil {
 			return &Response{Status: status.Code(err), Err: err}
 		}
-		snap, _ := t.snapshot.Load().(rootSnapshot)
+		snap := t.snapshot.Load()
 		root := snap.root
-		signed := snap.signed
+		signed := snap.serialized
 
 		proofResp := t.getProofByHashWithRoot(ctx, leafHash, root, signed)
 		if proofResp.Err == nil || status.Code(proofResp.Err) != codes.NotFound {
@@ -608,21 +541,35 @@ func (t *TrillianClient) waitForInclusionWithMinSize(ctx context.Context, leafHa
 	}
 }
 
-// waitForRootAtLeast blocks until t.lastRoot.TreeSize >= size, or context/client closes.
+// waitForRootAtLeast blocks until the cached tree size >= size, or the caller
+// context expires, or the client closes. Fast path avoids the mutex when the
+// snapshot already satisfies the requirement.
 func (t *TrillianClient) waitForRootAtLeast(ctx context.Context, size uint64) error {
+	if t.snapshot.Load().root.TreeSize >= size {
+		return nil
+	}
+
+	// cond.Wait only wakes on Broadcast, so caller-context cancellation would
+	// leave this goroutine parked until the next tree advance. AfterFunc fires
+	// a Broadcast when ctx is canceled; the returned stop() is called on return
+	// so a still-live ctx doesn't spawn a broadcast after we've left.
+	stop := context.AfterFunc(ctx, func() {
+		t.mu.Lock()
+		t.cond.Broadcast()
+		t.mu.Unlock()
+	})
+	defer stop()
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	for {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		select {
-		case <-t.stopCh:
+		if err := t.bgCtx.Err(); err != nil {
 			return status.Error(codes.Canceled, "client closed")
-		default:
 		}
-		cur := t.snapshot.Load().(rootSnapshot)
-		if cur.root.TreeSize >= size {
+		if t.snapshot.Load().root.TreeSize >= size {
 			return nil
 		}
 		t.cond.Wait()
