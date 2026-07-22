@@ -16,14 +16,22 @@
 package app
 
 import (
+	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -132,6 +140,30 @@ func CreatePropsFromPflags() *types.ArtifactProperties {
 	}
 
 	props.ArtifactHash = viper.GetString("artifact-hash")
+	typeStr := viper.GetString("type")
+	if props.ArtifactHash == "" && strings.HasPrefix(typeStr, "hashedrekord") {
+		if props.ArtifactPath != nil {
+			var artifactReader io.ReadCloser
+			var err error
+			if props.ArtifactPath.IsAbs() {
+				artifactReader, err = util.FileOrURLReadCloser(context.Background(), props.ArtifactPath.String(), nil)
+			} else {
+				artifactReader, err = os.Open(filepath.Clean(props.ArtifactPath.Path))
+			}
+			if err == nil {
+				defer artifactReader.Close()
+				artifactBytes, err := io.ReadAll(artifactReader)
+				if err == nil {
+					h := sha256.Sum256(artifactBytes)
+					props.ArtifactHash = hex.EncodeToString(h[:])
+				} else {
+					log.CliLogger.Fatalf("error reading artifact file: %v", err)
+				}
+			} else {
+				log.CliLogger.Fatalf("error opening artifact file: %v", err)
+			}
+		}
+	}
 
 	signatureString := viper.GetString("signature")
 	if signatureString != "" {
