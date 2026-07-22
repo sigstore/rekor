@@ -17,8 +17,12 @@ package api
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/go-openapi/runtime"
+	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
 )
@@ -43,5 +47,24 @@ func TestRetrieveUUIDFromTree_UnconfiguredTreeID(t *testing.T) {
 
 	if err != ErrNotFound {
 		t.Errorf("Expected ErrNotFound, got: %v", err)
+	}
+}
+
+func TestGetLogEntryByUUIDHandler_InvalidTreeID(t *testing.T) {
+	invalidEntryID := "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+	req := httptest.NewRequest("GET", "/api/v1/log/entries/"+invalidEntryID, nil)
+	params := entries.GetLogEntryByUUIDParams{
+		HTTPRequest: req,
+		EntryUUID:   invalidEntryID,
+	}
+
+	responder := GetLogEntryByUUIDHandler(params)
+
+	recorder := httptest.NewRecorder()
+	responder.WriteResponse(recorder, runtime.JSONProducer())
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Errorf("Expected status code %d (Bad Request), got %d", http.StatusBadRequest, recorder.Code)
 	}
 }

@@ -712,6 +712,9 @@ func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, e
 
 	uuid, err := sharding.GetUUIDFromIDString(entryUUID)
 	if err != nil {
+		if len(entryUUID) == sharding.EntryIDHexStringLen {
+			return nil, &types.InputValidationError{Err: err}
+		}
 		return nil, sharding.ErrPlainUUID
 	}
 
