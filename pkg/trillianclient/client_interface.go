@@ -24,12 +24,10 @@ import (
 )
 
 // Client defines the public API for interacting with a Trillian log.
-// Two implementations exist:
+// One implementation exists:
 //   - directTrillianClient: stateless, per-RPC client (default)
-//   - cachedTrillianClient: cached STH client with background root updates (experimental)
 type Client interface {
 	AddLeaf(ctx context.Context, byteValue []byte) *Response
-	// GetLatest returns the latest known signed log root.
 	GetLatest(ctx context.Context) *Response
 	GetLeafAndProofByHash(ctx context.Context, hash []byte) *Response
 	GetLeafAndProofByIndex(ctx context.Context, index int64) *Response
