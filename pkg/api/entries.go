@@ -331,7 +331,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalEntry)
 	}
 
-	tc, err := api.trillianClientManager.GetTrillianClient(api.ActiveTreeID())
+	tc, err := api.trillianClientManager.GetClient(api.ActiveTreeID())
 	if err != nil {
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, trillianUnexpectedResult)
 	}
@@ -624,7 +624,7 @@ func SearchLogQueryHandler(params entries.SearchLogQueryParams) middleware.Respo
 		for i, hash := range searchHashes {
 			var results map[int64]*trillian.GetEntryAndProofResponse
 			for _, shard := range api.logRanges.AllShards() {
-				tc, err := api.trillianClientManager.GetTrillianClient(shard)
+				tc, err := api.trillianClientManager.GetClient(shard)
 				if err != nil {
 					return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianCommunicationError)
 				}
@@ -680,7 +680,7 @@ var ErrNotFound = errors.New("grpc returned 0 leaves with success code")
 
 func retrieveLogEntryByIndex(ctx context.Context, logIndex int) (models.LogEntry, error) {
 	tid, resolvedIndex := api.logRanges.ResolveVirtualIndex(logIndex)
-	tc, err := api.trillianClientManager.GetTrillianClient(tid)
+	tc, err := api.trillianClientManager.GetClient(tid)
 	if err != nil {
 		return nil, fmt.Errorf("getting log client for tree %d: %w", tid, err)
 	}
@@ -759,7 +759,7 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 		return models.LogEntry{}, &types.InputValidationError{Err: fmt.Errorf("parsing UUID: %w", err)}
 	}
 
-	tc, err := api.trillianClientManager.GetTrillianClient(tid)
+	tc, err := api.trillianClientManager.GetClient(tid)
 	if err != nil {
 		return models.LogEntry{}, fmt.Errorf("getting log client for tree %d: %w", tid, err)
 	}
