@@ -29,7 +29,7 @@ import (
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
-	internalclient "github.com/sigstore/rekor/pkg/internal/trillianclient"
+	internalclient "github.com/sigstore/rekor/internal/trillianclient"
 	"github.com/sigstore/rekor/pkg/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"

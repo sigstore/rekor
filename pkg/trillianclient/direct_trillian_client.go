@@ -32,7 +32,7 @@ import (
 	"github.com/google/trillian/client"
 	"github.com/google/trillian/types"
 
-	internalclient "github.com/sigstore/rekor/pkg/internal/trillianclient"
+	internalclient "github.com/sigstore/rekor/internal/trillianclient"
 )
 
 // directTrillianClient is a stateless, per-RPC wrapper around the Trillian gRPC
