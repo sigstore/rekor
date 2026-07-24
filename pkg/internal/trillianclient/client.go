@@ -23,7 +23,16 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-// Client defines the public API for interacting with a Trillian log.
+// UnmarshalLogRoot decodes a serialized Trillian LogRootV1.
+func UnmarshalLogRoot(logRoot []byte) (types.LogRootV1, error) {
+	var root types.LogRootV1
+	if err := root.UnmarshalBinary(logRoot); err != nil {
+		return types.LogRootV1{}, err
+	}
+	return root, nil
+}
+
+// Client defines the API for interacting with a Trillian log
 // One implementation exists:
 //   - directTrillianClient: stateless, per-RPC client (default)
 type Client interface {
@@ -53,14 +62,6 @@ type Response struct {
 	GetConsistencyProofResult *trillian.GetConsistencyProofResponse
 	// GetLeavesByRangeResult contains the response for fetching a leaf without an inclusion proof
 	GetLeavesByRangeResult *trillian.GetLeavesByRangeResponse
-	// getProofResult contains the response for an inclusion proof fetched by leaf hash
-	getProofResult *trillian.GetInclusionProofByHashResponse
-}
-
-func unmarshalLogRoot(logRoot []byte) (types.LogRootV1, error) {
-	var root types.LogRootV1
-	if err := root.UnmarshalBinary(logRoot); err != nil {
-		return types.LogRootV1{}, err
-	}
-	return root, nil
+	// GetProofResult contains the response for an inclusion proof fetched by leaf hash
+	GetProofResult *trillian.GetInclusionProofByHashResponse
 }

@@ -29,6 +29,7 @@ import (
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
+	internalclient "github.com/sigstore/rekor/pkg/internal/trillianclient"
 	"github.com/sigstore/rekor/pkg/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -46,7 +47,7 @@ type ClientManager struct {
 	// Mutex for trillianClients map
 	clientMu sync.RWMutex
 	// trillianClients caches the client wrappers.
-	trillianClients map[int64]Client
+	trillianClients map[int64]internalclient.Client
 	// flag to indicate whether the client manager is shutting down
 	shutdown bool
 
@@ -62,7 +63,7 @@ func NewClientManager(treeIDToConfig map[int64]GRPCConfig, defaultConfig GRPCCon
 		connections:     make(map[GRPCConfig]*grpc.ClientConn),
 		treeIDToConfig:  treeIDToConfig,
 		defaultConfig:   defaultConfig,
-		trillianClients: make(map[int64]Client),
+		trillianClients: make(map[int64]internalclient.Client),
 	}
 }
 
@@ -100,7 +101,7 @@ func (cm *ClientManager) getConn(treeID int64) (*grpc.ClientConn, error) {
 }
 
 // GetClient returns a Rekor Trillian client wrapper for the given tree ID.
-func (cm *ClientManager) GetClient(treeID int64) (Client, error) {
+func (cm *ClientManager) GetClient(treeID int64) (internalclient.Client, error) {
 	cm.clientMu.RLock()
 	if cm.shutdown {
 		cm.clientMu.RUnlock()
@@ -223,7 +224,7 @@ func (cm *ClientManager) Close() error {
 	// set shutdown flag to true and clear cache of clients
 	cm.clientMu.Lock()
 	cm.shutdown = true
-	cm.trillianClients = make(map[int64]Client)
+	cm.trillianClients = make(map[int64]internalclient.Client)
 	cm.clientMu.Unlock()
 
 	cm.connMu.Lock()
