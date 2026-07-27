@@ -266,11 +266,9 @@ upload() {
         if [ ! $dbsize -ge $wantsize ] ; then
             echo "Uploading entries into mysql..."
             mysql -h $MYSQL_IP -P 3306 -utrillian -p${MYSQL_PASS} -D trillian -e "CREATE TABLE IF NOT EXISTS EntryIndex (
-                    PK BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-                    EntryKey varchar(512) NOT NULL,
-                    EntryUUID char(80) NOT NULL,
-                    PRIMARY KEY(PK),
-                    UNIQUE(EntryKey, EntryUUID)
+                    EntryKey varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+                    EntryUUID char(80) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+                    PRIMARY KEY(EntryKey, EntryUUID)
             );
             LOAD DATA LOCAL INFILE './indices.csv'
             INTO TABLE EntryIndex
