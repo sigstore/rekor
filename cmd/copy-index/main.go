@@ -45,11 +45,9 @@ import (
 const (
 	mysqlWriteStmt       = "INSERT IGNORE INTO EntryIndex (EntryKey, EntryUUID) VALUES (:key, :uuid)"
 	mysqlCreateTableStmt = `CREATE TABLE IF NOT EXISTS EntryIndex (
-		PK BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-		EntryKey varchar(512) NOT NULL,
-		EntryUUID char(80) NOT NULL,
-		PRIMARY KEY(PK),
-		UNIQUE(EntryKey, EntryUUID)
+		EntryKey varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+		EntryUUID char(80) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+		PRIMARY KEY(EntryKey, EntryUUID)
 	)`
 )
 
