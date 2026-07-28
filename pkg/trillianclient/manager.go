@@ -29,6 +29,7 @@ import (
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
+	internalclient "github.com/sigstore/rekor/internal/trillianclient"
 	"github.com/sigstore/rekor/pkg/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -45,8 +46,8 @@ type ClientManager struct {
 
 	// Mutex for trillianClients map
 	clientMu sync.RWMutex
-	// trillianClients caches the TrillianClient wrappers.
-	trillianClients map[int64]*TrillianClient
+	// trillianClients caches the client wrappers.
+	trillianClients map[int64]internalclient.Client
 	// flag to indicate whether the client manager is shutting down
 	shutdown bool
 
@@ -62,7 +63,7 @@ func NewClientManager(treeIDToConfig map[int64]GRPCConfig, defaultConfig GRPCCon
 		connections:     make(map[GRPCConfig]*grpc.ClientConn),
 		treeIDToConfig:  treeIDToConfig,
 		defaultConfig:   defaultConfig,
-		trillianClients: make(map[int64]*TrillianClient),
+		trillianClients: make(map[int64]internalclient.Client),
 	}
 }
 
@@ -99,17 +100,17 @@ func (cm *ClientManager) getConn(treeID int64) (*grpc.ClientConn, error) {
 	return newConn, nil
 }
 
-// GetTrillianClient returns a Rekor Trillian client wrapper for the given tree ID.
-func (cm *ClientManager) GetTrillianClient(treeID int64) (*TrillianClient, error) {
+// GetClient returns a Rekor Trillian client wrapper for the given tree ID.
+func (cm *ClientManager) GetClient(treeID int64) (internalclient.Client, error) {
 	cm.clientMu.RLock()
 	if cm.shutdown {
 		cm.clientMu.RUnlock()
 		return nil, errors.New("client manager is shutting down")
 	}
-	client, ok := cm.trillianClients[treeID]
+	c, ok := cm.trillianClients[treeID]
 	cm.clientMu.RUnlock()
 	if ok {
-		return client, nil
+		return c, nil
 	}
 
 	conn, err := cm.getConn(treeID)
@@ -123,11 +124,11 @@ func (cm *ClientManager) GetTrillianClient(treeID int64) (*TrillianClient, error
 	if cm.shutdown {
 		return nil, errors.New("client manager is shutting down")
 	}
-	if client, ok = cm.trillianClients[treeID]; ok {
-		return client, nil
+	if c, ok = cm.trillianClients[treeID]; ok {
+		return c, nil
 	}
 
-	newClient := newTrillianClient(trillian.NewTrillianLogClient(conn), treeID)
+	newClient := newDirectTrillianClient(trillian.NewTrillianLogClient(conn), treeID)
 	cm.trillianClients[treeID] = newClient
 	return newClient, nil
 }
@@ -223,7 +224,7 @@ func (cm *ClientManager) Close() error {
 	// set shutdown flag to true and clear cache of clients
 	cm.clientMu.Lock()
 	cm.shutdown = true
-	cm.trillianClients = make(map[int64]*TrillianClient)
+	cm.trillianClients = make(map[int64]internalclient.Client)
 	cm.clientMu.Unlock()
 
 	cm.connMu.Lock()

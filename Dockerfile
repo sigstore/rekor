@@ -24,6 +24,7 @@ RUN go mod download
 # Add source code
 ADD ./cmd/ $APP_ROOT/src/cmd/
 ADD ./pkg/ $APP_ROOT/src/pkg/
+ADD ./internal/ $APP_ROOT/src/internal/
 
 ARG SERVER_LDFLAGS
 RUN go build -ldflags "${SERVER_LDFLAGS}" ./cmd/rekor-server
