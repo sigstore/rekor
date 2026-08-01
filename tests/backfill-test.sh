@@ -135,7 +135,7 @@ run_backfill() {
             --concurrency 5 --start 0 --end $end_index
     else
         go run cmd/backfill-index/main.go --rekor-address $REKOR_ADDRESS \
-            --mysql-dsn "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DB}" \
+            --mysql-dsn "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DB}?parseTime=true&interpolateParams=true" \
             --concurrency 5 --start 0 --end $end_index
     fi
     set +e

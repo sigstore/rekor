@@ -56,7 +56,7 @@ services:
     command: [
       "--quota_system=noop",
       "--storage_system=mysql",
-      "--mysql_uri=test:zaphod@tcp(mysql:3306)/test",
+      "--mysql_uri=test:zaphod@tcp(mysql:3306)/test?parseTime=true&interpolateParams=true",
       "--rpc_endpoint=0.0.0.0:8090",
       "--http_endpoint=0.0.0.0:8091",
       "--alsologtostderr",
@@ -81,7 +81,7 @@ services:
     command: [
       "--quota_system=noop",
       "--storage_system=mysql",
-      "--mysql_uri=test:zaphod@tcp(mysql:3306)/test",
+      "--mysql_uri=test:zaphod@tcp(mysql:3306)/test?parseTime=true&interpolateParams=true",
       "--rpc_endpoint=0.0.0.0:8090",
       "--http_endpoint=0.0.0.0:8091",
       "--force_master",
@@ -115,7 +115,7 @@ services:
       "--enable_attestation_storage",
       "--attestation_storage_bucket=file:///var/run/attestations",
       "--search_index.storage_provider=mysql",
-      "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test",
+      "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test?parseTime=true&interpolateParams=true",
       # Uncomment this for production logging
       # "--log_type=prod",
       ]

@@ -129,7 +129,7 @@ services:
       "--enable_attestation_storage",
       "--attestation_storage_bucket=file:///var/run/attestations",
       "--search_index.storage_provider=mysql",
-      "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test",
+      "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test?parseTime=true&interpolateParams=true",
       "--client-signing-algorithms=rsa-sign-pkcs1-2048-sha256,ed25519-ph",
       # Uncomment this for production logging
       # "--log_type=prod",

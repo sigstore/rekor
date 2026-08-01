@@ -81,7 +81,7 @@ fi
 # search_index.storage_provider still points to redis, but it's useful
 # to test that the key cleanup is working
 go run cmd/backfill-index/main.go --rekor-address $REKOR_ADDRESS \
-    --mysql-dsn "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DB}" \
+    --mysql-dsn "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DB}?parseTime=true&interpolateParams=true" \
     --concurrency 5 --start 0 --end $end_index
 
 # run the cleanup script
