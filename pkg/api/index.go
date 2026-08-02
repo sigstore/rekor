@@ -132,11 +132,7 @@ func SearchIndexNotImplementedHandler(_ index.SearchIndexParams) middleware.Resp
 }
 
 func addToIndex(ctx context.Context, keys []string, value string) error {
-	err := indexStorageClient.WriteIndex(ctx, keys, value)
-	if err != nil {
-		return fmt.Errorf("redis client: %w", err)
-	}
-	return nil
+	return indexStorageClient.WriteIndex(ctx, keys, value)
 }
 
 func storeAttestation(ctx context.Context, uuid string, attestation []byte) error {

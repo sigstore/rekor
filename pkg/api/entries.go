@@ -402,7 +402,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 				log.ContextLogger(ctx).Errorf("getting entry index keys: %v", err)
 				return
 			}
-			if err := addToIndex(context.Background(), keys, entryID); err != nil {
+			if err = addToIndex(context.Background(), keys, entryID); err != nil {
 				log.ContextLogger(ctx).Errorf("adding keys to index: %v", err)
 			}
 		}()
