@@ -183,7 +183,7 @@ services:
       "--trillian_log_server.tlog_id=$SHARD_TREE_ID",
       "--trillian_log_server.sharding_config=/$SHARDING_CONFIG",
       "--search_index.storage_provider=mysql",
-      "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test",
+      "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test?parseTime=true&interpolateParams=true",
       # Uncomment this for production logging
       # "--log_type=prod",
       ]
