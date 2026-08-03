@@ -120,11 +120,11 @@ func initializePFlagMap() {
 				}
 				return nil
 			}
-			return valueFactory(pkiFormatFlag, pkiFormatValidator, "pgp")
+			return valueFactory(pkiFormatFlag, pkiFormatValidator, "x509")
 		},
 		typeFlag: func() pflag.Value {
 			// this ensures the type of the log entry matches a type supported in the CLI
-			return valueFactory(typeFlag, validateTypeFlag, "rekord")
+			return valueFactory(typeFlag, validateTypeFlag, "hashedrekord")
 		},
 		fileFlag: func() pflag.Value {
 			// this validates that the file exists and can be opened by the current uid
