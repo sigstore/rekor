@@ -16,7 +16,9 @@
 package alpine
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -134,5 +136,56 @@ func TestAlpineMetadataSizeBoundary(t *testing.T) {
 	expectedErr := fmt.Sprintf("decompressed size (%d) for signature.tar.gz exceeds max allowed size %d", boundary, boundary-1)
 	if !strings.Contains(err.Error(), expectedErr) {
 		t.Fatalf("expected error containing %q, got %q", expectedErr, err.Error())
+	}
+}
+
+// oneByteReader returns at most one byte per Read, forcing the short reads
+// that a network stream (e.g. an http.Response.Body) can legitimately return.
+type oneByteReader struct {
+	r io.Reader
+}
+
+func (o oneByteReader) Read(p []byte) (int, error) {
+	if len(p) > 1 {
+		p = p[:1]
+	}
+	return o.r.Read(p)
+}
+
+// TestAlpinePackagePartialReads guards against the control.tar.gz SHA1 digest
+// depending on how the input reader chunks its data. The digest that the
+// package signature is checked against must be a function of the bytes only,
+// not of the read sizes the underlying reader happens to return.
+func TestAlpinePackagePartialReads(t *testing.T) {
+	apk, err := os.ReadFile("tests/test_alpine.apk")
+	if err != nil {
+		t.Fatalf("could not read archive: %v", err)
+	}
+	pubKey, err := os.Open("tests/test_alpine.pub")
+	if err != nil {
+		t.Fatalf("could not open public key: %v", err)
+	}
+	defer pubKey.Close()
+	pub, err := x509.NewPublicKey(pubKey)
+	if err != nil {
+		t.Fatalf("failed to parse public key: %v", err)
+	}
+
+	full := Package{}
+	if err := full.Unmarshal(bytes.NewReader(apk)); err != nil {
+		t.Fatalf("unmarshal (full reads): %v", err)
+	}
+
+	chunked := Package{}
+	if err := chunked.Unmarshal(oneByteReader{r: bytes.NewReader(apk)}); err != nil {
+		t.Fatalf("unmarshal (partial reads): %v", err)
+	}
+
+	if !bytes.Equal(full.controlSHA1Digest, chunked.controlSHA1Digest) {
+		t.Fatalf("control.tar.gz SHA1 depends on read chunking:\n full    = %x\n chunked = %x",
+			full.controlSHA1Digest, chunked.controlSHA1Digest)
+	}
+	if err := chunked.VerifySignature(pub.CryptoPubKey()); err != nil {
+		t.Fatalf("signature verification failed for validly signed package read in small chunks: %v", err)
 	}
 }
