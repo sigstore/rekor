@@ -62,7 +62,7 @@ func newSHA1Reader(b *bufio.Reader) *sha1Reader {
 func (s *sha1Reader) Read(p []byte) (int, error) {
 	n, err := s.r.Read(p)
 	if err == nil && n > 0 && s.addToHash {
-		s.hasher.Write(p)
+		s.hasher.Write(p[:n])
 	}
 	return n, err
 }
