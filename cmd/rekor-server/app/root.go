@@ -149,8 +149,21 @@ Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().String("search_index.mysql.dsn", "", "DSN for index storage using MySQL")
 	rootCmd.PersistentFlags().Duration("search_index.mysql.conn_max_idletime", 0*time.Second, "maximum connection idle time")
 	rootCmd.PersistentFlags().Duration("search_index.mysql.conn_max_lifetime", 0*time.Second, "maximum connection lifetime")
-	rootCmd.PersistentFlags().Int("search_index.mysql.max_open_connections", 0, "maximum open connections")
-	rootCmd.PersistentFlags().Int("search_index.mysql.max_idle_connections", 0, "maximum idle connections")
+	rootCmd.PersistentFlags().Int("search_index.mysql.read.max_open_connections", 0, "maximum open connections in the index read pool; 0 for unlimited")
+	rootCmd.PersistentFlags().Int("search_index.mysql.read.max_idle_connections", 0, "maximum idle connections retained in the index read pool")
+	rootCmd.PersistentFlags().Int("search_index.mysql.write.max_open_connections", 0, "maximum open connections in the index write pool; 0 for unlimited")
+	rootCmd.PersistentFlags().Int("search_index.mysql.write.max_idle_connections", 0, "maximum idle connections retained in the index write pool")
+
+	// superseded by the per-pool flags above; these sized the single pool that predates the
+	// read/write split and are now split 70/30 between the write and read pools
+	rootCmd.PersistentFlags().Int("search_index.mysql.max_open_connections", 0, "deprecated: total provided will be split 70/30 across write/read pools; use per-pool flags instead")
+	rootCmd.PersistentFlags().Int("search_index.mysql.max_idle_connections", 0, "deprecated: total provided will be split 70/30 across write/read pools; use per-pool flags instead")
+	for _, f := range []string{"search_index.mysql.max_open_connections", "search_index.mysql.max_idle_connections"} {
+		if err := rootCmd.PersistentFlags().MarkDeprecated(f, "value is split 70/30 between the write and read pools; "+
+			"use the search_index.mysql.read.* and search_index.mysql.write.* equivalents"); err != nil {
+			log.Logger.Fatal(err)
+		}
+	}
 
 	rootCmd.PersistentFlags().String("http-request-id-header-name", middleware.RequestIDHeader, "name of HTTP Request Header to use as request correlation ID")
 	rootCmd.PersistentFlags().String("trace-string-prefix", "", "if set, this will be used to prefix the 'trace' field when outputting structured logs")

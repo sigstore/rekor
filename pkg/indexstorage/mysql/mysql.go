@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sigstore/rekor/pkg/log"
 
 	// this imports the mysql driver for go
@@ -39,39 +40,77 @@ const (
 )
 
 // IndexStorageProvider implements indexstorage.IndexStorage
+//
+// Reads and writes use independent connection pools against the same DSN.
+// LookupIndices runs synchronously in the HTTP request path while WriteIndex is
+// dispatched from a detached goroutine per entry, so a shared pool lets a burst
+// of writes queue ahead of every read. database/sql wakes a uniformly random
+// waiter rather than the longest-waiting one, so reads cannot be prioritized
+// within a pool no matter how large it is.
 type IndexStorageProvider struct {
-	db *sqlx.DB
+	readDB    *sqlx.DB
+	writeDB   *sqlx.DB
+	collector *dbStatsCollector
 }
 
 func NewProvider(dsn string, opts ...Options) (*IndexStorageProvider, error) {
-	var err error
 	provider := &IndexStorageProvider{}
-	provider.db, err = sqlx.Open(ProviderType, dsn)
+
+	readDB, err := openPool(dsn, poolRead, opts)
 	if err != nil {
 		return nil, err
 	}
-	if err = provider.db.Ping(); err != nil {
-		return nil, err
+	provider.readDB = readDB
+
+	writeDB, err := openPool(dsn, poolWrite, opts)
+	if err != nil {
+		return nil, errors.Join(err, readDB.Close())
+	}
+	provider.writeDB = writeDB
+
+	if _, err := provider.writeDB.Exec(createTableStmt); err != nil {
+		return nil, errors.Join(fmt.Errorf("create table if not exists failed: %w", err), provider.Shutdown())
 	}
 
-	for _, o := range opts {
-		o.applyConnMaxIdleTime(provider.db)
-		o.applyConnMaxLifetime(provider.db)
-		o.applyMaxIdleConns(provider.db)
-		o.applyMaxOpenConns(provider.db)
+	provider.collector = &dbStatsCollector{readDB: provider.readDB, writeDB: provider.writeDB}
+	if err := prometheus.DefaultRegisterer.Register(provider.collector); err != nil {
+		provider.collector = nil
+		var alreadyRegistered prometheus.AlreadyRegisteredError
+		if !errors.As(err, &alreadyRegistered) {
+			return nil, errors.Join(fmt.Errorf("registering db stats collector: %w", err), provider.Shutdown())
+		}
+		log.Logger.Warnf("search index db stats already registered by another provider; this provider's pools will not be reported")
 	}
 
-	if _, err := provider.db.Exec(createTableStmt); err != nil {
-		return nil, fmt.Errorf("create table if not exists failed: %w", err)
-	}
+	// a limit of 0 means unlimited, so report what each pool actually got
+	log.Logger.Infof("search index connection pools: %d read, %d write",
+		provider.readDB.Stats().MaxOpenConnections, provider.writeDB.Stats().MaxOpenConnections)
 
 	return provider, nil
 }
 
-// LookupIndices looks up and returns all indices for the specified keys. The key value(s) will be canonicalized
-// by converting all characters into a lowercase value before looking up in Redis
+// openPool opens one connection pool, applying only the options that name role.
+func openPool(dsn string, role poolRole, opts []Options) (*sqlx.DB, error) {
+	db, err := sqlx.Open(ProviderType, dsn)
+	if err != nil {
+		return nil, fmt.Errorf("opening %s pool: %w", role, err)
+	}
+	if err := db.Ping(); err != nil {
+		return nil, errors.Join(fmt.Errorf("pinging %s pool: %w", role, err), db.Close())
+	}
+
+	for _, o := range opts {
+		o.applyConnMaxIdleTime(db)
+		o.applyConnMaxLifetime(db)
+		o.applyMaxIdleConns(db, role)
+		o.applyMaxOpenConns(db, role)
+	}
+	return db, nil
+}
+
+// LookupIndices looks up and returns all indices for the specified keys.
 func (isp *IndexStorageProvider) LookupIndices(ctx context.Context, keys []string) ([]string, error) {
-	if isp.db == nil {
+	if isp.readDB == nil {
 		return []string{}, errors.New("sql client has not been initialized")
 	}
 
@@ -79,7 +118,7 @@ func (isp *IndexStorageProvider) LookupIndices(ctx context.Context, keys []strin
 	if err != nil {
 		return []string{}, fmt.Errorf("error preparing statement: %w", err)
 	}
-	rows, err := isp.db.QueryContext(ctx, isp.db.Rebind(query), args...)
+	rows, err := isp.readDB.QueryContext(ctx, isp.readDB.Rebind(query), args...)
 	if err != nil {
 		return []string{}, fmt.Errorf("error looking up indices from mysql: %w", err)
 	}
@@ -100,18 +139,17 @@ func (isp *IndexStorageProvider) LookupIndices(ctx context.Context, keys []strin
 	return entryUUIDs, nil
 }
 
-// WriteIndex adds the index for the specified key. The key value will be canonicalized
-// by converting all characters into a lowercase value before appending the index in Redis
+// WriteIndex adds the index for the specified keys.
 func (isp *IndexStorageProvider) WriteIndex(ctx context.Context, keys []string, index string) error {
-	if isp.db == nil {
+	if isp.writeDB == nil {
 		return errors.New("sql client has not been initialized")
 	}
 
-	var valueMaps []map[string]interface{}
+	valueMaps := make([]map[string]interface{}, 0, len(keys))
 	for _, key := range keys {
 		valueMaps = append(valueMaps, map[string]interface{}{"key": key, "uuid": index})
 	}
-	result, err := isp.db.NamedExecContext(ctx, writeStmt, valueMaps)
+	result, err := isp.writeDB.NamedExecContext(ctx, writeStmt, valueMaps)
 	if err != nil {
 		return fmt.Errorf("mysql write error: %w", err)
 	}
@@ -125,9 +163,19 @@ func (isp *IndexStorageProvider) WriteIndex(ctx context.Context, keys []string, 
 
 // Shutdown cleans up any client resources that may be held by the provider
 func (isp *IndexStorageProvider) Shutdown() error {
-	if isp.db == nil {
-		return nil
+	// a registered collector keeps reporting the closed pools as all-zero, and blocks a
+	// replacement provider from registering its own
+	if isp.collector != nil {
+		prometheus.DefaultRegisterer.Unregister(isp.collector)
+		isp.collector = nil
 	}
 
-	return isp.db.Close()
+	var errs []error
+	if isp.readDB != nil {
+		errs = append(errs, isp.readDB.Close())
+	}
+	if isp.writeDB != nil {
+		errs = append(errs, isp.writeDB.Close())
+	}
+	return errors.Join(errs...)
 }
