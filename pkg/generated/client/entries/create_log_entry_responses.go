@@ -27,7 +27,6 @@ import (
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -74,21 +73,17 @@ func NewCreateLogEntryCreated() *CreateLogEntryCreated {
 	return &CreateLogEntryCreated{}
 }
 
-/*
-CreateLogEntryCreated describes a response with status code 201, with default header values.
-
-Returns the entry created in the transparency log
-*/
+// CreateLogEntryCreated describes a response with status code 201, with default header values.
+//
+// Returns the entry created in the transparency log
 type CreateLogEntryCreated struct {
 
-	/* UUID of log entry
-	 */
+	// UUID of log entry
 	ETag string
 
-	/* URI location of log entry
-
-	   Format: uri
-	*/
+	// URI location of log entry
+	//
+	// Format: uri
 	Location strfmt.URI
 
 	Payload models.LogEntry
@@ -171,11 +166,9 @@ func NewCreateLogEntryBadRequest() *CreateLogEntryBadRequest {
 	return &CreateLogEntryBadRequest{}
 }
 
-/*
-CreateLogEntryBadRequest describes a response with status code 400, with default header values.
-
-The content supplied to the server was invalid
-*/
+// CreateLogEntryBadRequest describes a response with status code 400, with default header values.
+//
+// The content supplied to the server was invalid
 type CreateLogEntryBadRequest struct {
 	Payload *models.Error
 }
@@ -241,11 +234,9 @@ func NewCreateLogEntryConflict() *CreateLogEntryConflict {
 	return &CreateLogEntryConflict{}
 }
 
-/*
-CreateLogEntryConflict describes a response with status code 409, with default header values.
-
-The request conflicts with the current state of the transparency log
-*/
+// CreateLogEntryConflict describes a response with status code 409, with default header values.
+//
+// The request conflicts with the current state of the transparency log
 type CreateLogEntryConflict struct {
 	Location strfmt.URI
 
@@ -326,11 +317,9 @@ func NewCreateLogEntryDefault(code int) *CreateLogEntryDefault {
 	}
 }
 
-/*
-CreateLogEntryDefault describes a response with status code -1, with default header values.
-
-There was an internal error in the server while processing the request
-*/
+// CreateLogEntryDefault describes a response with status code -1, with default header values.
+//
+// There was an internal error in the server while processing the request
 type CreateLogEntryDefault struct {
 	_statusCode int
 

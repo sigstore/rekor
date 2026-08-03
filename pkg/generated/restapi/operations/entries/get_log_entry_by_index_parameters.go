@@ -25,7 +25,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/go-openapi/validate"
 )
 
@@ -44,12 +44,10 @@ func NewGetLogEntryByIndexParams() GetLogEntryByIndexParams {
 type GetLogEntryByIndexParams struct {
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
-
-	/*specifies the index of the entry in the transparency log to be retrieved
-	  Required: true
-	  Minimum: 0
-	  In: query
-	*/
+	// specifies the index of the entry in the transparency log to be retrieved
+	// Required: true
+	// Minimum: 0
+	// In: query
 	LogIndex int64
 }
 
@@ -90,7 +88,7 @@ func (o *GetLogEntryByIndexParams) bindLogIndex(rawData []string, hasKey bool, f
 		return err
 	}
 
-	value, err := swag.ConvertInt64(raw)
+	value, err := conv.ConvertInt64(raw)
 	if err != nil {
 		return errors.InvalidType("logIndex", "query", "int64", raw)
 	}

@@ -42,12 +42,10 @@ func NewGetLogEntryByUUIDParams() GetLogEntryByUUIDParams {
 type GetLogEntryByUUIDParams struct {
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
-
-	/*the UUID of the entry for which the inclusion proof information should be returned
-	  Required: true
-	  Pattern: ^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$
-	  In: path
-	*/
+	// the UUID of the entry for which the inclusion proof information should be returned
+	// Required: true
+	// Pattern: ^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$
+	// In: path
 	EntryUUID string
 }
 

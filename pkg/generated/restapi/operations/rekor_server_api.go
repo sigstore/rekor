@@ -31,8 +31,7 @@ import (
 	"github.com/go-openapi/runtime/security"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
-
+	"github.com/go-openapi/swag/cmdutils"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/pubkey"
@@ -117,7 +116,7 @@ func NewRekorServerAPI(spec *loads.Document) *RekorServerAPI {
 	}
 }
 
-/*RekorServerAPI Rekor is a cryptographically secure, immutable transparency log for signed software releases. */
+// RekorServerAPI Rekor is a cryptographically secure, immutable transparency log for signed software releases.
 type RekorServerAPI struct {
 	spec            *loads.Document
 	context         *middleware.Context
@@ -183,7 +182,7 @@ type RekorServerAPI struct {
 	ServerShutdown func()
 
 	// Custom command line argument groups with their descriptions
-	CommandLineOptionsGroups []swag.CommandLineOptionsGroup
+	CommandLineOptionsGroups []cmdutils.CommandLineOptionsGroup
 
 	// User defined logger function.
 	Logger func(string, ...any)

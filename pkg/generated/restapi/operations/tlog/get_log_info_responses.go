@@ -22,23 +22,18 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 // GetLogInfoOKCode is the HTTP code returned for type GetLogInfoOK
 const GetLogInfoOKCode int = 200
 
-/*
-GetLogInfoOK A JSON object with the root hash and tree size as properties
-
-swagger:response getLogInfoOK
-*/
+// GetLogInfoOK A JSON object with the root hash and tree size as properties
+//
+// swagger:response getLogInfoOK
 type GetLogInfoOK struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.LogInfo `json:"body,omitempty"`
 }
 
@@ -71,17 +66,13 @@ func (o *GetLogInfoOK) WriteResponse(rw http.ResponseWriter, producer runtime.Pr
 	}
 }
 
-/*
-GetLogInfoDefault There was an internal error in the server while processing the request
-
-swagger:response getLogInfoDefault
-*/
+// GetLogInfoDefault There was an internal error in the server while processing the request
+//
+// swagger:response getLogInfoDefault
 type GetLogInfoDefault struct {
 	_statusCode int
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 

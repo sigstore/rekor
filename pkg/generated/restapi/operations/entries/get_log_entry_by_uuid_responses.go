@@ -22,23 +22,18 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 // GetLogEntryByUUIDOKCode is the HTTP code returned for type GetLogEntryByUUIDOK
 const GetLogEntryByUUIDOKCode int = 200
 
-/*
-GetLogEntryByUUIDOK Information needed for a client to compute the inclusion proof
-
-swagger:response getLogEntryByUuidOK
-*/
+// GetLogEntryByUUIDOK Information needed for a client to compute the inclusion proof
+//
+// swagger:response getLogEntryByUuidOK
 type GetLogEntryByUUIDOK struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload models.LogEntry `json:"body,omitempty"`
 }
 
@@ -77,11 +72,9 @@ func (o *GetLogEntryByUUIDOK) WriteResponse(rw http.ResponseWriter, producer run
 // GetLogEntryByUUIDNotFoundCode is the HTTP code returned for type GetLogEntryByUUIDNotFound
 const GetLogEntryByUUIDNotFoundCode int = 404
 
-/*
-GetLogEntryByUUIDNotFound The content requested could not be found
-
-swagger:response getLogEntryByUuidNotFound
-*/
+// GetLogEntryByUUIDNotFound The content requested could not be found
+//
+// swagger:response getLogEntryByUuidNotFound
 type GetLogEntryByUUIDNotFound struct {
 }
 
@@ -99,17 +92,13 @@ func (o *GetLogEntryByUUIDNotFound) WriteResponse(rw http.ResponseWriter, produc
 	rw.WriteHeader(404)
 }
 
-/*
-GetLogEntryByUUIDDefault There was an internal error in the server while processing the request
-
-swagger:response getLogEntryByUuidDefault
-*/
+// GetLogEntryByUUIDDefault There was an internal error in the server while processing the request
+//
+// swagger:response getLogEntryByUuidDefault
 type GetLogEntryByUUIDDefault struct {
 	_statusCode int
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 

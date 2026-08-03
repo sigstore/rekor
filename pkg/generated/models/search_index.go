@@ -25,7 +25,8 @@ import (
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
+	"github.com/go-openapi/swag/typeutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -86,7 +87,7 @@ func (m *SearchIndex) Validate(formats strfmt.Registry) error {
 }
 
 func (m *SearchIndex) validateEmail(formats strfmt.Registry) error {
-	if swag.IsZero(m.Email) { // not required
+	if typeutils.IsZero(m.Email) { // not required
 		return nil
 	}
 
@@ -98,7 +99,7 @@ func (m *SearchIndex) validateEmail(formats strfmt.Registry) error {
 }
 
 func (m *SearchIndex) validateHash(formats strfmt.Registry) error {
-	if swag.IsZero(m.Hash) { // not required
+	if typeutils.IsZero(m.Hash) { // not required
 		return nil
 	}
 
@@ -139,7 +140,7 @@ func (m *SearchIndex) validateOperatorEnum(path, location string, value string) 
 }
 
 func (m *SearchIndex) validateOperator(formats strfmt.Registry) error {
-	if swag.IsZero(m.Operator) { // not required
+	if typeutils.IsZero(m.Operator) { // not required
 		return nil
 	}
 
@@ -152,7 +153,7 @@ func (m *SearchIndex) validateOperator(formats strfmt.Registry) error {
 }
 
 func (m *SearchIndex) validatePublicKey(formats strfmt.Registry) error {
-	if swag.IsZero(m.PublicKey) { // not required
+	if typeutils.IsZero(m.PublicKey) { // not required
 		return nil
 	}
 
@@ -175,7 +176,7 @@ func (m *SearchIndex) validatePublicKey(formats strfmt.Registry) error {
 }
 
 func (m *SearchIndex) validateSubject(formats strfmt.Registry) error {
-	if swag.IsZero(m.Subject) { // not required
+	if typeutils.IsZero(m.Subject) { // not required
 		return nil
 	}
 
@@ -208,7 +209,7 @@ func (m *SearchIndex) contextValidatePublicKey(ctx context.Context, formats strf
 
 	if m.PublicKey != nil {
 
-		if swag.IsZero(m.PublicKey) { // not required
+		if typeutils.IsZero(m.PublicKey) { // not required
 			return nil
 		}
 
@@ -234,13 +235,13 @@ func (m *SearchIndex) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *SearchIndex) UnmarshalBinary(b []byte) error {
 	var res SearchIndex
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -338,13 +339,13 @@ func (m *SearchIndexPublicKey) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *SearchIndexPublicKey) UnmarshalBinary(b []byte) error {
 	var res SearchIndexPublicKey
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res

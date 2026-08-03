@@ -19,10 +19,11 @@
 package client
 
 import (
+	"maps"
+
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
-
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/client/index"
 	"github.com/sigstore/rekor/pkg/generated/client/pubkey"
@@ -33,15 +34,13 @@ import (
 var Default = NewHTTPClient(nil)
 
 const (
-	// DefaultHost is the default Host
-	// found in Meta (info) section of spec file
+	// DefaultHost is the default Host found in Meta (info) section of spec file.
 	DefaultHost string = "rekor.sigstore.dev"
-	// DefaultBasePath is the default BasePath
-	// found in Meta (info) section of spec file
+	// DefaultBasePath is the default BasePath found in Meta (info) section of spec file.
 	DefaultBasePath string = "/"
 )
 
-// DefaultSchemes are the default schemes found in Meta (info) section of spec file
+// DefaultSchemes are the default schemes found in Meta (info) section of spec file.
 var DefaultSchemes = []string{"http"}
 
 // NewHTTPClient creates a new rekor HTTP client.
@@ -57,13 +56,16 @@ func NewHTTPClientWithConfig(formats strfmt.Registry, cfg *TransportConfig) *Rek
 		cfg = DefaultTransportConfig()
 	}
 
-	// create transport and client
+	// create transport and client.
 	transport := httptransport.New(cfg.Host, cfg.BasePath, cfg.Schemes)
+	maps.Copy(transport.Producers, cfg.Producers)
+	maps.Copy(transport.Consumers, cfg.Consumers)
+
 	return New(transport, formats)
 }
 
-// New creates a new rekor client
-func New(transport runtime.ClientTransport, formats strfmt.Registry) *Rekor {
+// New creates a new rekor client.
+func New(transport runtime.ContextualTransport, formats strfmt.Registry) *Rekor {
 	// ensure nullable parameters have default
 	if formats == nil {
 		formats = strfmt.Default
@@ -75,6 +77,7 @@ func New(transport runtime.ClientTransport, formats strfmt.Registry) *Rekor {
 	cli.Index = index.New(transport, formats)
 	cli.Pubkey = pubkey.New(transport, formats)
 	cli.Tlog = tlog.New(transport, formats)
+
 	return cli
 }
 
@@ -91,9 +94,11 @@ func DefaultTransportConfig() *TransportConfig {
 // TransportConfig contains the transport related info,
 // found in the meta section of the spec file.
 type TransportConfig struct {
-	Host     string
-	BasePath string
-	Schemes  []string
+	Host      string
+	BasePath  string
+	Schemes   []string
+	Producers map[string]runtime.Producer
+	Consumers map[string]runtime.Consumer
 }
 
 // WithHost overrides the default host,
@@ -117,7 +122,19 @@ func (cfg *TransportConfig) WithSchemes(schemes []string) *TransportConfig {
 	return cfg
 }
 
-// Rekor is a client for rekor
+// WithProducers overrides the default producers registered by [httptransport.Runtime].
+func (cfg *TransportConfig) WithProducers(producers map[string]runtime.Producer) *TransportConfig {
+	cfg.Producers = producers
+	return cfg
+}
+
+// WithConsumers overrides the default consumers registered by [httptransport.Runtime].
+func (cfg *TransportConfig) WithConsumers(consumers map[string]runtime.Consumer) *TransportConfig {
+	cfg.Consumers = consumers
+	return cfg
+}
+
+// Rekor is a client for rekor.
 type Rekor struct {
 	Entries entries.ClientService
 
@@ -127,11 +144,11 @@ type Rekor struct {
 
 	Tlog tlog.ClientService
 
-	Transport runtime.ClientTransport
+	Transport runtime.ContextualTransport
 }
 
-// SetTransport changes the transport on the client and all its subresources
-func (c *Rekor) SetTransport(transport runtime.ClientTransport) {
+// SetTransport changes the transport on the client and all its subresources.
+func (c *Rekor) SetTransport(transport runtime.ContextualTransport) {
 	c.Transport = transport
 	c.Entries.SetTransport(transport)
 	c.Index.SetTransport(transport)

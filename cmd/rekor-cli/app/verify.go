@@ -102,7 +102,7 @@ var verifyCmd = &cobra.Command{
 			return nil, err
 		}
 
-		searchParams := entries.NewSearchLogQueryParamsWithContext(ctx)
+		searchParams := entries.NewSearchLogQueryParams()
 		searchParams.SetTimeout(viper.GetDuration("timeout"))
 		searchLogQuery := models.SearchLogQuery{}
 
@@ -137,7 +137,7 @@ var verifyCmd = &cobra.Command{
 		}
 		searchParams.SetEntry(&searchLogQuery)
 
-		resp, err := rekorClient.Entries.SearchLogQuery(searchParams)
+		resp, err := rekorClient.Entries.SearchLogQueryContext(ctx, searchParams)
 		if err != nil {
 			return nil, err
 		}
