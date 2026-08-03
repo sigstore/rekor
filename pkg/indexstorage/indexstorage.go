@@ -74,8 +74,8 @@ func mysqlConnLimits() connLimits {
 		deprecatedOpen = 0
 		deprecatedIdle = 0
 	} else if hasDeprecated {
-		log.Logger.Warnf("search_index.mysql.max_open_connections and max_idle_connections are deprecated "+
-			"and will be split 70/30 between the write and read pools; "+
+		log.Logger.Warnf("search_index.mysql.max_open_connections and max_idle_connections are deprecated " +
+			"and will be split 70/30 between the write and read pools; " +
 			"set the search_index.mysql.read.* and search_index.mysql.write.* keys instead")
 	}
 
