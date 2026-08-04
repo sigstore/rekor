@@ -72,15 +72,11 @@ func NewProvider(dsn string, opts ...Options) (*IndexStorageProvider, error) {
 		return nil, errors.Join(fmt.Errorf("create table if not exists failed: %w", err), provider.Shutdown())
 	}
 
-	provider.collector = &dbStatsCollector{readDB: provider.readDB, writeDB: provider.writeDB}
-	if err := prometheus.DefaultRegisterer.Register(provider.collector); err != nil {
-		provider.collector = nil
-		var alreadyRegistered prometheus.AlreadyRegisteredError
-		if !errors.As(err, &alreadyRegistered) {
-			return nil, errors.Join(fmt.Errorf("registering db stats collector: %w", err), provider.Shutdown())
-		}
-		log.Logger.Warnf("search index db stats already registered by another provider; this provider's pools will not be reported")
+	collector := &dbStatsCollector{readDB: provider.readDB, writeDB: provider.writeDB}
+	if err := prometheus.DefaultRegisterer.Register(collector); err != nil {
+		return nil, errors.Join(fmt.Errorf("registering db stats collector: %w", err), provider.Shutdown())
 	}
+	provider.collector = collector
 
 	// a limit of 0 means unlimited, so report what each pool actually got
 	log.Logger.Infof("search index connection pools: %d read, %d write",
@@ -163,8 +159,7 @@ func (isp *IndexStorageProvider) WriteIndex(ctx context.Context, keys []string, 
 
 // Shutdown cleans up any client resources that may be held by the provider
 func (isp *IndexStorageProvider) Shutdown() error {
-	// a registered collector keeps reporting the closed pools as all-zero, and blocks a
-	// replacement provider from registering its own
+	// a registered collector keeps reporting the closed pools as all-zero
 	if isp.collector != nil {
 		prometheus.DefaultRegisterer.Unregister(isp.collector)
 		isp.collector = nil
