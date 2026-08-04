@@ -119,7 +119,7 @@ Memory and file-based signers should only be used for testing.`)
 
 	rootCmd.PersistentFlags().Uint16("port", 3000, "Port to bind to")
 
-	rootCmd.PersistentFlags().Bool("enable_retrieve_api", true, "enables Redis-based index API endpoint")
+	rootCmd.PersistentFlags().Bool("enable_retrieve_api", true, "enables index API endpoint")
 	_ = rootCmd.PersistentFlags().MarkDeprecated("enable_retrieve_api", "this flag is deprecated in favor of enabled_api_endpoints (searchIndex)")
 	rootCmd.PersistentFlags().String("search_index.storage_provider", "redis",
 		`Index Storage provider to use. Valid options are: [redis, mysql].`)
