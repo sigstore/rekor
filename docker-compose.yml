@@ -31,7 +31,7 @@ services:
       retries: 15
       start_period: 90s
   redis-server:
-    image: docker.io/redis:6.2
+    image: docker.io/valkey/valkey:9.1.1-alpine3.24
     command: [
       "--bind",
       "0.0.0.0",
@@ -44,7 +44,7 @@ services:
       - "6379:6379"
     restart: always # keep the redis server running
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "test", "ping"]
+      test: ["CMD", "valkey-cli", "-a", "test", "ping"]
       interval: 10s
       timeout: 3s
       retries: 3

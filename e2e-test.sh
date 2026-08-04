@@ -28,7 +28,7 @@ make gocovmerge
 
 echo "building test-only containers"
 docker build -t gcp-pubsub-emulator -f Dockerfile.pubsub-emulator .
-docker kill $(docker ps -q) || true
+${docker_compose} down -v || true
 
 echo "starting services"
 ${docker_compose} up -d --build
@@ -41,7 +41,7 @@ go test -c ./cmd/rekor-server -o rekor-server -covermode=count -coverpkg=./...
 
 count=0
 echo -n "waiting up to 120 sec for system to start"
-until [ $(${docker_compose} ps | grep -c "(healthy)") == 6 ];
+until [ $(${docker_compose} ps | grep -c "(healthy)") -eq 6 ];
 do
     if [ $count -eq 12 ]; then
        echo "! timeout reached"

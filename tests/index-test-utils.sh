@@ -90,10 +90,18 @@ docker_up () {
     set +e
 }
 
-redis_cli() {
+valkey_cli() {
     set -e
-    redis-cli -h $REDIS_HOST -a $REDIS_PASSWORD $@ 2>/dev/null
+    local cli="valkey-cli"
+    if ! command -v valkey-cli &> /dev/null; then
+        cli="redis-cli"
+    fi
+    $cli -h ${VALKEY_HOST:-$REDIS_HOST} -a ${VALKEY_PASSWORD:-$REDIS_PASSWORD} "$@" 2>/dev/null
     set +e
+}
+
+redis_cli() {
+    valkey_cli "$@"
 }
 
 mysql_cli() {
