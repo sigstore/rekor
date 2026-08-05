@@ -4,7 +4,7 @@ go 1.25.8
 
 require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/blang/semver v3.5.1+incompatible
+	github.com/blang/semver/v4 v4.0.0
 	github.com/go-openapi/errors v0.22.8
 	github.com/go-openapi/loads v0.25.0
 	github.com/go-openapi/runtime v0.32.5
