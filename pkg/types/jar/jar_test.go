@@ -53,17 +53,17 @@ func TestJARType(t *testing.T) {
 	}
 
 	u := UnmarshalTester{}
-	// ensure semver range parser is working
-	invalidSemVerRange := "not a valid semver range"
-	VersionMap.SetEntryFactory(invalidSemVerRange, u.NewEntry)
+	// ensure empty version is rejected
+	invalidSemVerRange := ""
+	_ = VersionMap.SetEntryFactory(invalidSemVerRange, u.NewEntry)
 	if VersionMap.Count() > 0 {
-		t.Error("invalid semver range was incorrectly added to SemVerToFacFnMap")
+		t.Error("invalid version was incorrectly added to SemVerToFacFnMap")
 	}
 
-	// valid semver range can be parsed
-	VersionMap.SetEntryFactory(">= 1.2.3", u.NewEntry)
+	// valid version can be parsed
+	_ = VersionMap.SetEntryFactory("2.0.1", u.NewEntry)
 	if VersionMap.Count() != 1 {
-		t.Error("valid semver range was not added to SemVerToFacFnMap")
+		t.Error("valid version was not added to SemVerToFacFnMap")
 	}
 
 	u.Jar.APIVersion = nil
@@ -90,7 +90,7 @@ func TestJARType(t *testing.T) {
 	// error in Unmarshal call is raised appropriately
 	u.Jar.APIVersion = conv.Pointer("2.2.0")
 	u2 := UnmarshalFailsTester{}
-	VersionMap.SetEntryFactory(">= 1.2.3", u2.NewEntry)
+	_ = VersionMap.SetEntryFactory("2.2.0", u2.NewEntry)
 	if _, err := brt.UnmarshalEntry(&u.Jar); err == nil {
 		t.Error("unexpected success in Unmarshal when error is thrown")
 	}

@@ -43,7 +43,7 @@ func New() types.TypeImpl {
 	return &brt
 }
 
-var VersionMap = types.NewSemVerEntryFactoryMap()
+var VersionMap = types.NewEntryFactoryMap()
 
 func (brt *BaseRPMType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
 	if pe == nil {
