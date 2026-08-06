@@ -39,6 +39,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"github.com/sigstore/rekor/internal/tlspolicy"
 	pkgapi "github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
@@ -164,8 +165,8 @@ func configureAPI(api *operations.RekorServerAPI) http.Handler {
 }
 
 // The TLS configuration before HTTPS server starts.
-func configureTLS(_ *tls.Config) {
-	// Make all necessary changes to the TLS configuration here.
+func configureTLS(cfg *tls.Config) {
+	tlspolicy.Apply(cfg)
 }
 
 // As soon as server is initialized but not run yet, this function will be called.
