@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -31,6 +32,7 @@ import (
 	"github.com/spf13/viper"
 	"sigs.k8s.io/release-utils/version"
 
+	"github.com/sigstore/rekor/internal/tlspolicy"
 	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/generated/restapi"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations"
@@ -139,7 +141,35 @@ var serveCmd = &cobra.Command{
 
 		server.Host = viper.GetString("rekor_server.address")
 		server.Port = int(viper.GetUint("port"))
-		server.EnabledListeners = []string{"http"}
+
+		// Defaults to plaintext HTTP, so existing deployments are unaffected.
+		scheme := viper.GetString("scheme")
+		server.EnabledListeners = []string{scheme}
+		server.TLSHost = server.Host
+
+		// Override cert fields only when set, preserving the TLS_* env fallbacks.
+		if v := viper.GetString("tls-certificate"); v != "" {
+			server.TLSCertificate = filepath.Clean(v)
+		}
+		if v := viper.GetString("tls-key"); v != "" {
+			server.TLSCertificateKey = filepath.Clean(v)
+		}
+		if v := viper.GetString("tls-ca"); v != "" {
+			server.TLSCACertificate = filepath.Clean(v)
+		}
+		if v := viper.GetUint("tls-port"); v != 0 {
+			server.TLSPort = int(v)
+		}
+
+		policy, err := tlspolicy.Parse(viper.GetString("tls-min-version"), viper.GetStringSlice("tls-cipher-suites"))
+		if err != nil {
+			log.Logger.Fatalf("invalid TLS policy: %v", err)
+		}
+		tlspolicy.Set(policy)
+
+		if err := validateScheme(scheme, server.TLSCertificate, server.TLSCertificateKey); err != nil {
+			log.Logger.Fatal(err)
+		}
 
 		treeID := viper.GetInt64("trillian_log_server.tlog_id")
 
@@ -164,6 +194,22 @@ var serveCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
+}
+
+// validateScheme accepts only http and https; https also requires a
+// certificate/key pair.
+func validateScheme(scheme, tlsCert, tlsKey string) error {
+	switch scheme {
+	case "http":
+		return nil
+	case "https":
+		if tlsCert == "" || tlsKey == "" {
+			return fmt.Errorf("scheme 'https' requires both --tls-certificate and --tls-key (or the TLS_CERTIFICATE and TLS_PRIVATE_KEY environment variables)")
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported scheme %q: supported schemes are http and https", scheme)
+	}
 }
 
 // filterEntryTypes filters the list of compiled-in entry types
