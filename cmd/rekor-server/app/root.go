@@ -180,6 +180,15 @@ Memory and file-based signers should only be used for testing.`)
 	keyAlgorithmHelp := fmt.Sprintf("signing algorithm to use for signing/hashing (allowed %s)", strings.Join(keyAlgorithmTypes, ", "))
 	rootCmd.PersistentFlags().StringSlice("client-signing-algorithms", keyAlgorithmTypes, keyAlgorithmHelp)
 
+	// TLS on the API listener; add "https" to --scheme to serve TLS.
+	rootCmd.PersistentFlags().StringSlice("scheme", []string{"http"}, "listeners to enable on the API; add 'https' to serve TLS (e.g. --scheme http --scheme https)")
+	rootCmd.PersistentFlags().String("tls-certificate", "", "the certificate file to use for serving TLS on the API listener")
+	rootCmd.PersistentFlags().String("tls-key", "", "the private key file (without passphrase) to use for serving TLS on the API listener")
+	rootCmd.PersistentFlags().String("tls-ca", "", "the certificate authority file used to verify client certificates for mutual TLS on the API listener")
+	rootCmd.PersistentFlags().Int("tls-port", 0, "the port to serve TLS on for the API listener; defaults to a random port when unset")
+	rootCmd.PersistentFlags().String("tls-min-version", "", "minimum TLS version for the API listener (1.2 or 1.3); when unset defaults to 1.3")
+	rootCmd.PersistentFlags().StringSlice("tls-cipher-suites", nil, "allowed TLS 1.2 cipher suite names (crypto/tls spelling) for the API listener; empty keeps the built-in default. Has no effect on TLS 1.3.")
+
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
 		log.Logger.Fatal(err)
 	}
