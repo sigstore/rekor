@@ -43,9 +43,9 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/require"
+	"go.yaml.in/yaml/v3"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"gopkg.in/yaml.v2"
 )
 
 func TestNewLogRanges(t *testing.T) {
@@ -860,7 +860,6 @@ func TestNewLogRangesWithMock(t *testing.T) {
 	defer mockCtl.Finish()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			got, err := NewLogRanges(tt.args.ctx, tt.args.path, tt.args.treeID, sc)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewLogRanges() error = %v, wantErr %v", err, tt.wantErr)
