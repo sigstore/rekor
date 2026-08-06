@@ -20,3 +20,15 @@ trillian_log_server:
 rekor_server:
   address: "127.0.0.1"
   port: 3000
+
+# Serve the API over TLS. Disabled by default (HTTP only); uncomment to enable.
+# scheme:
+#   - http
+#   - https
+# tls-certificate: "/path/to/server.crt"
+# tls-key: "/path/to/server.key"
+# tls-ca: "/path/to/client-ca.crt"   # optional; enables mutual TLS
+# tls-port: 3443
+# tls-min-version: "1.3"             # 1.2 or 1.3; defaults to 1.3
+# tls-cipher-suites:                 # TLS 1.2 only; ignored for TLS 1.3
+#   - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384

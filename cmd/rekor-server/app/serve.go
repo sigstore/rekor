@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -31,6 +32,7 @@ import (
 	"github.com/spf13/viper"
 	"sigs.k8s.io/release-utils/version"
 
+	"github.com/sigstore/rekor/internal/tlspolicy"
 	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/generated/restapi"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations"
@@ -137,7 +139,36 @@ var serveCmd = &cobra.Command{
 
 		server.Host = viper.GetString("rekor_server.address")
 		server.Port = int(viper.GetUint("port"))
-		server.EnabledListeners = []string{"http"}
+
+		// Enable the API listener scheme and TLS material from Rekor's config.
+		// Defaults to plaintext HTTP only, so existing deployments are unaffected.
+		schemes := viper.GetStringSlice("scheme")
+		server.EnabledListeners = schemes
+		server.TLSHost = server.Host
+
+		// Override cert fields only when set, preserving the TLS_* env fallbacks.
+		if v := viper.GetString("tls-certificate"); v != "" {
+			server.TLSCertificate = v
+		}
+		if v := viper.GetString("tls-key"); v != "" {
+			server.TLSCertificateKey = v
+		}
+		if v := viper.GetString("tls-ca"); v != "" {
+			server.TLSCACertificate = v
+		}
+		if v := viper.GetInt("tls-port"); v != 0 {
+			server.TLSPort = v
+		}
+
+		policy, err := tlspolicy.Parse(viper.GetString("tls-min-version"), viper.GetStringSlice("tls-cipher-suites"))
+		if err != nil {
+			log.Logger.Fatalf("invalid TLS policy: %v", err)
+		}
+		tlspolicy.Set(policy)
+
+		if slices.Contains(schemes, "https") && (server.TLSCertificate == "" || server.TLSCertificateKey == "") {
+			log.Logger.Fatal("scheme 'https' requires both --tls-certificate and --tls-key (or the TLS_CERTIFICATE and TLS_PRIVATE_KEY environment variables)")
+		}
 
 		treeID := viper.GetInt64("trillian_log_server.tlog_id")
 
