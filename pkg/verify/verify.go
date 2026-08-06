@@ -48,11 +48,11 @@ func ProveConsistency(ctx context.Context, rClient *client.Rekor,
 			return errors.New("old root hash does not match STH hash")
 		}
 	case oldTreeSize < int64(newSTH.Size): // nolint: gosec
-		consistencyParams := tlog.NewGetLogProofParamsWithContext(ctx)
+		consistencyParams := tlog.NewGetLogProofParams()
 		consistencyParams.FirstSize = &oldTreeSize      // Root size at the old, or trusted state.
 		consistencyParams.LastSize = int64(newSTH.Size) // nolint: gosec // Root size at the new state to verify against.
 		consistencyParams.TreeID = &treeID
-		consistencyProof, err := rClient.Tlog.GetLogProof(consistencyParams)
+		consistencyProof, err := rClient.Tlog.GetLogProofContext(ctx, consistencyParams)
 		if err != nil {
 			return err
 		}
@@ -86,8 +86,8 @@ func VerifyCurrentCheckpoint(ctx context.Context, rClient *client.Rekor, verifie
 	}
 
 	// Get and verify against the current STH.
-	infoParams := tlog.NewGetLogInfoParamsWithContext(ctx)
-	result, err := rClient.Tlog.GetLogInfo(infoParams)
+	infoParams := tlog.NewGetLogInfoParams()
+	result, err := rClient.Tlog.GetLogInfoContext(ctx, infoParams)
 	if err != nil {
 		return nil, err
 	}

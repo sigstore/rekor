@@ -277,9 +277,9 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) (err erro
 	for i := *startIndex; i <= *endIndex; i++ {
 		index := i // capture loop variable for closure
 		group.Go(func() error {
-			params := entries.NewGetLogEntryByIndexParamsWithContext(ctx)
+			params := entries.NewGetLogEntryByIndexParams()
 			params.SetLogIndex(int64(index))
-			resp, err := rekorClient.Entries.GetLogEntryByIndex(params)
+			resp, err := rekorClient.Entries.GetLogEntryByIndexContext(ctx, params)
 			if err != nil {
 				// in case of sigterm, just return to exit gracefully
 				if errors.Is(err, context.Canceled) {

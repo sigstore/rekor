@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/sigstore/rekor/pkg/generated/client/index"
+	"github.com/sigstore/rekor/pkg/generated/client/tlog"
 	"go.uber.org/goleak"
 )
 
@@ -48,7 +49,7 @@ func TestGetRekorClientWithUserAgent(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, _ = client.Tlog.GetLogInfo(nil)
+	_, _ = client.Tlog.GetLogInfo(tlog.NewGetLogInfoParams())
 	if !requestReceived {
 		t.Fatal("no requests were received")
 	}
@@ -75,7 +76,7 @@ func TestGetRekorClientWithCustomPath(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, _ = client.Tlog.GetLogInfo(nil)
+	_, _ = client.Tlog.GetLogInfo(tlog.NewGetLogInfoParams())
 	if !requestReceived {
 		t.Fatal("no requests were received")
 	}
@@ -103,7 +104,7 @@ func TestGetRekorClientWithRetryCount(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = client.Tlog.GetLogInfo(nil)
+	_, err = client.Tlog.GetLogInfo(tlog.NewGetLogInfoParams())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -148,7 +149,7 @@ func TestRetryErrorHandlerSurfacesServerResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = client.Tlog.GetLogInfo(nil)
+	_, err = client.Tlog.GetLogInfo(tlog.NewGetLogInfoParams())
 	if err == nil {
 		t.Fatal("expected an error after retries were exhausted")
 	}

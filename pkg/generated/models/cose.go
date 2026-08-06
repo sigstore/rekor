@@ -25,7 +25,7 @@ import (
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -135,7 +135,7 @@ func (m Cose) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	return swag.ConcatJSON(b1, b2, b3), nil
+	return jsonutils.ConcatJSON(b1, b2, b3), nil
 }
 
 // Validate validates this cose
@@ -193,13 +193,13 @@ func (m *Cose) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *Cose) UnmarshalBinary(b []byte) error {
 	var res Cose
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res

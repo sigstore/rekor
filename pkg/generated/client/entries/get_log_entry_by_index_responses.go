@@ -26,7 +26,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -67,11 +66,9 @@ func NewGetLogEntryByIndexOK() *GetLogEntryByIndexOK {
 	return &GetLogEntryByIndexOK{}
 }
 
-/*
-GetLogEntryByIndexOK describes a response with status code 200, with default header values.
-
-the entry in the transparency log requested along with an inclusion proof
-*/
+// GetLogEntryByIndexOK describes a response with status code 200, with default header values.
+//
+// the entry in the transparency log requested along with an inclusion proof
 type GetLogEntryByIndexOK struct {
 	Payload models.LogEntry
 }
@@ -135,11 +132,9 @@ func NewGetLogEntryByIndexNotFound() *GetLogEntryByIndexNotFound {
 	return &GetLogEntryByIndexNotFound{}
 }
 
-/*
-GetLogEntryByIndexNotFound describes a response with status code 404, with default header values.
-
-The content requested could not be found
-*/
+// GetLogEntryByIndexNotFound describes a response with status code 404, with default header values.
+//
+// The content requested could not be found
 type GetLogEntryByIndexNotFound struct {
 }
 
@@ -193,11 +188,9 @@ func NewGetLogEntryByIndexDefault(code int) *GetLogEntryByIndexDefault {
 	}
 }
 
-/*
-GetLogEntryByIndexDefault describes a response with status code -1, with default header values.
-
-There was an internal error in the server while processing the request
-*/
+// GetLogEntryByIndexDefault describes a response with status code -1, with default header values.
+//
+// There was an internal error in the server while processing the request
 type GetLogEntryByIndexDefault struct {
 	_statusCode int
 

@@ -26,7 +26,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -61,11 +60,9 @@ func NewGetLogInfoOK() *GetLogInfoOK {
 	return &GetLogInfoOK{}
 }
 
-/*
-GetLogInfoOK describes a response with status code 200, with default header values.
-
-A JSON object with the root hash and tree size as properties
-*/
+// GetLogInfoOK describes a response with status code 200, with default header values.
+//
+// A JSON object with the root hash and tree size as properties
 type GetLogInfoOK struct {
 	Payload *models.LogInfo
 }
@@ -133,11 +130,9 @@ func NewGetLogInfoDefault(code int) *GetLogInfoDefault {
 	}
 }
 
-/*
-GetLogInfoDefault describes a response with status code -1, with default header values.
-
-There was an internal error in the server while processing the request
-*/
+// GetLogInfoDefault describes a response with status code -1, with default header values.
+//
+// There was an internal error in the server while processing the request
 type GetLogInfoDefault struct {
 	_statusCode int
 

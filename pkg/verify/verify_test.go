@@ -45,14 +45,22 @@ func (m *TlogClient) GetLogProof(_ *tlog.GetLogProofParams, _ ...tlog.ClientOpti
 		}}, nil
 }
 
+func (m *TlogClient) GetLogProofContext(_ context.Context, params *tlog.GetLogProofParams, opts ...tlog.ClientOption) (*tlog.GetLogProofOK, error) {
+	return m.GetLogProof(params, opts...)
+}
+
 func (m *TlogClient) GetLogInfo(_ *tlog.GetLogInfoParams, _ ...tlog.ClientOption) (*tlog.GetLogInfoOK, error) {
 	return &tlog.GetLogInfoOK{
 		Payload: &m.LogInfo,
 	}, nil
 }
 
+func (m *TlogClient) GetLogInfoContext(_ context.Context, params *tlog.GetLogInfoParams, opts ...tlog.ClientOption) (*tlog.GetLogInfoOK, error) {
+	return m.GetLogInfo(params, opts...)
+}
+
 // TODO: Implement mock
-func (m *TlogClient) SetTransport(_ runtime.ClientTransport) {
+func (m *TlogClient) SetTransport(_ runtime.ContextualTransport) {
 }
 
 func TestConsistency(t *testing.T) {

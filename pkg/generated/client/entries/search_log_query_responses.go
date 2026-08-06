@@ -26,7 +26,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -73,11 +72,9 @@ func NewSearchLogQueryOK() *SearchLogQueryOK {
 	return &SearchLogQueryOK{}
 }
 
-/*
-SearchLogQueryOK describes a response with status code 200, with default header values.
-
-Returns zero or more entries from the transparency log, according to how many were included in request query
-*/
+// SearchLogQueryOK describes a response with status code 200, with default header values.
+//
+// Returns zero or more entries from the transparency log, according to how many were included in request query
 type SearchLogQueryOK struct {
 	Payload []models.LogEntry
 }
@@ -141,11 +138,9 @@ func NewSearchLogQueryBadRequest() *SearchLogQueryBadRequest {
 	return &SearchLogQueryBadRequest{}
 }
 
-/*
-SearchLogQueryBadRequest describes a response with status code 400, with default header values.
-
-The content supplied to the server was invalid
-*/
+// SearchLogQueryBadRequest describes a response with status code 400, with default header values.
+//
+// The content supplied to the server was invalid
 type SearchLogQueryBadRequest struct {
 	Payload *models.Error
 }
@@ -211,11 +206,9 @@ func NewSearchLogQueryUnprocessableEntity() *SearchLogQueryUnprocessableEntity {
 	return &SearchLogQueryUnprocessableEntity{}
 }
 
-/*
-SearchLogQueryUnprocessableEntity describes a response with status code 422, with default header values.
-
-The server understood the request but is unable to process the contained instructions
-*/
+// SearchLogQueryUnprocessableEntity describes a response with status code 422, with default header values.
+//
+// The server understood the request but is unable to process the contained instructions
 type SearchLogQueryUnprocessableEntity struct {
 	Payload *models.Error
 }
@@ -283,11 +276,9 @@ func NewSearchLogQueryDefault(code int) *SearchLogQueryDefault {
 	}
 }
 
-/*
-SearchLogQueryDefault describes a response with status code -1, with default header values.
-
-There was an internal error in the server while processing the request
-*/
+// SearchLogQueryDefault describes a response with status code -1, with default header values.
+//
+// There was an internal error in the server while processing the request
 type SearchLogQueryDefault struct {
 	_statusCode int
 

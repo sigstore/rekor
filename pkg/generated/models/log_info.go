@@ -25,7 +25,8 @@ import (
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
+	"github.com/go-openapi/swag/typeutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -88,12 +89,12 @@ func (m *LogInfo) Validate(formats strfmt.Registry) error {
 }
 
 func (m *LogInfo) validateInactiveShards(formats strfmt.Registry) error {
-	if swag.IsZero(m.InactiveShards) { // not required
+	if typeutils.IsZero(m.InactiveShards) { // not required
 		return nil
 	}
 
 	for i := 0; i < len(m.InactiveShards); i++ {
-		if swag.IsZero(m.InactiveShards[i]) { // not required
+		if typeutils.IsZero(m.InactiveShards[i]) { // not required
 			continue
 		}
 
@@ -185,7 +186,7 @@ func (m *LogInfo) contextValidateInactiveShards(ctx context.Context, formats str
 
 		if m.InactiveShards[i] != nil {
 
-			if swag.IsZero(m.InactiveShards[i]) { // not required
+			if typeutils.IsZero(m.InactiveShards[i]) { // not required
 				return nil
 			}
 
@@ -213,13 +214,13 @@ func (m *LogInfo) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *LogInfo) UnmarshalBinary(b []byte) error {
 	var res LogInfo
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res

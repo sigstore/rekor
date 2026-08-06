@@ -22,23 +22,18 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 // GetPublicKeyOKCode is the HTTP code returned for type GetPublicKeyOK
 const GetPublicKeyOKCode int = 200
 
-/*
-GetPublicKeyOK The public key
-
-swagger:response getPublicKeyOK
-*/
+// GetPublicKeyOK The public key
+//
+// swagger:response getPublicKeyOK
 type GetPublicKeyOK struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload string `json:"body,omitempty"`
 }
 
@@ -69,17 +64,13 @@ func (o *GetPublicKeyOK) WriteResponse(rw http.ResponseWriter, producer runtime.
 	}
 }
 
-/*
-GetPublicKeyDefault There was an internal error in the server while processing the request
-
-swagger:response getPublicKeyDefault
-*/
+// GetPublicKeyDefault There was an internal error in the server while processing the request
+//
+// swagger:response getPublicKeyDefault
 type GetPublicKeyDefault struct {
 	_statusCode int
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 

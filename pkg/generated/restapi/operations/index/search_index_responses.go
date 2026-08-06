@@ -22,23 +22,18 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 // SearchIndexOKCode is the HTTP code returned for type SearchIndexOK
 const SearchIndexOKCode int = 200
 
-/*
-SearchIndexOK Returns zero or more entry UUIDs from the transparency log based on search query
-
-swagger:response searchIndexOK
-*/
+// SearchIndexOK Returns zero or more entry UUIDs from the transparency log based on search query
+//
+// swagger:response searchIndexOK
 type SearchIndexOK struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload []string `json:"body,omitempty"`
 }
 
@@ -77,16 +72,12 @@ func (o *SearchIndexOK) WriteResponse(rw http.ResponseWriter, producer runtime.P
 // SearchIndexBadRequestCode is the HTTP code returned for type SearchIndexBadRequest
 const SearchIndexBadRequestCode int = 400
 
-/*
-SearchIndexBadRequest The content supplied to the server was invalid
-
-swagger:response searchIndexBadRequest
-*/
+// SearchIndexBadRequest The content supplied to the server was invalid
+//
+// swagger:response searchIndexBadRequest
 type SearchIndexBadRequest struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 
@@ -119,17 +110,13 @@ func (o *SearchIndexBadRequest) WriteResponse(rw http.ResponseWriter, producer r
 	}
 }
 
-/*
-SearchIndexDefault There was an internal error in the server while processing the request
-
-swagger:response searchIndexDefault
-*/
+// SearchIndexDefault There was an internal error in the server while processing the request
+//
+// swagger:response searchIndexDefault
 type SearchIndexDefault struct {
 	_statusCode int
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 

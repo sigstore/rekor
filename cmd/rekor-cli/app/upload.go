@@ -165,14 +165,14 @@ var uploadCmd = &cobra.Command{
 }
 
 func tryUpload(ctx context.Context, rekorClient *gen_client.Rekor, entry models.ProposedEntry) (*entries.CreateLogEntryCreated, error) {
-	params := entries.NewCreateLogEntryParamsWithContext(ctx)
+	params := entries.NewCreateLogEntryParams()
 	params.SetTimeout(viper.GetDuration("timeout"))
 	if pei, ok := entry.(types.ProposedEntryIterator); ok {
 		params.SetProposedEntry(pei.Get())
 	} else {
 		params.SetProposedEntry(entry)
 	}
-	resp, err := rekorClient.Entries.CreateLogEntry(params)
+	resp, err := rekorClient.Entries.CreateLogEntryContext(ctx, params)
 	if err != nil {
 		if e, ok := err.(*entries.CreateLogEntryBadRequest); ok {
 			if pei, ok := entry.(types.ProposedEntryIterator); ok {

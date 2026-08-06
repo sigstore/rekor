@@ -26,7 +26,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -67,11 +66,9 @@ func NewGetLogEntryByUUIDOK() *GetLogEntryByUUIDOK {
 	return &GetLogEntryByUUIDOK{}
 }
 
-/*
-GetLogEntryByUUIDOK describes a response with status code 200, with default header values.
-
-Information needed for a client to compute the inclusion proof
-*/
+// GetLogEntryByUUIDOK describes a response with status code 200, with default header values.
+//
+// Information needed for a client to compute the inclusion proof
 type GetLogEntryByUUIDOK struct {
 	Payload models.LogEntry
 }
@@ -135,11 +132,9 @@ func NewGetLogEntryByUUIDNotFound() *GetLogEntryByUUIDNotFound {
 	return &GetLogEntryByUUIDNotFound{}
 }
 
-/*
-GetLogEntryByUUIDNotFound describes a response with status code 404, with default header values.
-
-The content requested could not be found
-*/
+// GetLogEntryByUUIDNotFound describes a response with status code 404, with default header values.
+//
+// The content requested could not be found
 type GetLogEntryByUUIDNotFound struct {
 }
 
@@ -193,11 +188,9 @@ func NewGetLogEntryByUUIDDefault(code int) *GetLogEntryByUUIDDefault {
 	}
 }
 
-/*
-GetLogEntryByUUIDDefault describes a response with status code -1, with default header values.
-
-There was an internal error in the server while processing the request
-*/
+// GetLogEntryByUUIDDefault describes a response with status code -1, with default header values.
+//
+// There was an internal error in the server while processing the request
 type GetLogEntryByUUIDDefault struct {
 	_statusCode int
 
