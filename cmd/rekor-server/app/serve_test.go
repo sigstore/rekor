@@ -130,3 +130,67 @@ func TestFilterEntryTypes_DuplicatesAreIdempotent(t *testing.T) {
 		t.Errorf("duplicate kinds should de-dupe\n got: %v\nwant: %v", got, want)
 	}
 }
+
+func TestValidateSchemes(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		schemes   []string
+		tlsCert   string
+		tlsKey    string
+		wantErr   bool
+		errSubstr string
+	}{
+		{name: "default http only", schemes: []string{"http"}},
+		{name: "https with cert and key", schemes: []string{"https"}, tlsCert: "c", tlsKey: "k"},
+		{name: "unix only", schemes: []string{"unix"}},
+		{name: "https and unix", schemes: []string{"https", "unix"}, tlsCert: "c", tlsKey: "k"},
+		{
+			name:      "unknown scheme rejected",
+			schemes:   []string{"htps"},
+			wantErr:   true,
+			errSubstr: "unsupported scheme",
+		},
+		{
+			name:      "http and https rejected",
+			schemes:   []string{"http", "https"},
+			tlsCert:   "c",
+			tlsKey:    "k",
+			wantErr:   true,
+			errSubstr: "mutually exclusive",
+		},
+		{
+			name:      "https without cert",
+			schemes:   []string{"https"},
+			tlsKey:    "k",
+			wantErr:   true,
+			errSubstr: "requires both",
+		},
+		{
+			name:      "https without key",
+			schemes:   []string{"https"},
+			tlsCert:   "c",
+			wantErr:   true,
+			errSubstr: "requires both",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateSchemes(tc.schemes, tc.tlsCert, tc.tlsKey)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+				if tc.errSubstr != "" && !strings.Contains(err.Error(), tc.errSubstr) {
+					t.Errorf("error %q should contain %q", err.Error(), tc.errSubstr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
