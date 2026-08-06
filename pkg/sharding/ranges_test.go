@@ -43,9 +43,9 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/require"
-	"go.yaml.in/yaml/v3"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"sigs.k8s.io/yaml"
 )
 
 func TestNewLogRanges(t *testing.T) {
@@ -551,8 +551,12 @@ func TestLogRangesFromPath(t *testing.T) {
 						t.Fatalf("Failed to encode json: %v", err)
 					}
 				case tt.wantYaml:
-					if err := yaml.NewEncoder(f).Encode(tt.want); err != nil {
+					content, err := yaml.Marshal(tt.want)
+					if err != nil {
 						t.Fatalf("Failed to encode yaml: %v", err)
+					}
+					if _, err := f.Write(content); err != nil {
+						t.Fatalf("Failed to write yaml: %v", err)
 					}
 				case tt.wantInvalidJSON:
 					if _, err := f.WriteString("invalid json"); err != nil {
