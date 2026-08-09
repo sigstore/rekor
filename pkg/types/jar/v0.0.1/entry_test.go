@@ -29,7 +29,6 @@ import (
 	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
-	"github.com/spf13/viper"
 	"go.uber.org/goleak"
 )
 
@@ -172,8 +171,8 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 func TestJarMetadataSize(t *testing.T) {
 	jarBytes, _ := os.ReadFile("tests/test.jar")
 
-	os.Setenv("MAX_JAR_METADATA_SIZE", "10")
-	viper.AutomaticEnv()
+	defer SetMaxJarMetadataSize(maxJarMetadataSize)
+	SetMaxJarMetadataSize(10)
 
 	v := V001Entry{
 		JARModel: models.JarV001Schema{

@@ -119,7 +119,7 @@ func logEntryFromLeaf(ctx context.Context, leaf *trillian.LogLeaf, signedLogRoot
 	if ok {
 		sc = val
 	} else {
-		scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), tid, root.TreeSize, root.RootHash, logRange.Signer)
+		scBytes, err := util.CreateAndSignCheckpoint(ctx, checkpointHostname, tid, root.TreeSize, root.RootHash, logRange.Signer)
 		if err != nil {
 			return nil, err
 		}
@@ -440,7 +440,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		hashes = append(hashes, hex.EncodeToString(hash))
 	}
 
-	scBytes, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), api.ActiveTreeID(), root.TreeSize, root.RootHash, api.logRanges.GetActive().Signer)
+	scBytes, err := util.CreateAndSignCheckpoint(ctx, checkpointHostname, api.ActiveTreeID(), root.TreeSize, root.RootHash, api.logRanges.GetActive().Signer)
 	if err != nil {
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, sthGenerateError)
 	}
@@ -488,10 +488,10 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 				log.ContextLogger(ctx).Error(err)
 				return
 			}
-			if viper.GetBool("rekor_server.publish_events_protobuf") {
+			if publishEventsProtobuf {
 				go publishEvent(ctx, api.newEntryPublisher, event, events.ContentTypeProtobuf)
 			}
-			if viper.GetBool("rekor_server.publish_events_json") {
+			if publishEventsJSON {
 				go publishEvent(ctx, api.newEntryPublisher, event, events.ContentTypeJSON)
 			}
 		}()

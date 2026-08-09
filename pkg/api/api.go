@@ -71,6 +71,10 @@ var DefaultClientSigningAlgorithms = AllowedClientSigningAlgorithms
 func NewAPI(treeID int64) (*API, error) {
 	ctx := context.Background()
 
+	checkpointHostname = viper.GetString("rekor_server.hostname")
+	publishEventsProtobuf = viper.GetBool("rekor_server.publish_events_protobuf")
+	publishEventsJSON = viper.GetBool("rekor_server.publish_events_json")
+
 	// this is also used for the active tree
 	defaultGRPCConfig := trillianclient.GRPCConfig{
 		Address:             viper.GetString("trillian_log_server.address"),
@@ -150,7 +154,7 @@ func NewAPI(treeID int64) (*API, error) {
 		if !ok {
 			return nil, fmt.Errorf("no root found for inactive shard %d", r.TreeID)
 		}
-		cp, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), r.TreeID, uint64(r.TreeLength), root.RootHash, r.Signer) //nolint:gosec
+		cp, err := util.CreateAndSignCheckpoint(ctx, checkpointHostname, r.TreeID, uint64(r.TreeLength), root.RootHash, r.Signer) //nolint:gosec
 		if err != nil {
 			return nil, fmt.Errorf("error signing checkpoint for inactive shard %d: %w", r.TreeID, err)
 		}
@@ -159,7 +163,7 @@ func NewAPI(treeID int64) (*API, error) {
 
 	var newEntryPublisher pubsub.Publisher
 	if p := viper.GetString("rekor_server.new_entry_publisher"); p != "" {
-		if !viper.GetBool("rekor_server.publish_events_protobuf") && !viper.GetBool("rekor_server.publish_events_json") {
+		if !publishEventsProtobuf && !publishEventsJSON {
 			return nil, fmt.Errorf("%q is configured but neither %q or %q are enabled", "new_entry_publisher", "publish_events_protobuf", "publish_events_json")
 		}
 		newEntryPublisher, err = pubsub.Get(ctx, p)
@@ -184,6 +188,15 @@ var (
 	api                      *API
 	attestationStorageClient storage.AttestationStorage
 	indexStorageClient       indexstorage.IndexStorage
+)
+
+// Immutable config snapshotted by NewAPI. viper rebuilds a flat map of every
+// bound pflag on each lookup of a dotted key, so reading these per-request
+// allocates for a value that cannot change after startup.
+var (
+	checkpointHostname    string
+	publishEventsProtobuf bool
+	publishEventsJSON     bool
 )
 
 func ConfigureAPI(treeID int64) {
