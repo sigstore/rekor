@@ -26,8 +26,6 @@ import (
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 
-	"github.com/hashicorp/go-cleanhttp"
-	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/util"
 )
@@ -43,7 +41,7 @@ const maxErrorBodyBytes = 512
 // reason the retries failed — especially when the server returned an error
 // response (5xx) rather than a transport error. See
 // https://github.com/sigstore/rekor/issues/2640.
-func retryErrorHandler(resp *http.Response, err error, numTries int) (*http.Response, error) {
+func retryErrorHandler(resp *http.Response, err error, numTries uint) (*http.Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("giving up after %d attempt(s): %w", numTries, err)
 	}
@@ -69,28 +67,35 @@ func GetRekorClient(rekorServerURL string, opts ...Option) (*client.Rekor, error
 	}
 	o := makeOptions(opts...)
 
-	retryableClient := retryablehttp.NewClient()
-	defaultTransport := cleanhttp.DefaultTransport()
+	dt, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, fmt.Errorf("default transport does not implement *http.Transport")
+	}
+	t := dt.Clone()
+	t.DisableKeepAlives = true
+	t.MaxIdleConnsPerHost = -1
 	if o.NoDisableKeepalives {
-		defaultTransport.DisableKeepAlives = false
+		t.DisableKeepAlives = false
 	}
 	if o.InsecureTLS {
 		/* #nosec G402 */
-		defaultTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		t.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	} else if o.TLSConfig != nil {
-		defaultTransport.TLSClientConfig = o.TLSConfig
+		t.TLSClientConfig = o.TLSConfig
 	}
-	retryableClient.HTTPClient = &http.Client{
-		Transport: defaultTransport,
-	}
-	retryableClient.RetryMax = int(o.RetryCount)
-	retryableClient.RetryWaitMin = o.RetryWaitMin
-	retryableClient.RetryWaitMax = o.RetryWaitMax
-	retryableClient.Logger = o.Logger
-	retryableClient.ErrorHandler = retryErrorHandler
 
-	httpClient := retryableClient.StandardClient()
-	httpClient.Transport = createRoundTripper(httpClient.Transport, o)
+	retryTransport := &retryTransport{
+		Transport:    t,
+		MaxRetries:   o.RetryCount,
+		RetryWaitMin: o.RetryWaitMin,
+		RetryWaitMax: o.RetryWaitMax,
+		Logger:       o.Logger,
+		ErrorHandler: retryErrorHandler,
+	}
+
+	httpClient := &http.Client{
+		Transport: createRoundTripper(retryTransport, o),
+	}
 
 	// sanitize path
 	if url.Path == "" {
