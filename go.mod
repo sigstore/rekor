@@ -55,7 +55,7 @@ require (
 	github.com/go-chi/chi/v5 v5.3.1
 	github.com/go-openapi/swag/conv v0.28.0
 	github.com/go-redis/redismock/v9 v9.2.0
-	github.com/go-sql-driver/mysql v1.9.3
+	github.com/go-sql-driver/mysql v1.10.0
 	github.com/go-viper/mapstructure/v2 v2.5.0
 	github.com/golang/mock v1.7.0-rc.1
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
