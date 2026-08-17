@@ -189,7 +189,7 @@ require (
 
 require (
 	cloud.google.com/go v0.123.0 // indirect
-	cloud.google.com/go/iam v1.11.0
+	cloud.google.com/go/iam v1.13.0
 	cloud.google.com/go/kms v1.33.0 // indirect
 	cloud.google.com/go/storage v1.62.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
