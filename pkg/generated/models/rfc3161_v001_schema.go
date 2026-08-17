@@ -166,7 +166,7 @@ func (m *Rfc3161V001SchemaTsr) validateContent(formats strfmt.Registry) error {
 }
 
 // ContextValidate validates this rfc3161 v001 schema tsr based on context it is used
-func (m *Rfc3161V001SchemaTsr) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *Rfc3161V001SchemaTsr) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

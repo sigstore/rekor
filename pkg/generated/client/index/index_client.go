@@ -92,7 +92,7 @@ type ClientService interface {
 // If you need to pass a specific context, use [Client.SearchIndexContext] instead.
 func (a *Client) SearchIndex(params *SearchIndexParams, opts ...ClientOption) (*SearchIndexOK, error) {
 	var ctx context.Context
-	if params.inner.ctx != nil {
+	if params != nil && params.inner.ctx != nil {
 		ctx = params.inner.ctx
 	} else {
 		ctx = context.Background()

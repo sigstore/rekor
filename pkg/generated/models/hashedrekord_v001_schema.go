@@ -382,7 +382,7 @@ func (m *HashedrekordV001SchemaDataHash) validateValue(formats strfmt.Registry) 
 }
 
 // ContextValidate validates this hashedrekord v001 schema data hash based on context it is used
-func (m *HashedrekordV001SchemaDataHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *HashedrekordV001SchemaDataHash) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -522,12 +522,12 @@ type HashedrekordV001SchemaSignaturePublicKey struct {
 }
 
 // Validate validates this hashedrekord v001 schema signature public key
-func (m *HashedrekordV001SchemaSignaturePublicKey) Validate(formats strfmt.Registry) error {
+func (m *HashedrekordV001SchemaSignaturePublicKey) Validate(_ strfmt.Registry) error {
 	return nil
 }
 
 // ContextValidate validates this hashedrekord v001 schema signature public key based on context it is used
-func (m *HashedrekordV001SchemaSignaturePublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *HashedrekordV001SchemaSignaturePublicKey) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

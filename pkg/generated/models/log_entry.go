@@ -337,12 +337,12 @@ type LogEntryAnonAttestation struct {
 }
 
 // Validate validates this log entry anon attestation
-func (m *LogEntryAnonAttestation) Validate(formats strfmt.Registry) error {
+func (m *LogEntryAnonAttestation) Validate(_ strfmt.Registry) error {
 	return nil
 }
 
 // ContextValidate validates this log entry anon attestation based on context it is used
-func (m *LogEntryAnonAttestation) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *LogEntryAnonAttestation) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

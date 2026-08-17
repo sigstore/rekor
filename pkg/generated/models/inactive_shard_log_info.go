@@ -127,7 +127,7 @@ func (m *InactiveShardLogInfo) validateTreeSize(formats strfmt.Registry) error {
 }
 
 // ContextValidate validates this inactive shard log info based on context it is used
-func (m *InactiveShardLogInfo) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *InactiveShardLogInfo) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

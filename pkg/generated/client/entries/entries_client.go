@@ -109,7 +109,7 @@ type ClientService interface {
 // If you need to pass a specific context, use [Client.CreateLogEntryContext] instead.
 func (a *Client) CreateLogEntry(params *CreateLogEntryParams, opts ...ClientOption) (*CreateLogEntryCreated, error) {
 	var ctx context.Context
-	if params.inner.ctx != nil {
+	if params != nil && params.inner.ctx != nil {
 		ctx = params.inner.ctx
 	} else {
 		ctx = context.Background()
@@ -173,7 +173,7 @@ func (a *Client) CreateLogEntryContext(ctx context.Context, params *CreateLogEnt
 // If you need to pass a specific context, use [Client.GetLogEntryByIndexContext] instead.
 func (a *Client) GetLogEntryByIndex(params *GetLogEntryByIndexParams, opts ...ClientOption) (*GetLogEntryByIndexOK, error) {
 	var ctx context.Context
-	if params.inner.ctx != nil {
+	if params != nil && params.inner.ctx != nil {
 		ctx = params.inner.ctx
 	} else {
 		ctx = context.Background()
@@ -236,7 +236,7 @@ func (a *Client) GetLogEntryByIndexContext(ctx context.Context, params *GetLogEn
 // If you need to pass a specific context, use [Client.GetLogEntryByUUIDContext] instead.
 func (a *Client) GetLogEntryByUUID(params *GetLogEntryByUUIDParams, opts ...ClientOption) (*GetLogEntryByUUIDOK, error) {
 	var ctx context.Context
-	if params.inner.ctx != nil {
+	if params != nil && params.inner.ctx != nil {
 		ctx = params.inner.ctx
 	} else {
 		ctx = context.Background()
@@ -299,7 +299,7 @@ func (a *Client) GetLogEntryByUUIDContext(ctx context.Context, params *GetLogEnt
 // If you need to pass a specific context, use [Client.SearchLogQueryContext] instead.
 func (a *Client) SearchLogQuery(params *SearchLogQueryParams, opts ...ClientOption) (*SearchLogQueryOK, error) {
 	var ctx context.Context
-	if params.inner.ctx != nil {
+	if params != nil && params.inner.ctx != nil {
 		ctx = params.inner.ctx
 	} else {
 		ctx = context.Background()

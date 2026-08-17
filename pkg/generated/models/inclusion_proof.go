@@ -153,7 +153,7 @@ func (m *InclusionProof) validateTreeSize(formats strfmt.Registry) error {
 }
 
 // ContextValidate validates this inclusion proof based on context it is used
-func (m *InclusionProof) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *InclusionProof) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

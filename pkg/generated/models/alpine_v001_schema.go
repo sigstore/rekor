@@ -455,7 +455,7 @@ func (m *AlpineV001SchemaPublicKey) validateContent(formats strfmt.Registry) err
 }
 
 // ContextValidate validates this alpine v001 schema public key based on context it is used
-func (m *AlpineV001SchemaPublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *AlpineV001SchemaPublicKey) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

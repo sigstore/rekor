@@ -382,7 +382,7 @@ func (m *JarV001SchemaArchiveHash) validateValue(formats strfmt.Registry) error 
 }
 
 // ContextValidate validates this jar v001 schema archive hash based on context it is used
-func (m *JarV001SchemaArchiveHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *JarV001SchemaArchiveHash) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

@@ -239,7 +239,7 @@ func (m *TUFV001SchemaMetadata) validateContent(formats strfmt.Registry) error {
 }
 
 // ContextValidate validates this TUF v001 schema metadata based on context it is used
-func (m *TUFV001SchemaMetadata) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *TUFV001SchemaMetadata) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -295,7 +295,7 @@ func (m *TUFV001SchemaRoot) validateContent(formats strfmt.Registry) error {
 }
 
 // ContextValidate validates this TUF v001 schema root based on context it is used
-func (m *TUFV001SchemaRoot) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *TUFV001SchemaRoot) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

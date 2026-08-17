@@ -96,7 +96,7 @@ type ClientService interface {
 // If you need to pass a specific context, use [Client.GetLogInfoContext] instead.
 func (a *Client) GetLogInfo(params *GetLogInfoParams, opts ...ClientOption) (*GetLogInfoOK, error) {
 	var ctx context.Context
-	if params.inner.ctx != nil {
+	if params != nil && params.inner.ctx != nil {
 		ctx = params.inner.ctx
 	} else {
 		ctx = context.Background()
@@ -161,7 +161,7 @@ func (a *Client) GetLogInfoContext(ctx context.Context, params *GetLogInfoParams
 // If you need to pass a specific context, use [Client.GetLogProofContext] instead.
 func (a *Client) GetLogProof(params *GetLogProofParams, opts ...ClientOption) (*GetLogProofOK, error) {
 	var ctx context.Context
-	if params.inner.ctx != nil {
+	if params != nil && params.inner.ctx != nil {
 		ctx = params.inner.ctx
 	} else {
 		ctx = context.Background()

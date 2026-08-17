@@ -393,7 +393,7 @@ func (m *RpmV001SchemaPackageHash) validateValue(formats strfmt.Registry) error 
 }
 
 // ContextValidate validates this rpm v001 schema package hash based on context it is used
-func (m *RpmV001SchemaPackageHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *RpmV001SchemaPackageHash) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -450,7 +450,7 @@ func (m *RpmV001SchemaPublicKey) validateContent(formats strfmt.Registry) error 
 }
 
 // ContextValidate validates this rpm v001 schema public key based on context it is used
-func (m *RpmV001SchemaPublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *RpmV001SchemaPublicKey) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

@@ -619,7 +619,7 @@ func (m *RekordV001SchemaSignaturePublicKey) validateContent(formats strfmt.Regi
 }
 
 // ContextValidate validates this rekord v001 schema signature public key based on context it is used
-func (m *RekordV001SchemaSignaturePublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *RekordV001SchemaSignaturePublicKey) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

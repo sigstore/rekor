@@ -678,7 +678,7 @@ func (m *HelmV001SchemaPublicKey) validateContent(formats strfmt.Registry) error
 }
 
 // ContextValidate validates this helm v001 schema public key based on context it is used
-func (m *HelmV001SchemaPublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *HelmV001SchemaPublicKey) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

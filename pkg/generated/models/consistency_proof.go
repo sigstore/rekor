@@ -92,7 +92,7 @@ func (m *ConsistencyProof) validateRootHash(formats strfmt.Registry) error {
 }
 
 // ContextValidate validates this consistency proof based on context it is used
-func (m *ConsistencyProof) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *ConsistencyProof) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

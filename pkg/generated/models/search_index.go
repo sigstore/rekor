@@ -330,7 +330,7 @@ func (m *SearchIndexPublicKey) validateFormat(formats strfmt.Registry) error {
 }
 
 // ContextValidate validates this search index public key based on context it is used
-func (m *SearchIndexPublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *SearchIndexPublicKey) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

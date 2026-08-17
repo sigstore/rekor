@@ -553,7 +553,7 @@ func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) validateSig(formats st
 }
 
 // ContextValidate validates this intoto v002 schema content envelope signatures items0 based on context it is used
-func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 

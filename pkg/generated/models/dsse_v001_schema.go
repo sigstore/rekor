@@ -614,7 +614,7 @@ func (m *DSSEV001SchemaProposedContent) validateVerifiers(formats strfmt.Registr
 }
 
 // ContextValidate validates this DSSE v001 schema proposed content based on context it is used
-func (m *DSSEV001SchemaProposedContent) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *DSSEV001SchemaProposedContent) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -693,7 +693,7 @@ func (m *DSSEV001SchemaSignaturesItems0) validateVerifier(formats strfmt.Registr
 }
 
 // ContextValidate validates this DSSE v001 schema signatures items0 based on context it is used
-func (m *DSSEV001SchemaSignaturesItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *DSSEV001SchemaSignaturesItems0) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
