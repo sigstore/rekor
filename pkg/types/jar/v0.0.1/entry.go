@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/sigstore/rekor/internal/config"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pkcs7"
@@ -50,15 +51,6 @@ import (
 const (
 	APIVERSION = "0.0.1"
 )
-
-// Zero means unlimited. rekor-server overrides this from config at startup;
-// leaving the default at zero preserves the unbounded behavior other callers
-// (e.g. rekor-cli) get when the flag was never registered with viper.
-var maxJarMetadataSize uint64
-
-func SetMaxJarMetadataSize(limit uint64) {
-	maxJarMetadataSize = limit
-}
 
 func init() {
 	if err := jar.VersionMap.SetEntryFactory(APIVERSION, NewEntry); err != nil {
@@ -225,8 +217,8 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, 
 		if dir != "META-INF/" || name == "" || strings.LastIndex(name, ".") < 0 {
 			continue
 		}
-		if maxJarMetadataSize > 0 && f.UncompressedSize64 > maxJarMetadataSize {
-			return nil, nil, &types.InputValidationError{Err: fmt.Errorf("uncompressed jar metadata of size %d exceeds max allowed size %d", f.UncompressedSize64, maxJarMetadataSize)}
+		if config.MaxJarMetadataSize > 0 && f.UncompressedSize64 > config.MaxJarMetadataSize {
+			return nil, nil, &types.InputValidationError{Err: fmt.Errorf("uncompressed jar metadata of size %d exceeds max allowed size %d", f.UncompressedSize64, config.MaxJarMetadataSize)}
 		}
 	}
 

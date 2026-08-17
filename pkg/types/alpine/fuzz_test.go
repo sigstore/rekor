@@ -17,18 +17,15 @@ package alpine
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
+	"github.com/sigstore/rekor/internal/config"
 	utils "github.com/sigstore/rekor/pkg/fuzz"
 )
 
 func init() {
-	SetMaxAPKMetadataSize(60000)
-	if maxAPKMetadataSize != 60000 {
-		panic(fmt.Sprintf("max metadata size is not defined: %d", maxAPKMetadataSize))
-	}
+	config.MaxAPKMetadataSize = 60000
 }
 
 // FuzzPackageUnmarshal implements the fuzz test

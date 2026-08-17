@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sigstore/rekor/internal/config"
 	"github.com/sigstore/rekor/pkg/pki/x509"
 )
 
@@ -56,10 +57,10 @@ func TestAlpinePackage(t *testing.T) {
 }
 
 func TestAlpineMetadataSize(t *testing.T) {
-	origVal := maxAPKMetadataSize
-	defer SetMaxAPKMetadataSize(origVal)
+	origVal := config.MaxAPKMetadataSize
+	defer func() { config.MaxAPKMetadataSize = origVal }()
 
-	SetMaxAPKMetadataSize(10)
+	config.MaxAPKMetadataSize = 10
 
 	inputArchive, err := os.Open("tests/test_alpine.apk")
 	if err != nil {
@@ -78,10 +79,10 @@ func TestAlpineMetadataSize(t *testing.T) {
 }
 
 func TestAlpineMetadataSizeDefault(t *testing.T) {
-	origVal := maxAPKMetadataSize
-	defer SetMaxAPKMetadataSize(origVal)
+	origVal := config.MaxAPKMetadataSize
+	defer func() { config.MaxAPKMetadataSize = origVal }()
 
-	SetMaxAPKMetadataSize(0)
+	config.MaxAPKMetadataSize = 0
 
 	inputArchive, err := os.Open("tests/test_alpine.apk")
 	if err != nil {
@@ -97,14 +98,14 @@ func TestAlpineMetadataSizeDefault(t *testing.T) {
 }
 
 func TestAlpineMetadataSizeBoundary(t *testing.T) {
-	origVal := maxAPKMetadataSize
-	defer SetMaxAPKMetadataSize(origVal)
+	origVal := config.MaxAPKMetadataSize
+	defer func() { config.MaxAPKMetadataSize = origVal }()
 
 	// The signature.tar.gz decompressed size in test_alpine.apk is exactly 1024 bytes.
 	boundary := 1024
 
 	// 1. Verify that max_apk_metadata_size = 1024 succeeds
-	SetMaxAPKMetadataSize(uint64(boundary))
+	config.MaxAPKMetadataSize = uint64(boundary)
 	inputArchive, err := os.Open("tests/test_alpine.apk")
 	if err != nil {
 		t.Fatalf("could not open archive %v", err)
@@ -117,7 +118,7 @@ func TestAlpineMetadataSizeBoundary(t *testing.T) {
 	}
 
 	// 2. Verify that max_apk_metadata_size = 1023 fails
-	SetMaxAPKMetadataSize(uint64(boundary - 1))
+	config.MaxAPKMetadataSize = uint64(boundary - 1)
 	inputArchive, err = os.Open("tests/test_alpine.apk")
 	if err != nil {
 		t.Fatalf("could not open archive %v", err)

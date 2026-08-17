@@ -31,19 +31,11 @@ import (
 	"io"
 	"strings"
 
+	"github.com/sigstore/rekor/internal/config"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	"gopkg.in/ini.v1"
 )
-
-// Zero means unlimited. rekor-server overrides this from config at startup;
-// leaving the default at zero preserves the unbounded behavior other callers
-// (e.g. rekor-cli) get when the flag was never registered with viper.
-var maxAPKMetadataSize uint64
-
-func SetMaxAPKMetadataSize(limit uint64) {
-	maxAPKMetadataSize = limit
-}
 
 type Package struct {
 	Pkginfo           map[string]string // KVP pairs
@@ -114,7 +106,7 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 
 	// GZIP headers/footers are left unmodified; Tar footers are removed on first two archives
 	// signature.tar.gz | control.tar.gz | data.tar.gz
-	maxBufSize := maxAPKMetadataSize
+	maxBufSize := config.MaxAPKMetadataSize
 	if maxBufSize == 0 {
 		maxBufSize = 20 * 1024 * 1024
 	}
@@ -173,8 +165,8 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 			if header.Size < 0 {
 				return errors.New("negative header size for .SIGN file")
 			}
-			if maxAPKMetadataSize > 0 && uint64(header.Size) > maxAPKMetadataSize {
-				return fmt.Errorf("uncompressed .SIGN file size %d exceeds max allowed size %d", header.Size, maxAPKMetadataSize)
+			if config.MaxAPKMetadataSize > 0 && uint64(header.Size) > config.MaxAPKMetadataSize {
+				return fmt.Errorf("uncompressed .SIGN file size %d exceeds max allowed size %d", header.Size, config.MaxAPKMetadataSize)
 			}
 			sigBytes := make([]byte, header.Size)
 			if _, err = sigReader.Read(sigBytes); err != nil && err != io.EOF {
@@ -206,8 +198,8 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 			if header.Size < 0 {
 				return errors.New("negative header size for .PKGINFO file")
 			}
-			if maxAPKMetadataSize > 0 && uint64(header.Size) > maxAPKMetadataSize {
-				return fmt.Errorf("uncompressed .PKGINFO file size %d exceeds max allowed size %d", header.Size, maxAPKMetadataSize)
+			if config.MaxAPKMetadataSize > 0 && uint64(header.Size) > config.MaxAPKMetadataSize {
+				return fmt.Errorf("uncompressed .PKGINFO file size %d exceeds max allowed size %d", header.Size, config.MaxAPKMetadataSize)
 			}
 			pkginfoContent := make([]byte, header.Size)
 			if _, err = ctlReader.Read(pkginfoContent); err != nil && err != io.EOF {

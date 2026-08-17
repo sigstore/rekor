@@ -50,6 +50,12 @@ type API struct {
 	// so we can fetch the checkpoint on service startup to
 	// minimize signature generations
 	cachedCheckpoints map[int64]string
+	// Config snapshotted at startup. viper rebuilds a flat map of every bound
+	// pflag on each lookup of a dotted key, so reading these per-request
+	// allocates for values that cannot change once the server is running.
+	checkpointHostname    string
+	publishEventsProtobuf bool
+	publishEventsJSON     bool
 }
 
 func (api *API) ActiveTreeID() int64 {
@@ -71,9 +77,9 @@ var DefaultClientSigningAlgorithms = AllowedClientSigningAlgorithms
 func NewAPI(treeID int64) (*API, error) {
 	ctx := context.Background()
 
-	checkpointHostname = viper.GetString("rekor_server.hostname")
-	publishEventsProtobuf = viper.GetBool("rekor_server.publish_events_protobuf")
-	publishEventsJSON = viper.GetBool("rekor_server.publish_events_json")
+	checkpointHostname := viper.GetString("rekor_server.hostname")
+	publishEventsProtobuf := viper.GetBool("rekor_server.publish_events_protobuf")
+	publishEventsJSON := viper.GetBool("rekor_server.publish_events_json")
 
 	// this is also used for the active tree
 	defaultGRPCConfig := trillianclient.GRPCConfig{
@@ -178,9 +184,12 @@ func NewAPI(treeID int64) (*API, error) {
 		trillianClientManager: tcm,
 		logRanges:             ranges,
 		// Utility functionality not required for operation of the core service
-		newEntryPublisher: newEntryPublisher,
-		algorithmRegistry: algorithmRegistry,
-		cachedCheckpoints: cachedCheckpoints,
+		newEntryPublisher:     newEntryPublisher,
+		algorithmRegistry:     algorithmRegistry,
+		cachedCheckpoints:     cachedCheckpoints,
+		checkpointHostname:    checkpointHostname,
+		publishEventsProtobuf: publishEventsProtobuf,
+		publishEventsJSON:     publishEventsJSON,
 	}, nil
 }
 
@@ -188,15 +197,6 @@ var (
 	api                      *API
 	attestationStorageClient storage.AttestationStorage
 	indexStorageClient       indexstorage.IndexStorage
-)
-
-// Immutable config snapshotted by NewAPI. viper rebuilds a flat map of every
-// bound pflag on each lookup of a dotted key, so reading these per-request
-// allocates for a value that cannot change after startup.
-var (
-	checkpointHostname    string
-	publishEventsProtobuf bool
-	publishEventsJSON     bool
 )
 
 func ConfigureAPI(treeID int64) {

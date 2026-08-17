@@ -67,7 +67,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	treeSize := int64(root.TreeSize) //nolint:gosec
 
 	scBytes, err := util.CreateAndSignCheckpoint(ctx,
-		checkpointHostname, api.logRanges.GetActive().TreeID, root.TreeSize, root.RootHash, api.logRanges.GetActive().Signer)
+		api.checkpointHostname, api.logRanges.GetActive().TreeID, root.TreeSize, root.RootHash, api.logRanges.GetActive().Signer)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, sthGenerateError)
 	}
