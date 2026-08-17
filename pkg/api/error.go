@@ -17,7 +17,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -35,24 +34,24 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 )
 
+// statusClientClosedRequest is the nginx-style code for a client that hung up
+// before we could respond; it has no net/http constant or StatusText entry.
+const statusClientClosedRequest = 499
+
 func mapGRPCToHTTP(code int, err error) int {
 	// Only try to be smart if current code is a generic 500
 	if code != http.StatusInternalServerError {
 		return code
 	}
 
-	// Look for a GRPC error (even a wrapped one) to resolve a more useful HTTP code.
+	// FromError walks the whole error tree, so wrapped and joined errors resolve too.
 	// The list of handled codes is intentionally limited to specific cases
-	for currErr := err; currErr != nil; currErr = errors.Unwrap(currErr) {
-		if st, ok := status.FromError(currErr); ok {
-			switch st.Code() {
-			case codes.Canceled:
-				return 499 // Client Closed Request
-			case codes.DeadlineExceeded:
-				return http.StatusGatewayTimeout
-			default:
-				return code
-			}
+	if st, ok := status.FromError(err); ok {
+		switch st.Code() {
+		case codes.Canceled:
+			return statusClientClosedRequest
+		case codes.DeadlineExceeded:
+			return http.StatusGatewayTimeout
 		}
 	}
 	return code
@@ -87,17 +86,22 @@ func errorMsg(message string, code int) *models.Error {
 
 var re = regexp.MustCompile("^(.*)Params$")
 
-func handleRekorAPIError(params interface{}, code int, err error, message string, fields ...interface{}) middleware.Responder {
+func handleRekorAPIError(params any, code int, err error, message string, fields ...any) middleware.Responder {
 	code = mapGRPCToHTTP(code, err)
 
 	if message == "" {
-		message = http.StatusText(code)
+		// http.StatusText has no entry for the nonstandard 499
+		if code == statusClientClosedRequest {
+			message = clientDisconnected
+		} else {
+			message = http.StatusText(code)
+		}
 	}
 
 	typeStr := fmt.Sprintf("%T", params)
 	handler := re.FindStringSubmatch(typeStr)[1]
 
-	logMsg := func(r *http.Request, inputs ...interface{}) {
+	logMsg := func(r *http.Request, inputs ...any) {
 		ctx := r.Context()
 		// If the client disconnected before we could respond, rewrite the
 		// status to 499 (nginx-style "client closed request") so that the
@@ -105,10 +109,10 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		// server-side error we could have prevented. Also replace the
 		// client-facing message so the JSON body reflects the true cause.
 		if code >= 500 && ctx.Err() == context.Canceled {
-			code = 499
+			code = statusClientClosedRequest
 			message = clientDisconnected
 		}
-		fields := append([]interface{}{"handler", handler, "statusCode", code, "clientMessage", message}, fields...)
+		fields := append([]any{"handler", handler, "statusCode", code, "clientMessage", message}, fields...)
 		if code >= 500 {
 			fields = append(fields, inputs...)
 			log.ContextLogger(ctx).Errorw(err.Error(), fields...)
@@ -155,12 +159,12 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 			}
 			return resp
 		default:
-			requestFields := []interface{}{"requestBody", params.ProposedEntry}
+			requestFields := []any{"requestBody", params.ProposedEntry}
 			logMsg(params.HTTPRequest, requestFields...)
 			return entries.NewCreateLogEntryDefault(code).WithPayload(errorMsg(message, code))
 		}
 	case entries.SearchLogQueryParams:
-		requestFields := []interface{}{}
+		requestFields := []any{}
 		if params.Entry != nil {
 			requestFields = append(requestFields, "requestBody", *params.Entry)
 		}
@@ -188,7 +192,7 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		logMsg(params.HTTPRequest)
 		return pubkey.NewGetPublicKeyDefault(code).WithPayload(errorMsg(message, code))
 	case index.SearchIndexParams:
-		requestFields := []interface{}{}
+		requestFields := []any{}
 		if params.Query != nil {
 			requestFields = append(requestFields, "requestBody", *params.Query)
 		}

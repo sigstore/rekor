@@ -17,12 +17,15 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/go-openapi/runtime"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -84,6 +87,35 @@ func TestHandleRekorAPIError_ClientCanceled(t *testing.T) {
 
 		if recorder.Code != 499 {
 			t.Errorf("Expected status code 499, got %d", recorder.Code)
+		}
+	})
+
+	// Case 3: a wrapped gRPC Canceled error downgrades to 499 even though the
+	// request context is still live, so the empty message must not fall through
+	// to http.StatusText(499), which is "".
+	t.Run("Canceled gRPC error populates default message", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/v1/log/entries?logIndex=1", nil)
+		params := entries.GetLogEntryByIndexParams{
+			HTTPRequest: req,
+			LogIndex:    1,
+		}
+
+		err := fmt.Errorf("wrapped: %w", status.Error(codes.Canceled, "context canceled"))
+		responder := handleRekorAPIError(params, http.StatusInternalServerError, err, "")
+
+		recorder := httptest.NewRecorder()
+		responder.WriteResponse(recorder, runtime.JSONProducer())
+
+		if recorder.Code != 499 {
+			t.Errorf("Expected status code 499, got %d", recorder.Code)
+		}
+
+		var payload models.Error
+		if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+			t.Fatalf("could not decode response body: %v", err)
+		}
+		if payload.Message != clientDisconnected {
+			t.Errorf("Expected message %q, got %q", clientDisconnected, payload.Message)
 		}
 	})
 }
