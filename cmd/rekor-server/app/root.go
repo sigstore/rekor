@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/sigstore/rekor/internal/config"
 	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types"
@@ -254,4 +255,7 @@ func initConfig() {
 	intoto001.SetMaxAttestationSize(maxSize)
 	intoto002.SetMaxAttestationSize(maxSize)
 	cose.SetMaxAttestationSize(maxSize)
+
+	config.MaxAPKMetadataSize = viper.GetUint64("max_apk_metadata_size")
+	config.MaxJarMetadataSize = viper.GetUint64("max_jar_metadata_size")
 }

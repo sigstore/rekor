@@ -50,6 +50,12 @@ type API struct {
 	// so we can fetch the checkpoint on service startup to
 	// minimize signature generations
 	cachedCheckpoints map[int64]string
+	// Config snapshotted at startup. viper rebuilds a flat map of every bound
+	// pflag on each lookup of a dotted key, so reading these per-request
+	// allocates for values that cannot change once the server is running.
+	checkpointHostname    string
+	publishEventsProtobuf bool
+	publishEventsJSON     bool
 }
 
 func (api *API) ActiveTreeID() int64 {
@@ -70,6 +76,10 @@ var DefaultClientSigningAlgorithms = AllowedClientSigningAlgorithms
 
 func NewAPI(treeID int64) (*API, error) {
 	ctx := context.Background()
+
+	checkpointHostname := viper.GetString("rekor_server.hostname")
+	publishEventsProtobuf := viper.GetBool("rekor_server.publish_events_protobuf")
+	publishEventsJSON := viper.GetBool("rekor_server.publish_events_json")
 
 	// this is also used for the active tree
 	defaultGRPCConfig := trillianclient.GRPCConfig{
@@ -150,7 +160,7 @@ func NewAPI(treeID int64) (*API, error) {
 		if !ok {
 			return nil, fmt.Errorf("no root found for inactive shard %d", r.TreeID)
 		}
-		cp, err := util.CreateAndSignCheckpoint(ctx, viper.GetString("rekor_server.hostname"), r.TreeID, uint64(r.TreeLength), root.RootHash, r.Signer) //nolint:gosec
+		cp, err := util.CreateAndSignCheckpoint(ctx, checkpointHostname, r.TreeID, uint64(r.TreeLength), root.RootHash, r.Signer) //nolint:gosec
 		if err != nil {
 			return nil, fmt.Errorf("error signing checkpoint for inactive shard %d: %w", r.TreeID, err)
 		}
@@ -159,7 +169,7 @@ func NewAPI(treeID int64) (*API, error) {
 
 	var newEntryPublisher pubsub.Publisher
 	if p := viper.GetString("rekor_server.new_entry_publisher"); p != "" {
-		if !viper.GetBool("rekor_server.publish_events_protobuf") && !viper.GetBool("rekor_server.publish_events_json") {
+		if !publishEventsProtobuf && !publishEventsJSON {
 			return nil, fmt.Errorf("%q is configured but neither %q or %q are enabled", "new_entry_publisher", "publish_events_protobuf", "publish_events_json")
 		}
 		newEntryPublisher, err = pubsub.Get(ctx, p)
@@ -174,9 +184,12 @@ func NewAPI(treeID int64) (*API, error) {
 		trillianClientManager: tcm,
 		logRanges:             ranges,
 		// Utility functionality not required for operation of the core service
-		newEntryPublisher: newEntryPublisher,
-		algorithmRegistry: algorithmRegistry,
-		cachedCheckpoints: cachedCheckpoints,
+		newEntryPublisher:     newEntryPublisher,
+		algorithmRegistry:     algorithmRegistry,
+		cachedCheckpoints:     cachedCheckpoints,
+		checkpointHostname:    checkpointHostname,
+		publishEventsProtobuf: publishEventsProtobuf,
+		publishEventsJSON:     publishEventsJSON,
 	}, nil
 }
 
