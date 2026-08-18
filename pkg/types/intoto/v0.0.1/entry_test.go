@@ -407,6 +407,20 @@ func TestV001EntryWithoutEnvelopeOrPayloadHash(t *testing.T) {
 	}
 }
 
+// testSubject and testStatement mirror the JSON shape of an in-toto statement
+// so that marshalled test payloads match what clients actually submit.
+type testSubject struct {
+	Name   string            `json:"name"`
+	Digest map[string]string `json:"digest"`
+}
+
+type testStatement struct {
+	Type          string        `json:"_type"`
+	PredicateType string        `json:"predicateType"`
+	Subject       []testSubject `json:"subject"`
+	Predicate     any           `json:"predicate"`
+}
+
 func TestV001Entry_IndexKeys(t *testing.T) {
 	h := sha256.Sum256([]byte("foo"))
 	dataSHA := hex.EncodeToString(h[:])
@@ -414,27 +428,25 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		statement in_toto.Statement
+		statement testStatement
 		want      []string
 	}{
 		{
 			name: "standard",
 			want: []string{hashkey},
-			statement: in_toto.Statement{
+			statement: testStatement{
 				Predicate: "hello",
 			},
 		},
 		{
 			name: "subject",
 			want: []string{"sha256:foo", hashkey},
-			statement: in_toto.Statement{
-				StatementHeader: in_toto.StatementHeader{
-					Subject: []in_toto.Subject{
-						{
-							Name: "foo",
-							Digest: map[string]string{
-								"sha256": "foo",
-							},
+			statement: testStatement{
+				Subject: []testSubject{
+					{
+						Name: "foo",
+						Digest: map[string]string{
+							"sha256": "foo",
 						},
 					},
 				},
@@ -444,7 +456,7 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 		{
 			name: "slsa",
 			want: []string{"sha256:bar", hashkey},
-			statement: in_toto.Statement{
+			statement: testStatement{
 				Predicate: slsa.ProvenancePredicate{
 					Materials: []common.ProvenanceMaterial{
 						{

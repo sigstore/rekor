@@ -38,6 +38,7 @@ func TestArtifactPFlags(t *testing.T) {
 		artifact              string
 		signature             string
 		publicKey             string
+		pkiFormat             string
 		multiPublicKey        []string
 		uuid                  string
 		aad                   string
@@ -91,12 +92,14 @@ func TestArtifactPFlags(t *testing.T) {
 	tests := []test{
 		{
 			caseDesc:              "valid rekord file",
+			typeStr:               "rekord",
 			entry:                 "tests/rekor.json",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
 		{
 			caseDesc:              "valid rekord URL",
+			typeStr:               "rekord",
 			entry:                 testServer.URL + "/rekord",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
@@ -146,21 +149,35 @@ func TestArtifactPFlags(t *testing.T) {
 		},
 		{
 			caseDesc:              "non-existent rekord file",
+			typeStr:               "rekord",
 			entry:                 "tests/not_there.json",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "non-existent rekord url",
+			typeStr:               "rekord",
 			entry:                 testServer.URL + "/not_found",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "valid rekord - local artifact with required flags",
+			typeStr:               "rekord",
 			artifact:              "tests/test_file.txt",
 			signature:             "tests/test_file.sig",
 			publicKey:             "tests/test_public_key.key",
+			pkiFormat:             "pgp",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "valid hashedrekord - local artifact without hash flag",
+			typeStr:               "hashedrekord",
+			artifact:              "tests/test_x509_artifact.txt",
+			signature:             "tests/test_x509.sig",
+			publicKey:             "tests/test_x509_public_key.pem",
+			pkiFormat:             "x509",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -252,9 +269,11 @@ func TestArtifactPFlags(t *testing.T) {
 		},
 		{
 			caseDesc:              "valid rekord - remote artifact with required flags",
+			typeStr:               "rekord",
 			artifact:              testServer.URL + "/artifact",
 			signature:             "tests/test_file.sig",
 			publicKey:             "tests/test_public_key.key",
+			pkiFormat:             "pgp",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -422,6 +441,9 @@ func TestArtifactPFlags(t *testing.T) {
 		}
 		if tc.publicKey != "" {
 			args = append(args, "--public-key", tc.publicKey)
+		}
+		if tc.pkiFormat != "" {
+			args = append(args, "--pki-format", tc.pkiFormat)
 		}
 		if len(tc.multiPublicKey) > 0 {
 			for _, key := range tc.multiPublicKey {

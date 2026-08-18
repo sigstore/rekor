@@ -61,16 +61,16 @@ func TestDuplicates(t *testing.T) {
 	}
 
 	// Now upload to rekor!
-	out := e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out := e2eutil.RunCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, "Created entry at")
 
 	// Now upload the same one again, we should get a dupe entry.
-	out = e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out = e2eutil.RunCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, "Entry already exists")
 
 	// Now do a new one, we should get a new entry
 	e2eutil.CreatedPGPSignedArtifact(t, artifactPath, sigPath)
-	out = e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out = e2eutil.RunCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, "Created entry at")
 }
 
@@ -169,7 +169,7 @@ func TestGetCLI(t *testing.T) {
 	t.Cleanup(func() {
 		os.Remove(pubPath)
 	})
-	out := e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out := e2eutil.RunCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, "Created entry at")
 
 	uuid, err := sharding.GetUUIDFromIDString(e2eutil.GetUUIDFromUploadOutput(t, out))
@@ -198,7 +198,7 @@ func TestGetCLI(t *testing.T) {
 	out = e2eutil.RunCli(t, "search", "--artifact", artifactPath)
 	e2eutil.OutputContains(t, out, uuid)
 
-	out = e2eutil.RunCli(t, "search", "--public-key", pubPath)
+	out = e2eutil.RunCli(t, "search", "--pki-format=pgp", "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, uuid)
 
 	artifactBytes, err := ioutil.ReadFile(artifactPath)

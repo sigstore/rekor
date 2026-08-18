@@ -118,7 +118,7 @@ waitForRekorServer
 
 # Add some things to the tlog :)
 pushd tests
-$REKOR_CLI upload --artifact test_file.txt --signature test_file.sig --public-key test_public_key.key --rekor_server http://localhost:3000
+$REKOR_CLI upload --type=rekord --pki-format=pgp --artifact test_file.txt --signature test_file.sig --public-key test_public_key.key --rekor_server http://localhost:3000
 popd
 
 # Make sure we can prove consistency
@@ -126,8 +126,8 @@ $REKOR_CLI loginfo --rekor_server http://localhost:3000
 
 # Add 2 more entries to the log
 pushd tests/sharding-testdata
-$REKOR_CLI upload --artifact file1 --signature file1.sig --pki-format=x509 --public-key=ec_public.pem --rekor_server http://localhost:3000
-$REKOR_CLI upload --artifact file2 --signature file2.sig --pki-format=x509 --public-key=ec_public.pem --rekor_server http://localhost:3000
+$REKOR_CLI upload --type=rekord --artifact file1 --signature file1.sig --pki-format=x509 --public-key=ec_public.pem --rekor_server http://localhost:3000
+$REKOR_CLI upload --type=rekord --artifact file2 --signature file2.sig --pki-format=x509 --public-key=ec_public.pem --rekor_server http://localhost:3000
 popd
 
 
@@ -219,7 +219,7 @@ check_log_index 2
 
 # Add in a new entry to this shard
 pushd tests/sharding-testdata
-$REKOR_CLI upload --artifact file2 --signature file2.sig --pki-format=x509 --public-key=ec_public.pem --rekor_server http://localhost:3000
+$REKOR_CLI upload --type=rekord --artifact file2 --signature file2.sig --pki-format=x509 --public-key=ec_public.pem --rekor_server http://localhost:3000
 popd
 # Pass in the universal log_index & make sure it resolves 
 check_log_index 3
@@ -266,7 +266,7 @@ stringsMatch $NUM_ELEMENTS "1"
 
 # Make sure we can verify the entry we entered into the now-inactive shard
 pushd tests
-$REKOR_CLI verify --artifact test_file.txt --signature test_file.sig --public-key test_public_key.key --rekor_server http://localhost:3000
+$REKOR_CLI verify --type=rekord --pki-format=pgp --artifact test_file.txt --signature test_file.sig --public-key test_public_key.key --rekor_server http://localhost:3000
 popd
 
 # -f makes sure we exit on failure

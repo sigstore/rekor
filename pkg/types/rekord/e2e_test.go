@@ -73,15 +73,15 @@ func TestUploadVerifyRekord(t *testing.T) {
 	}
 
 	// Verify should fail initially
-	out := e2eutil.RunCliErr(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out := e2eutil.RunCliErr(t, "verify", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, "entry in log cannot be located")
 
 	// It should upload successfully.
-	out = e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out = e2eutil.RunCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, "Created entry at")
 
 	// Now we should be able to verify it.
-	out = e2eutil.RunCli(t, "verify", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out = e2eutil.RunCli(t, "verify", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, "Inclusion Proof:")
 	e2eutil.OutputContains(t, out, "Checkpoint:")
 }

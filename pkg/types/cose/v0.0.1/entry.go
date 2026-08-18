@@ -141,8 +141,17 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	return result, nil
 }
 
-func getIntotoStatement(b []byte) (*in_toto.Statement, error) {
-	var stmt in_toto.Statement
+// indexKeyExtract captures only the fields of an in-toto statement that are
+// used to derive index keys; it intentionally uses encoding/json semantics so
+// that payloads accepted today continue to parse identically.
+type indexKeyExtract struct {
+	Subject []struct {
+		Digest map[string]string `json:"digest"`
+	} `json:"subject"`
+}
+
+func getIntotoStatement(b []byte) (*indexKeyExtract, error) {
+	var stmt indexKeyExtract
 	if err := json.Unmarshal(b, &stmt); err != nil {
 		return nil, err
 	}
