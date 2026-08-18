@@ -61,7 +61,7 @@ server:
   ingress:
     enabled: false
   image:
-    repository: projectsigstore/rekor/ci/rekor/rekor-server
+    repository: ghcr.io/sigstore/rekor/ci/rekor/rekor-server
     version: '$sha'
 EOF
 
