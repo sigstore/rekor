@@ -54,6 +54,9 @@ func (brt *BaseRPMType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl
 	if !ok {
 		return nil, errors.New("cannot unmarshal non-RPM types")
 	}
+	if rpm == nil {
+		return nil, errors.New("proposed entry cannot be nil")
+	}
 
 	if rpm.APIVersion == nil {
 		return nil, errors.New("api version cannot be nil")

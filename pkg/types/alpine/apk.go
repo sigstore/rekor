@@ -165,8 +165,8 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 			if header.Size < 0 {
 				return errors.New("negative header size for .SIGN file")
 			}
-			if uint64(header.Size) > viper.GetUint64("max_apk_metadata_size") && viper.GetUint64("max_apk_metadata_size") > 0 {
-				return fmt.Errorf("uncompressed .SIGN file size %d exceeds max allowed size %d", header.Size, viper.GetUint64("max_apk_metadata_size"))
+			if uint64(header.Size) > maxBufSize {
+				return fmt.Errorf("uncompressed .SIGN file size %d exceeds max allowed size %d", header.Size, maxBufSize)
 			}
 			sigBytes := make([]byte, header.Size)
 			if _, err = sigReader.Read(sigBytes); err != nil && err != io.EOF {
@@ -198,8 +198,8 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 			if header.Size < 0 {
 				return errors.New("negative header size for .PKGINFO file")
 			}
-			if uint64(header.Size) > viper.GetUint64("max_apk_metadata_size") && viper.GetUint64("max_apk_metadata_size") > 0 {
-				return fmt.Errorf("uncompressed .PKGINFO file size %d exceeds max allowed size %d", header.Size, viper.GetUint64("max_apk_metadata_size"))
+			if uint64(header.Size) > maxBufSize {
+				return fmt.Errorf("uncompressed .PKGINFO file size %d exceeds max allowed size %d", header.Size, maxBufSize)
 			}
 			pkginfoContent := make([]byte, header.Size)
 			if _, err = ctlReader.Read(pkginfoContent); err != nil && err != io.EOF {

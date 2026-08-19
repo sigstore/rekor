@@ -81,6 +81,10 @@ func NewEntryFromBytes(timestamp []byte) models.ProposedEntry {
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
+	if v.Rfc3161Obj.Tsr == nil || v.Rfc3161Obj.Tsr.Content == nil {
+		return nil, errors.New("invalid object")
+	}
+
 	str := v.Rfc3161Obj.Tsr.Content.String()
 	tb, err := base64.StdEncoding.DecodeString(str)
 	if err != nil {
@@ -97,7 +101,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	rfc3161Resp, ok := pe.(*models.Rfc3161)
-	if !ok {
+	if !ok || rfc3161Resp == nil {
 		return errors.New("cannot unmarshal non Rfc3161 v0.0.1 type")
 	}
 
@@ -178,6 +182,10 @@ func (v V001Entry) validate() error {
 	data := v.Rfc3161Obj.Tsr
 	if data == nil {
 		return errors.New("missing tsr data")
+	}
+
+	if data.Content == nil {
+		return errors.New("missing tsr content")
 	}
 
 	content := *data.Content

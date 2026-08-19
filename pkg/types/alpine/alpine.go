@@ -54,6 +54,9 @@ func (bat *BaseAlpineType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryI
 	if !ok {
 		return nil, errors.New("cannot unmarshal non-Alpine types")
 	}
+	if apk == nil {
+		return nil, errors.New("proposed entry cannot be nil")
+	}
 
 	if apk.APIVersion == nil {
 		return nil, errors.New("api version cannot be nil")

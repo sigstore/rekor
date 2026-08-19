@@ -170,6 +170,9 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	if !ok {
 		return errors.New("cannot unmarshal non Cose v0.0.1 type")
 	}
+	if it == nil {
+		return errors.New("proposed entry cannot be nil")
+	}
 
 	var err error
 	if err := DecodeEntry(it.Spec, &v.CoseObj); err != nil {
@@ -275,6 +278,9 @@ func (v *V001Entry) validate() error {
 		return err
 	}
 
+	if v.CoseObj.Data == nil {
+		return errors.New("cose object data cannot be nil")
+	}
 	if err := sign1Msg.Verify(v.CoseObj.Data.Aad, bv); err != nil {
 		return err
 	}
@@ -287,7 +293,7 @@ func getPublicKey(pk pki.PublicKey) (gocose.Algorithm, crypto.PublicKey, error) 
 	invAlg := gocose.Algorithm(0)
 	x5pk, ok := pk.(*x509.PublicKey)
 
-	if !ok {
+	if !ok || x5pk == nil {
 		return invAlg, nil, errors.New("invalid public key type")
 	}
 
@@ -423,6 +429,9 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	if len(publicKeyBytes) == 0 {
 		if len(props.PublicKeyPaths) != 1 {
 			return nil, errors.New("only one public key must be provided to verify signature")
+		}
+		if props.PublicKeyPaths[0] == nil {
+			return nil, errors.New("public key path must be provided")
 		}
 		keyBytes, err := os.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
 		if err != nil {

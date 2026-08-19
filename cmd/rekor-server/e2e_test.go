@@ -143,6 +143,9 @@ func getRekorMetricCount(metricLine string, t *testing.T) (int, error) {
 		t.Log("Matched metric line: " + scanner.Text())
 		return result, nil
 	}
+	if err := scanner.Err(); err != nil {
+		return 0, err
+	}
 	return 0, nil
 }
 func TestEnvVariableValidation(t *testing.T) {

@@ -54,7 +54,7 @@ func (it BaseIntotoType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImp
 
 	in, ok := pe.(*models.Intoto)
 	if !ok {
-		return nil, errors.New("cannot unmarshal non-Rekord types")
+		return nil, errors.New("cannot unmarshal non-Intoto types")
 	}
 
 	if in.APIVersion == nil {

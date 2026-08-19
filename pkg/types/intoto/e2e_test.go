@@ -147,8 +147,8 @@ func TestIntoto(t *testing.T) {
 	if err := types.DecodeEntry(g.Body.(map[string]interface{})["IntotoObj"], intotoModel); err != nil {
 		t.Errorf("could not convert body into intoto type: %v", err)
 	}
-	if intotoModel.Content == nil || intotoModel.Content.PayloadHash == nil {
-		t.Errorf("could not find hash over attestation %v", intotoModel)
+	if intotoModel.Content == nil || intotoModel.Content.PayloadHash == nil || intotoModel.Content.PayloadHash.Value == nil {
+		t.Fatalf("could not find hash over attestation %v", intotoModel)
 	}
 	recordedPayloadHash, err := hex.DecodeString(*intotoModel.Content.PayloadHash.Value)
 	if err != nil {

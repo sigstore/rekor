@@ -19,6 +19,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
+	"errors"
 	"hash"
 	"io"
 
@@ -92,7 +93,7 @@ func Sign(sshPrivateKey string, data io.Reader) ([]byte, error) {
 
 	as, ok := s.(ssh.AlgorithmSigner)
 	if !ok {
-		return nil, err
+		return nil, errors.New("ssh private key does not support algorithm signing")
 	}
 
 	sig, err := sign(as, data)

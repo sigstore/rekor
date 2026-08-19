@@ -51,7 +51,7 @@ func (btt BaseTimestampType) UnmarshalEntry(pe models.ProposedEntry) (types.Entr
 	}
 
 	rfc3161, ok := pe.(*models.Rfc3161)
-	if !ok {
+	if !ok || rfc3161 == nil {
 		return nil, errors.New("cannot unmarshal non-Timestamp types")
 	}
 
