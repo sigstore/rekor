@@ -29,7 +29,8 @@ import (
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
+	"github.com/go-openapi/swag/typeutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -129,7 +130,7 @@ func (m SearchLogQuery) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	return swag.ConcatJSON(b1, b2, b3), nil
+	return jsonutils.ConcatJSON(b1, b2, b3), nil
 }
 
 // Validate validates this search log query
@@ -155,7 +156,7 @@ func (m *SearchLogQuery) Validate(formats strfmt.Registry) error {
 }
 
 func (m *SearchLogQuery) validateEntries(formats strfmt.Registry) error {
-	if swag.IsZero(m.Entries()) { // not required
+	if typeutils.IsZero(m.Entries()) { // not required
 		return nil
 	}
 
@@ -190,7 +191,7 @@ func (m *SearchLogQuery) validateEntries(formats strfmt.Registry) error {
 }
 
 func (m *SearchLogQuery) validateEntryUUIDs(formats strfmt.Registry) error {
-	if swag.IsZero(m.EntryUUIDs) { // not required
+	if typeutils.IsZero(m.EntryUUIDs) { // not required
 		return nil
 	}
 
@@ -216,7 +217,7 @@ func (m *SearchLogQuery) validateEntryUUIDs(formats strfmt.Registry) error {
 }
 
 func (m *SearchLogQuery) validateLogIndexes(formats strfmt.Registry) error {
-	if swag.IsZero(m.LogIndexes) { // not required
+	if typeutils.IsZero(m.LogIndexes) { // not required
 		return nil
 	}
 
@@ -231,7 +232,7 @@ func (m *SearchLogQuery) validateLogIndexes(formats strfmt.Registry) error {
 	}
 
 	for i := 0; i < len(m.LogIndexes); i++ {
-		if swag.IsZero(m.LogIndexes[i]) { // not required
+		if typeutils.IsZero(m.LogIndexes[i]) { // not required
 			continue
 		}
 
@@ -262,7 +263,7 @@ func (m *SearchLogQuery) contextValidateEntries(ctx context.Context, formats str
 
 	for i := 0; i < len(m.Entries()); i++ {
 
-		if swag.IsZero(m.entriesField[i]) { // not required
+		if typeutils.IsZero(m.entriesField[i]) { // not required
 			return nil
 		}
 
@@ -289,13 +290,13 @@ func (m *SearchLogQuery) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *SearchLogQuery) UnmarshalBinary(b []byte) error {
 	var res SearchLogQuery
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res

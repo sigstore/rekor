@@ -27,7 +27,7 @@ import (
 	"github.com/go-openapi/runtime"
 	cr "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 )
 
 // NewGetLogProofParams creates a new GetLogProofParams object,
@@ -37,24 +37,28 @@ import (
 //
 // To enforce default values in parameter, use SetDefaults or WithDefaults.
 func NewGetLogProofParams() *GetLogProofParams {
-	return &GetLogProofParams{
-		timeout: cr.DefaultTimeout,
-	}
+	return NewGetLogProofParamsWithTimeout(cr.DefaultTimeout)
 }
 
 // NewGetLogProofParamsWithTimeout creates a new GetLogProofParams object
 // with the ability to set a timeout on a request.
 func NewGetLogProofParamsWithTimeout(timeout time.Duration) *GetLogProofParams {
 	return &GetLogProofParams{
-		timeout: timeout,
+		inner: innerParams{
+			timeout: timeout,
+		},
 	}
 }
 
 // NewGetLogProofParamsWithContext creates a new GetLogProofParams object
 // with the ability to set a context for a request.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetLogProofParams].
 func NewGetLogProofParamsWithContext(ctx context.Context) *GetLogProofParams {
 	return &GetLogProofParams{
-		Context: ctx,
+		inner: innerParams{
+			ctx: ctx,
+		},
 	}
 }
 
@@ -75,30 +79,27 @@ GetLogProofParams contains all the parameters to send to the API endpoint
 */
 type GetLogProofParams struct {
 
-	/* FirstSize.
-
-	   The size of the tree that you wish to prove consistency from (1 means the beginning of the log) Defaults to 1 if not specified
-
-
-	   Default: 1
-	*/
+	// FirstSize.
+	//
+	// The size of the tree that you wish to prove consistency from (1 means the beginning of the log) Defaults to 1 if not specified
+	//
+	//
+	// Default: 1
 	FirstSize *int64
 
-	/* LastSize.
-
-	   The size of the tree that you wish to prove consistency to
-	*/
+	// LastSize.
+	//
+	// The size of the tree that you wish to prove consistency to
 	LastSize int64
 
-	/* TreeID.
-
-	   The tree ID of the tree that you wish to prove consistency for
-	*/
+	// TreeID.
+	//
+	// The tree ID of the tree that you wish to prove consistency for
 	TreeID *string
 
-	timeout    time.Duration
-	Context    context.Context
 	HTTPClient *http.Client
+
+	inner innerParams
 }
 
 // WithDefaults hydrates default values in the get log proof params (not the query body).
@@ -121,82 +122,85 @@ func (o *GetLogProofParams) SetDefaults() {
 		FirstSize: &firstSizeDefault,
 	}
 
-	val.timeout = o.timeout
-	val.Context = o.Context
+	val.inner.timeout = o.inner.timeout
+	val.inner.ctx = o.inner.ctx
 	val.HTTPClient = o.HTTPClient
 	*o = val
 }
 
-// WithTimeout adds the timeout to the get log proof params
+// WithTimeout adds the timeout to the get log proof params.
 func (o *GetLogProofParams) WithTimeout(timeout time.Duration) *GetLogProofParams {
 	o.SetTimeout(timeout)
 	return o
 }
 
-// SetTimeout adds the timeout to the get log proof params
+// SetTimeout adds the timeout to the get log proof params.
 func (o *GetLogProofParams) SetTimeout(timeout time.Duration) {
-	o.timeout = timeout
+	o.inner.timeout = timeout
 }
 
-// WithContext adds the context to the get log proof params
+// WithContext adds the context to the get log proof params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetLogProofParams].
 func (o *GetLogProofParams) WithContext(ctx context.Context) *GetLogProofParams {
 	o.SetContext(ctx)
 	return o
 }
 
-// SetContext adds the context to the get log proof params
+// SetContext adds the context to the get log proof params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetLogProofParams].
 func (o *GetLogProofParams) SetContext(ctx context.Context) {
-	o.Context = ctx
+	o.inner.ctx = ctx
 }
 
-// WithHTTPClient adds the HTTPClient to the get log proof params
+// WithHTTPClient adds the HTTPClient to the get log proof params.
 func (o *GetLogProofParams) WithHTTPClient(client *http.Client) *GetLogProofParams {
 	o.SetHTTPClient(client)
 	return o
 }
 
-// SetHTTPClient adds the HTTPClient to the get log proof params
+// SetHTTPClient adds the HTTPClient to the get log proof params.
 func (o *GetLogProofParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
-// WithFirstSize adds the firstSize to the get log proof params
+// WithFirstSize adds the firstSize to the get log proof params.
 func (o *GetLogProofParams) WithFirstSize(firstSize *int64) *GetLogProofParams {
 	o.SetFirstSize(firstSize)
 	return o
 }
 
-// SetFirstSize adds the firstSize to the get log proof params
+// SetFirstSize adds the firstSize to the get log proof params.
 func (o *GetLogProofParams) SetFirstSize(firstSize *int64) {
 	o.FirstSize = firstSize
 }
 
-// WithLastSize adds the lastSize to the get log proof params
+// WithLastSize adds the lastSize to the get log proof params.
 func (o *GetLogProofParams) WithLastSize(lastSize int64) *GetLogProofParams {
 	o.SetLastSize(lastSize)
 	return o
 }
 
-// SetLastSize adds the lastSize to the get log proof params
+// SetLastSize adds the lastSize to the get log proof params.
 func (o *GetLogProofParams) SetLastSize(lastSize int64) {
 	o.LastSize = lastSize
 }
 
-// WithTreeID adds the treeID to the get log proof params
+// WithTreeID adds the treeID to the get log proof params.
 func (o *GetLogProofParams) WithTreeID(treeID *string) *GetLogProofParams {
 	o.SetTreeID(treeID)
 	return o
 }
 
-// SetTreeID adds the treeId to the get log proof params
+// SetTreeID adds the treeId to the get log proof params.
 func (o *GetLogProofParams) SetTreeID(treeID *string) {
 	o.TreeID = treeID
 }
 
-// WriteToRequest writes these params to a swagger request
+// WriteToRequest writes these params to a [runtime.ClientRequest].
 func (o *GetLogProofParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
-
-	if err := r.SetTimeout(o.timeout); err != nil {
+	if err := r.SetTimeout(o.inner.timeout); err != nil {
 		return err
 	}
 	var res []error
@@ -209,7 +213,7 @@ func (o *GetLogProofParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 		if o.FirstSize != nil {
 			qrFirstSize = *o.FirstSize
 		}
-		qFirstSize := swag.FormatInt64(qrFirstSize)
+		qFirstSize := conv.FormatInteger(qrFirstSize)
 		if qFirstSize != "" {
 
 			if err := r.SetQueryParam("firstSize", qFirstSize); err != nil {
@@ -220,7 +224,7 @@ func (o *GetLogProofParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 
 	// query param lastSize
 	qrLastSize := o.LastSize
-	qLastSize := swag.FormatInt64(qrLastSize)
+	qLastSize := conv.FormatInteger(qrLastSize)
 	if qLastSize != "" {
 
 		if err := r.SetQueryParam("lastSize", qLastSize); err != nil {

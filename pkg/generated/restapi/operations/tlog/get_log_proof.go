@@ -42,13 +42,11 @@ func NewGetLogProof(ctx *middleware.Context, handler GetLogProofHandler) *GetLog
 	return &GetLogProof{Context: ctx, Handler: handler}
 }
 
-/*
-	GetLogProof swagger:route GET /api/v1/log/proof tlog getLogProof
-
-# Get information required to generate a consistency proof for the transparency log
-
-Returns a list of hashes for specified tree sizes that can be used to confirm the consistency of the transparency log
-*/
+// GetLogProof swagger:route GET /api/v1/log/proof tlog getLogProof
+//
+// # Get information required to generate a consistency proof for the transparency log
+//
+// Returns a list of hashes for specified tree sizes that can be used to confirm the consistency of the transparency log
 type GetLogProof struct {
 	Context *middleware.Context
 	Handler GetLogProofHandler
@@ -59,13 +57,13 @@ func (o *GetLogProof) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	if rCtx != nil {
 		*r = *rCtx
 	}
-	var Params = NewGetLogProofParams()
-	if err := o.Context.BindValidRequest(r, route, &Params); err != nil { // bind params
+	params := NewGetLogProofParams()
+	if err := o.Context.BindValidRequest(r, route, &params); err != nil { // bind params
 		o.Context.Respond(rw, r, route.Produces, route, err)
 		return
 	}
 
-	res := o.Handler.Handle(Params) // actually handle the request
+	res := o.Handler.Handle(params) // actually handle the request
 
 	o.Context.Respond(rw, r, route.Produces, route, res)
 

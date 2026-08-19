@@ -25,7 +25,8 @@ import (
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
+	"github.com/go-openapi/swag/typeutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -176,13 +177,13 @@ func (m *RekordV001Schema) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *RekordV001Schema) UnmarshalBinary(b []byte) error {
 	var res RekordV001Schema
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -217,7 +218,7 @@ func (m *RekordV001SchemaData) Validate(formats strfmt.Registry) error {
 }
 
 func (m *RekordV001SchemaData) validateHash(formats strfmt.Registry) error {
-	if swag.IsZero(m.Hash) { // not required
+	if typeutils.IsZero(m.Hash) { // not required
 		return nil
 	}
 
@@ -257,7 +258,7 @@ func (m *RekordV001SchemaData) contextValidateHash(ctx context.Context, formats 
 
 	if m.Hash != nil {
 
-		if swag.IsZero(m.Hash) { // not required
+		if typeutils.IsZero(m.Hash) { // not required
 			return nil
 		}
 
@@ -283,13 +284,13 @@ func (m *RekordV001SchemaData) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *RekordV001SchemaData) UnmarshalBinary(b []byte) error {
 	var res RekordV001SchemaData
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -393,13 +394,13 @@ func (m *RekordV001SchemaDataHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *RekordV001SchemaDataHash) UnmarshalBinary(b []byte) error {
 	var res RekordV001SchemaDataHash
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -570,13 +571,13 @@ func (m *RekordV001SchemaSignature) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *RekordV001SchemaSignature) UnmarshalBinary(b []byte) error {
 	var res RekordV001SchemaSignature
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -618,7 +619,7 @@ func (m *RekordV001SchemaSignaturePublicKey) validateContent(formats strfmt.Regi
 }
 
 // ContextValidate validates this rekord v001 schema signature public key based on context it is used
-func (m *RekordV001SchemaSignaturePublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *RekordV001SchemaSignaturePublicKey) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -627,13 +628,13 @@ func (m *RekordV001SchemaSignaturePublicKey) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *RekordV001SchemaSignaturePublicKey) UnmarshalBinary(b []byte) error {
 	var res RekordV001SchemaSignaturePublicKey
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res

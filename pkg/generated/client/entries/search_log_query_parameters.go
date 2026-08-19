@@ -27,7 +27,6 @@ import (
 	"github.com/go-openapi/runtime"
 	cr "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -38,24 +37,28 @@ import (
 //
 // To enforce default values in parameter, use SetDefaults or WithDefaults.
 func NewSearchLogQueryParams() *SearchLogQueryParams {
-	return &SearchLogQueryParams{
-		timeout: cr.DefaultTimeout,
-	}
+	return NewSearchLogQueryParamsWithTimeout(cr.DefaultTimeout)
 }
 
 // NewSearchLogQueryParamsWithTimeout creates a new SearchLogQueryParams object
 // with the ability to set a timeout on a request.
 func NewSearchLogQueryParamsWithTimeout(timeout time.Duration) *SearchLogQueryParams {
 	return &SearchLogQueryParams{
-		timeout: timeout,
+		inner: innerParams{
+			timeout: timeout,
+		},
 	}
 }
 
 // NewSearchLogQueryParamsWithContext creates a new SearchLogQueryParams object
 // with the ability to set a context for a request.
+//
+// Deprecated: use the operation call with context to pass the context instead of [SearchLogQueryParams].
 func NewSearchLogQueryParamsWithContext(ctx context.Context) *SearchLogQueryParams {
 	return &SearchLogQueryParams{
-		Context: ctx,
+		inner: innerParams{
+			ctx: ctx,
+		},
 	}
 }
 
@@ -79,9 +82,9 @@ type SearchLogQueryParams struct {
 	// Entry.
 	Entry *models.SearchLogQuery
 
-	timeout    time.Duration
-	Context    context.Context
 	HTTPClient *http.Client
+
+	inner innerParams
 }
 
 // WithDefaults hydrates default values in the search log query params (not the query body).
@@ -99,54 +102,57 @@ func (o *SearchLogQueryParams) SetDefaults() {
 	// no default values defined for this parameter
 }
 
-// WithTimeout adds the timeout to the search log query params
+// WithTimeout adds the timeout to the search log query params.
 func (o *SearchLogQueryParams) WithTimeout(timeout time.Duration) *SearchLogQueryParams {
 	o.SetTimeout(timeout)
 	return o
 }
 
-// SetTimeout adds the timeout to the search log query params
+// SetTimeout adds the timeout to the search log query params.
 func (o *SearchLogQueryParams) SetTimeout(timeout time.Duration) {
-	o.timeout = timeout
+	o.inner.timeout = timeout
 }
 
-// WithContext adds the context to the search log query params
+// WithContext adds the context to the search log query params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [SearchLogQueryParams].
 func (o *SearchLogQueryParams) WithContext(ctx context.Context) *SearchLogQueryParams {
 	o.SetContext(ctx)
 	return o
 }
 
-// SetContext adds the context to the search log query params
+// SetContext adds the context to the search log query params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [SearchLogQueryParams].
 func (o *SearchLogQueryParams) SetContext(ctx context.Context) {
-	o.Context = ctx
+	o.inner.ctx = ctx
 }
 
-// WithHTTPClient adds the HTTPClient to the search log query params
+// WithHTTPClient adds the HTTPClient to the search log query params.
 func (o *SearchLogQueryParams) WithHTTPClient(client *http.Client) *SearchLogQueryParams {
 	o.SetHTTPClient(client)
 	return o
 }
 
-// SetHTTPClient adds the HTTPClient to the search log query params
+// SetHTTPClient adds the HTTPClient to the search log query params.
 func (o *SearchLogQueryParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
-// WithEntry adds the entry to the search log query params
+// WithEntry adds the entry to the search log query params.
 func (o *SearchLogQueryParams) WithEntry(entry *models.SearchLogQuery) *SearchLogQueryParams {
 	o.SetEntry(entry)
 	return o
 }
 
-// SetEntry adds the entry to the search log query params
+// SetEntry adds the entry to the search log query params.
 func (o *SearchLogQueryParams) SetEntry(entry *models.SearchLogQuery) {
 	o.Entry = entry
 }
 
-// WriteToRequest writes these params to a swagger request
+// WriteToRequest writes these params to a [runtime.ClientRequest].
 func (o *SearchLogQueryParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
-
-	if err := r.SetTimeout(o.timeout); err != nil {
+	if err := r.SetTimeout(o.inner.timeout); err != nil {
 		return err
 	}
 	var res []error

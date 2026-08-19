@@ -211,7 +211,7 @@ func TestGetCLI(t *testing.T) {
 }
 
 func publicKeyFromRekorClient(ctx context.Context, c *generatedClient.Rekor) (*ecdsa.PublicKey, error) {
-	resp, err := c.Pubkey.GetPublicKey(&pubkey.GetPublicKeyParams{Context: ctx})
+	resp, err := c.Pubkey.GetPublicKeyContext(ctx, pubkey.NewGetPublicKeyParams())
 	if err != nil {
 		return nil, err
 	}

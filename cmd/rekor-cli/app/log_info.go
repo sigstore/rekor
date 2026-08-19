@@ -72,9 +72,9 @@ var logInfoCmd = &cobra.Command{
 			return nil, err
 		}
 
-		params := tlog.NewGetLogInfoParamsWithContext(ctx)
+		params := tlog.NewGetLogInfoParams()
 		params.SetTimeout(viper.GetDuration("timeout"))
-		result, err := rekorClient.Tlog.GetLogInfo(params)
+		result, err := rekorClient.Tlog.GetLogInfoContext(ctx, params)
 		if err != nil {
 			return nil, err
 		}
@@ -166,7 +166,7 @@ func loadVerifier(ctx context.Context, rekorClient *rclient.Rekor, treeID string
 	publicKey := viper.GetString("rekor_server_public_key")
 	if publicKey == "" {
 		// fetch key from server
-		keyResp, err := rekorClient.Pubkey.GetPublicKey(pubkey.NewGetPublicKeyParamsWithContext(ctx).WithTreeID(conv.Pointer(treeID)))
+		keyResp, err := rekorClient.Pubkey.GetPublicKeyContext(ctx, pubkey.NewGetPublicKeyParams().WithTreeID(conv.Pointer(treeID)))
 		if err != nil {
 			return nil, err
 		}

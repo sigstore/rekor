@@ -25,7 +25,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/go-openapi/validate"
 )
 
@@ -51,26 +51,20 @@ func NewGetLogProofParams() GetLogProofParams {
 type GetLogProofParams struct {
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
-
-	/*The size of the tree that you wish to prove consistency from (1 means the beginning of the log) Defaults to 1 if not specified
-
-	  Minimum: 1
-	  In: query
-	  Default: 1
-	*/
+	// The size of the tree that you wish to prove consistency from (1 means the beginning of the log) Defaults to 1 if not specified
+	//
+	// Minimum: 1
+	// In: query
+	// Default: 1
 	FirstSize *int64
-
-	/*The size of the tree that you wish to prove consistency to
-	  Required: true
-	  Minimum: 1
-	  In: query
-	*/
+	// The size of the tree that you wish to prove consistency to
+	// Required: true
+	// Minimum: 1
+	// In: query
 	LastSize int64
-
-	/*The tree ID of the tree that you wish to prove consistency for
-	  Pattern: ^[0-9]+$
-	  In: query
-	*/
+	// The tree ID of the tree that you wish to prove consistency for
+	// Pattern: ^[0-9]+$
+	// In: query
 	TreeID *string
 }
 
@@ -119,7 +113,7 @@ func (o *GetLogProofParams) bindFirstSize(rawData []string, hasKey bool, formats
 		return nil
 	}
 
-	value, err := swag.ConvertInt64(raw)
+	value, err := conv.ConvertInt64(raw)
 	if err != nil {
 		return errors.InvalidType("firstSize", "query", "int64", raw)
 	}
@@ -159,7 +153,7 @@ func (o *GetLogProofParams) bindLastSize(rawData []string, hasKey bool, formats 
 		return err
 	}
 
-	value, err := swag.ConvertInt64(raw)
+	value, err := conv.ConvertInt64(raw)
 	if err != nil {
 		return errors.InvalidType("lastSize", "query", "int64", raw)
 	}

@@ -25,7 +25,8 @@ import (
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
+	"github.com/go-openapi/swag/typeutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -176,13 +177,13 @@ func (m *HelmV001Schema) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *HelmV001Schema) UnmarshalBinary(b []byte) error {
 	var res HelmV001Schema
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -221,7 +222,7 @@ func (m *HelmV001SchemaChart) Validate(formats strfmt.Registry) error {
 }
 
 func (m *HelmV001SchemaChart) validateHash(formats strfmt.Registry) error {
-	if swag.IsZero(m.Hash) { // not required
+	if typeutils.IsZero(m.Hash) { // not required
 		return nil
 	}
 
@@ -289,7 +290,7 @@ func (m *HelmV001SchemaChart) contextValidateHash(ctx context.Context, formats s
 
 	if m.Hash != nil {
 
-		if swag.IsZero(m.Hash) { // not required
+		if typeutils.IsZero(m.Hash) { // not required
 			return nil
 		}
 
@@ -336,13 +337,13 @@ func (m *HelmV001SchemaChart) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *HelmV001SchemaChart) UnmarshalBinary(b []byte) error {
 	var res HelmV001SchemaChart
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -446,13 +447,13 @@ func (m *HelmV001SchemaChartHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *HelmV001SchemaChartHash) UnmarshalBinary(b []byte) error {
 	var res HelmV001SchemaChartHash
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -487,7 +488,7 @@ func (m *HelmV001SchemaChartProvenance) Validate(formats strfmt.Registry) error 
 }
 
 func (m *HelmV001SchemaChartProvenance) validateSignature(formats strfmt.Registry) error {
-	if swag.IsZero(m.Signature) { // not required
+	if typeutils.IsZero(m.Signature) { // not required
 		return nil
 	}
 
@@ -527,7 +528,7 @@ func (m *HelmV001SchemaChartProvenance) contextValidateSignature(ctx context.Con
 
 	if m.Signature != nil {
 
-		if swag.IsZero(m.Signature) { // not required
+		if typeutils.IsZero(m.Signature) { // not required
 			return nil
 		}
 
@@ -553,13 +554,13 @@ func (m *HelmV001SchemaChartProvenance) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *HelmV001SchemaChartProvenance) UnmarshalBinary(b []byte) error {
 	var res HelmV001SchemaChartProvenance
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -629,13 +630,13 @@ func (m *HelmV001SchemaChartProvenanceSignature) MarshalBinary() ([]byte, error)
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *HelmV001SchemaChartProvenanceSignature) UnmarshalBinary(b []byte) error {
 	var res HelmV001SchemaChartProvenanceSignature
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -677,7 +678,7 @@ func (m *HelmV001SchemaPublicKey) validateContent(formats strfmt.Registry) error
 }
 
 // ContextValidate validates this helm v001 schema public key based on context it is used
-func (m *HelmV001SchemaPublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *HelmV001SchemaPublicKey) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -686,13 +687,13 @@ func (m *HelmV001SchemaPublicKey) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *HelmV001SchemaPublicKey) UnmarshalBinary(b []byte) error {
 	var res HelmV001SchemaPublicKey
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res

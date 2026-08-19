@@ -24,7 +24,8 @@ import (
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
+	"github.com/go-openapi/swag/typeutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -39,7 +40,7 @@ func (m LogEntry) Validate(formats strfmt.Registry) error {
 
 	for k := range m {
 
-		if swag.IsZero(m[k]) { // not required
+		if typeutils.IsZero(m[k]) { // not required
 			continue
 		}
 		if val, ok := m[k]; ok {
@@ -150,7 +151,7 @@ func (m *LogEntryAnon) Validate(formats strfmt.Registry) error {
 }
 
 func (m *LogEntryAnon) validateAttestation(formats strfmt.Registry) error {
-	if swag.IsZero(m.Attestation) { // not required
+	if typeutils.IsZero(m.Attestation) { // not required
 		return nil
 	}
 
@@ -217,7 +218,7 @@ func (m *LogEntryAnon) validateLogIndex(formats strfmt.Registry) error {
 }
 
 func (m *LogEntryAnon) validateVerification(formats strfmt.Registry) error {
-	if swag.IsZero(m.Verification) { // not required
+	if typeutils.IsZero(m.Verification) { // not required
 		return nil
 	}
 
@@ -261,7 +262,7 @@ func (m *LogEntryAnon) contextValidateAttestation(ctx context.Context, formats s
 
 	if m.Attestation != nil {
 
-		if swag.IsZero(m.Attestation) { // not required
+		if typeutils.IsZero(m.Attestation) { // not required
 			return nil
 		}
 
@@ -286,7 +287,7 @@ func (m *LogEntryAnon) contextValidateVerification(ctx context.Context, formats 
 
 	if m.Verification != nil {
 
-		if swag.IsZero(m.Verification) { // not required
+		if typeutils.IsZero(m.Verification) { // not required
 			return nil
 		}
 
@@ -312,13 +313,13 @@ func (m *LogEntryAnon) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *LogEntryAnon) UnmarshalBinary(b []byte) error {
 	var res LogEntryAnon
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -336,12 +337,12 @@ type LogEntryAnonAttestation struct {
 }
 
 // Validate validates this log entry anon attestation
-func (m *LogEntryAnonAttestation) Validate(formats strfmt.Registry) error {
+func (m *LogEntryAnonAttestation) Validate(_ strfmt.Registry) error {
 	return nil
 }
 
 // ContextValidate validates this log entry anon attestation based on context it is used
-func (m *LogEntryAnonAttestation) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *LogEntryAnonAttestation) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -350,13 +351,13 @@ func (m *LogEntryAnonAttestation) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *LogEntryAnonAttestation) UnmarshalBinary(b []byte) error {
 	var res LogEntryAnonAttestation
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -391,7 +392,7 @@ func (m *LogEntryAnonVerification) Validate(formats strfmt.Registry) error {
 }
 
 func (m *LogEntryAnonVerification) validateInclusionProof(formats strfmt.Registry) error {
-	if swag.IsZero(m.InclusionProof) { // not required
+	if typeutils.IsZero(m.InclusionProof) { // not required
 		return nil
 	}
 
@@ -431,7 +432,7 @@ func (m *LogEntryAnonVerification) contextValidateInclusionProof(ctx context.Con
 
 	if m.InclusionProof != nil {
 
-		if swag.IsZero(m.InclusionProof) { // not required
+		if typeutils.IsZero(m.InclusionProof) { // not required
 			return nil
 		}
 
@@ -457,13 +458,13 @@ func (m *LogEntryAnonVerification) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *LogEntryAnonVerification) UnmarshalBinary(b []byte) error {
 	var res LogEntryAnonVerification
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res

@@ -36,24 +36,28 @@ import (
 //
 // To enforce default values in parameter, use SetDefaults or WithDefaults.
 func NewGetPublicKeyParams() *GetPublicKeyParams {
-	return &GetPublicKeyParams{
-		timeout: cr.DefaultTimeout,
-	}
+	return NewGetPublicKeyParamsWithTimeout(cr.DefaultTimeout)
 }
 
 // NewGetPublicKeyParamsWithTimeout creates a new GetPublicKeyParams object
 // with the ability to set a timeout on a request.
 func NewGetPublicKeyParamsWithTimeout(timeout time.Duration) *GetPublicKeyParams {
 	return &GetPublicKeyParams{
-		timeout: timeout,
+		inner: innerParams{
+			timeout: timeout,
+		},
 	}
 }
 
 // NewGetPublicKeyParamsWithContext creates a new GetPublicKeyParams object
 // with the ability to set a context for a request.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetPublicKeyParams].
 func NewGetPublicKeyParamsWithContext(ctx context.Context) *GetPublicKeyParams {
 	return &GetPublicKeyParams{
-		Context: ctx,
+		inner: innerParams{
+			ctx: ctx,
+		},
 	}
 }
 
@@ -74,15 +78,14 @@ GetPublicKeyParams contains all the parameters to send to the API endpoint
 */
 type GetPublicKeyParams struct {
 
-	/* TreeID.
-
-	   The tree ID of the tree you wish to get a public key for
-	*/
+	// TreeID.
+	//
+	// The tree ID of the tree you wish to get a public key for
 	TreeID *string
 
-	timeout    time.Duration
-	Context    context.Context
 	HTTPClient *http.Client
+
+	inner innerParams
 }
 
 // WithDefaults hydrates default values in the get public key params (not the query body).
@@ -100,54 +103,57 @@ func (o *GetPublicKeyParams) SetDefaults() {
 	// no default values defined for this parameter
 }
 
-// WithTimeout adds the timeout to the get public key params
+// WithTimeout adds the timeout to the get public key params.
 func (o *GetPublicKeyParams) WithTimeout(timeout time.Duration) *GetPublicKeyParams {
 	o.SetTimeout(timeout)
 	return o
 }
 
-// SetTimeout adds the timeout to the get public key params
+// SetTimeout adds the timeout to the get public key params.
 func (o *GetPublicKeyParams) SetTimeout(timeout time.Duration) {
-	o.timeout = timeout
+	o.inner.timeout = timeout
 }
 
-// WithContext adds the context to the get public key params
+// WithContext adds the context to the get public key params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetPublicKeyParams].
 func (o *GetPublicKeyParams) WithContext(ctx context.Context) *GetPublicKeyParams {
 	o.SetContext(ctx)
 	return o
 }
 
-// SetContext adds the context to the get public key params
+// SetContext adds the context to the get public key params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetPublicKeyParams].
 func (o *GetPublicKeyParams) SetContext(ctx context.Context) {
-	o.Context = ctx
+	o.inner.ctx = ctx
 }
 
-// WithHTTPClient adds the HTTPClient to the get public key params
+// WithHTTPClient adds the HTTPClient to the get public key params.
 func (o *GetPublicKeyParams) WithHTTPClient(client *http.Client) *GetPublicKeyParams {
 	o.SetHTTPClient(client)
 	return o
 }
 
-// SetHTTPClient adds the HTTPClient to the get public key params
+// SetHTTPClient adds the HTTPClient to the get public key params.
 func (o *GetPublicKeyParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
-// WithTreeID adds the treeID to the get public key params
+// WithTreeID adds the treeID to the get public key params.
 func (o *GetPublicKeyParams) WithTreeID(treeID *string) *GetPublicKeyParams {
 	o.SetTreeID(treeID)
 	return o
 }
 
-// SetTreeID adds the treeId to the get public key params
+// SetTreeID adds the treeId to the get public key params.
 func (o *GetPublicKeyParams) SetTreeID(treeID *string) {
 	o.TreeID = treeID
 }
 
-// WriteToRequest writes these params to a swagger request
+// WriteToRequest writes these params to a [runtime.ClientRequest].
 func (o *GetPublicKeyParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
-
-	if err := r.SetTimeout(o.timeout); err != nil {
+	if err := r.SetTimeout(o.inner.timeout); err != nil {
 		return err
 	}
 	var res []error

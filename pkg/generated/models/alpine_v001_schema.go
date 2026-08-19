@@ -25,7 +25,8 @@ import (
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
+	"github.com/go-openapi/swag/typeutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -176,13 +177,13 @@ func (m *AlpineV001Schema) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *AlpineV001Schema) UnmarshalBinary(b []byte) error {
 	var res AlpineV001Schema
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -221,7 +222,7 @@ func (m *AlpineV001SchemaPackage) Validate(formats strfmt.Registry) error {
 }
 
 func (m *AlpineV001SchemaPackage) validateHash(formats strfmt.Registry) error {
-	if swag.IsZero(m.Hash) { // not required
+	if typeutils.IsZero(m.Hash) { // not required
 		return nil
 	}
 
@@ -265,7 +266,7 @@ func (m *AlpineV001SchemaPackage) contextValidateHash(ctx context.Context, forma
 
 	if m.Hash != nil {
 
-		if swag.IsZero(m.Hash) { // not required
+		if typeutils.IsZero(m.Hash) { // not required
 			return nil
 		}
 
@@ -296,13 +297,13 @@ func (m *AlpineV001SchemaPackage) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *AlpineV001SchemaPackage) UnmarshalBinary(b []byte) error {
 	var res AlpineV001SchemaPackage
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -406,13 +407,13 @@ func (m *AlpineV001SchemaPackageHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *AlpineV001SchemaPackageHash) UnmarshalBinary(b []byte) error {
 	var res AlpineV001SchemaPackageHash
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -454,7 +455,7 @@ func (m *AlpineV001SchemaPublicKey) validateContent(formats strfmt.Registry) err
 }
 
 // ContextValidate validates this alpine v001 schema public key based on context it is used
-func (m *AlpineV001SchemaPublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *AlpineV001SchemaPublicKey) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -463,13 +464,13 @@ func (m *AlpineV001SchemaPublicKey) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *AlpineV001SchemaPublicKey) UnmarshalBinary(b []byte) error {
 	var res AlpineV001SchemaPublicKey
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res

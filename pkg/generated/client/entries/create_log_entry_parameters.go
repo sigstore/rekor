@@ -27,7 +27,6 @@ import (
 	"github.com/go-openapi/runtime"
 	cr "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -38,24 +37,28 @@ import (
 //
 // To enforce default values in parameter, use SetDefaults or WithDefaults.
 func NewCreateLogEntryParams() *CreateLogEntryParams {
-	return &CreateLogEntryParams{
-		timeout: cr.DefaultTimeout,
-	}
+	return NewCreateLogEntryParamsWithTimeout(cr.DefaultTimeout)
 }
 
 // NewCreateLogEntryParamsWithTimeout creates a new CreateLogEntryParams object
 // with the ability to set a timeout on a request.
 func NewCreateLogEntryParamsWithTimeout(timeout time.Duration) *CreateLogEntryParams {
 	return &CreateLogEntryParams{
-		timeout: timeout,
+		inner: innerParams{
+			timeout: timeout,
+		},
 	}
 }
 
 // NewCreateLogEntryParamsWithContext creates a new CreateLogEntryParams object
 // with the ability to set a context for a request.
+//
+// Deprecated: use the operation call with context to pass the context instead of [CreateLogEntryParams].
 func NewCreateLogEntryParamsWithContext(ctx context.Context) *CreateLogEntryParams {
 	return &CreateLogEntryParams{
-		Context: ctx,
+		inner: innerParams{
+			ctx: ctx,
+		},
 	}
 }
 
@@ -79,9 +82,9 @@ type CreateLogEntryParams struct {
 	// ProposedEntry.
 	ProposedEntry models.ProposedEntry
 
-	timeout    time.Duration
-	Context    context.Context
 	HTTPClient *http.Client
+
+	inner innerParams
 }
 
 // WithDefaults hydrates default values in the create log entry params (not the query body).
@@ -99,54 +102,57 @@ func (o *CreateLogEntryParams) SetDefaults() {
 	// no default values defined for this parameter
 }
 
-// WithTimeout adds the timeout to the create log entry params
+// WithTimeout adds the timeout to the create log entry params.
 func (o *CreateLogEntryParams) WithTimeout(timeout time.Duration) *CreateLogEntryParams {
 	o.SetTimeout(timeout)
 	return o
 }
 
-// SetTimeout adds the timeout to the create log entry params
+// SetTimeout adds the timeout to the create log entry params.
 func (o *CreateLogEntryParams) SetTimeout(timeout time.Duration) {
-	o.timeout = timeout
+	o.inner.timeout = timeout
 }
 
-// WithContext adds the context to the create log entry params
+// WithContext adds the context to the create log entry params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [CreateLogEntryParams].
 func (o *CreateLogEntryParams) WithContext(ctx context.Context) *CreateLogEntryParams {
 	o.SetContext(ctx)
 	return o
 }
 
-// SetContext adds the context to the create log entry params
+// SetContext adds the context to the create log entry params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [CreateLogEntryParams].
 func (o *CreateLogEntryParams) SetContext(ctx context.Context) {
-	o.Context = ctx
+	o.inner.ctx = ctx
 }
 
-// WithHTTPClient adds the HTTPClient to the create log entry params
+// WithHTTPClient adds the HTTPClient to the create log entry params.
 func (o *CreateLogEntryParams) WithHTTPClient(client *http.Client) *CreateLogEntryParams {
 	o.SetHTTPClient(client)
 	return o
 }
 
-// SetHTTPClient adds the HTTPClient to the create log entry params
+// SetHTTPClient adds the HTTPClient to the create log entry params.
 func (o *CreateLogEntryParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
-// WithProposedEntry adds the proposedEntry to the create log entry params
+// WithProposedEntry adds the proposedEntry to the create log entry params.
 func (o *CreateLogEntryParams) WithProposedEntry(proposedEntry models.ProposedEntry) *CreateLogEntryParams {
 	o.SetProposedEntry(proposedEntry)
 	return o
 }
 
-// SetProposedEntry adds the proposedEntry to the create log entry params
+// SetProposedEntry adds the proposedEntry to the create log entry params.
 func (o *CreateLogEntryParams) SetProposedEntry(proposedEntry models.ProposedEntry) {
 	o.ProposedEntry = proposedEntry
 }
 
-// WriteToRequest writes these params to a swagger request
+// WriteToRequest writes these params to a [runtime.ClientRequest].
 func (o *CreateLogEntryParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
-
-	if err := r.SetTimeout(o.timeout); err != nil {
+	if err := r.SetTimeout(o.inner.timeout); err != nil {
 		return err
 	}
 	var res []error

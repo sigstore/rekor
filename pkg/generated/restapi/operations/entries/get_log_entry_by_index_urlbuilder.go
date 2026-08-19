@@ -23,7 +23,7 @@ import (
 	"net/url"
 	golangswaggerpaths "path"
 
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 )
 
 // GetLogEntryByIndexURL generates an URL for the get log entry by index operation
@@ -61,7 +61,7 @@ func (o *GetLogEntryByIndexURL) Build() (*url.URL, error) {
 
 	qs := make(url.Values)
 
-	logIndexQ := swag.FormatInt64(o.LogIndex)
+	logIndexQ := conv.FormatInteger(o.LogIndex)
 	if logIndexQ != "" {
 		qs.Set("logIndex", logIndexQ)
 	}

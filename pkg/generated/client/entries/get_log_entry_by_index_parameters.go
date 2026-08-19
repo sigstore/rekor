@@ -27,7 +27,7 @@ import (
 	"github.com/go-openapi/runtime"
 	cr "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 )
 
 // NewGetLogEntryByIndexParams creates a new GetLogEntryByIndexParams object,
@@ -37,24 +37,28 @@ import (
 //
 // To enforce default values in parameter, use SetDefaults or WithDefaults.
 func NewGetLogEntryByIndexParams() *GetLogEntryByIndexParams {
-	return &GetLogEntryByIndexParams{
-		timeout: cr.DefaultTimeout,
-	}
+	return NewGetLogEntryByIndexParamsWithTimeout(cr.DefaultTimeout)
 }
 
 // NewGetLogEntryByIndexParamsWithTimeout creates a new GetLogEntryByIndexParams object
 // with the ability to set a timeout on a request.
 func NewGetLogEntryByIndexParamsWithTimeout(timeout time.Duration) *GetLogEntryByIndexParams {
 	return &GetLogEntryByIndexParams{
-		timeout: timeout,
+		inner: innerParams{
+			timeout: timeout,
+		},
 	}
 }
 
 // NewGetLogEntryByIndexParamsWithContext creates a new GetLogEntryByIndexParams object
 // with the ability to set a context for a request.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetLogEntryByIndexParams].
 func NewGetLogEntryByIndexParamsWithContext(ctx context.Context) *GetLogEntryByIndexParams {
 	return &GetLogEntryByIndexParams{
-		Context: ctx,
+		inner: innerParams{
+			ctx: ctx,
+		},
 	}
 }
 
@@ -75,15 +79,14 @@ GetLogEntryByIndexParams contains all the parameters to send to the API endpoint
 */
 type GetLogEntryByIndexParams struct {
 
-	/* LogIndex.
-
-	   specifies the index of the entry in the transparency log to be retrieved
-	*/
+	// LogIndex.
+	//
+	// specifies the index of the entry in the transparency log to be retrieved
 	LogIndex int64
 
-	timeout    time.Duration
-	Context    context.Context
 	HTTPClient *http.Client
+
+	inner innerParams
 }
 
 // WithDefaults hydrates default values in the get log entry by index params (not the query body).
@@ -101,61 +104,64 @@ func (o *GetLogEntryByIndexParams) SetDefaults() {
 	// no default values defined for this parameter
 }
 
-// WithTimeout adds the timeout to the get log entry by index params
+// WithTimeout adds the timeout to the get log entry by index params.
 func (o *GetLogEntryByIndexParams) WithTimeout(timeout time.Duration) *GetLogEntryByIndexParams {
 	o.SetTimeout(timeout)
 	return o
 }
 
-// SetTimeout adds the timeout to the get log entry by index params
+// SetTimeout adds the timeout to the get log entry by index params.
 func (o *GetLogEntryByIndexParams) SetTimeout(timeout time.Duration) {
-	o.timeout = timeout
+	o.inner.timeout = timeout
 }
 
-// WithContext adds the context to the get log entry by index params
+// WithContext adds the context to the get log entry by index params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetLogEntryByIndexParams].
 func (o *GetLogEntryByIndexParams) WithContext(ctx context.Context) *GetLogEntryByIndexParams {
 	o.SetContext(ctx)
 	return o
 }
 
-// SetContext adds the context to the get log entry by index params
+// SetContext adds the context to the get log entry by index params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetLogEntryByIndexParams].
 func (o *GetLogEntryByIndexParams) SetContext(ctx context.Context) {
-	o.Context = ctx
+	o.inner.ctx = ctx
 }
 
-// WithHTTPClient adds the HTTPClient to the get log entry by index params
+// WithHTTPClient adds the HTTPClient to the get log entry by index params.
 func (o *GetLogEntryByIndexParams) WithHTTPClient(client *http.Client) *GetLogEntryByIndexParams {
 	o.SetHTTPClient(client)
 	return o
 }
 
-// SetHTTPClient adds the HTTPClient to the get log entry by index params
+// SetHTTPClient adds the HTTPClient to the get log entry by index params.
 func (o *GetLogEntryByIndexParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
-// WithLogIndex adds the logIndex to the get log entry by index params
+// WithLogIndex adds the logIndex to the get log entry by index params.
 func (o *GetLogEntryByIndexParams) WithLogIndex(logIndex int64) *GetLogEntryByIndexParams {
 	o.SetLogIndex(logIndex)
 	return o
 }
 
-// SetLogIndex adds the logIndex to the get log entry by index params
+// SetLogIndex adds the logIndex to the get log entry by index params.
 func (o *GetLogEntryByIndexParams) SetLogIndex(logIndex int64) {
 	o.LogIndex = logIndex
 }
 
-// WriteToRequest writes these params to a swagger request
+// WriteToRequest writes these params to a [runtime.ClientRequest].
 func (o *GetLogEntryByIndexParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
-
-	if err := r.SetTimeout(o.timeout); err != nil {
+	if err := r.SetTimeout(o.inner.timeout); err != nil {
 		return err
 	}
 	var res []error
 
 	// query param logIndex
 	qrLogIndex := o.LogIndex
-	qLogIndex := swag.FormatInt64(qrLogIndex)
+	qLogIndex := conv.FormatInteger(qrLogIndex)
 	if qLogIndex != "" {
 
 		if err := r.SetQueryParam("logIndex", qLogIndex); err != nil {

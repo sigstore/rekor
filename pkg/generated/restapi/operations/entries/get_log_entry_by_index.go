@@ -42,11 +42,9 @@ func NewGetLogEntryByIndex(ctx *middleware.Context, handler GetLogEntryByIndexHa
 	return &GetLogEntryByIndex{Context: ctx, Handler: handler}
 }
 
-/*
-	GetLogEntryByIndex swagger:route GET /api/v1/log/entries entries getLogEntryByIndex
-
-Retrieves an entry and inclusion proof from the transparency log (if it exists) by index
-*/
+// GetLogEntryByIndex swagger:route GET /api/v1/log/entries entries getLogEntryByIndex
+//
+// Retrieves an entry and inclusion proof from the transparency log (if it exists) by index
 type GetLogEntryByIndex struct {
 	Context *middleware.Context
 	Handler GetLogEntryByIndexHandler
@@ -57,13 +55,13 @@ func (o *GetLogEntryByIndex) ServeHTTP(rw http.ResponseWriter, r *http.Request) 
 	if rCtx != nil {
 		*r = *rCtx
 	}
-	var Params = NewGetLogEntryByIndexParams()
-	if err := o.Context.BindValidRequest(r, route, &Params); err != nil { // bind params
+	params := NewGetLogEntryByIndexParams()
+	if err := o.Context.BindValidRequest(r, route, &params); err != nil { // bind params
 		o.Context.Respond(rw, r, route.Produces, route, err)
 		return
 	}
 
-	res := o.Handler.Handle(Params) // actually handle the request
+	res := o.Handler.Handle(params) // actually handle the request
 
 	o.Context.Respond(rw, r, route.Produces, route, res)
 

@@ -26,7 +26,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -67,11 +66,9 @@ func NewGetLogProofOK() *GetLogProofOK {
 	return &GetLogProofOK{}
 }
 
-/*
-GetLogProofOK describes a response with status code 200, with default header values.
-
-All hashes required to compute the consistency proof
-*/
+// GetLogProofOK describes a response with status code 200, with default header values.
+//
+// All hashes required to compute the consistency proof
 type GetLogProofOK struct {
 	Payload *models.ConsistencyProof
 }
@@ -137,11 +134,9 @@ func NewGetLogProofBadRequest() *GetLogProofBadRequest {
 	return &GetLogProofBadRequest{}
 }
 
-/*
-GetLogProofBadRequest describes a response with status code 400, with default header values.
-
-The content supplied to the server was invalid
-*/
+// GetLogProofBadRequest describes a response with status code 400, with default header values.
+//
+// The content supplied to the server was invalid
 type GetLogProofBadRequest struct {
 	Payload *models.Error
 }
@@ -209,11 +204,9 @@ func NewGetLogProofDefault(code int) *GetLogProofDefault {
 	}
 }
 
-/*
-GetLogProofDefault describes a response with status code -1, with default header values.
-
-There was an internal error in the server while processing the request
-*/
+// GetLogProofDefault describes a response with status code -1, with default header values.
+//
+// There was an internal error in the server while processing the request
 type GetLogProofDefault struct {
 	_statusCode int
 

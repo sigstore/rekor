@@ -25,7 +25,8 @@ import (
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
+	"github.com/go-openapi/swag/typeutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -68,7 +69,7 @@ func (m *CoseV001Schema) Validate(formats strfmt.Registry) error {
 }
 
 func (m *CoseV001Schema) validateData(formats strfmt.Registry) error {
-	if swag.IsZero(m.Data) { // not required
+	if typeutils.IsZero(m.Data) { // not required
 		return nil
 	}
 
@@ -117,7 +118,7 @@ func (m *CoseV001Schema) contextValidateData(ctx context.Context, formats strfmt
 
 	if m.Data != nil {
 
-		if swag.IsZero(m.Data) { // not required
+		if typeutils.IsZero(m.Data) { // not required
 			return nil
 		}
 
@@ -143,13 +144,13 @@ func (m *CoseV001Schema) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *CoseV001Schema) UnmarshalBinary(b []byte) error {
 	var res CoseV001Schema
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -191,7 +192,7 @@ func (m *CoseV001SchemaData) Validate(formats strfmt.Registry) error {
 }
 
 func (m *CoseV001SchemaData) validateEnvelopeHash(formats strfmt.Registry) error {
-	if swag.IsZero(m.EnvelopeHash) { // not required
+	if typeutils.IsZero(m.EnvelopeHash) { // not required
 		return nil
 	}
 
@@ -214,7 +215,7 @@ func (m *CoseV001SchemaData) validateEnvelopeHash(formats strfmt.Registry) error
 }
 
 func (m *CoseV001SchemaData) validatePayloadHash(formats strfmt.Registry) error {
-	if swag.IsZero(m.PayloadHash) { // not required
+	if typeutils.IsZero(m.PayloadHash) { // not required
 		return nil
 	}
 
@@ -258,7 +259,7 @@ func (m *CoseV001SchemaData) contextValidateEnvelopeHash(ctx context.Context, fo
 
 	if m.EnvelopeHash != nil {
 
-		if swag.IsZero(m.EnvelopeHash) { // not required
+		if typeutils.IsZero(m.EnvelopeHash) { // not required
 			return nil
 		}
 
@@ -283,7 +284,7 @@ func (m *CoseV001SchemaData) contextValidatePayloadHash(ctx context.Context, for
 
 	if m.PayloadHash != nil {
 
-		if swag.IsZero(m.PayloadHash) { // not required
+		if typeutils.IsZero(m.PayloadHash) { // not required
 			return nil
 		}
 
@@ -309,13 +310,13 @@ func (m *CoseV001SchemaData) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *CoseV001SchemaData) UnmarshalBinary(b []byte) error {
 	var res CoseV001SchemaData
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -419,13 +420,13 @@ func (m *CoseV001SchemaDataEnvelopeHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *CoseV001SchemaDataEnvelopeHash) UnmarshalBinary(b []byte) error {
 	var res CoseV001SchemaDataEnvelopeHash
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -529,13 +530,13 @@ func (m *CoseV001SchemaDataPayloadHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *CoseV001SchemaDataPayloadHash) UnmarshalBinary(b []byte) error {
 	var res CoseV001SchemaDataPayloadHash
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
