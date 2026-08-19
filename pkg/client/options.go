@@ -18,8 +18,6 @@ import (
 	"crypto/tls"
 	"net/http"
 	"time"
-
-	"github.com/hashicorp/go-retryablehttp"
 )
 
 // Option is a functional option for customizing static signatures.
@@ -32,7 +30,7 @@ type options struct {
 	RetryWaitMax        time.Duration
 	InsecureTLS         bool
 	TLSConfig           *tls.Config
-	Logger              interface{}
+	Logger              any
 	NoDisableKeepalives bool
 	Headers             map[string][]string
 }
@@ -83,12 +81,15 @@ func WithRetryWaitMax(t time.Duration) Option {
 	}
 }
 
-// WithLogger sets the logger; it must implement either retryablehttp.Logger or retryablehttp.LeveledLogger; if not, this will not take effect.
-func WithLogger(logger interface{}) Option {
+// WithLogger sets the logger; it must implement either a simple logger interface
+// with a `Printf(string, ...any)` method, or a leveled logger interface with
+// `Error`, `Info`, `Debug`, and `Warn` methods that take a message string and
+// variadic `keysAndValues`.
+func WithLogger(l any) Option {
 	return func(o *options) {
-		switch logger.(type) {
-		case retryablehttp.Logger, retryablehttp.LeveledLogger:
-			o.Logger = logger
+		switch l.(type) {
+		case logger, leveledLogger:
+			o.Logger = l
 		}
 	}
 }
