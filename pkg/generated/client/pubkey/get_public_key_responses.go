@@ -26,7 +26,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -61,11 +60,9 @@ func NewGetPublicKeyOK() *GetPublicKeyOK {
 	return &GetPublicKeyOK{}
 }
 
-/*
-GetPublicKeyOK describes a response with status code 200, with default header values.
-
-The public key
-*/
+// GetPublicKeyOK describes a response with status code 200, with default header values.
+//
+// The public key
 type GetPublicKeyOK struct {
 	Payload string
 }
@@ -131,11 +128,9 @@ func NewGetPublicKeyDefault(code int) *GetPublicKeyDefault {
 	}
 }
 
-/*
-GetPublicKeyDefault describes a response with status code -1, with default header values.
-
-There was an internal error in the server while processing the request
-*/
+// GetPublicKeyDefault describes a response with status code -1, with default header values.
+//
+// There was an internal error in the server while processing the request
 type GetPublicKeyDefault struct {
 	_statusCode int
 

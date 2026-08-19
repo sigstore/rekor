@@ -23,31 +23,24 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 // CreateLogEntryCreatedCode is the HTTP code returned for type CreateLogEntryCreated
 const CreateLogEntryCreatedCode int = 201
 
-/*
-CreateLogEntryCreated Returns the entry created in the transparency log
-
-swagger:response createLogEntryCreated
-*/
+// CreateLogEntryCreated Returns the entry created in the transparency log
+//
+// swagger:response createLogEntryCreated
 type CreateLogEntryCreated struct {
-	/*UUID of log entry
 
-	 */
+	// UUID of log entry
 	ETag string `json:"ETag"`
-	/*URI location of log entry
 
-	 */
+	// URI location of log entry
 	Location strfmt.URI `json:"Location"`
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload models.LogEntry `json:"body,omitempty"`
 }
 
@@ -122,16 +115,12 @@ func (o *CreateLogEntryCreated) WriteResponse(rw http.ResponseWriter, producer r
 // CreateLogEntryBadRequestCode is the HTTP code returned for type CreateLogEntryBadRequest
 const CreateLogEntryBadRequestCode int = 400
 
-/*
-CreateLogEntryBadRequest The content supplied to the server was invalid
-
-swagger:response createLogEntryBadRequest
-*/
+// CreateLogEntryBadRequest The content supplied to the server was invalid
+//
+// swagger:response createLogEntryBadRequest
 type CreateLogEntryBadRequest struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 
@@ -167,20 +156,13 @@ func (o *CreateLogEntryBadRequest) WriteResponse(rw http.ResponseWriter, produce
 // CreateLogEntryConflictCode is the HTTP code returned for type CreateLogEntryConflict
 const CreateLogEntryConflictCode int = 409
 
-/*
-CreateLogEntryConflict The request conflicts with the current state of the transparency log
-
-swagger:response createLogEntryConflict
-*/
+// CreateLogEntryConflict The request conflicts with the current state of the transparency log
+//
+// swagger:response createLogEntryConflict
 type CreateLogEntryConflict struct {
-	/*
-
-	 */
 	Location strfmt.URI `json:"Location"`
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 
@@ -231,17 +213,13 @@ func (o *CreateLogEntryConflict) WriteResponse(rw http.ResponseWriter, producer 
 	}
 }
 
-/*
-CreateLogEntryDefault There was an internal error in the server while processing the request
-
-swagger:response createLogEntryDefault
-*/
+// CreateLogEntryDefault There was an internal error in the server while processing the request
+//
+// swagger:response createLogEntryDefault
 type CreateLogEntryDefault struct {
 	_statusCode int
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 

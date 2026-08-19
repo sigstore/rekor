@@ -22,23 +22,18 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 // GetLogProofOKCode is the HTTP code returned for type GetLogProofOK
 const GetLogProofOKCode int = 200
 
-/*
-GetLogProofOK All hashes required to compute the consistency proof
-
-swagger:response getLogProofOK
-*/
+// GetLogProofOK All hashes required to compute the consistency proof
+//
+// swagger:response getLogProofOK
 type GetLogProofOK struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.ConsistencyProof `json:"body,omitempty"`
 }
 
@@ -74,16 +69,12 @@ func (o *GetLogProofOK) WriteResponse(rw http.ResponseWriter, producer runtime.P
 // GetLogProofBadRequestCode is the HTTP code returned for type GetLogProofBadRequest
 const GetLogProofBadRequestCode int = 400
 
-/*
-GetLogProofBadRequest The content supplied to the server was invalid
-
-swagger:response getLogProofBadRequest
-*/
+// GetLogProofBadRequest The content supplied to the server was invalid
+//
+// swagger:response getLogProofBadRequest
 type GetLogProofBadRequest struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 
@@ -116,17 +107,13 @@ func (o *GetLogProofBadRequest) WriteResponse(rw http.ResponseWriter, producer r
 	}
 }
 
-/*
-GetLogProofDefault There was an internal error in the server while processing the request
-
-swagger:response getLogProofDefault
-*/
+// GetLogProofDefault There was an internal error in the server while processing the request
+//
+// swagger:response getLogProofDefault
 type GetLogProofDefault struct {
 	_statusCode int
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 

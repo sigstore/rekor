@@ -25,7 +25,8 @@ import (
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
+	"github.com/go-openapi/swag/typeutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -87,7 +88,7 @@ func (m *JarV001Schema) validateArchive(formats strfmt.Registry) error {
 }
 
 func (m *JarV001Schema) validateSignature(formats strfmt.Registry) error {
-	if swag.IsZero(m.Signature) { // not required
+	if typeutils.IsZero(m.Signature) { // not required
 		return nil
 	}
 
@@ -152,7 +153,7 @@ func (m *JarV001Schema) contextValidateSignature(ctx context.Context, formats st
 
 	if m.Signature != nil {
 
-		if swag.IsZero(m.Signature) { // not required
+		if typeutils.IsZero(m.Signature) { // not required
 			return nil
 		}
 
@@ -178,13 +179,13 @@ func (m *JarV001Schema) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *JarV001Schema) UnmarshalBinary(b []byte) error {
 	var res JarV001Schema
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -219,7 +220,7 @@ func (m *JarV001SchemaArchive) Validate(formats strfmt.Registry) error {
 }
 
 func (m *JarV001SchemaArchive) validateHash(formats strfmt.Registry) error {
-	if swag.IsZero(m.Hash) { // not required
+	if typeutils.IsZero(m.Hash) { // not required
 		return nil
 	}
 
@@ -259,7 +260,7 @@ func (m *JarV001SchemaArchive) contextValidateHash(ctx context.Context, formats 
 
 	if m.Hash != nil {
 
-		if swag.IsZero(m.Hash) { // not required
+		if typeutils.IsZero(m.Hash) { // not required
 			return nil
 		}
 
@@ -285,13 +286,13 @@ func (m *JarV001SchemaArchive) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *JarV001SchemaArchive) UnmarshalBinary(b []byte) error {
 	var res JarV001SchemaArchive
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -381,7 +382,7 @@ func (m *JarV001SchemaArchiveHash) validateValue(formats strfmt.Registry) error 
 }
 
 // ContextValidate validates this jar v001 schema archive hash based on context it is used
-func (m *JarV001SchemaArchiveHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *JarV001SchemaArchiveHash) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -390,13 +391,13 @@ func (m *JarV001SchemaArchiveHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *JarV001SchemaArchiveHash) UnmarshalBinary(b []byte) error {
 	var res JarV001SchemaArchiveHash
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -523,13 +524,13 @@ func (m *JarV001SchemaSignature) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *JarV001SchemaSignature) UnmarshalBinary(b []byte) error {
 	var res JarV001SchemaSignature
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -585,13 +586,13 @@ func (m *JarV001SchemaSignaturePublicKey) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *JarV001SchemaSignaturePublicKey) UnmarshalBinary(b []byte) error {
 	var res JarV001SchemaSignaturePublicKey
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res

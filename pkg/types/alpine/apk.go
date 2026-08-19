@@ -31,9 +31,9 @@ import (
 	"io"
 	"strings"
 
+	"github.com/sigstore/rekor/internal/config"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
-	"github.com/spf13/viper"
 	"gopkg.in/ini.v1"
 )
 
@@ -106,7 +106,7 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 
 	// GZIP headers/footers are left unmodified; Tar footers are removed on first two archives
 	// signature.tar.gz | control.tar.gz | data.tar.gz
-	maxBufSize := viper.GetUint64("max_apk_metadata_size")
+	maxBufSize := config.MaxAPKMetadataSize
 	if maxBufSize == 0 {
 		maxBufSize = 20 * 1024 * 1024
 	}
@@ -165,8 +165,8 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 			if header.Size < 0 {
 				return errors.New("negative header size for .SIGN file")
 			}
-			if uint64(header.Size) > maxBufSize {
-				return fmt.Errorf("uncompressed .SIGN file size %d exceeds max allowed size %d", header.Size, maxBufSize)
+			if config.MaxAPKMetadataSize > 0 && uint64(header.Size) > config.MaxAPKMetadataSize {
+				return fmt.Errorf("uncompressed .SIGN file size %d exceeds max allowed size %d", header.Size, config.MaxAPKMetadataSize)
 			}
 			sigBytes := make([]byte, header.Size)
 			if _, err = sigReader.Read(sigBytes); err != nil && err != io.EOF {
@@ -198,8 +198,8 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 			if header.Size < 0 {
 				return errors.New("negative header size for .PKGINFO file")
 			}
-			if uint64(header.Size) > maxBufSize {
-				return fmt.Errorf("uncompressed .PKGINFO file size %d exceeds max allowed size %d", header.Size, maxBufSize)
+			if config.MaxAPKMetadataSize > 0 && uint64(header.Size) > config.MaxAPKMetadataSize {
+				return fmt.Errorf("uncompressed .PKGINFO file size %d exceeds max allowed size %d", header.Size, config.MaxAPKMetadataSize)
 			}
 			pkginfoContent := make([]byte, header.Size)
 			if _, err = ctlReader.Read(pkginfoContent); err != nil && err != io.EOF {

@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/sigstore/rekor/internal/config"
 	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types"
@@ -185,30 +186,43 @@ Memory and file-based signers should only be used for testing.`)
 	}
 
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
 
-	log.Logger.Debugf("pprof enabled %v", enablePprof)
-	// Enable pprof
-	if enablePprof {
-		go func() {
-			mux := http.NewServeMux()
-
-			mux.HandleFunc("/debug/pprof/", pprof.Index)
-			mux.HandleFunc("/debug/pprof/{action}", pprof.Index)
-			mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-
-			srv := &http.Server{
-				Addr:         ":6060",
-				ReadTimeout:  10 * time.Second,
-				WriteTimeout: 10 * time.Second,
-				Handler:      mux,
-			}
-
-			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Logger.Fatalf("Error when starting or running http server: %v", err)
-			}
-		}()
+// StartPprof serves net/http/pprof on port 6060 when --enable_pprof is set.
+// Called from the serve command rather than init() because init() runs before
+// cobra parses flags, so enablePprof is always false there.
+func StartPprof() {
+	if !enablePprof {
+		return
 	}
+	log.Logger.Info("pprof enabled on :6060")
 
+	go func() {
+		mux := http.NewServeMux()
+
+		// pprof.Index dispatches the runtime-provided profiles (heap, goroutine,
+		// allocs, ...) from the path suffix, but profile/trace/cmdline/symbol are
+		// distinct handlers it does not cover and must be routed explicitly.
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+		srv := &http.Server{
+			Addr: ":6060",
+			// No WriteTimeout: a CPU profile or trace streams for its full
+			// requested duration (30s by default, often longer), and any write
+			// deadline shorter than that truncates the response into an
+			// unparseable profile.
+			ReadHeaderTimeout: 10 * time.Second,
+			Handler:           mux,
+		}
+
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Logger.Errorf("pprof server: %v", err)
+		}
+	}()
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -241,4 +255,7 @@ func initConfig() {
 	intoto001.SetMaxAttestationSize(maxSize)
 	intoto002.SetMaxAttestationSize(maxSize)
 	cose.SetMaxAttestationSize(maxSize)
+
+	config.MaxAPKMetadataSize = viper.GetUint64("max_apk_metadata_size")
+	config.MaxJarMetadataSize = viper.GetUint64("max_jar_metadata_size")
 }

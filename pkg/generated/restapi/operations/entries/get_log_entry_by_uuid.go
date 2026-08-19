@@ -42,13 +42,11 @@ func NewGetLogEntryByUUID(ctx *middleware.Context, handler GetLogEntryByUUIDHand
 	return &GetLogEntryByUUID{Context: ctx, Handler: handler}
 }
 
-/*
-	GetLogEntryByUUID swagger:route GET /api/v1/log/entries/{entryUUID} entries getLogEntryByUuid
-
-# Get log entry and information required to generate an inclusion proof for the entry in the transparency log
-
-Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log
-*/
+// GetLogEntryByUUID swagger:route GET /api/v1/log/entries/{entryUUID} entries getLogEntryByUuid
+//
+// # Get log entry and information required to generate an inclusion proof for the entry in the transparency log
+//
+// Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log
 type GetLogEntryByUUID struct {
 	Context *middleware.Context
 	Handler GetLogEntryByUUIDHandler
@@ -59,13 +57,13 @@ func (o *GetLogEntryByUUID) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	if rCtx != nil {
 		*r = *rCtx
 	}
-	var Params = NewGetLogEntryByUUIDParams()
-	if err := o.Context.BindValidRequest(r, route, &Params); err != nil { // bind params
+	params := NewGetLogEntryByUUIDParams()
+	if err := o.Context.BindValidRequest(r, route, &params); err != nil { // bind params
 		o.Context.Respond(rw, r, route.Produces, route, err)
 		return
 	}
 
-	res := o.Handler.Handle(Params) // actually handle the request
+	res := o.Handler.Handle(params) // actually handle the request
 
 	o.Context.Respond(rw, r, route.Produces, route, res)
 

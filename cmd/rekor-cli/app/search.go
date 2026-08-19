@@ -110,7 +110,7 @@ var searchCmd = &cobra.Command{
 			return nil, err
 		}
 
-		params := index.NewSearchIndexParamsWithContext(cmd.Context())
+		params := index.NewSearchIndexParams()
 		params.SetTimeout(viper.GetDuration("timeout"))
 		params.Query = &models.SearchIndex{}
 
@@ -203,7 +203,7 @@ var searchCmd = &cobra.Command{
 		if subjectStr != "" {
 			params.Query.Subject = subjectStr
 		}
-		resp, err := rekorClient.Index.SearchIndex(params)
+		resp, err := rekorClient.Index.SearchIndexContext(cmd.Context(), params)
 		if err != nil {
 			switch t := err.(type) {
 			case *index.SearchIndexDefault:

@@ -24,7 +24,7 @@ import (
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -118,13 +118,13 @@ func (m *Rfc3161V001Schema) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *Rfc3161V001Schema) UnmarshalBinary(b []byte) error {
 	var res Rfc3161V001Schema
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -166,7 +166,7 @@ func (m *Rfc3161V001SchemaTsr) validateContent(formats strfmt.Registry) error {
 }
 
 // ContextValidate validates this rfc3161 v001 schema tsr based on context it is used
-func (m *Rfc3161V001SchemaTsr) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *Rfc3161V001SchemaTsr) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -175,13 +175,13 @@ func (m *Rfc3161V001SchemaTsr) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *Rfc3161V001SchemaTsr) UnmarshalBinary(b []byte) error {
 	var res Rfc3161V001SchemaTsr
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res

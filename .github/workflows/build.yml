@@ -34,6 +34,7 @@ jobs:
 
     permissions:
       id-token: write
+      packages: write
       contents: read
 
     steps:
@@ -56,16 +57,14 @@ jobs:
 
       - uses: ko-build/setup-ko@61b4d1d396f5b2e7d6bb6fefdce3dc38d1a13445 # v0.10
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         with:
-          workload_identity_provider: 'projects/498091336538/locations/global/workloadIdentityPools/githubactions/providers/sigstore-rekor'
-          service_account: 'github-actions-rekor@projectsigstore.iam.gserviceaccount.com'
-
-      - name: creds
-        run: gcloud auth configure-docker --quiet
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: container
-        run: KO_PREFIX=gcr.io/projectsigstore/rekor/ci/rekor make sign-keyless-ci
+        run: KO_PREFIX=ghcr.io/sigstore/rekor/ci/rekor make sign-keyless-ci
         env:
           COSIGN_YES: true

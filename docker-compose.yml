@@ -116,6 +116,7 @@ services:
       "--attestation_storage_bucket=file:///var/run/attestations",
       "--search_index.storage_provider=mysql",
       "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test?parseTime=true&interpolateParams=true",
+      "--enable_pprof",
       # Uncomment this for production logging
       # "--log_type=prod",
       ]
@@ -125,6 +126,7 @@ services:
     ports:
       - "3000:3000"
       - "2112:2112"
+      - "6060:6060"
     depends_on:
       mysql:
         condition: service_healthy

@@ -26,7 +26,8 @@ import (
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
+	"github.com/go-openapi/swag/typeutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -79,7 +80,7 @@ func (m *DSSEV001Schema) Validate(formats strfmt.Registry) error {
 }
 
 func (m *DSSEV001Schema) validateEnvelopeHash(formats strfmt.Registry) error {
-	if swag.IsZero(m.EnvelopeHash) { // not required
+	if typeutils.IsZero(m.EnvelopeHash) { // not required
 		return nil
 	}
 
@@ -102,7 +103,7 @@ func (m *DSSEV001Schema) validateEnvelopeHash(formats strfmt.Registry) error {
 }
 
 func (m *DSSEV001Schema) validatePayloadHash(formats strfmt.Registry) error {
-	if swag.IsZero(m.PayloadHash) { // not required
+	if typeutils.IsZero(m.PayloadHash) { // not required
 		return nil
 	}
 
@@ -125,7 +126,7 @@ func (m *DSSEV001Schema) validatePayloadHash(formats strfmt.Registry) error {
 }
 
 func (m *DSSEV001Schema) validateProposedContent(formats strfmt.Registry) error {
-	if swag.IsZero(m.ProposedContent) { // not required
+	if typeutils.IsZero(m.ProposedContent) { // not required
 		return nil
 	}
 
@@ -148,7 +149,7 @@ func (m *DSSEV001Schema) validateProposedContent(formats strfmt.Registry) error 
 }
 
 func (m *DSSEV001Schema) validateSignatures(formats strfmt.Registry) error {
-	if swag.IsZero(m.Signatures) { // not required
+	if typeutils.IsZero(m.Signatures) { // not required
 		return nil
 	}
 
@@ -159,7 +160,7 @@ func (m *DSSEV001Schema) validateSignatures(formats strfmt.Registry) error {
 	}
 
 	for i := 0; i < len(m.Signatures); i++ {
-		if swag.IsZero(m.Signatures[i]) { // not required
+		if typeutils.IsZero(m.Signatures[i]) { // not required
 			continue
 		}
 
@@ -213,7 +214,7 @@ func (m *DSSEV001Schema) contextValidateEnvelopeHash(ctx context.Context, format
 
 	if m.EnvelopeHash != nil {
 
-		if swag.IsZero(m.EnvelopeHash) { // not required
+		if typeutils.IsZero(m.EnvelopeHash) { // not required
 			return nil
 		}
 
@@ -238,7 +239,7 @@ func (m *DSSEV001Schema) contextValidatePayloadHash(ctx context.Context, formats
 
 	if m.PayloadHash != nil {
 
-		if swag.IsZero(m.PayloadHash) { // not required
+		if typeutils.IsZero(m.PayloadHash) { // not required
 			return nil
 		}
 
@@ -263,7 +264,7 @@ func (m *DSSEV001Schema) contextValidateProposedContent(ctx context.Context, for
 
 	if m.ProposedContent != nil {
 
-		if swag.IsZero(m.ProposedContent) { // not required
+		if typeutils.IsZero(m.ProposedContent) { // not required
 			return nil
 		}
 
@@ -294,7 +295,7 @@ func (m *DSSEV001Schema) contextValidateSignatures(ctx context.Context, formats 
 
 		if m.Signatures[i] != nil {
 
-			if swag.IsZero(m.Signatures[i]) { // not required
+			if typeutils.IsZero(m.Signatures[i]) { // not required
 				return nil
 			}
 
@@ -322,13 +323,13 @@ func (m *DSSEV001Schema) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *DSSEV001Schema) UnmarshalBinary(b []byte) error {
 	var res DSSEV001Schema
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -432,13 +433,13 @@ func (m *DSSEV001SchemaEnvelopeHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *DSSEV001SchemaEnvelopeHash) UnmarshalBinary(b []byte) error {
 	var res DSSEV001SchemaEnvelopeHash
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -542,13 +543,13 @@ func (m *DSSEV001SchemaPayloadHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *DSSEV001SchemaPayloadHash) UnmarshalBinary(b []byte) error {
 	var res DSSEV001SchemaPayloadHash
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -613,7 +614,7 @@ func (m *DSSEV001SchemaProposedContent) validateVerifiers(formats strfmt.Registr
 }
 
 // ContextValidate validates this DSSE v001 schema proposed content based on context it is used
-func (m *DSSEV001SchemaProposedContent) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *DSSEV001SchemaProposedContent) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -622,13 +623,13 @@ func (m *DSSEV001SchemaProposedContent) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *DSSEV001SchemaProposedContent) UnmarshalBinary(b []byte) error {
 	var res DSSEV001SchemaProposedContent
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -692,7 +693,7 @@ func (m *DSSEV001SchemaSignaturesItems0) validateVerifier(formats strfmt.Registr
 }
 
 // ContextValidate validates this DSSE v001 schema signatures items0 based on context it is used
-func (m *DSSEV001SchemaSignaturesItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *DSSEV001SchemaSignaturesItems0) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -701,13 +702,13 @@ func (m *DSSEV001SchemaSignaturesItems0) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *DSSEV001SchemaSignaturesItems0) UnmarshalBinary(b []byte) error {
 	var res DSSEV001SchemaSignaturesItems0
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res

@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/sigstore/rekor/internal/config"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pkcs7"
@@ -45,7 +46,6 @@ import (
 	"github.com/go-openapi/swag/conv"
 	jarutils "github.com/sassoftware/relic/v8/lib/signjar"
 	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -233,8 +233,8 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, 
 		if dir != "META-INF/" || name == "" || strings.LastIndex(name, ".") < 0 {
 			continue
 		}
-		if f.UncompressedSize64 > viper.GetUint64("max_jar_metadata_size") && viper.GetUint64("max_jar_metadata_size") > 0 {
-			return nil, nil, &types.InputValidationError{Err: fmt.Errorf("uncompressed jar metadata of size %d exceeds max allowed size %d", f.UncompressedSize64, viper.GetUint64("max_jar_metadata_size"))}
+		if config.MaxJarMetadataSize > 0 && f.UncompressedSize64 > config.MaxJarMetadataSize {
+			return nil, nil, &types.InputValidationError{Err: fmt.Errorf("uncompressed jar metadata of size %d exceeds max allowed size %d", f.UncompressedSize64, config.MaxJarMetadataSize)}
 		}
 	}
 

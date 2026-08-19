@@ -72,7 +72,7 @@ func NewTinkSignerWithHandle(kek tink.AEAD, keysetPath string) (signature.Signer
 func getKeyEncryptionKey(ctx context.Context, kmsKey string) (tink.AEAD, error) {
 	switch {
 	case strings.HasPrefix(kmsKey, "gcp-kms://"):
-		gcpClient, err := gcpkms.NewClientWithOptions(ctx, kmsKey)
+		gcpClient, err := gcpkms.NewClient(ctx, kmsKey, gcpkms.WithTransport(gcpkms.TransportREST))
 		if err != nil {
 			return nil, err
 		}

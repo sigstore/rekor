@@ -27,7 +27,6 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/validate"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -46,11 +45,8 @@ func NewCreateLogEntryParams() CreateLogEntryParams {
 type CreateLogEntryParams struct {
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
-
-	/*
-	  Required: true
-	  In: body
-	*/
+	// Required: true
+	// In: body
 	ProposedEntry models.ProposedEntry
 }
 

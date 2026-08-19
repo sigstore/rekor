@@ -19,17 +19,21 @@
 package entries
 
 import (
+	"context"
+	"time"
+
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 )
 
 // New creates a new entries API client.
-func New(transport runtime.ClientTransport, formats strfmt.Registry) ClientService {
+func New(transport runtime.ContextualTransport, formats strfmt.Registry) ClientService {
 	return &Client{transport: transport, formats: formats}
 }
 
 // New creates a new entries API client with basic auth credentials.
+//
 // It takes the following parameters:
 // - host: http host (github.com).
 // - basePath: any base path for the API client ("/v1", "/v3").
@@ -43,6 +47,7 @@ func NewClientWithBasicAuth(host, basePath, scheme, user, password string) Clien
 }
 
 // New creates a new entries API client with a bearer token for authentication.
+//
 // It takes the following parameters:
 // - host: http host (github.com).
 // - basePath: any base path for the API client ("/v1", "/v3").
@@ -54,40 +59,77 @@ func NewClientWithBearerToken(host, basePath, scheme, bearerToken string) Client
 	return &Client{transport: transport, formats: strfmt.Default}
 }
 
-/*
-Client for entries API
-*/
+// Client for entries API.
 type Client struct {
-	transport runtime.ClientTransport
+	transport runtime.ContextualTransport
 	formats   strfmt.Registry
 }
 
 // ClientOption may be used to customize the behavior of Client methods.
 type ClientOption func(*runtime.ClientOperation)
 
-// ClientService is the interface for Client methods
+// ClientService is the interface for Client methods.
 type ClientService interface {
+
+	// CreateLogEntry creates an entry in the transparency log.
 	CreateLogEntry(params *CreateLogEntryParams, opts ...ClientOption) (*CreateLogEntryCreated, error)
 
+	// CreateLogEntryContext creates an entry in the transparency log.
+	CreateLogEntryContext(ctx context.Context, params *CreateLogEntryParams, opts ...ClientOption) (*CreateLogEntryCreated, error)
+
+	// GetLogEntryByIndex retrieves an entry and inclusion proof from the transparency log if it exists by index.
 	GetLogEntryByIndex(params *GetLogEntryByIndexParams, opts ...ClientOption) (*GetLogEntryByIndexOK, error)
 
+	// GetLogEntryByIndexContext retrieves an entry and inclusion proof from the transparency log if it exists by index.
+	GetLogEntryByIndexContext(ctx context.Context, params *GetLogEntryByIndexParams, opts ...ClientOption) (*GetLogEntryByIndexOK, error)
+
+	// GetLogEntryByUUID get log entry and information required to generate an inclusion proof for the entry in the transparency log.
 	GetLogEntryByUUID(params *GetLogEntryByUUIDParams, opts ...ClientOption) (*GetLogEntryByUUIDOK, error)
 
+	// GetLogEntryByUUIDContext get log entry and information required to generate an inclusion proof for the entry in the transparency log.
+	GetLogEntryByUUIDContext(ctx context.Context, params *GetLogEntryByUUIDParams, opts ...ClientOption) (*GetLogEntryByUUIDOK, error)
+
+	// SearchLogQuery searches transparency log for one or more log entries.
 	SearchLogQuery(params *SearchLogQueryParams, opts ...ClientOption) (*SearchLogQueryOK, error)
 
-	SetTransport(transport runtime.ClientTransport)
+	// SearchLogQueryContext searches transparency log for one or more log entries.
+	SearchLogQueryContext(ctx context.Context, params *SearchLogQueryParams, opts ...ClientOption) (*SearchLogQueryOK, error)
+
+	SetTransport(transport runtime.ContextualTransport)
 }
 
-/*
-CreateLogEntry creates an entry in the transparency log
-
-Creates an entry in the transparency log for a detached signature, public key, and content.
-*/
+// CreateLogEntry creates an entry in the transparency log.
+//
+// Creates an entry in the transparency log for a detached signature, public key, and content.
+// .
+//
+// This method does not support injected context.
+// However, timeout and opentracing contexts are honored whenever enabled.
+//
+// If you need to pass a specific context, use [Client.CreateLogEntryContext] instead.
 func (a *Client) CreateLogEntry(params *CreateLogEntryParams, opts ...ClientOption) (*CreateLogEntryCreated, error) {
+	var ctx context.Context
+	if params != nil && params.inner.ctx != nil {
+		ctx = params.inner.ctx
+	} else {
+		ctx = context.Background()
+	}
+
+	return a.CreateLogEntryContext(ctx, params, opts...)
+}
+
+// CreateLogEntryContext creates an entry in the transparency log.
+//
+// Creates an entry in the transparency log for a detached signature, public key, and content.
+// .
+//
+// Do not use the deprecated [CreateLogEntryParams.Context] with this method: it would be ignored.
+func (a *Client) CreateLogEntryContext(ctx context.Context, params *CreateLogEntryParams, opts ...ClientOption) (*CreateLogEntryCreated, error) {
 	// NOTE: parameters are not validated before sending
 	if params == nil {
 		params = NewCreateLogEntryParams()
 	}
+
 	op := &runtime.ClientOperation{
 		ID:                 "createLogEntry",
 		Method:             "POST",
@@ -97,13 +139,14 @@ func (a *Client) CreateLogEntry(params *CreateLogEntryParams, opts ...ClientOpti
 		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &CreateLogEntryReader{formats: a.formats},
-		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}
+
 	for _, opt := range opts {
 		opt(op)
 	}
-	result, err := a.transport.Submit(op)
+
+	result, err := a.transport.SubmitContext(ctx, op)
 	if err != nil {
 		return nil, err
 	}
@@ -122,14 +165,32 @@ func (a *Client) CreateLogEntry(params *CreateLogEntryParams, opts ...ClientOpti
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 
-/*
-GetLogEntryByIndex retrieves an entry and inclusion proof from the transparency log if it exists by index
-*/
+// GetLogEntryByIndex retrieves an entry and inclusion proof from the transparency log if it exists by index.
+//
+// This method does not support injected context.
+// However, timeout and opentracing contexts are honored whenever enabled.
+//
+// If you need to pass a specific context, use [Client.GetLogEntryByIndexContext] instead.
 func (a *Client) GetLogEntryByIndex(params *GetLogEntryByIndexParams, opts ...ClientOption) (*GetLogEntryByIndexOK, error) {
+	var ctx context.Context
+	if params != nil && params.inner.ctx != nil {
+		ctx = params.inner.ctx
+	} else {
+		ctx = context.Background()
+	}
+
+	return a.GetLogEntryByIndexContext(ctx, params, opts...)
+}
+
+// GetLogEntryByIndexContext retrieves an entry and inclusion proof from the transparency log if it exists by index.
+//
+// Do not use the deprecated [GetLogEntryByIndexParams.Context] with this method: it would be ignored.
+func (a *Client) GetLogEntryByIndexContext(ctx context.Context, params *GetLogEntryByIndexParams, opts ...ClientOption) (*GetLogEntryByIndexOK, error) {
 	// NOTE: parameters are not validated before sending
 	if params == nil {
 		params = NewGetLogEntryByIndexParams()
 	}
+
 	op := &runtime.ClientOperation{
 		ID:                 "getLogEntryByIndex",
 		Method:             "GET",
@@ -139,13 +200,14 @@ func (a *Client) GetLogEntryByIndex(params *GetLogEntryByIndexParams, opts ...Cl
 		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &GetLogEntryByIndexReader{formats: a.formats},
-		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}
+
 	for _, opt := range opts {
 		opt(op)
 	}
-	result, err := a.transport.Submit(op)
+
+	result, err := a.transport.SubmitContext(ctx, op)
 	if err != nil {
 		return nil, err
 	}
@@ -164,16 +226,36 @@ func (a *Client) GetLogEntryByIndex(params *GetLogEntryByIndexParams, opts ...Cl
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 
-/*
-GetLogEntryByUUID gets log entry and information required to generate an inclusion proof for the entry in the transparency log
-
-Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log
-*/
+// GetLogEntryByUUID gets log entry and information required to generate an inclusion proof for the entry in the transparency log.
+//
+// Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log.
+//
+// This method does not support injected context.
+// However, timeout and opentracing contexts are honored whenever enabled.
+//
+// If you need to pass a specific context, use [Client.GetLogEntryByUUIDContext] instead.
 func (a *Client) GetLogEntryByUUID(params *GetLogEntryByUUIDParams, opts ...ClientOption) (*GetLogEntryByUUIDOK, error) {
+	var ctx context.Context
+	if params != nil && params.inner.ctx != nil {
+		ctx = params.inner.ctx
+	} else {
+		ctx = context.Background()
+	}
+
+	return a.GetLogEntryByUUIDContext(ctx, params, opts...)
+}
+
+// GetLogEntryByUUIDContext gets log entry and information required to generate an inclusion proof for the entry in the transparency log.
+//
+// Returns the entry, root hash, tree size, and a list of hashes that can be used to calculate proof of an entry being included in the transparency log.
+//
+// Do not use the deprecated [GetLogEntryByUUIDParams.Context] with this method: it would be ignored.
+func (a *Client) GetLogEntryByUUIDContext(ctx context.Context, params *GetLogEntryByUUIDParams, opts ...ClientOption) (*GetLogEntryByUUIDOK, error) {
 	// NOTE: parameters are not validated before sending
 	if params == nil {
 		params = NewGetLogEntryByUUIDParams()
 	}
+
 	op := &runtime.ClientOperation{
 		ID:                 "getLogEntryByUUID",
 		Method:             "GET",
@@ -183,13 +265,14 @@ func (a *Client) GetLogEntryByUUID(params *GetLogEntryByUUIDParams, opts ...Clie
 		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &GetLogEntryByUUIDReader{formats: a.formats},
-		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}
+
 	for _, opt := range opts {
 		opt(op)
 	}
-	result, err := a.transport.Submit(op)
+
+	result, err := a.transport.SubmitContext(ctx, op)
 	if err != nil {
 		return nil, err
 	}
@@ -208,14 +291,32 @@ func (a *Client) GetLogEntryByUUID(params *GetLogEntryByUUIDParams, opts ...Clie
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 
-/*
-SearchLogQuery searches transparency log for one or more log entries
-*/
+// SearchLogQuery searches transparency log for one or more log entries.
+//
+// This method does not support injected context.
+// However, timeout and opentracing contexts are honored whenever enabled.
+//
+// If you need to pass a specific context, use [Client.SearchLogQueryContext] instead.
 func (a *Client) SearchLogQuery(params *SearchLogQueryParams, opts ...ClientOption) (*SearchLogQueryOK, error) {
+	var ctx context.Context
+	if params != nil && params.inner.ctx != nil {
+		ctx = params.inner.ctx
+	} else {
+		ctx = context.Background()
+	}
+
+	return a.SearchLogQueryContext(ctx, params, opts...)
+}
+
+// SearchLogQueryContext searches transparency log for one or more log entries.
+//
+// Do not use the deprecated [SearchLogQueryParams.Context] with this method: it would be ignored.
+func (a *Client) SearchLogQueryContext(ctx context.Context, params *SearchLogQueryParams, opts ...ClientOption) (*SearchLogQueryOK, error) {
 	// NOTE: parameters are not validated before sending
 	if params == nil {
 		params = NewSearchLogQueryParams()
 	}
+
 	op := &runtime.ClientOperation{
 		ID:                 "searchLogQuery",
 		Method:             "POST",
@@ -225,13 +326,14 @@ func (a *Client) SearchLogQuery(params *SearchLogQueryParams, opts ...ClientOpti
 		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &SearchLogQueryReader{formats: a.formats},
-		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}
+
 	for _, opt := range opts {
 		opt(op)
 	}
-	result, err := a.transport.Submit(op)
+
+	result, err := a.transport.SubmitContext(ctx, op)
 	if err != nil {
 		return nil, err
 	}
@@ -251,6 +353,14 @@ func (a *Client) SearchLogQuery(params *SearchLogQueryParams, opts ...ClientOpti
 }
 
 // SetTransport changes the transport on the client
-func (a *Client) SetTransport(transport runtime.ClientTransport) {
+func (a *Client) SetTransport(transport runtime.ContextualTransport) {
 	a.transport = transport
+}
+
+// innerParams captures internal fields so they don't conflict with user-supplied parameters.
+type innerParams struct {
+	timeout time.Duration
+
+	// Deprecated: use the operation call with context to pass the context instead of [EntriesParams].
+	ctx context.Context
 }
