@@ -51,7 +51,7 @@ func (rt BaseRekordType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImp
 	}
 
 	rekord, ok := pe.(*models.Rekord)
-	if !ok {
+	if !ok || rekord == nil {
 		return nil, errors.New("cannot unmarshal non-Rekord types")
 	}
 

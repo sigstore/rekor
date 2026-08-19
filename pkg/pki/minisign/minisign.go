@@ -43,6 +43,10 @@ func NewSignature(r io.Reader) (*Signature, error) {
 	var s Signature
 	var inputBuffer bytes.Buffer
 
+	if r == nil {
+		return nil, errors.New("minisign signature reader cannot be nil")
+	}
+
 	if _, err := io.Copy(&inputBuffer, r); err != nil {
 		return nil, fmt.Errorf("unable to read minisign signature: %w", err)
 	}
@@ -92,13 +96,13 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOption) error {
+func (s Signature) Verify(r io.Reader, k any, opts ...sigsig.VerifyOption) error {
 	if s.signature == nil {
 		return errors.New("minisign signature has not been initialized")
 	}
 
 	key, ok := k.(*PublicKey)
-	if !ok {
+	if !ok || key == nil {
 		return errors.New("cannot use Verify with a non-minisign key")
 	}
 	if key.key == nil {
@@ -112,12 +116,17 @@ func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOptio
 
 	prehashed := s.signature.SignatureAlgorithm[1] == 0x44
 	if prehashed {
+		if r == nil {
+			return errors.New("reading minisign data: reader cannot be nil")
+		}
 		h, _ := blake2b.New512(nil)
 		_, err := io.Copy(h, r)
 		if err != nil {
 			return errors.New("reading minisign data")
 		}
 		r = bytes.NewReader(h.Sum(nil))
+	} else if r == nil {
+		return errors.New("reading minisign data: reader cannot be nil")
 	}
 
 	return verifier.VerifySignature(bytes.NewReader(s.signature.Signature[:]), r, opts...)
@@ -132,6 +141,10 @@ type PublicKey struct {
 func NewPublicKey(r io.Reader) (*PublicKey, error) {
 	var k PublicKey
 	var inputBuffer bytes.Buffer
+
+	if r == nil {
+		return nil, errors.New("minisign public key reader cannot be nil")
+	}
 
 	if _, err := io.Copy(&inputBuffer, r); err != nil {
 		return nil, fmt.Errorf("unable to read minisign public key: %w", err)
@@ -191,6 +204,9 @@ func (k PublicKey) Subjects() []string {
 
 // Identities implements the pki.PublicKey interface
 func (k PublicKey) Identities() ([]identity.Identity, error) {
+	if k.key == nil {
+		return nil, errors.New("minisign public key has not been initialized")
+	}
 	// PKIX encode ed25519 public key
 	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(ed25519.PublicKey(k.key.PublicKey[:]))
 	if err != nil {

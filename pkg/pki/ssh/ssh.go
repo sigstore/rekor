@@ -54,6 +54,12 @@ func NewSignature(r io.Reader) (*Signature, error) {
 
 // CanonicalValue implements the pki.Signature interface
 func (s Signature) CanonicalValue() ([]byte, error) {
+	if s.signature == nil {
+		return nil, errors.New("ssh signature has not been initialized")
+	}
+	if s.pk == nil {
+		return nil, errors.New("ssh signature public key has not been initialized")
+	}
 	return []byte(Armor(s.signature, s.pk)), nil
 }
 
@@ -64,7 +70,7 @@ func (s Signature) Verify(r io.Reader, k interface{}, _ ...sigsig.VerifyOption) 
 	}
 
 	key, ok := k.(*PublicKey)
-	if !ok {
+	if !ok || key == nil {
 		return fmt.Errorf("invalid public key type for: %v", k)
 	}
 
@@ -128,13 +134,24 @@ func (k PublicKey) Subjects() []string {
 
 // Identities implements the pki.PublicKey interface
 func (k PublicKey) Identities() ([]identity.Identity, error) {
+	if k.key == nil {
+		return nil, errors.New("ssh public key has not been initialized")
+	}
+
 	// extract key from SSH certificate if present
 	var sshKey ssh.PublicKey
 	switch v := k.key.(type) {
 	case *ssh.Certificate:
+		if v == nil {
+			return nil, errors.New("ssh certificate is nil")
+		}
 		sshKey = v.Key
 	default:
 		sshKey = k.key
+	}
+
+	if sshKey == nil {
+		return nil, errors.New("ssh public key is nil")
 	}
 
 	// Extract crypto.PublicKey from SSH key

@@ -47,6 +47,10 @@ type Signature struct {
 
 // NewSignature creates and validates a PGP signature object
 func NewSignature(r io.Reader) (*Signature, error) {
+	if r == nil {
+		return nil, errors.New("nil reader")
+	}
+
 	var s Signature
 	var inputBuffer bytes.Buffer
 
@@ -146,7 +150,7 @@ func (s Signature) Verify(r io.Reader, k interface{}, _ ...sigsig.VerifyOption) 
 	if !ok {
 		return errors.New("cannot use Verify with a non-PGP signature")
 	}
-	if len(key.key) == 0 {
+	if key == nil || len(key.key) == 0 {
 		return errors.New("PGP public key has not been initialized")
 	}
 
@@ -201,6 +205,10 @@ type PublicKey struct {
 
 // NewPublicKey implements the pki.PublicKey interface
 func NewPublicKey(r io.Reader) (*PublicKey, error) {
+	if r == nil {
+		return nil, errors.New("nil reader")
+	}
+
 	var k PublicKey
 	var inputBuffer bytes.Buffer
 
@@ -243,6 +251,9 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 					return nil, fmt.Errorf("invalid PGP public key provided: %w", err)
 				}
 			}
+		}
+		if err := scan.Err(); err != nil {
+			return nil, fmt.Errorf("error reading PGP public key: %w", err)
 		}
 	} else {
 		// process as binary
@@ -298,6 +309,9 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 		defer armoredWriter.Close()
 
 		for _, entity := range k.key {
+			if entity == nil {
+				return fmt.Errorf("pgp key ring contains a nil entity")
+			}
 			if err := entity.Serialize(armoredWriter); err != nil {
 				return fmt.Errorf("error generating canonical value of PGP public key: %w", err)
 			}
@@ -329,8 +343,11 @@ func (k PublicKey) EmailAddresses() []string {
 	var names []string
 	// Extract from cert
 	for _, entity := range k.key {
+		if entity == nil {
+			continue
+		}
 		for _, identity := range entity.Identities {
-			if govalidator.IsEmail(identity.UserId.Email) {
+			if identity != nil && identity.UserId != nil && govalidator.IsEmail(identity.UserId.Email) {
 				names = append(names, identity.UserId.Email)
 			}
 		}
@@ -347,12 +364,22 @@ func (k PublicKey) Subjects() []string {
 func (k PublicKey) Identities() ([]identity.Identity, error) {
 	var ids []identity.Identity
 	for _, entity := range k.key {
+		if entity == nil {
+			continue
+		}
 		var keys []*packet.PublicKey
-		keys = append(keys, entity.PrimaryKey)
+		if entity.PrimaryKey != nil {
+			keys = append(keys, entity.PrimaryKey)
+		}
 		for _, subKey := range entity.Subkeys {
-			keys = append(keys, subKey.PublicKey)
+			if subKey.PublicKey != nil {
+				keys = append(keys, subKey.PublicKey)
+			}
 		}
 		for _, pk := range keys {
+			if pk == nil {
+				continue
+			}
 			pubKey := pk.PublicKey
 			// Only process supported types. Will ignore DSA
 			// and ElGamal keys.

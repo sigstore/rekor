@@ -48,6 +48,9 @@ func NewSignature(r io.Reader) (*Signature, error) {
 }
 
 func NewSignatureWithOpts(r io.Reader, opts ...sigsig.LoadOption) (*Signature, error) {
+	if r == nil {
+		return nil, errors.New("reader cannot be nil")
+	}
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -71,7 +74,7 @@ func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOptio
 	}
 
 	key, ok := k.(*PublicKey)
-	if !ok {
+	if !ok || key == nil {
 		return fmt.Errorf("invalid public key type for: %v", k)
 	}
 
@@ -111,6 +114,9 @@ type cert struct {
 
 // NewPublicKey implements the pki.PublicKey interface
 func NewPublicKey(r io.Reader) (*PublicKey, error) {
+	if r == nil {
+		return nil, errors.New("reader cannot be nil")
+	}
 	rawPub, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err

@@ -68,6 +68,10 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
+	if v.RPMModel.PublicKey == nil || v.RPMModel.PublicKey.Content == nil {
+		return nil, errors.New("rpm v0.0.1 entry not initialized")
+	}
+
 	keyObj, err := pgp.NewPublicKey(bytes.NewReader(*v.RPMModel.PublicKey.Content))
 	if err != nil {
 		return nil, err
@@ -81,9 +85,11 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 
 	result = append(result, keyObj.Subjects()...)
 
-	if v.RPMModel.Package.Hash != nil {
-		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.RPMModel.Package.Hash.Algorithm, *v.RPMModel.Package.Hash.Value))
-		result = append(result, hashKey)
+	if v.RPMModel.Package != nil && v.RPMModel.Package.Hash != nil {
+		if v.RPMModel.Package.Hash.Algorithm != nil && v.RPMModel.Package.Hash.Value != nil {
+			hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.RPMModel.Package.Hash.Algorithm, *v.RPMModel.Package.Hash.Value))
+			result = append(result, hashKey)
+		}
 	}
 
 	return result, nil
@@ -93,6 +99,9 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	rpm, ok := pe.(*models.Rpm)
 	if !ok {
 		return errors.New("cannot unmarshal non RPM v0.0.1 type")
+	}
+	if rpm == nil {
+		return errors.New("proposed entry cannot be nil")
 	}
 
 	if err := DecodeEntry(rpm.Spec, &v.RPMModel); err != nil {
@@ -345,6 +354,9 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	if len(publicKeyBytes) == 0 {
 		if len(props.PublicKeyPaths) != 1 {
 			return nil, errors.New("only one public key must be provided to verify RPM signature")
+		}
+		if props.PublicKeyPaths[0] == nil {
+			return nil, errors.New("public key path must be specified")
 		}
 		keyBytes, err := os.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
 		if err != nil {

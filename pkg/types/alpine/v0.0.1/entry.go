@@ -67,6 +67,10 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
+	if v.AlpineModel.PublicKey == nil || v.AlpineModel.PublicKey.Content == nil {
+		return nil, errors.New("public key is not set")
+	}
+
 	keyObj, err := x509.NewPublicKey(bytes.NewReader(*v.AlpineModel.PublicKey.Content))
 	if err != nil {
 		return nil, err
@@ -80,7 +84,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 
 	result = append(result, keyObj.Subjects()...)
 
-	if v.AlpineModel.Package.Hash != nil {
+	if v.AlpineModel.Package != nil && v.AlpineModel.Package.Hash != nil && v.AlpineModel.Package.Hash.Algorithm != nil && v.AlpineModel.Package.Hash.Value != nil {
 		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.AlpineModel.Package.Hash.Algorithm, *v.AlpineModel.Package.Hash.Value))
 		result = append(result, hashKey)
 	}
@@ -164,6 +168,9 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	apk, ok := pe.(*models.Alpine)
 	if !ok {
 		return errors.New("cannot unmarshal non Alpine v0.0.1 type")
+	}
+	if apk == nil {
+		return errors.New("proposed entry cannot be nil")
 	}
 
 	if err := DecodeEntry(apk.Spec, &v.AlpineModel); err != nil {
@@ -334,6 +341,9 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	if len(publicKeyBytes) == 0 {
 		if len(props.PublicKeyPaths) != 1 {
 			return nil, errors.New("only one public key must be provided")
+		}
+		if props.PublicKeyPaths[0] == nil {
+			return nil, errors.New("public key path is not set")
 		}
 		keyBytes, err := os.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
 		if err != nil {

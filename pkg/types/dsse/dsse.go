@@ -54,6 +54,9 @@ func (it BaseDSSEType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl,
 	if !ok {
 		return nil, errors.New("cannot unmarshal non-DSSE types")
 	}
+	if in == nil {
+		return nil, errors.New("proposed entry cannot be nil")
+	}
 
 	if in.APIVersion == nil {
 		return nil, errors.New("api version cannot be nil")

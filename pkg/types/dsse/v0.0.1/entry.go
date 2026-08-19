@@ -111,12 +111,12 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 		result = append(result, keyObj.Subjects()...)
 	}
 
-	if v.DSSEObj.PayloadHash != nil {
+	if v.DSSEObj.PayloadHash != nil && v.DSSEObj.PayloadHash.Algorithm != nil && v.DSSEObj.PayloadHash.Value != nil {
 		payloadHashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.DSSEObj.PayloadHash.Algorithm, *v.DSSEObj.PayloadHash.Value))
 		result = append(result, payloadHashKey)
 	}
 
-	if v.DSSEObj.EnvelopeHash != nil {
+	if v.DSSEObj.EnvelopeHash != nil && v.DSSEObj.EnvelopeHash.Algorithm != nil && v.DSSEObj.EnvelopeHash.Value != nil {
 		envelopeHashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.DSSEObj.EnvelopeHash.Algorithm, *v.DSSEObj.EnvelopeHash.Value))
 		result = append(result, envelopeHashKey)
 	}
@@ -237,6 +237,9 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	it, ok := pe.(*models.DSSE)
 	if !ok {
 		return errors.New("cannot unmarshal non DSSE v0.0.1 type")
+	}
+	if it == nil {
+		return errors.New("proposed entry cannot be nil")
 	}
 
 	dsseObj := &models.DSSEV001Schema{}
@@ -423,6 +426,9 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 
 	if len(props.PublicKeyPaths) > 0 {
 		for _, path := range props.PublicKeyPaths {
+			if path == nil {
+				return nil, errors.New("public key path cannot be nil")
+			}
 			if path.IsAbs() {
 				return nil, errors.New("dsse public keys cannot be fetched over HTTP(S)")
 			}
@@ -515,6 +521,9 @@ func (v V001Entry) Verifiers() ([]pkitypes.PublicKey, error) {
 
 	var keys []pkitypes.PublicKey
 	for _, s := range v.DSSEObj.Signatures {
+		if s == nil || s.Verifier == nil {
+			return nil, errors.New("dsse v0.0.1 entry not initialized")
+		}
 		key, err := x509.NewPublicKey(bytes.NewReader(*s.Verifier))
 		if err != nil {
 			return nil, err
