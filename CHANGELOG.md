@@ -14,6 +14,7 @@
 * alpine: hash only the bytes read when computing the control.tar.gz digest (#2908)
 * return a 400 error for invalid TreeID (#2895)
 * Return the file error instead of the URL error for a missing artifact path (#2872)
+* Apply proactive hardening against malformed requests (#2945)
 
 ## Improvements
 
