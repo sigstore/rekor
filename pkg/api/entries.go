@@ -403,7 +403,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 				log.ContextLogger(ctx).Errorf("getting entry index keys: %v", err)
 				return
 			}
-			if err = addToIndex(context.Background(), keys, entryID); err != nil {
+			if err = addToIndex(context.WithoutCancel(ctx), keys, entryID); err != nil {
 				log.ContextLogger(ctx).Errorf("adding keys to index: %v", err)
 			}
 		}()
@@ -414,7 +414,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 			attKey, attVal := entryWithAtt.AttestationKeyValue()
 			if attVal != nil {
 				go func() {
-					if err := storeAttestation(context.Background(), attKey, attVal); err != nil {
+					if err := storeAttestation(context.WithoutCancel(ctx), attKey, attVal); err != nil {
 						// entryIDstruct.UUID
 						log.ContextLogger(ctx).Debugf("error storing attestation: %s", err)
 					} else {
