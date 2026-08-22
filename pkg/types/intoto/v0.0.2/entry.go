@@ -103,54 +103,69 @@ func (v V002Entry) IndexKeys() ([]string, error) {
 		result = append(result, keyObj.Subjects()...)
 	}
 
-	payloadKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.PayloadHash.Algorithm, *v.IntotoObj.Content.PayloadHash.Value))
-	result = append(result, payloadKey)
+	if v.IntotoObj.Content.PayloadHash != nil && v.IntotoObj.Content.PayloadHash.Algorithm != nil && v.IntotoObj.Content.PayloadHash.Value != nil {
+		payloadKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.PayloadHash.Algorithm, *v.IntotoObj.Content.PayloadHash.Value))
+		result = append(result, payloadKey)
+	}
 
 	// since we can't deterministically calculate this server-side (due to public keys being added inline, and also canonicalization being potentially different),
 	// we'll just skip adding this index key
 	// hashkey := strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.Hash.Algorithm, *v.IntotoObj.Content.Hash.Value))
 	// result = append(result, hashkey)
 
-	switch *v.IntotoObj.Content.Envelope.PayloadType {
-	case in_toto.PayloadType:
+	if v.IntotoObj.Content.Envelope.PayloadType != nil {
+		switch *v.IntotoObj.Content.Envelope.PayloadType {
+		case in_toto.PayloadType:
 
-		if v.IntotoObj.Content.Envelope.Payload == nil {
-			log.Logger.Info("IntotoObj DSSE payload is empty")
-			return result, nil
-		}
-		decodedPayload, err := base64.StdEncoding.DecodeString(string(v.IntotoObj.Content.Envelope.Payload))
-		if err != nil {
-			return result, fmt.Errorf("could not decode envelope payload: %w", err)
-		}
-		statement, err := parseStatement(decodedPayload)
-		if err != nil {
-			return result, err
-		}
-		for _, s := range statement.Subject {
-			for alg, ds := range s.Digest {
-				result = append(result, alg+":"+ds)
+			if v.IntotoObj.Content.Envelope.Payload == nil {
+				log.Logger.Info("IntotoObj DSSE payload is empty")
+				return result, nil
 			}
-		}
-		// Not all in-toto statements will contain a SLSA provenance predicate.
-		// See https://github.com/in-toto/attestation/blob/main/spec/README.md#predicate
-		// for other predicates.
-		if predicate, err := parseSlsaPredicate(decodedPayload); err == nil {
-			if predicate.Predicate.Materials != nil {
-				for _, s := range predicate.Predicate.Materials {
-					for alg, ds := range s.Digest {
-						result = append(result, alg+":"+ds)
+			decodedPayload, err := base64.StdEncoding.DecodeString(string(v.IntotoObj.Content.Envelope.Payload))
+			if err != nil {
+				return result, fmt.Errorf("could not decode envelope payload: %w", err)
+			}
+			statement, err := parseStatement(decodedPayload)
+			if err != nil {
+				return result, err
+			}
+			for _, s := range statement.Subject {
+				for alg, ds := range s.Digest {
+					result = append(result, alg+":"+ds)
+				}
+			}
+			// Not all in-toto statements will contain a SLSA provenance predicate.
+			// See https://github.com/in-toto/attestation/blob/main/spec/README.md#predicate
+			// for other predicates.
+			if predicate, err := parseSlsaPredicate(decodedPayload); err == nil {
+				if predicate.Predicate.Materials != nil {
+					for _, s := range predicate.Predicate.Materials {
+						for alg, ds := range s.Digest {
+							result = append(result, alg+":"+ds)
+						}
 					}
 				}
 			}
+		default:
+			log.Logger.Infof("Unknown in_toto DSSE envelope Type: %s", *v.IntotoObj.Content.Envelope.PayloadType)
 		}
-	default:
-		log.Logger.Infof("Unknown in_toto DSSE envelope Type: %s", *v.IntotoObj.Content.Envelope.PayloadType)
+	} else {
+		log.Logger.Info("IntotoObj DSSE payloadType is nil")
 	}
 	return result, nil
 }
 
-func parseStatement(p []byte) (*in_toto.Statement, error) {
-	ps := in_toto.Statement{}
+// indexKeyExtract captures only the fields of an in-toto statement that are
+// used to derive index keys; it intentionally uses encoding/json semantics so
+// that payloads accepted today continue to parse identically.
+type indexKeyExtract struct {
+	Subject []struct {
+		Digest map[string]string `json:"digest"`
+	} `json:"subject"`
+}
+
+func parseStatement(p []byte) (*indexKeyExtract, error) {
+	ps := indexKeyExtract{}
 	if err := json.Unmarshal(p, &ps); err != nil {
 		return nil, err
 	}
@@ -301,8 +316,16 @@ func (v *V002Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
+	if v.IntotoObj.Content == nil || v.IntotoObj.Content.Envelope == nil {
+		return errors.New("missing content or envelope in intoto v0.0.2 entry")
+	}
+
 	if string(v.IntotoObj.Content.Envelope.Payload) == "" {
 		return nil
+	}
+
+	if v.IntotoObj.Content.Envelope.PayloadType == nil {
+		return errors.New("missing payload type in intoto v0.0.2 entry")
 	}
 
 	env := &dsse.Envelope{
@@ -388,7 +411,7 @@ func (v *V002Entry) Canonicalize(_ context.Context) ([]byte, error) {
 
 // AttestationKey returns the digest of the attestation that was uploaded, to be used to lookup the attestation from storage
 func (v *V002Entry) AttestationKey() string {
-	if v.IntotoObj.Content != nil && v.IntotoObj.Content.PayloadHash != nil {
+	if v.IntotoObj.Content != nil && v.IntotoObj.Content.PayloadHash != nil && v.IntotoObj.Content.PayloadHash.Algorithm != nil && v.IntotoObj.Content.PayloadHash.Value != nil {
 		return fmt.Sprintf("%s:%s", *v.IntotoObj.Content.PayloadHash.Algorithm, *v.IntotoObj.Content.PayloadHash.Value)
 	}
 	return ""
@@ -480,6 +503,9 @@ func (v V002Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 
 	if len(props.PublicKeyPaths) > 0 {
 		for _, path := range props.PublicKeyPaths {
+			if path == nil {
+				return nil, errors.New("public key path cannot be nil")
+			}
 			if path.IsAbs() {
 				return nil, errors.New("dsse public keys cannot be fetched over HTTP(S)")
 			}
@@ -594,6 +620,9 @@ func (v V002Entry) Verifiers() ([]pkitypes.PublicKey, error) {
 
 	var keys []pkitypes.PublicKey
 	for _, s := range v.IntotoObj.Content.Envelope.Signatures {
+		if s == nil || s.PublicKey == nil {
+			return nil, errors.New("malformed or missing signature")
+		}
 		key, err := x509.NewPublicKey(bytes.NewReader(*s.PublicKey))
 		if err != nil {
 			return nil, err

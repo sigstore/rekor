@@ -38,6 +38,7 @@ make_entries() {
         echo test${i} > $testdir/blob${i}
         minisign -S -s $testdir/mini${i}.key -m $testdir/blob${i}
         rekor-cli --rekor_server $REKOR_ADDRESS upload \
+            --type=rekord \
             --artifact $testdir/blob${i} \
             --pki-format=minisign \
             --public-key $testdir/mini${i}.pub \
@@ -51,6 +52,7 @@ make_entries() {
         set -e
         minisign -S -s $testdir/mini${key_index}.key -m $testdir/blob${i}
         rekor-cli --rekor_server $REKOR_ADDRESS upload \
+            --type=rekord \
             --artifact $testdir/blob${i} \
             --pki-format=minisign \
             --public-key $testdir/mini${key_index}.pub \
@@ -81,7 +83,7 @@ fi
 # search_index.storage_provider still points to redis, but it's useful
 # to test that the key cleanup is working
 go run cmd/backfill-index/main.go --rekor-address $REKOR_ADDRESS \
-    --mysql-dsn "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DB}" \
+    --mysql-dsn "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DB}?parseTime=true&interpolateParams=true" \
     --concurrency 5 --start 0 --end $end_index
 
 # run the cleanup script

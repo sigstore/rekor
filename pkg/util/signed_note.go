@@ -186,6 +186,10 @@ func (s *SignedNote) UnmarshalText(data []byte) error {
 		sn.Signatures = append(sn.Signatures, sig)
 
 	}
+	if err := b.Err(); err != nil {
+		return fmt.Errorf("reading signed note: %w", err)
+	}
+
 	if len(sn.Signatures) == 0 {
 		return errors.New("no signatures found in input")
 	}

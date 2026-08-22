@@ -25,7 +25,8 @@ import (
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
+	"github.com/go-openapi/swag/typeutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -176,13 +177,13 @@ func (m *RpmV001Schema) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *RpmV001Schema) UnmarshalBinary(b []byte) error {
 	var res RpmV001Schema
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -221,7 +222,7 @@ func (m *RpmV001SchemaPackage) Validate(formats strfmt.Registry) error {
 }
 
 func (m *RpmV001SchemaPackage) validateHash(formats strfmt.Registry) error {
-	if swag.IsZero(m.Hash) { // not required
+	if typeutils.IsZero(m.Hash) { // not required
 		return nil
 	}
 
@@ -265,7 +266,7 @@ func (m *RpmV001SchemaPackage) contextValidateHash(ctx context.Context, formats 
 
 	if m.Hash != nil {
 
-		if swag.IsZero(m.Hash) { // not required
+		if typeutils.IsZero(m.Hash) { // not required
 			return nil
 		}
 
@@ -296,13 +297,13 @@ func (m *RpmV001SchemaPackage) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *RpmV001SchemaPackage) UnmarshalBinary(b []byte) error {
 	var res RpmV001SchemaPackage
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -392,7 +393,7 @@ func (m *RpmV001SchemaPackageHash) validateValue(formats strfmt.Registry) error 
 }
 
 // ContextValidate validates this rpm v001 schema package hash based on context it is used
-func (m *RpmV001SchemaPackageHash) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *RpmV001SchemaPackageHash) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -401,13 +402,13 @@ func (m *RpmV001SchemaPackageHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *RpmV001SchemaPackageHash) UnmarshalBinary(b []byte) error {
 	var res RpmV001SchemaPackageHash
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -449,7 +450,7 @@ func (m *RpmV001SchemaPublicKey) validateContent(formats strfmt.Registry) error 
 }
 
 // ContextValidate validates this rpm v001 schema public key based on context it is used
-func (m *RpmV001SchemaPublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *RpmV001SchemaPublicKey) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -458,13 +459,13 @@ func (m *RpmV001SchemaPublicKey) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *RpmV001SchemaPublicKey) UnmarshalBinary(b []byte) error {
 	var res RpmV001SchemaPublicKey
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res

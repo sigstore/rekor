@@ -45,14 +45,22 @@ func (m *TlogClient) GetLogProof(_ *tlog.GetLogProofParams, _ ...tlog.ClientOpti
 		}}, nil
 }
 
+func (m *TlogClient) GetLogProofContext(_ context.Context, params *tlog.GetLogProofParams, opts ...tlog.ClientOption) (*tlog.GetLogProofOK, error) {
+	return m.GetLogProof(params, opts...)
+}
+
 func (m *TlogClient) GetLogInfo(_ *tlog.GetLogInfoParams, _ ...tlog.ClientOption) (*tlog.GetLogInfoOK, error) {
 	return &tlog.GetLogInfoOK{
 		Payload: &m.LogInfo,
 	}, nil
 }
 
+func (m *TlogClient) GetLogInfoContext(_ context.Context, params *tlog.GetLogInfoParams, opts ...tlog.ClientOption) (*tlog.GetLogInfoOK, error) {
+	return m.GetLogInfo(params, opts...)
+}
+
 // TODO: Implement mock
-func (m *TlogClient) SetTransport(_ runtime.ClientTransport) {
+func (m *TlogClient) SetTransport(_ runtime.ContextualTransport) {
 }
 
 func TestConsistency(t *testing.T) {
@@ -338,5 +346,41 @@ func TestCheckpoint(t *testing.T) {
 				t.Fatalf("VerifyCheckpointSignature = %t, wantErr %t", gotErr, test.wantErr)
 			}
 		})
+	}
+}
+
+func TestCheckpointRootHashCaseFolding(t *testing.T) {
+	signer, _, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var rootHash [32]byte
+	for i := range rootHash {
+		rootHash[i] = byte(i) + 1
+	}
+	rootHash[0] = 'A'
+
+	scBytes, err := util.CreateAndSignCheckpoint(context.Background(), "rekor.localhost", 123, 42, rootHash[:], signer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Same bytes except an ASCII letter in different case: not equal, but equal
+	// under case folding.
+	mismatch := rootHash
+	mismatch[0] = 'a'
+
+	e := models.LogEntryAnon{
+		Verification: &models.LogEntryAnonVerification{
+			InclusionProof: &models.InclusionProof{
+				RootHash:   conv.Pointer(hex.EncodeToString(mismatch[:])),
+				Checkpoint: conv.Pointer(string(scBytes)),
+			},
+		},
+	}
+
+	if err := VerifyCheckpointSignature(&e, signer); err == nil {
+		t.Fatal("VerifyCheckpointSignature accepted a root hash that does not match the signed tree head")
 	}
 }

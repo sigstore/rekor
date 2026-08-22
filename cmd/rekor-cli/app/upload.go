@@ -56,8 +56,9 @@ func (u *uploadCmdOutput) String() string {
 
 // uploadCmd represents the upload command
 var uploadCmd = &cobra.Command{
-	Use:   "upload",
-	Short: "Upload an artifact to Rekor",
+	Use:     "upload",
+	Example: `  rekor-cli upload --artifact <path-or-url> --signature <path> --public-key <path>`,
+	Short:   "Upload an artifact to Rekor",
 	PreRunE: func(cmd *cobra.Command, _ []string) error {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
@@ -164,14 +165,14 @@ var uploadCmd = &cobra.Command{
 }
 
 func tryUpload(ctx context.Context, rekorClient *gen_client.Rekor, entry models.ProposedEntry) (*entries.CreateLogEntryCreated, error) {
-	params := entries.NewCreateLogEntryParamsWithContext(ctx)
+	params := entries.NewCreateLogEntryParams()
 	params.SetTimeout(viper.GetDuration("timeout"))
 	if pei, ok := entry.(types.ProposedEntryIterator); ok {
 		params.SetProposedEntry(pei.Get())
 	} else {
 		params.SetProposedEntry(entry)
 	}
-	resp, err := rekorClient.Entries.CreateLogEntry(params)
+	resp, err := rekorClient.Entries.CreateLogEntryContext(ctx, params)
 	if err != nil {
 		if e, ok := err.(*entries.CreateLogEntryBadRequest); ok {
 			if pei, ok := entry.(types.ProposedEntryIterator); ok {

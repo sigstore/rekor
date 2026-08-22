@@ -127,6 +127,9 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	if !ok {
 		return errors.New("cannot unmarshal non tuf v0.0.1 type")
 	}
+	if tuf == nil {
+		return errors.New("proposed entry cannot be nil")
+	}
 
 	if err := DecodeEntry(tuf.Spec, &v.TufObj); err != nil {
 		return err
@@ -183,6 +186,12 @@ func DecodeEntry(input any, output *models.TUFV001Schema) error {
 }
 
 func (v *V001Entry) fetchExternalEntities(_ context.Context) (pki.PublicKey, pki.Signature, error) {
+	if v.TufObj.Metadata == nil {
+		return nil, nil, errors.New("missing metadata")
+	}
+	if v.TufObj.Root == nil {
+		return nil, nil, errors.New("missing root")
+	}
 	// Parse metadata content
 	var contentBytes []byte
 	if v.TufObj.Metadata.Content != nil {
@@ -228,7 +237,11 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	canonicalEntry := models.TUFV001Schema{}
 
-	canonicalEntry.SpecVersion, err = key.(*ptuf.PublicKey).SpecVersion()
+	pk, ok := key.(*ptuf.PublicKey)
+	if !ok || pk == nil {
+		return nil, errors.New("invalid public key type")
+	}
+	canonicalEntry.SpecVersion, err = pk.SpecVersion()
 	if err != nil {
 		return nil, err
 	}
@@ -317,6 +330,9 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		if len(props.PublicKeyPaths) != 1 {
 			return nil, errors.New("only one path to root file must be specified")
 		}
+		if props.PublicKeyPaths[0] == nil {
+			return nil, errors.New("path to root file cannot be nil")
+		}
 		keyBytes, err := os.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
 		if err != nil {
 			return nil, fmt.Errorf("error reading root file: %w", err)
@@ -400,6 +416,9 @@ func (v V001Entry) Insertable() (bool, error) {
 }
 
 func (v V001Entry) parseRootContent() ([]byte, error) {
+	if v.TufObj.Root == nil {
+		return nil, errors.New("missing root")
+	}
 	var keyBytes []byte
 	// Root.Content can either be a base64-encoded string or object
 	switch v := v.TufObj.Root.Content.(type) {
@@ -420,6 +439,9 @@ func (v V001Entry) parseRootContent() ([]byte, error) {
 }
 
 func (v V001Entry) parseMetadataContent() ([]byte, error) {
+	if v.TufObj.Metadata == nil {
+		return nil, errors.New("missing metadata")
+	}
 	var sigBytes []byte
 	// Metadata.Content can either be a base64-encoded string or object
 	switch v := v.TufObj.Metadata.Content.(type) {

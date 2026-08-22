@@ -43,7 +43,7 @@ func New() types.TypeImpl {
 	return &brt
 }
 
-var VersionMap = types.NewSemVerEntryFactoryMap()
+var VersionMap = types.NewEntryFactoryMap()
 
 func (rt BaseRekordType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
 	if pe == nil {
@@ -51,7 +51,7 @@ func (rt BaseRekordType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImp
 	}
 
 	rekord, ok := pe.(*models.Rekord)
-	if !ok {
+	if !ok || rekord == nil {
 		return nil, errors.New("cannot unmarshal non-Rekord types")
 	}
 

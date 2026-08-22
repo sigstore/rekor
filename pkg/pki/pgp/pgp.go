@@ -27,13 +27,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/asaskevich/govalidator"
-
-	//TODO: https://github.com/sigstore/rekor/issues/286
-	"golang.org/x/crypto/openpgp"        //nolint:staticcheck
-	"golang.org/x/crypto/openpgp/armor"  //nolint:staticcheck
-	"golang.org/x/crypto/openpgp/packet" //nolint:staticcheck
 
 	"github.com/sigstore/rekor/pkg/pki/identity"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -48,6 +47,10 @@ type Signature struct {
 
 // NewSignature creates and validates a PGP signature object
 func NewSignature(r io.Reader) (*Signature, error) {
+	if r == nil {
+		return nil, errors.New("nil reader")
+	}
+
 	var s Signature
 	var inputBuffer bytes.Buffer
 
@@ -80,9 +83,7 @@ func NewSignature(r io.Reader) (*Signature, error) {
 	}
 
 	if _, ok := sigPkt.(*packet.Signature); !ok {
-		if _, ok := sigPkt.(*packet.SignatureV3); !ok {
-			return nil, errors.New("valid PGP signature was not detected")
-		}
+		return nil, errors.New("valid PGP signature was not detected")
 	}
 
 	s.signature = inputBuffer.Bytes()
@@ -149,16 +150,48 @@ func (s Signature) Verify(r io.Reader, k interface{}, _ ...sigsig.VerifyOption) 
 	if !ok {
 		return errors.New("cannot use Verify with a non-PGP signature")
 	}
-	if len(key.key) == 0 {
+	if key == nil || len(key.key) == 0 {
 		return errors.New("PGP public key has not been initialized")
 	}
 
-	verifyFn := openpgp.CheckDetachedSignature
+	sigReader := bytes.NewReader(s.signature)
+	var (
+		sigPkt packet.Packet
+		err    error
+	)
 	if s.isArmored {
-		verifyFn = openpgp.CheckArmoredDetachedSignature
+		block, decodeErr := armor.Decode(sigReader)
+		if decodeErr != nil {
+			return fmt.Errorf("error decoding armored PGP signature: %w", decodeErr)
+		}
+		sigPkt, err = packet.Read(block.Body)
+	} else {
+		sigPkt, err = packet.Read(sigReader)
+	}
+	if err != nil {
+		return fmt.Errorf("error reading PGP signature: %w", err)
+	}
+	sig, ok := sigPkt.(*packet.Signature)
+	if !ok {
+		return errors.New("valid PGP signature was not detected")
 	}
 
-	if _, err := verifyFn(key.key, r, bytes.NewReader(s.signature)); err != nil {
+	// ProtonMail's verifier checks key validity against Config.Time (default:
+	// now). Use the signature creation time so historically valid signatures
+	// still verify after key expiry, matching prior x/crypto/openpgp behavior
+	// needed for transparency-log replay and existing fixtures.
+	cfg := &packet.Config{
+		Time: func() time.Time { return sig.CreationTime },
+	}
+	if _, err := sigReader.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+	if s.isArmored {
+		_, err = openpgp.CheckArmoredDetachedSignature(key.key, r, sigReader, cfg)
+	} else {
+		_, err = openpgp.CheckDetachedSignature(key.key, r, sigReader, cfg)
+	}
+	if err != nil {
 		return err
 	}
 
@@ -172,6 +205,10 @@ type PublicKey struct {
 
 // NewPublicKey implements the pki.PublicKey interface
 func NewPublicKey(r io.Reader) (*PublicKey, error) {
+	if r == nil {
+		return nil, errors.New("nil reader")
+	}
+
 	var k PublicKey
 	var inputBuffer bytes.Buffer
 
@@ -214,6 +251,9 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 					return nil, fmt.Errorf("invalid PGP public key provided: %w", err)
 				}
 			}
+		}
+		if err := scan.Err(); err != nil {
+			return nil, fmt.Errorf("error reading PGP public key: %w", err)
 		}
 	} else {
 		// process as binary
@@ -269,6 +309,9 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 		defer armoredWriter.Close()
 
 		for _, entity := range k.key {
+			if entity == nil {
+				return fmt.Errorf("pgp key ring contains a nil entity")
+			}
 			if err := entity.Serialize(armoredWriter); err != nil {
 				return fmt.Errorf("error generating canonical value of PGP public key: %w", err)
 			}
@@ -281,7 +324,8 @@ func (k PublicKey) CanonicalValue() ([]byte, error) {
 	return canonicalBuffer.Bytes(), nil
 }
 
-func (k PublicKey) KeyRing() (openpgp.KeyRing, error) {
+// Entities returns the underlying OpenPGP entity list.
+func (k PublicKey) Entities() (openpgp.EntityList, error) {
 	if k.key == nil {
 		return nil, errors.New("PGP public key has not been initialized")
 	}
@@ -289,13 +333,21 @@ func (k PublicKey) KeyRing() (openpgp.KeyRing, error) {
 	return k.key, nil
 }
 
+// KeyRing returns the underlying OpenPGP key ring.
+func (k PublicKey) KeyRing() (openpgp.KeyRing, error) {
+	return k.Entities()
+}
+
 // EmailAddresses implements the pki.PublicKey interface
 func (k PublicKey) EmailAddresses() []string {
 	var names []string
 	// Extract from cert
 	for _, entity := range k.key {
+		if entity == nil {
+			continue
+		}
 		for _, identity := range entity.Identities {
-			if govalidator.IsEmail(identity.UserId.Email) {
+			if identity != nil && identity.UserId != nil && govalidator.IsEmail(identity.UserId.Email) {
 				names = append(names, identity.UserId.Email)
 			}
 		}
@@ -312,12 +364,22 @@ func (k PublicKey) Subjects() []string {
 func (k PublicKey) Identities() ([]identity.Identity, error) {
 	var ids []identity.Identity
 	for _, entity := range k.key {
+		if entity == nil {
+			continue
+		}
 		var keys []*packet.PublicKey
-		keys = append(keys, entity.PrimaryKey)
+		if entity.PrimaryKey != nil {
+			keys = append(keys, entity.PrimaryKey)
+		}
 		for _, subKey := range entity.Subkeys {
-			keys = append(keys, subKey.PublicKey)
+			if subKey.PublicKey != nil {
+				keys = append(keys, subKey.PublicKey)
+			}
 		}
 		for _, pk := range keys {
+			if pk == nil {
+				continue
+			}
 			pubKey := pk.PublicKey
 			// Only process supported types. Will ignore DSA
 			// and ElGamal keys.
@@ -334,7 +396,7 @@ func (k PublicKey) Identities() ([]identity.Identity, error) {
 			ids = append(ids, identity.Identity{
 				Crypto:      pubKey,
 				Raw:         pkixKey,
-				Fingerprint: hex.EncodeToString(pk.Fingerprint[:]),
+				Fingerprint: hex.EncodeToString(pk.Fingerprint),
 			})
 		}
 	}

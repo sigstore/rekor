@@ -45,7 +45,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 func TestNewLogRanges(t *testing.T) {
@@ -551,8 +551,12 @@ func TestLogRangesFromPath(t *testing.T) {
 						t.Fatalf("Failed to encode json: %v", err)
 					}
 				case tt.wantYaml:
-					if err := yaml.NewEncoder(f).Encode(tt.want); err != nil {
+					content, err := yaml.Marshal(tt.want)
+					if err != nil {
 						t.Fatalf("Failed to encode yaml: %v", err)
+					}
+					if _, err := f.Write(content); err != nil {
+						t.Fatalf("Failed to write yaml: %v", err)
 					}
 				case tt.wantInvalidJSON:
 					if _, err := f.WriteString("invalid json"); err != nil {
@@ -860,7 +864,6 @@ func TestNewLogRangesWithMock(t *testing.T) {
 	defer mockCtl.Finish()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			got, err := NewLogRanges(tt.args.ctx, tt.args.path, tt.args.treeID, sc)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewLogRanges() error = %v, wantErr %v", err, tt.wantErr)

@@ -19,17 +19,21 @@
 package pubkey
 
 import (
+	"context"
+	"time"
+
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 )
 
 // New creates a new pubkey API client.
-func New(transport runtime.ClientTransport, formats strfmt.Registry) ClientService {
+func New(transport runtime.ContextualTransport, formats strfmt.Registry) ClientService {
 	return &Client{transport: transport, formats: formats}
 }
 
 // New creates a new pubkey API client with basic auth credentials.
+//
 // It takes the following parameters:
 // - host: http host (github.com).
 // - basePath: any base path for the API client ("/v1", "/v3").
@@ -43,6 +47,7 @@ func NewClientWithBasicAuth(host, basePath, scheme, user, password string) Clien
 }
 
 // New creates a new pubkey API client with a bearer token for authentication.
+//
 // It takes the following parameters:
 // - host: http host (github.com).
 // - basePath: any base path for the API client ("/v1", "/v3").
@@ -54,11 +59,9 @@ func NewClientWithBearerToken(host, basePath, scheme, bearerToken string) Client
 	return &Client{transport: transport, formats: strfmt.Default}
 }
 
-/*
-Client for pubkey API
-*/
+// Client for pubkey API.
 type Client struct {
-	transport runtime.ClientTransport
+	transport runtime.ContextualTransport
 	formats   strfmt.Registry
 }
 
@@ -89,23 +92,48 @@ func WithAcceptApplicationxPemFile(r *runtime.ClientOperation) {
 	r.ProducesMediaTypes = []string{"application/x-pem-file"}
 }
 
-// ClientService is the interface for Client methods
+// ClientService is the interface for Client methods.
 type ClientService interface {
+
+	// GetPublicKey retrieve the public key that can be used to validate the signed tree head.
 	GetPublicKey(params *GetPublicKeyParams, opts ...ClientOption) (*GetPublicKeyOK, error)
 
-	SetTransport(transport runtime.ClientTransport)
+	// GetPublicKeyContext retrieve the public key that can be used to validate the signed tree head.
+	GetPublicKeyContext(ctx context.Context, params *GetPublicKeyParams, opts ...ClientOption) (*GetPublicKeyOK, error)
+
+	SetTransport(transport runtime.ContextualTransport)
 }
 
-/*
-GetPublicKey retrieves the public key that can be used to validate the signed tree head
-
-Returns the public key that can be used to validate the signed tree head
-*/
+// GetPublicKey retrieves the public key that can be used to validate the signed tree head.
+//
+// Returns the public key that can be used to validate the signed tree head.
+//
+// This method does not support injected context.
+// However, timeout and opentracing contexts are honored whenever enabled.
+//
+// If you need to pass a specific context, use [Client.GetPublicKeyContext] instead.
 func (a *Client) GetPublicKey(params *GetPublicKeyParams, opts ...ClientOption) (*GetPublicKeyOK, error) {
+	var ctx context.Context
+	if params != nil && params.inner.ctx != nil {
+		ctx = params.inner.ctx
+	} else {
+		ctx = context.Background()
+	}
+
+	return a.GetPublicKeyContext(ctx, params, opts...)
+}
+
+// GetPublicKeyContext retrieves the public key that can be used to validate the signed tree head.
+//
+// Returns the public key that can be used to validate the signed tree head.
+//
+// Do not use the deprecated [GetPublicKeyParams.Context] with this method: it would be ignored.
+func (a *Client) GetPublicKeyContext(ctx context.Context, params *GetPublicKeyParams, opts ...ClientOption) (*GetPublicKeyOK, error) {
 	// NOTE: parameters are not validated before sending
 	if params == nil {
 		params = NewGetPublicKeyParams()
 	}
+
 	op := &runtime.ClientOperation{
 		ID:                 "getPublicKey",
 		Method:             "GET",
@@ -115,13 +143,14 @@ func (a *Client) GetPublicKey(params *GetPublicKeyParams, opts ...ClientOption) 
 		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &GetPublicKeyReader{formats: a.formats},
-		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}
+
 	for _, opt := range opts {
 		opt(op)
 	}
-	result, err := a.transport.Submit(op)
+
+	result, err := a.transport.SubmitContext(ctx, op)
 	if err != nil {
 		return nil, err
 	}
@@ -141,6 +170,14 @@ func (a *Client) GetPublicKey(params *GetPublicKeyParams, opts ...ClientOption) 
 }
 
 // SetTransport changes the transport on the client
-func (a *Client) SetTransport(transport runtime.ClientTransport) {
+func (a *Client) SetTransport(transport runtime.ContextualTransport) {
 	a.transport = transport
+}
+
+// innerParams captures internal fields so they don't conflict with user-supplied parameters.
+type innerParams struct {
+	timeout time.Duration
+
+	// Deprecated: use the operation call with context to pass the context instead of [PubkeyParams].
+	ctx context.Context
 }

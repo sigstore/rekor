@@ -19,12 +19,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/blang/semver"
 	"github.com/sigstore/rekor/pkg/internal/log"
 )
 
 // VersionEntryFactoryMap defines a map-like interface to find the correct implementation for a version string
-// This could be a simple map[string][EntryFactory], or something more elegant (e.g. semver)
+// This could be a simple map[string][EntryFactory], or something more elegant
 type VersionEntryFactoryMap interface {
 	GetEntryFactory(string) (EntryFactory, error) // return the entry factory for the specified version
 	SetEntryFactory(string, EntryFactory) error   // set the entry factory for the specified version
@@ -32,63 +31,53 @@ type VersionEntryFactoryMap interface {
 	SupportedVersions() []string                  // return a list of versions currently stored in the map
 }
 
-// SemVerEntryFactoryMap implements a map that allows implementations to specify their supported versions using
-// semver-compliant strings
-type SemVerEntryFactoryMap struct {
+// EntryFactoryMap implements a thread-safe map of version strings to EntryFactory functions
+type EntryFactoryMap struct {
 	factoryMap map[string]EntryFactory
 
 	sync.RWMutex
 }
 
-func NewSemVerEntryFactoryMap() VersionEntryFactoryMap {
-	s := SemVerEntryFactoryMap{}
+func NewEntryFactoryMap() VersionEntryFactoryMap {
+	s := EntryFactoryMap{}
 	s.factoryMap = make(map[string]EntryFactory)
 	return &s
 }
 
-func (s *SemVerEntryFactoryMap) Count() int {
+func (s *EntryFactoryMap) Count() int {
+	s.RLock()
+	defer s.RUnlock()
 	return len(s.factoryMap)
 }
 
-func (s *SemVerEntryFactoryMap) GetEntryFactory(version string) (EntryFactory, error) {
+func (s *EntryFactoryMap) GetEntryFactory(version string) (EntryFactory, error) {
 	s.RLock()
 	defer s.RUnlock()
 
-	semverToMatch, err := semver.Parse(version)
-	if err != nil {
-		log.Logger.Error(err)
-		return nil, err
+	if ef, ok := s.factoryMap[version]; ok {
+		return ef, nil
 	}
 
-	// will return first function that matches
-	for k, v := range s.factoryMap {
-		semverRange, err := semver.ParseRange(k)
-		if err != nil {
-			log.Logger.Error(err)
-			return nil, err
-		}
-
-		if semverRange(semverToMatch) {
-			return v, nil
-		}
-	}
 	return nil, fmt.Errorf("unable to locate entry for version %s", version)
 }
 
-func (s *SemVerEntryFactoryMap) SetEntryFactory(constraint string, ef EntryFactory) error {
+func (s *EntryFactoryMap) SetEntryFactory(version string, ef EntryFactory) error {
 	s.Lock()
 	defer s.Unlock()
 
-	if _, err := semver.ParseRange(constraint); err != nil {
+	if version == "" {
+		err := fmt.Errorf("empty version string")
 		log.Logger.Error(err)
 		return err
 	}
 
-	s.factoryMap[constraint] = ef
+	s.factoryMap[version] = ef
 	return nil
 }
 
-func (s *SemVerEntryFactoryMap) SupportedVersions() []string {
+func (s *EntryFactoryMap) SupportedVersions() []string {
+	s.RLock()
+	defer s.RUnlock()
 	var versions []string
 	for k := range s.factoryMap {
 		versions = append(versions, k)

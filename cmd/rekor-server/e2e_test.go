@@ -20,7 +20,10 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/ecdsa"
+	cryptorand "crypto/rand"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -28,7 +31,9 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,8 +42,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sigstore/rekor/pkg/pki/x509/testutils"
 	"github.com/sigstore/rekor/pkg/sharding"
 	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
 func TestDuplicates(t *testing.T) {
@@ -54,16 +61,16 @@ func TestDuplicates(t *testing.T) {
 	}
 
 	// Now upload to rekor!
-	out := e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out := e2eutil.RunCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, "Created entry at")
 
 	// Now upload the same one again, we should get a dupe entry.
-	out = e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out = e2eutil.RunCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, "Entry already exists")
 
 	// Now do a new one, we should get a new entry
 	e2eutil.CreatedPGPSignedArtifact(t, artifactPath, sigPath)
-	out = e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out = e2eutil.RunCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, "Created entry at")
 }
 
@@ -136,6 +143,9 @@ func getRekorMetricCount(metricLine string, t *testing.T) (int, error) {
 		t.Log("Matched metric line: " + scanner.Text())
 		return result, nil
 	}
+	if err := scanner.Err(); err != nil {
+		return 0, err
+	}
 	return 0, nil
 }
 func TestEnvVariableValidation(t *testing.T) {
@@ -162,7 +172,7 @@ func TestGetCLI(t *testing.T) {
 	t.Cleanup(func() {
 		os.Remove(pubPath)
 	})
-	out := e2eutil.RunCli(t, "upload", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
+	out := e2eutil.RunCli(t, "upload", "--type=rekord", "--pki-format=pgp", "--artifact", artifactPath, "--signature", sigPath, "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, "Created entry at")
 
 	uuid, err := sharding.GetUUIDFromIDString(e2eutil.GetUUIDFromUploadOutput(t, out))
@@ -191,7 +201,7 @@ func TestGetCLI(t *testing.T) {
 	out = e2eutil.RunCli(t, "search", "--artifact", artifactPath)
 	e2eutil.OutputContains(t, out, uuid)
 
-	out = e2eutil.RunCli(t, "search", "--public-key", pubPath)
+	out = e2eutil.RunCli(t, "search", "--pki-format=pgp", "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, uuid)
 
 	artifactBytes, err := ioutil.ReadFile(artifactPath)
@@ -405,4 +415,72 @@ func TestHTTPMaxRequestBodySizeCreateLogEntry(t *testing.T) {
 	if resp.StatusCode != http.StatusRequestEntityTooLarge {
 		t.Fatalf("expected status %d, got %d instead", http.StatusRequestEntityTooLarge, resp.StatusCode)
 	}
+}
+
+func TestSearchBySANSubject(t *testing.T) {
+	const sanURI = "https://github.com/sofico-codebase/.github/.github/workflows/fabric-build.yaml@refs/heads/main"
+
+	td := t.TempDir()
+	artifactPath := filepath.Join(td, "artifact")
+	sigPath := filepath.Join(td, "signature")
+	certPath := filepath.Join(td, "chain.pem")
+
+	rootCert, rootKey, err := testutils.GenerateRootCa()
+	if err != nil {
+		t.Fatalf("root ca: %v", err)
+	}
+	subCert, subKey, err := testutils.GenerateSubordinateCa(rootCert, rootKey)
+	if err != nil {
+		t.Fatalf("sub ca: %v", err)
+	}
+	u, err := url.Parse(sanURI)
+	if err != nil {
+		t.Fatalf("parse uri: %v", err)
+	}
+	leafCert, leafKey, err := testutils.GenerateLeafCertWithSubjectAlternateNames(
+		nil, nil, []net.IP{}, []*url.URL{u},
+		"https://token.actions.githubusercontent.com",
+		subCert, subKey,
+	)
+	if err != nil {
+		t.Fatalf("leaf cert: %v", err)
+	}
+
+	pemChain, err := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, subCert, rootCert})
+	if err != nil {
+		t.Fatalf("marshal chain: %v", err)
+	}
+	if err := os.WriteFile(certPath, pemChain, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	artifact := e2eutil.CreateArtifact(t, artifactPath)
+	digest := sha256.Sum256([]byte(artifact))
+	sig, err := ecdsa.SignASN1(cryptorand.Reader, leafKey, digest[:])
+	if err != nil {
+		t.Fatalf("sign artifact: %v", err)
+	}
+	if err := os.WriteFile(sigPath, sig, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := e2eutil.RunCli(t, "upload",
+		"--type", "hashedrekord:0.0.1",
+		"--artifact-hash", "sha256:"+hex.EncodeToString(digest[:]),
+		"--signature", sigPath,
+		"--public-key", certPath,
+		"--pki-format", "x509",
+	)
+	e2eutil.OutputContains(t, out, "Created entry at")
+	uuid := e2eutil.GetUUIDFromUploadOutput(t, out)
+
+	out = e2eutil.RunCli(t, "search", "--subject", sanURI)
+	e2eutil.OutputContains(t, out, uuid)
+
+	mangled := strings.ToUpper(sanURI)
+	if mangled == sanURI {
+		t.Fatalf("test setup: mangled string equals original")
+	}
+	out = e2eutil.RunCli(t, "search", "--subject", mangled)
+	e2eutil.OutputContains(t, out, uuid)
 }

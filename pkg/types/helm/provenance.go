@@ -22,10 +22,8 @@ import (
 	"io"
 	"strings"
 
+	"github.com/ProtonMail/go-crypto/openpgp/clearsign"
 	"sigs.k8s.io/yaml"
-
-	//TODO: https://github.com/sigstore/rekor/issues/286
-	"golang.org/x/crypto/openpgp/clearsign" //nolint:staticcheck
 )
 
 type Provenance struct {

@@ -141,8 +141,17 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	return result, nil
 }
 
-func getIntotoStatement(b []byte) (*in_toto.Statement, error) {
-	var stmt in_toto.Statement
+// indexKeyExtract captures only the fields of an in-toto statement that are
+// used to derive index keys; it intentionally uses encoding/json semantics so
+// that payloads accepted today continue to parse identically.
+type indexKeyExtract struct {
+	Subject []struct {
+		Digest map[string]string `json:"digest"`
+	} `json:"subject"`
+}
+
+func getIntotoStatement(b []byte) (*indexKeyExtract, error) {
+	var stmt indexKeyExtract
 	if err := json.Unmarshal(b, &stmt); err != nil {
 		return nil, err
 	}
@@ -160,6 +169,9 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	it, ok := pe.(*models.Cose)
 	if !ok {
 		return errors.New("cannot unmarshal non Cose v0.0.1 type")
+	}
+	if it == nil {
+		return errors.New("proposed entry cannot be nil")
 	}
 
 	var err error
@@ -266,6 +278,9 @@ func (v *V001Entry) validate() error {
 		return err
 	}
 
+	if v.CoseObj.Data == nil {
+		return errors.New("cose object data cannot be nil")
+	}
 	if err := sign1Msg.Verify(v.CoseObj.Data.Aad, bv); err != nil {
 		return err
 	}
@@ -278,7 +293,7 @@ func getPublicKey(pk pki.PublicKey) (gocose.Algorithm, crypto.PublicKey, error) 
 	invAlg := gocose.Algorithm(0)
 	x5pk, ok := pk.(*x509.PublicKey)
 
-	if !ok {
+	if !ok || x5pk == nil {
 		return invAlg, nil, errors.New("invalid public key type")
 	}
 
@@ -414,6 +429,9 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	if len(publicKeyBytes) == 0 {
 		if len(props.PublicKeyPaths) != 1 {
 			return nil, errors.New("only one public key must be provided to verify signature")
+		}
+		if props.PublicKeyPaths[0] == nil {
+			return nil, errors.New("public key path must be provided")
 		}
 		keyBytes, err := os.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
 		if err != nil {

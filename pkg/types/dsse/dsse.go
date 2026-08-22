@@ -43,7 +43,7 @@ func New() types.TypeImpl {
 	return &bit
 }
 
-var VersionMap = types.NewSemVerEntryFactoryMap()
+var VersionMap = types.NewEntryFactoryMap()
 
 func (it BaseDSSEType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
 	if pe == nil {
@@ -53,6 +53,9 @@ func (it BaseDSSEType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl,
 	in, ok := pe.(*models.DSSE)
 	if !ok {
 		return nil, errors.New("cannot unmarshal non-DSSE types")
+	}
+	if in == nil {
+		return nil, errors.New("proposed entry cannot be nil")
 	}
 
 	if in.APIVersion == nil {

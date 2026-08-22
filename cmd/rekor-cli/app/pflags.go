@@ -40,6 +40,7 @@ const (
 	uuidFlag           FlagType = "uuid"
 	shaFlag            FlagType = "sha"
 	emailFlag          FlagType = "email"
+	subjectFlag        FlagType = "subject"
 	operatorFlag       FlagType = "operator"
 	logIndexFlag       FlagType = "logIndex"
 	pkiFormatFlag      FlagType = "pkiFormat"
@@ -93,6 +94,20 @@ func initializePFlagMap() {
 			}
 			return valueFactory(emailFlag, emailValidator, "")
 		},
+		subjectFlag: func() pflag.Value {
+			// non-empty SAN value; cap mirrors openapi maxLength on SearchIndex.subject
+			// and the mysql EntryKey varchar(512) column width
+			subjectValidator := func(val string) error {
+				if val == "" {
+					return errors.New("subject must not be empty")
+				}
+				if len(val) > 512 {
+					return fmt.Errorf("subject exceeds maximum length of 512 bytes")
+				}
+				return nil
+			}
+			return valueFactory(subjectFlag, subjectValidator, "")
+		},
 		logIndexFlag: func() pflag.Value {
 			// this checks for a valid integer >= 0
 			return valueFactory(logIndexFlag, validateUint, "")
@@ -105,11 +120,11 @@ func initializePFlagMap() {
 				}
 				return nil
 			}
-			return valueFactory(pkiFormatFlag, pkiFormatValidator, "pgp")
+			return valueFactory(pkiFormatFlag, pkiFormatValidator, "x509")
 		},
 		typeFlag: func() pflag.Value {
 			// this ensures the type of the log entry matches a type supported in the CLI
-			return valueFactory(typeFlag, validateTypeFlag, "rekord")
+			return valueFactory(typeFlag, validateTypeFlag, "hashedrekord")
 		},
 		fileFlag: func() pflag.Value {
 			// this validates that the file exists and can be opened by the current uid
@@ -280,12 +295,23 @@ func validateSHAValue(v string) error {
 
 // validateFileOrURL ensures the provided string is either a valid file path that can be opened or a valid URL
 func validateFileOrURL(v string) error {
-	valGen := pflagValueFuncMap[fileFlag]
-	if valGen().Set(v) == nil {
+	fileErr := pflagValueFuncMap[fileFlag]().Set(v)
+	if fileErr == nil {
 		return nil
 	}
-	valGen = pflagValueFuncMap[urlFlag]
-	return valGen().Set(v)
+	urlErr := pflagValueFuncMap[urlFlag]().Set(v)
+	if urlErr == nil {
+		return nil
+	}
+	// Neither a readable file nor a valid URL. Return the error for whichever
+	// the input was most likely intended to be, so the message is actionable:
+	// a value with an http(s) scheme is treated as a URL, anything else as a
+	// file path. Previously the file error (e.g. "no such file or directory")
+	// was always masked by the "is not a valid url" error.
+	if strings.HasPrefix(v, "http://") || strings.HasPrefix(v, "https://") {
+		return urlErr
+	}
+	return fileErr
 }
 
 // validateID ensures the ID is either an EntryID (TreeID + UUID) or a UUID

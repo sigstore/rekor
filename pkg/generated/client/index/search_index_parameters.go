@@ -27,7 +27,6 @@ import (
 	"github.com/go-openapi/runtime"
 	cr "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -38,24 +37,28 @@ import (
 //
 // To enforce default values in parameter, use SetDefaults or WithDefaults.
 func NewSearchIndexParams() *SearchIndexParams {
-	return &SearchIndexParams{
-		timeout: cr.DefaultTimeout,
-	}
+	return NewSearchIndexParamsWithTimeout(cr.DefaultTimeout)
 }
 
 // NewSearchIndexParamsWithTimeout creates a new SearchIndexParams object
 // with the ability to set a timeout on a request.
 func NewSearchIndexParamsWithTimeout(timeout time.Duration) *SearchIndexParams {
 	return &SearchIndexParams{
-		timeout: timeout,
+		inner: innerParams{
+			timeout: timeout,
+		},
 	}
 }
 
 // NewSearchIndexParamsWithContext creates a new SearchIndexParams object
 // with the ability to set a context for a request.
+//
+// Deprecated: use the operation call with context to pass the context instead of [SearchIndexParams].
 func NewSearchIndexParamsWithContext(ctx context.Context) *SearchIndexParams {
 	return &SearchIndexParams{
-		Context: ctx,
+		inner: innerParams{
+			ctx: ctx,
+		},
 	}
 }
 
@@ -79,9 +82,9 @@ type SearchIndexParams struct {
 	// Query.
 	Query *models.SearchIndex
 
-	timeout    time.Duration
-	Context    context.Context
 	HTTPClient *http.Client
+
+	inner innerParams
 }
 
 // WithDefaults hydrates default values in the search index params (not the query body).
@@ -99,54 +102,57 @@ func (o *SearchIndexParams) SetDefaults() {
 	// no default values defined for this parameter
 }
 
-// WithTimeout adds the timeout to the search index params
+// WithTimeout adds the timeout to the search index params.
 func (o *SearchIndexParams) WithTimeout(timeout time.Duration) *SearchIndexParams {
 	o.SetTimeout(timeout)
 	return o
 }
 
-// SetTimeout adds the timeout to the search index params
+// SetTimeout adds the timeout to the search index params.
 func (o *SearchIndexParams) SetTimeout(timeout time.Duration) {
-	o.timeout = timeout
+	o.inner.timeout = timeout
 }
 
-// WithContext adds the context to the search index params
+// WithContext adds the context to the search index params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [SearchIndexParams].
 func (o *SearchIndexParams) WithContext(ctx context.Context) *SearchIndexParams {
 	o.SetContext(ctx)
 	return o
 }
 
-// SetContext adds the context to the search index params
+// SetContext adds the context to the search index params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [SearchIndexParams].
 func (o *SearchIndexParams) SetContext(ctx context.Context) {
-	o.Context = ctx
+	o.inner.ctx = ctx
 }
 
-// WithHTTPClient adds the HTTPClient to the search index params
+// WithHTTPClient adds the HTTPClient to the search index params.
 func (o *SearchIndexParams) WithHTTPClient(client *http.Client) *SearchIndexParams {
 	o.SetHTTPClient(client)
 	return o
 }
 
-// SetHTTPClient adds the HTTPClient to the search index params
+// SetHTTPClient adds the HTTPClient to the search index params.
 func (o *SearchIndexParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
-// WithQuery adds the query to the search index params
+// WithQuery adds the query to the search index params.
 func (o *SearchIndexParams) WithQuery(query *models.SearchIndex) *SearchIndexParams {
 	o.SetQuery(query)
 	return o
 }
 
-// SetQuery adds the query to the search index params
+// SetQuery adds the query to the search index params.
 func (o *SearchIndexParams) SetQuery(query *models.SearchIndex) {
 	o.Query = query
 }
 
-// WriteToRequest writes these params to a swagger request
+// WriteToRequest writes these params to a [runtime.ClientRequest].
 func (o *SearchIndexParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
-
-	if err := r.SetTimeout(o.timeout); err != nil {
+	if err := r.SetTimeout(o.inner.timeout); err != nil {
 		return err
 	}
 	var res []error

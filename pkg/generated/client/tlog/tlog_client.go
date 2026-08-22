@@ -19,17 +19,21 @@
 package tlog
 
 import (
+	"context"
+	"time"
+
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 )
 
 // New creates a new tlog API client.
-func New(transport runtime.ClientTransport, formats strfmt.Registry) ClientService {
+func New(transport runtime.ContextualTransport, formats strfmt.Registry) ClientService {
 	return &Client{transport: transport, formats: formats}
 }
 
 // New creates a new tlog API client with basic auth credentials.
+//
 // It takes the following parameters:
 // - host: http host (github.com).
 // - basePath: any base path for the API client ("/v1", "/v3").
@@ -43,6 +47,7 @@ func NewClientWithBasicAuth(host, basePath, scheme, user, password string) Clien
 }
 
 // New creates a new tlog API client with a bearer token for authentication.
+//
 // It takes the following parameters:
 // - host: http host (github.com).
 // - basePath: any base path for the API client ("/v1", "/v3").
@@ -54,36 +59,63 @@ func NewClientWithBearerToken(host, basePath, scheme, bearerToken string) Client
 	return &Client{transport: transport, formats: strfmt.Default}
 }
 
-/*
-Client for tlog API
-*/
+// Client for tlog API.
 type Client struct {
-	transport runtime.ClientTransport
+	transport runtime.ContextualTransport
 	formats   strfmt.Registry
 }
 
 // ClientOption may be used to customize the behavior of Client methods.
 type ClientOption func(*runtime.ClientOperation)
 
-// ClientService is the interface for Client methods
+// ClientService is the interface for Client methods.
 type ClientService interface {
+
+	// GetLogInfo get information about the current state of the transparency log.
 	GetLogInfo(params *GetLogInfoParams, opts ...ClientOption) (*GetLogInfoOK, error)
 
+	// GetLogInfoContext get information about the current state of the transparency log.
+	GetLogInfoContext(ctx context.Context, params *GetLogInfoParams, opts ...ClientOption) (*GetLogInfoOK, error)
+
+	// GetLogProof get information required to generate a consistency proof for the transparency log.
 	GetLogProof(params *GetLogProofParams, opts ...ClientOption) (*GetLogProofOK, error)
 
-	SetTransport(transport runtime.ClientTransport)
+	// GetLogProofContext get information required to generate a consistency proof for the transparency log.
+	GetLogProofContext(ctx context.Context, params *GetLogProofParams, opts ...ClientOption) (*GetLogProofOK, error)
+
+	SetTransport(transport runtime.ContextualTransport)
 }
 
-/*
-GetLogInfo gets information about the current state of the transparency log
-
-Returns the current root hash and size of the merkle tree used to store the log entries.
-*/
+// GetLogInfo gets information about the current state of the transparency log.
+//
+// Returns the current root hash and size of the merkle tree used to store the log entries..
+//
+// This method does not support injected context.
+// However, timeout and opentracing contexts are honored whenever enabled.
+//
+// If you need to pass a specific context, use [Client.GetLogInfoContext] instead.
 func (a *Client) GetLogInfo(params *GetLogInfoParams, opts ...ClientOption) (*GetLogInfoOK, error) {
+	var ctx context.Context
+	if params != nil && params.inner.ctx != nil {
+		ctx = params.inner.ctx
+	} else {
+		ctx = context.Background()
+	}
+
+	return a.GetLogInfoContext(ctx, params, opts...)
+}
+
+// GetLogInfoContext gets information about the current state of the transparency log.
+//
+// Returns the current root hash and size of the merkle tree used to store the log entries..
+//
+// Do not use the deprecated [GetLogInfoParams.Context] with this method: it would be ignored.
+func (a *Client) GetLogInfoContext(ctx context.Context, params *GetLogInfoParams, opts ...ClientOption) (*GetLogInfoOK, error) {
 	// NOTE: parameters are not validated before sending
 	if params == nil {
 		params = NewGetLogInfoParams()
 	}
+
 	op := &runtime.ClientOperation{
 		ID:                 "getLogInfo",
 		Method:             "GET",
@@ -93,13 +125,14 @@ func (a *Client) GetLogInfo(params *GetLogInfoParams, opts ...ClientOption) (*Ge
 		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &GetLogInfoReader{formats: a.formats},
-		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}
+
 	for _, opt := range opts {
 		opt(op)
 	}
-	result, err := a.transport.Submit(op)
+
+	result, err := a.transport.SubmitContext(ctx, op)
 	if err != nil {
 		return nil, err
 	}
@@ -118,16 +151,36 @@ func (a *Client) GetLogInfo(params *GetLogInfoParams, opts ...ClientOption) (*Ge
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 
-/*
-GetLogProof gets information required to generate a consistency proof for the transparency log
-
-Returns a list of hashes for specified tree sizes that can be used to confirm the consistency of the transparency log
-*/
+// GetLogProof gets information required to generate a consistency proof for the transparency log.
+//
+// Returns a list of hashes for specified tree sizes that can be used to confirm the consistency of the transparency log.
+//
+// This method does not support injected context.
+// However, timeout and opentracing contexts are honored whenever enabled.
+//
+// If you need to pass a specific context, use [Client.GetLogProofContext] instead.
 func (a *Client) GetLogProof(params *GetLogProofParams, opts ...ClientOption) (*GetLogProofOK, error) {
+	var ctx context.Context
+	if params != nil && params.inner.ctx != nil {
+		ctx = params.inner.ctx
+	} else {
+		ctx = context.Background()
+	}
+
+	return a.GetLogProofContext(ctx, params, opts...)
+}
+
+// GetLogProofContext gets information required to generate a consistency proof for the transparency log.
+//
+// Returns a list of hashes for specified tree sizes that can be used to confirm the consistency of the transparency log.
+//
+// Do not use the deprecated [GetLogProofParams.Context] with this method: it would be ignored.
+func (a *Client) GetLogProofContext(ctx context.Context, params *GetLogProofParams, opts ...ClientOption) (*GetLogProofOK, error) {
 	// NOTE: parameters are not validated before sending
 	if params == nil {
 		params = NewGetLogProofParams()
 	}
+
 	op := &runtime.ClientOperation{
 		ID:                 "getLogProof",
 		Method:             "GET",
@@ -137,13 +190,14 @@ func (a *Client) GetLogProof(params *GetLogProofParams, opts ...ClientOption) (*
 		Schemes:            []string{"http"},
 		Params:             params,
 		Reader:             &GetLogProofReader{formats: a.formats},
-		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}
+
 	for _, opt := range opts {
 		opt(op)
 	}
-	result, err := a.transport.Submit(op)
+
+	result, err := a.transport.SubmitContext(ctx, op)
 	if err != nil {
 		return nil, err
 	}
@@ -163,6 +217,14 @@ func (a *Client) GetLogProof(params *GetLogProofParams, opts ...ClientOption) (*
 }
 
 // SetTransport changes the transport on the client
-func (a *Client) SetTransport(transport runtime.ClientTransport) {
+func (a *Client) SetTransport(transport runtime.ContextualTransport) {
 	a.transport = transport
+}
+
+// innerParams captures internal fields so they don't conflict with user-supplied parameters.
+type innerParams struct {
+	timeout time.Duration
+
+	// Deprecated: use the operation call with context to pass the context instead of [TlogParams].
+	ctx context.Context
 }

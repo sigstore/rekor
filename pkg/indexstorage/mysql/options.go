@@ -20,12 +20,15 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// Options configures connections to the MySQL index storage system
+// Options configures connections to the MySQL index storage system.
+//
+// The read and write pools are sized independently, so the connection limit options name
+// the pool they configure and are ignored when the other pool is being opened.
 type Options interface {
 	applyConnMaxIdleTime(*sqlx.DB)
 	applyConnMaxLifetime(*sqlx.DB)
-	applyMaxIdleConns(*sqlx.DB)
-	applyMaxOpenConns(*sqlx.DB)
+	applyMaxIdleConns(*sqlx.DB, poolRole)
+	applyMaxOpenConns(*sqlx.DB, poolRole)
 }
 
 // NoOpOptionImpl implements the MySQLOption interfaces as no-ops.
@@ -38,10 +41,10 @@ func (noOpOptionImpl) applyConnMaxIdleTime(_ *sqlx.DB) {}
 func (noOpOptionImpl) applyConnMaxLifetime(_ *sqlx.DB) {}
 
 // ApplyMaxOpenConns is a no-op required to fully implement the requisite interfaces
-func (noOpOptionImpl) applyMaxOpenConns(_ *sqlx.DB) {}
+func (noOpOptionImpl) applyMaxOpenConns(_ *sqlx.DB, _ poolRole) {}
 
 // ApplyMaxIdleConns is a no-op required to fully implement the requisite interfaces
-func (noOpOptionImpl) applyMaxIdleConns(_ *sqlx.DB) {}
+func (noOpOptionImpl) applyMaxIdleConns(_ *sqlx.DB, _ poolRole) {}
 
 // RequestConnMaxIdleTime implements the functional option pattern for specifying the maximum connection idle time
 type RequestConnMaxIdleTime struct {
@@ -79,38 +82,69 @@ func WithConnMaxLifetime(lifetime time.Duration) RequestConnMaxLifetime {
 	return RequestConnMaxLifetime{lifetime: lifetime}
 }
 
-// RequestMaxIdleConns implements the functional option pattern for specifying the maximum number of idle connections
+// RequestMaxIdleConns implements the functional option pattern for specifying the maximum
+// number of idle connections in one pool
 type RequestMaxIdleConns struct {
 	noOpOptionImpl
+	role      poolRole
 	idleConns int
 }
 
-// ApplyMaxIdleConns sets the maximum number of idle connections
-func (r RequestMaxIdleConns) applyMaxIdleConns(db *sqlx.DB) {
-	if db != nil {
+// ApplyMaxIdleConns sets the maximum number of idle connections, if db is the pool this
+// option was built for
+func (r RequestMaxIdleConns) applyMaxIdleConns(db *sqlx.DB, role poolRole) {
+	if db != nil && role == r.role {
 		db.SetMaxIdleConns(r.idleConns)
 	}
 }
 
-// WithMaxIdleConns specifies the maximum number of idle connections
-func WithMaxIdleConns(idleConns int) RequestMaxIdleConns {
-	return RequestMaxIdleConns{idleConns: idleConns}
+// WithReadMaxIdleConns specifies the maximum number of idle connections in the read pool
+func WithReadMaxIdleConns(idleConns int) RequestMaxIdleConns {
+	return RequestMaxIdleConns{role: poolRead, idleConns: idleConns}
 }
 
-// RequestMaxOpenConns implements the functional option pattern for specifying the maximum number of open connections
+// WithWriteMaxIdleConns specifies the maximum number of idle connections in the write pool
+func WithWriteMaxIdleConns(idleConns int) RequestMaxIdleConns {
+	return RequestMaxIdleConns{role: poolWrite, idleConns: idleConns}
+}
+
+// RequestMaxOpenConns implements the functional option pattern for specifying the maximum
+// number of open connections in one pool
 type RequestMaxOpenConns struct {
 	noOpOptionImpl
+	role      poolRole
 	openConns int
 }
 
-// applyMaxOpenConns sets the maximum number of open connections
-func (r RequestMaxOpenConns) applyMaxOpenConns(db *sqlx.DB) {
-	if db != nil {
+// applyMaxOpenConns sets the maximum number of open connections, if db is the pool this
+// option was built for
+func (r RequestMaxOpenConns) applyMaxOpenConns(db *sqlx.DB, role poolRole) {
+	if db != nil && role == r.role {
 		db.SetMaxOpenConns(r.openConns)
 	}
 }
 
-// WithMaxOpenConns specifies the maximum number of open connections
-func WithMaxOpenConns(openConns int) RequestMaxOpenConns {
-	return RequestMaxOpenConns{openConns: openConns}
+// WithReadMaxOpenConns specifies the maximum number of open connections in the read pool
+func WithReadMaxOpenConns(openConns int) RequestMaxOpenConns {
+	return RequestMaxOpenConns{role: poolRead, openConns: openConns}
+}
+
+// WithWriteMaxOpenConns specifies the maximum number of open connections in the write pool
+func WithWriteMaxOpenConns(openConns int) RequestMaxOpenConns {
+	return RequestMaxOpenConns{role: poolWrite, openConns: openConns}
+}
+
+// poolRole identifies which of the provider's two connection pools is being configured.
+type poolRole int
+
+const (
+	poolRead poolRole = iota
+	poolWrite
+)
+
+func (r poolRole) String() string {
+	if r == poolWrite {
+		return "write"
+	}
+	return "read"
 }

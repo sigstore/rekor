@@ -43,7 +43,7 @@ func New() types.TypeImpl {
 	return &brt
 }
 
-var VersionMap = types.NewSemVerEntryFactoryMap()
+var VersionMap = types.NewEntryFactoryMap()
 
 func (brt *BaseRPMType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
 	if pe == nil {
@@ -53,6 +53,9 @@ func (brt *BaseRPMType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl
 	rpm, ok := pe.(*models.Rpm)
 	if !ok {
 		return nil, errors.New("cannot unmarshal non-RPM types")
+	}
+	if rpm == nil {
+		return nil, errors.New("proposed entry cannot be nil")
 	}
 
 	if rpm.APIVersion == nil {

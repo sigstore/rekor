@@ -43,7 +43,7 @@ func New() types.TypeImpl {
 	return &bjt
 }
 
-var VersionMap = types.NewSemVerEntryFactoryMap()
+var VersionMap = types.NewEntryFactoryMap()
 
 func (bjt *BaseJARType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
 	if pe == nil {
@@ -53,6 +53,10 @@ func (bjt *BaseJARType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl
 	jar, ok := pe.(*models.Jar)
 	if !ok {
 		return nil, errors.New("cannot unmarshal non-JAR types")
+	}
+
+	if jar == nil {
+		return nil, errors.New("proposed entry cannot be nil")
 	}
 
 	if jar.APIVersion == nil {

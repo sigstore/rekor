@@ -43,7 +43,7 @@ func New() types.TypeImpl {
 	return &bit
 }
 
-var VersionMap = types.NewSemVerEntryFactoryMap()
+var VersionMap = types.NewEntryFactoryMap()
 
 func (it BaseHelmType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
 	if pe == nil {
@@ -53,6 +53,9 @@ func (it BaseHelmType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl,
 	in, ok := pe.(*models.Helm)
 	if !ok {
 		return nil, errors.New("cannot unmarshal non-Rekord types")
+	}
+	if in == nil {
+		return nil, errors.New("proposed entry cannot be nil")
 	}
 
 	if in.APIVersion == nil {

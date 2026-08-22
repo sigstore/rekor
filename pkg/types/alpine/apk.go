@@ -31,9 +31,9 @@ import (
 	"io"
 	"strings"
 
+	"github.com/sigstore/rekor/internal/config"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
-	"github.com/spf13/viper"
 	"gopkg.in/ini.v1"
 )
 
@@ -62,7 +62,7 @@ func newSHA1Reader(b *bufio.Reader) *sha1Reader {
 func (s *sha1Reader) Read(p []byte) (int, error) {
 	n, err := s.r.Read(p)
 	if err == nil && n > 0 && s.addToHash {
-		s.hasher.Write(p)
+		s.hasher.Write(p[:n])
 	}
 	return n, err
 }
@@ -106,15 +106,17 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 
 	// GZIP headers/footers are left unmodified; Tar footers are removed on first two archives
 	// signature.tar.gz | control.tar.gz | data.tar.gz
+	maxBufSize := config.MaxAPKMetadataSize
+	if maxBufSize == 0 {
+		maxBufSize = 20 * 1024 * 1024
+	}
 	sigBuf := bytes.Buffer{}
-	for {
-		_, err := io.CopyN(&sigBuf, gzipReader, 1024)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return fmt.Errorf("reading signature.tar.gz: %w", err)
-		}
+	if _, err := io.Copy(&sigBuf, io.LimitReader(gzipReader, int64(maxBufSize)+1)); err != nil {
+		return fmt.Errorf("reading signature.tar.gz: %w", err)
+	}
+	if sigBuf.Len() > int(maxBufSize) {
+		return fmt.Errorf("decompressed size (%d) for signature.tar.gz exceeds max allowed size %d",
+			sigBuf.Len(), maxBufSize)
 	}
 
 	// the SHA1 sum used in the signature is over the entire file control.tar.gz so we need to
@@ -163,8 +165,8 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 			if header.Size < 0 {
 				return errors.New("negative header size for .SIGN file")
 			}
-			if uint64(header.Size) > viper.GetUint64("max_apk_metadata_size") && viper.GetUint64("max_apk_metadata_size") > 0 {
-				return fmt.Errorf("uncompressed .SIGN file size %d exceeds max allowed size %d", header.Size, viper.GetUint64("max_apk_metadata_size"))
+			if config.MaxAPKMetadataSize > 0 && uint64(header.Size) > config.MaxAPKMetadataSize {
+				return fmt.Errorf("uncompressed .SIGN file size %d exceeds max allowed size %d", header.Size, config.MaxAPKMetadataSize)
 			}
 			sigBytes := make([]byte, header.Size)
 			if _, err = sigReader.Read(sigBytes); err != nil && err != io.EOF {
@@ -196,8 +198,8 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 			if header.Size < 0 {
 				return errors.New("negative header size for .PKGINFO file")
 			}
-			if uint64(header.Size) > viper.GetUint64("max_apk_metadata_size") && viper.GetUint64("max_apk_metadata_size") > 0 {
-				return fmt.Errorf("uncompressed .PKGINFO file size %d exceeds max allowed size %d", header.Size, viper.GetUint64("max_apk_metadata_size"))
+			if config.MaxAPKMetadataSize > 0 && uint64(header.Size) > config.MaxAPKMetadataSize {
+				return fmt.Errorf("uncompressed .PKGINFO file size %d exceeds max allowed size %d", header.Size, config.MaxAPKMetadataSize)
 			}
 			pkginfoContent := make([]byte, header.Size)
 			if _, err = ctlReader.Read(pkginfoContent); err != nil && err != io.EOF {

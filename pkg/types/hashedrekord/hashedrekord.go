@@ -43,7 +43,7 @@ func New() types.TypeImpl {
 	return &brt
 }
 
-var VersionMap = types.NewSemVerEntryFactoryMap()
+var VersionMap = types.NewEntryFactoryMap()
 
 func (rt BaseRekordType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
 	if pe == nil {
@@ -53,6 +53,9 @@ func (rt BaseRekordType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImp
 	rekord, ok := pe.(*models.Hashedrekord)
 	if !ok {
 		return nil, fmt.Errorf("cannot unmarshal non-hashed Rekord types: %s", pe.Kind())
+	}
+	if rekord == nil {
+		return nil, errors.New("proposed entry cannot be nil")
 	}
 
 	if rekord.APIVersion == nil {

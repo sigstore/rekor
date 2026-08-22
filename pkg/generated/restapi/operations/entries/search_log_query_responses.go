@@ -22,23 +22,18 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 // SearchLogQueryOKCode is the HTTP code returned for type SearchLogQueryOK
 const SearchLogQueryOKCode int = 200
 
-/*
-SearchLogQueryOK Returns zero or more entries from the transparency log, according to how many were included in request query
-
-swagger:response searchLogQueryOK
-*/
+// SearchLogQueryOK Returns zero or more entries from the transparency log, according to how many were included in request query
+//
+// swagger:response searchLogQueryOK
 type SearchLogQueryOK struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload []models.LogEntry `json:"body,omitempty"`
 }
 
@@ -77,16 +72,12 @@ func (o *SearchLogQueryOK) WriteResponse(rw http.ResponseWriter, producer runtim
 // SearchLogQueryBadRequestCode is the HTTP code returned for type SearchLogQueryBadRequest
 const SearchLogQueryBadRequestCode int = 400
 
-/*
-SearchLogQueryBadRequest The content supplied to the server was invalid
-
-swagger:response searchLogQueryBadRequest
-*/
+// SearchLogQueryBadRequest The content supplied to the server was invalid
+//
+// swagger:response searchLogQueryBadRequest
 type SearchLogQueryBadRequest struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 
@@ -122,16 +113,12 @@ func (o *SearchLogQueryBadRequest) WriteResponse(rw http.ResponseWriter, produce
 // SearchLogQueryUnprocessableEntityCode is the HTTP code returned for type SearchLogQueryUnprocessableEntity
 const SearchLogQueryUnprocessableEntityCode int = 422
 
-/*
-SearchLogQueryUnprocessableEntity The server understood the request but is unable to process the contained instructions
-
-swagger:response searchLogQueryUnprocessableEntity
-*/
+// SearchLogQueryUnprocessableEntity The server understood the request but is unable to process the contained instructions
+//
+// swagger:response searchLogQueryUnprocessableEntity
 type SearchLogQueryUnprocessableEntity struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 
@@ -164,17 +151,13 @@ func (o *SearchLogQueryUnprocessableEntity) WriteResponse(rw http.ResponseWriter
 	}
 }
 
-/*
-SearchLogQueryDefault There was an internal error in the server while processing the request
-
-swagger:response searchLogQueryDefault
-*/
+// SearchLogQueryDefault There was an internal error in the server while processing the request
+//
+// swagger:response searchLogQueryDefault
 type SearchLogQueryDefault struct {
 	_statusCode int
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 

@@ -22,23 +22,18 @@ import (
 	"net/http"
 
 	"github.com/go-openapi/runtime"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 // GetLogEntryByIndexOKCode is the HTTP code returned for type GetLogEntryByIndexOK
 const GetLogEntryByIndexOKCode int = 200
 
-/*
-GetLogEntryByIndexOK the entry in the transparency log requested along with an inclusion proof
-
-swagger:response getLogEntryByIndexOK
-*/
+// GetLogEntryByIndexOK the entry in the transparency log requested along with an inclusion proof
+//
+// swagger:response getLogEntryByIndexOK
 type GetLogEntryByIndexOK struct {
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload models.LogEntry `json:"body,omitempty"`
 }
 
@@ -77,11 +72,9 @@ func (o *GetLogEntryByIndexOK) WriteResponse(rw http.ResponseWriter, producer ru
 // GetLogEntryByIndexNotFoundCode is the HTTP code returned for type GetLogEntryByIndexNotFound
 const GetLogEntryByIndexNotFoundCode int = 404
 
-/*
-GetLogEntryByIndexNotFound The content requested could not be found
-
-swagger:response getLogEntryByIndexNotFound
-*/
+// GetLogEntryByIndexNotFound The content requested could not be found
+//
+// swagger:response getLogEntryByIndexNotFound
 type GetLogEntryByIndexNotFound struct {
 }
 
@@ -99,17 +92,13 @@ func (o *GetLogEntryByIndexNotFound) WriteResponse(rw http.ResponseWriter, produ
 	rw.WriteHeader(404)
 }
 
-/*
-GetLogEntryByIndexDefault There was an internal error in the server while processing the request
-
-swagger:response getLogEntryByIndexDefault
-*/
+// GetLogEntryByIndexDefault There was an internal error in the server while processing the request
+//
+// swagger:response getLogEntryByIndexDefault
 type GetLogEntryByIndexDefault struct {
 	_statusCode int
 
-	/*
-	  In: Body
-	*/
+	// In: Body
 	Payload *models.Error `json:"body,omitempty"`
 }
 

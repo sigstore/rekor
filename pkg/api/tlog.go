@@ -26,7 +26,6 @@ import (
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/swag/conv"
 	"github.com/google/trillian/types"
-	"github.com/spf13/viper"
 	"google.golang.org/grpc/codes"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -37,7 +36,7 @@ import (
 // GetLogInfoHandler returns the current size of the tree and the STH
 func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	ctx := params.HTTPRequest.Context()
-	tc, err := api.trillianClientManager.GetTrillianClient(api.ActiveTreeID())
+	tc, err := api.trillianClientManager.GetClient(api.ActiveTreeID())
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianCommunicationError)
 	}
@@ -53,7 +52,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 		inactiveShards = append(inactiveShards, is)
 	}
 
-	resp := tc.GetLatest(ctx, 0)
+	resp := tc.GetLatest(ctx)
 	if resp.Status != codes.OK {
 		return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("grpc error: %w", resp.Err), trillianCommunicationError)
 	}
@@ -68,7 +67,7 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	treeSize := int64(root.TreeSize) //nolint:gosec
 
 	scBytes, err := util.CreateAndSignCheckpoint(ctx,
-		viper.GetString("rekor_server.hostname"), api.logRanges.GetActive().TreeID, root.TreeSize, root.RootHash, api.logRanges.GetActive().Signer)
+		api.checkpointHostname, api.logRanges.GetActive().TreeID, root.TreeSize, root.RootHash, api.logRanges.GetActive().Signer)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, sthGenerateError)
 	}
@@ -108,7 +107,7 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 		}
 		treeID = id
 	}
-	tc, err := api.trillianClientManager.GetTrillianClient(treeID)
+	tc, err := api.trillianClientManager.GetClient(treeID)
 	if err != nil {
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianCommunicationError)
 	}
@@ -148,11 +147,11 @@ func GetLogProofHandler(params tlog.GetLogProofParams) middleware.Responder {
 }
 
 func inactiveShardLogInfo(ctx context.Context, tid int64, cachedCheckpoints map[int64]string) (*models.InactiveShardLogInfo, error) {
-	tc, err := api.trillianClientManager.GetTrillianClient(tid)
+	tc, err := api.trillianClientManager.GetClient(tid)
 	if err != nil {
 		return nil, fmt.Errorf("getting log client for tree %d: %w", tid, err)
 	}
-	resp := tc.GetLatest(ctx, 0)
+	resp := tc.GetLatest(ctx)
 	if resp.Status != codes.OK {
 		return nil, fmt.Errorf("resp code is %d", resp.Status)
 	}

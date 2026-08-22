@@ -21,7 +21,6 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
@@ -290,12 +289,9 @@ func setAlpineArtifactFields(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProper
 			// do nothing
 		}, nil
 	}
-	artifactFile, err := createAbsFile(ff, "ArtifactFile", artifactBytes)
-	cleanup = func() {
-		os.Remove("ArtifactFile")
-	}
+	artifactFile, artifactCleanup, err := createAbsFile(ff, "ArtifactFile", artifactBytes)
 	props.ArtifactPath = artifactFile
-	return cleanup, err
+	return artifactCleanup, err
 }
 
 // Creates an ArtifactProperties with values determined by the fuzzer

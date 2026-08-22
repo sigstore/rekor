@@ -65,11 +65,17 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
+	if v.HelmObj.PublicKey == nil || v.HelmObj.PublicKey.Content == nil {
+		return nil, errors.New("public key is not initialized")
+	}
 	keyObj, err := pgp.NewPublicKey(bytes.NewReader(*v.HelmObj.PublicKey.Content))
 	if err != nil {
 		return nil, err
 	}
 
+	if v.HelmObj.Chart == nil || v.HelmObj.Chart.Provenance == nil {
+		return nil, errors.New("chart provenance is not initialized")
+	}
 	provenance := helm.Provenance{}
 	if err := provenance.Unmarshal(bytes.NewReader(v.HelmObj.Chart.Provenance.Content)); err != nil {
 		return nil, err
@@ -101,6 +107,9 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	helm, ok := pe.(*models.Helm)
 	if !ok {
 		return errors.New("cannot unmarshal non Helm v0.0.1 type")
+	}
+	if helm == nil {
+		return errors.New("proposed entry cannot be nil")
 	}
 
 	if err := DecodeEntry(helm.Spec, &v.HelmObj); err != nil {
@@ -344,6 +353,9 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 	if len(publicKeyBytes) == 0 {
 		if len(props.PublicKeyPaths) != 1 {
 			return nil, errors.New("only one public key must be provided")
+		}
+		if props.PublicKeyPaths[0] == nil {
+			return nil, errors.New("public key path cannot be nil")
 		}
 		keyBytes, err := os.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
 		if err != nil {

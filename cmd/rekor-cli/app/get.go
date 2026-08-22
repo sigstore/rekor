@@ -70,7 +70,9 @@ func (g *getCmdOutput) String() string {
 
 // getCmd represents the get command
 var getCmd = &cobra.Command{
-	Use:   "get",
+	Use: "get",
+	Example: `  rekor-cli get --uuid <entry-uuid>
+  rekor-cli get --log-index 0`,
 	Short: "Rekor get command",
 	Long:  `Get information regarding entries in the transparency log`,
 	PreRun: func(cmd *cobra.Command, _ []string) {
@@ -93,7 +95,7 @@ var getCmd = &cobra.Command{
 		}
 
 		if logIndex != "" {
-			params := entries.NewGetLogEntryByIndexParamsWithContext(ctx)
+			params := entries.NewGetLogEntryByIndexParams()
 			params.SetTimeout(viper.GetDuration("timeout"))
 			logIndexInt, err := strconv.ParseInt(logIndex, 10, 0)
 			if err != nil {
@@ -101,7 +103,7 @@ var getCmd = &cobra.Command{
 			}
 			params.LogIndex = logIndexInt
 
-			resp, err := rekorClient.Entries.GetLogEntryByIndex(params)
+			resp, err := rekorClient.Entries.GetLogEntryByIndexContext(ctx, params)
 			if err != nil {
 				return nil, err
 			}
@@ -135,11 +137,11 @@ var getCmd = &cobra.Command{
 
 		// Note: this UUID may be an EntryID
 		if uuid != "" {
-			params := entries.NewGetLogEntryByUUIDParamsWithContext(ctx)
+			params := entries.NewGetLogEntryByUUIDParams()
 			params.SetTimeout(viper.GetDuration("timeout"))
 			params.EntryUUID = uuid
 
-			resp, err := rekorClient.Entries.GetLogEntryByUUID(params)
+			resp, err := rekorClient.Entries.GetLogEntryByUUIDContext(ctx, params)
 			if err != nil {
 				return nil, err
 			}

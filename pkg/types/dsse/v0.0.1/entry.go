@@ -111,12 +111,12 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 		result = append(result, keyObj.Subjects()...)
 	}
 
-	if v.DSSEObj.PayloadHash != nil {
+	if v.DSSEObj.PayloadHash != nil && v.DSSEObj.PayloadHash.Algorithm != nil && v.DSSEObj.PayloadHash.Value != nil {
 		payloadHashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.DSSEObj.PayloadHash.Algorithm, *v.DSSEObj.PayloadHash.Value))
 		result = append(result, payloadHashKey)
 	}
 
-	if v.DSSEObj.EnvelopeHash != nil {
+	if v.DSSEObj.EnvelopeHash != nil && v.DSSEObj.EnvelopeHash.Algorithm != nil && v.DSSEObj.EnvelopeHash.Value != nil {
 		envelopeHashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.DSSEObj.EnvelopeHash.Algorithm, *v.DSSEObj.EnvelopeHash.Value))
 		result = append(result, envelopeHashKey)
 	}
@@ -238,6 +238,9 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	if !ok {
 		return errors.New("cannot unmarshal non DSSE v0.0.1 type")
 	}
+	if it == nil {
+		return errors.New("proposed entry cannot be nil")
+	}
 
 	dsseObj := &models.DSSEV001Schema{}
 
@@ -285,7 +288,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		allPubKeyBytes = append(allPubKeyBytes, publicKey)
 	}
 
-	sigToKeyMap, err := verifyEnvelope(allPubKeyBytes, env)
+	sigToKeyMap, decodedPayload, err := verifyEnvelope(allPubKeyBytes, env)
 	if err != nil {
 		return err
 	}
@@ -309,12 +312,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 			Signature: &sortedSigs[i],
 			Verifier:  &b64CanonicalizedKey,
 		})
-	}
-
-	decodedPayload, err := env.DecodeB64Payload()
-	if err != nil {
-		// this shouldn't happen because failure would have occurred in verifyEnvelope call above
-		return err
 	}
 
 	// extraction of index keys - done here so we can clear the huge strings from memory
@@ -429,6 +426,9 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 
 	if len(props.PublicKeyPaths) > 0 {
 		for _, path := range props.PublicKeyPaths {
+			if path == nil {
+				return nil, errors.New("public key path cannot be nil")
+			}
 			if path.IsAbs() {
 				return nil, errors.New("dsse public keys cannot be fetched over HTTP(S)")
 			}
@@ -442,7 +442,7 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 		}
 	}
 
-	keysBySig, err := verifyEnvelope(allPubKeyBytes, env)
+	keysBySig, _, err := verifyEnvelope(allPubKeyBytes, env)
 	if err != nil {
 		return nil, err
 	}
@@ -464,7 +464,7 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 // verifyEnvelope takes in an array of possible key bytes and attempts to parse them as x509 public keys.
 // it then uses these to verify the envelope and makes sure that every signature on the envelope is verified.
 // it returns a map of verifiers indexed by the signature the verifier corresponds to.
-func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x509.PublicKey, error) {
+func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x509.PublicKey, []byte, error) {
 	// generate a fake id for these keys so we can get back to the key bytes and match them to their corresponding signature
 	verifierBySig := make(map[string]*x509.PublicKey)
 	allSigs := make(map[string]struct{})
@@ -472,28 +472,33 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 		allSigs[sig.Sig] = struct{}{}
 	}
 
+	var verifiedPayload []byte
 	for _, pubKeyBytes := range allPubKeyBytes {
 		if len(allSigs) == 0 {
 			break // if all signatures have been verified, do not attempt anymore
 		}
 		key, err := x509.NewPublicKey(bytes.NewReader(pubKeyBytes))
 		if err != nil {
-			return nil, fmt.Errorf("could not parse public key as x509: %w", err)
+			return nil, nil, fmt.Errorf("could not parse public key as x509: %w", err)
 		}
 
 		vfr, err := signature.LoadVerifier(key.CryptoPubKey(), crypto.SHA256)
 		if err != nil {
-			return nil, fmt.Errorf("could not load verifier: %w", err)
+			return nil, nil, fmt.Errorf("could not load verifier: %w", err)
 		}
 
 		dsseVfr, err := dsse.NewEnvelopeVerifier(&sigdsse.VerifierAdapter{SignatureVerifier: vfr})
 		if err != nil {
-			return nil, fmt.Errorf("could not use public key as a dsse verifier: %w", err)
+			return nil, nil, fmt.Errorf("could not use public key as a dsse verifier: %w", err)
 		}
 
-		accepted, err := dsseVfr.Verify(context.Background(), env)
+		accepted, payload, err := dsseVfr.VerifyAndDecode(context.Background(), env)
 		if err != nil {
-			return nil, fmt.Errorf("could not verify envelope: %w", err)
+			return nil, nil, fmt.Errorf("could not verify envelope: %w", err)
+		}
+
+		if len(accepted) > 0 {
+			verifiedPayload = payload
 		}
 
 		for _, accept := range accepted {
@@ -503,10 +508,10 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 	}
 
 	if len(allSigs) > 0 {
-		return nil, errors.New("all signatures must have a key that verifies it")
+		return nil, nil, errors.New("all signatures must have a key that verifies it")
 	}
 
-	return verifierBySig, nil
+	return verifierBySig, verifiedPayload, nil
 }
 
 func (v V001Entry) Verifiers() ([]pkitypes.PublicKey, error) {
@@ -516,6 +521,9 @@ func (v V001Entry) Verifiers() ([]pkitypes.PublicKey, error) {
 
 	var keys []pkitypes.PublicKey
 	for _, s := range v.DSSEObj.Signatures {
+		if s == nil || s.Verifier == nil {
+			return nil, errors.New("dsse v0.0.1 entry not initialized")
+		}
 		key, err := x509.NewPublicKey(bytes.NewReader(*s.Verifier))
 		if err != nil {
 			return nil, err

@@ -48,11 +48,11 @@ func ProveConsistency(ctx context.Context, rClient *client.Rekor,
 			return errors.New("old root hash does not match STH hash")
 		}
 	case oldTreeSize < int64(newSTH.Size): // nolint: gosec
-		consistencyParams := tlog.NewGetLogProofParamsWithContext(ctx)
+		consistencyParams := tlog.NewGetLogProofParams()
 		consistencyParams.FirstSize = &oldTreeSize      // Root size at the old, or trusted state.
 		consistencyParams.LastSize = int64(newSTH.Size) // nolint: gosec // Root size at the new state to verify against.
 		consistencyParams.TreeID = &treeID
-		consistencyProof, err := rClient.Tlog.GetLogProof(consistencyParams)
+		consistencyProof, err := rClient.Tlog.GetLogProofContext(ctx, consistencyParams)
 		if err != nil {
 			return err
 		}
@@ -86,8 +86,8 @@ func VerifyCurrentCheckpoint(ctx context.Context, rClient *client.Rekor, verifie
 	}
 
 	// Get and verify against the current STH.
-	infoParams := tlog.NewGetLogInfoParamsWithContext(ctx)
-	result, err := rClient.Tlog.GetLogInfo(infoParams)
+	infoParams := tlog.NewGetLogInfoParams()
+	result, err := rClient.Tlog.GetLogInfoContext(ctx, infoParams)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func VerifyCheckpointSignature(e *models.LogEntryAnon, verifier signature.Verifi
 		return errors.New("decoding inclusion proof root has")
 	}
 
-	if !bytes.EqualFold(rootHash, sth.Hash) {
+	if !bytes.Equal(rootHash, sth.Hash) {
 		return fmt.Errorf("proof root hash does not match signed tree head, expected %s got %s",
 			*e.Verification.InclusionProof.RootHash,
 			hex.EncodeToString(sth.Hash))

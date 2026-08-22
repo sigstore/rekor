@@ -104,11 +104,11 @@ func NewLogRanges(ctx context.Context, inactiveShardsPath string, activeTreeID i
 func (l *LogRanges) CompleteInitialization(ctx context.Context, tcm *trillianclient.ClientManager) (map[int64]types.LogRootV1, error) {
 	sthMap := make(map[int64]types.LogRootV1)
 	for i, r := range l.inactive {
-		logClient, err := tcm.GetTrillianClient(r.TreeID)
+		logClient, err := tcm.GetClient(r.TreeID)
 		if err != nil {
 			return nil, fmt.Errorf("getting log client for tree %d: %w", r.TreeID, err)
 		}
-		resp := logClient.GetLatest(ctx, 0)
+		resp := logClient.GetLatest(ctx)
 		if resp.Err != nil {
 			return nil, fmt.Errorf("getting signed log root for tree %d: %w", r.TreeID, resp.Err)
 		}

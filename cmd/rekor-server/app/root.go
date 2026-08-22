@@ -25,8 +25,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/sigstore/rekor/internal/config"
 	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/types"
 	cose "github.com/sigstore/rekor/pkg/types/cose/v0.0.1"
 	intoto001 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	intoto002 "github.com/sigstore/rekor/pkg/types/intoto/v0.0.2"
@@ -118,7 +120,7 @@ Memory and file-based signers should only be used for testing.`)
 
 	rootCmd.PersistentFlags().Uint16("port", 3000, "Port to bind to")
 
-	rootCmd.PersistentFlags().Bool("enable_retrieve_api", true, "enables Redis-based index API endpoint")
+	rootCmd.PersistentFlags().Bool("enable_retrieve_api", true, "enables index API endpoint")
 	_ = rootCmd.PersistentFlags().MarkDeprecated("enable_retrieve_api", "this flag is deprecated in favor of enabled_api_endpoints (searchIndex)")
 	rootCmd.PersistentFlags().String("search_index.storage_provider", "redis",
 		`Index Storage provider to use. Valid options are: [redis, mysql].`)
@@ -136,6 +138,11 @@ Memory and file-based signers should only be used for testing.`)
 
 	rootCmd.PersistentFlags().StringSlice("enabled_api_endpoints", operationIDs, "list of API endpoints to enable using operationId from openapi.yaml")
 
+	rootCmd.PersistentFlags().StringSlice("enabled_entry_types", types.ListSupportedKinds(),
+		"comma-separated list of entry type kinds to enable on the server (e.g. rekord,intoto,dsse,hashedrekord). "+
+			"If unset (default), all types compiled into the binary are enabled. Any kind specified here must be compiled "+
+			"into the binary; unknown kinds will cause startup to fail.")
+
 	rootCmd.PersistentFlags().Uint64("max_request_body_size", 0, "maximum size for HTTP request body, in bytes; set to 0 for unlimited")
 	rootCmd.PersistentFlags().Uint64("max_jar_metadata_size", 1048576, "maximum permitted size for jar META-INF/ files, in bytes; set to 0 for unlimited")
 	rootCmd.PersistentFlags().Uint64("max_apk_metadata_size", 1048576, "maximum permitted size for apk .SIGN and .PKGINFO files, in bytes; set to 0 for unlimited")
@@ -143,8 +150,21 @@ Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().String("search_index.mysql.dsn", "", "DSN for index storage using MySQL")
 	rootCmd.PersistentFlags().Duration("search_index.mysql.conn_max_idletime", 0*time.Second, "maximum connection idle time")
 	rootCmd.PersistentFlags().Duration("search_index.mysql.conn_max_lifetime", 0*time.Second, "maximum connection lifetime")
-	rootCmd.PersistentFlags().Int("search_index.mysql.max_open_connections", 0, "maximum open connections")
-	rootCmd.PersistentFlags().Int("search_index.mysql.max_idle_connections", 0, "maximum idle connections")
+	rootCmd.PersistentFlags().Int("search_index.mysql.read.max_open_connections", 0, "maximum open connections in the index read pool; 0 for unlimited")
+	rootCmd.PersistentFlags().Int("search_index.mysql.read.max_idle_connections", 0, "maximum idle connections retained in the index read pool")
+	rootCmd.PersistentFlags().Int("search_index.mysql.write.max_open_connections", 0, "maximum open connections in the index write pool; 0 for unlimited")
+	rootCmd.PersistentFlags().Int("search_index.mysql.write.max_idle_connections", 0, "maximum idle connections retained in the index write pool")
+
+	// superseded by the per-pool flags above; these sized the single pool that predates the
+	// read/write split and are now split 70/30 between the write and read pools
+	rootCmd.PersistentFlags().Int("search_index.mysql.max_open_connections", 0, "deprecated: total provided will be split 70/30 across write/read pools; use per-pool flags instead")
+	rootCmd.PersistentFlags().Int("search_index.mysql.max_idle_connections", 0, "deprecated: total provided will be split 70/30 across write/read pools; use per-pool flags instead")
+	for _, f := range []string{"search_index.mysql.max_open_connections", "search_index.mysql.max_idle_connections"} {
+		if err := rootCmd.PersistentFlags().MarkDeprecated(f, "value is split 70/30 between the write and read pools; "+
+			"use the search_index.mysql.read.* and search_index.mysql.write.* equivalents"); err != nil {
+			log.Logger.Fatal(err)
+		}
+	}
 
 	rootCmd.PersistentFlags().String("http-request-id-header-name", middleware.RequestIDHeader, "name of HTTP Request Header to use as request correlation ID")
 	rootCmd.PersistentFlags().String("trace-string-prefix", "", "if set, this will be used to prefix the 'trace' field when outputting structured logs")
@@ -166,30 +186,43 @@ Memory and file-based signers should only be used for testing.`)
 	}
 
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
 
-	log.Logger.Debugf("pprof enabled %v", enablePprof)
-	// Enable pprof
-	if enablePprof {
-		go func() {
-			mux := http.NewServeMux()
-
-			mux.HandleFunc("/debug/pprof/", pprof.Index)
-			mux.HandleFunc("/debug/pprof/{action}", pprof.Index)
-			mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-
-			srv := &http.Server{
-				Addr:         ":6060",
-				ReadTimeout:  10 * time.Second,
-				WriteTimeout: 10 * time.Second,
-				Handler:      mux,
-			}
-
-			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Logger.Fatalf("Error when starting or running http server: %v", err)
-			}
-		}()
+// StartPprof serves net/http/pprof on port 6060 when --enable_pprof is set.
+// Called from the serve command rather than init() because init() runs before
+// cobra parses flags, so enablePprof is always false there.
+func StartPprof() {
+	if !enablePprof {
+		return
 	}
+	log.Logger.Info("pprof enabled on :6060")
 
+	go func() {
+		mux := http.NewServeMux()
+
+		// pprof.Index dispatches the runtime-provided profiles (heap, goroutine,
+		// allocs, ...) from the path suffix, but profile/trace/cmdline/symbol are
+		// distinct handlers it does not cover and must be routed explicitly.
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+		srv := &http.Server{
+			Addr: ":6060",
+			// No WriteTimeout: a CPU profile or trace streams for its full
+			// requested duration (30s by default, often longer), and any write
+			// deadline shorter than that truncates the response into an
+			// unparseable profile.
+			ReadHeaderTimeout: 10 * time.Second,
+			Handler:           mux,
+		}
+
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Logger.Errorf("pprof server: %v", err)
+		}
+	}()
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -222,4 +255,7 @@ func initConfig() {
 	intoto001.SetMaxAttestationSize(maxSize)
 	intoto002.SetMaxAttestationSize(maxSize)
 	cose.SetMaxAttestationSize(maxSize)
+
+	config.MaxAPKMetadataSize = viper.GetUint64("max_apk_metadata_size")
+	config.MaxJarMetadataSize = viper.GetUint64("max_jar_metadata_size")
 }

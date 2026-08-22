@@ -31,7 +31,7 @@ services:
       retries: 15
       start_period: 90s
   redis-server:
-    image: docker.io/redis:6.2
+    image: docker.io/valkey/valkey:9.1.1-alpine3.24
     command: [
       "--bind",
       "0.0.0.0",
@@ -44,7 +44,7 @@ services:
       - "6379:6379"
     restart: always # keep the redis server running
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "test", "ping"]
+      test: ["CMD", "valkey-cli", "-a", "test", "ping"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -56,7 +56,7 @@ services:
     command: [
       "--quota_system=noop",
       "--storage_system=mysql",
-      "--mysql_uri=test:zaphod@tcp(mysql:3306)/test",
+      "--mysql_uri=test:zaphod@tcp(mysql:3306)/test?parseTime=true&interpolateParams=true",
       "--rpc_endpoint=0.0.0.0:8090",
       "--http_endpoint=0.0.0.0:8091",
       "--alsologtostderr",
@@ -81,7 +81,7 @@ services:
     command: [
       "--quota_system=noop",
       "--storage_system=mysql",
-      "--mysql_uri=test:zaphod@tcp(mysql:3306)/test",
+      "--mysql_uri=test:zaphod@tcp(mysql:3306)/test?parseTime=true&interpolateParams=true",
       "--rpc_endpoint=0.0.0.0:8090",
       "--http_endpoint=0.0.0.0:8091",
       "--force_master",
@@ -115,7 +115,8 @@ services:
       "--enable_attestation_storage",
       "--attestation_storage_bucket=file:///var/run/attestations",
       "--search_index.storage_provider=mysql",
-      "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test",
+      "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test?parseTime=true&interpolateParams=true",
+      "--enable_pprof",
       # Uncomment this for production logging
       # "--log_type=prod",
       ]
@@ -125,6 +126,7 @@ services:
     ports:
       - "3000:3000"
       - "2112:2112"
+      - "6060:6060"
     depends_on:
       mysql:
         condition: service_healthy

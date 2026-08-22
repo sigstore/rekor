@@ -140,8 +140,17 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	return result, nil
 }
 
-func parseStatement(p string) (*in_toto.Statement, error) {
-	ps := in_toto.Statement{}
+// indexKeyExtract captures only the fields of an in-toto statement that are
+// used to derive index keys; it intentionally uses encoding/json semantics so
+// that payloads accepted today continue to parse identically.
+type indexKeyExtract struct {
+	Subject []struct {
+		Digest map[string]string `json:"digest"`
+	} `json:"subject"`
+}
+
+func parseStatement(p string) (*indexKeyExtract, error) {
+	ps := indexKeyExtract{}
 	payload, err := base64.StdEncoding.DecodeString(p)
 	if err != nil {
 		return nil, err
@@ -238,6 +247,9 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return err
 	}
 
+	if v.IntotoObj.PublicKey == nil {
+		return errors.New("missing public key in intoto v0.0.1 entry")
+	}
 	v.keyObj, err = x509.NewPublicKey(bytes.NewReader(*v.IntotoObj.PublicKey))
 	if err != nil {
 		return err
@@ -291,7 +303,14 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 // validate performs cross-field validation for fields in object
 func (v *V001Entry) validate() error {
 	// TODO handle multiple
-	pk := v.keyObj.(*x509.PublicKey)
+	pk, ok := v.keyObj.(*x509.PublicKey)
+	if !ok {
+		return errors.New("public key is not of type *x509.PublicKey")
+	}
+
+	if v.IntotoObj.Content == nil {
+		return errors.New("missing content in intoto v0.0.1 entry")
+	}
 
 	// one of two cases must be true:
 	// - ProposedEntry: client gives an envelope; (client provided hash/payloadhash are ignored as they are computed server-side) OR
@@ -346,7 +365,7 @@ func (v *V001Entry) validate() error {
 
 // AttestationKey returns the digest of the attestation that was uploaded, to be used to lookup the attestation from storage
 func (v *V001Entry) AttestationKey() string {
-	if v.IntotoObj.Content != nil && v.IntotoObj.Content.PayloadHash != nil {
+	if v.IntotoObj.Content != nil && v.IntotoObj.Content.PayloadHash != nil && v.IntotoObj.Content.PayloadHash.Algorithm != nil && v.IntotoObj.Content.PayloadHash.Value != nil {
 		return fmt.Sprintf("%s:%s", *v.IntotoObj.Content.PayloadHash.Algorithm, *v.IntotoObj.Content.PayloadHash.Value)
 	}
 	return ""
@@ -384,6 +403,9 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	if len(publicKeyBytes) == 0 {
 		if len(props.PublicKeyPaths) != 1 {
 			return nil, errors.New("only one public key must be provided to verify signature")
+		}
+		if props.PublicKeyPaths[0] == nil {
+			return nil, errors.New("public key path cannot be nil")
 		}
 		keyBytes, err := os.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
 		if err != nil {
@@ -429,7 +451,7 @@ func (v V001Entry) Verifiers() ([]pkitypes.PublicKey, error) {
 
 func (v V001Entry) ArtifactHash() (string, error) {
 	if v.IntotoObj.Content == nil || v.IntotoObj.Content.PayloadHash == nil || v.IntotoObj.Content.PayloadHash.Algorithm == nil || v.IntotoObj.Content.PayloadHash.Value == nil {
-		return "", errors.New("hashedrekord v0.0.1 entry not initialized")
+		return "", errors.New("intoto v0.0.1 entry not initialized")
 	}
 	return strings.ToLower(fmt.Sprintf("%s:%s", *v.IntotoObj.Content.PayloadHash.Algorithm, *v.IntotoObj.Content.PayloadHash.Value)), nil
 }

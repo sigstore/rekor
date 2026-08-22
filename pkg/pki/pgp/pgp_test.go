@@ -357,9 +357,9 @@ func TestEmailAddresses(t *testing.T) {
 		t.Errorf("Subjects for uninitialized key should give empty slice")
 	}
 	tests := []test{
-		{caseDesc: "Valid armored public key", inputFile: "testdata/valid_armored_public.pgp", subjects: []string{}, keys: 2},
+		{caseDesc: "Valid armored public key", inputFile: "testdata/valid_armored_public.pgp", subjects: []string{"not@real.com"}, keys: 2},
 		{caseDesc: "Valid armored public key with multiple subentries", inputFile: "testdata/valid_armored_complex_public.pgp", subjects: []string{"linux-packages-keymaster@google.com", "linux-packages-keymaster@google.com"}, keys: 4},
-		{caseDesc: "Valid binary public key", inputFile: "testdata/valid_binary_public.pgp", subjects: []string{}, keys: 2},
+		{caseDesc: "Valid binary public key", inputFile: "testdata/valid_binary_public.pgp", subjects: []string{"not@real.com"}, keys: 2},
 		{caseDesc: "Valid binary public key with multiple subentries", inputFile: "testdata/valid_binary_complex_public.pgp", subjects: []string{"linux-packages-keymaster@google.com", "linux-packages-keymaster@google.com"}, keys: 4},
 	}
 

@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/sigstore/rekor/internal/config"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/pki/pkcs7"
@@ -43,9 +44,8 @@ import (
 	"github.com/go-openapi/strfmt"
 
 	"github.com/go-openapi/swag/conv"
-	jarutils "github.com/sassoftware/relic/lib/signjar"
+	jarutils "github.com/sassoftware/relic/v8/lib/signjar"
 	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -73,20 +73,32 @@ func NewEntry() types.EntryImpl {
 func (v *V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
-	keyObj, err := pkcs7.NewSignature(bytes.NewReader(v.JARModel.Signature.Content))
-	if err != nil {
-		return nil, err
+	if v.JARModel.Signature != nil && len(v.JARModel.Signature.Content) > 0 {
+		keyObj, err := pkcs7.NewSignature(bytes.NewReader(v.JARModel.Signature.Content))
+		if err != nil {
+			return nil, err
+		}
+		key, err := keyObj.CanonicalValue()
+		if err != nil {
+			return nil, err
+		}
+		keyHash := sha256.Sum256(key)
+		result = append(result, strings.ToLower(hex.EncodeToString(keyHash[:])))
 	}
-	key, err := keyObj.CanonicalValue()
-	if err != nil {
-		return nil, err
-	}
-	keyHash := sha256.Sum256(key)
-	result = append(result, strings.ToLower(hex.EncodeToString(keyHash[:])))
 
-	if v.JARModel.Archive.Hash != nil {
-		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.JARModel.Archive.Hash.Algorithm, *v.JARModel.Archive.Hash.Value))
-		result = append(result, hashKey)
+	if v.JARModel.Archive != nil && v.JARModel.Archive.Hash != nil {
+		alg := ""
+		if v.JARModel.Archive.Hash.Algorithm != nil {
+			alg = *v.JARModel.Archive.Hash.Algorithm
+		}
+		val := ""
+		if v.JARModel.Archive.Hash.Value != nil {
+			val = *v.JARModel.Archive.Hash.Value
+		}
+		if alg != "" && val != "" {
+			hashKey := strings.ToLower(fmt.Sprintf("%s:%s", alg, val))
+			result = append(result, hashKey)
+		}
 	}
 
 	return result, nil
@@ -96,6 +108,10 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	jar, ok := pe.(*models.Jar)
 	if !ok {
 		return errors.New("cannot unmarshal non JAR v0.0.1 type")
+	}
+
+	if jar == nil {
+		return errors.New("proposed entry cannot be nil")
 	}
 
 	if err := DecodeEntry(jar.Spec, &v.JARModel); err != nil {
@@ -217,8 +233,8 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, 
 		if dir != "META-INF/" || name == "" || strings.LastIndex(name, ".") < 0 {
 			continue
 		}
-		if f.UncompressedSize64 > viper.GetUint64("max_jar_metadata_size") && viper.GetUint64("max_jar_metadata_size") > 0 {
-			return nil, nil, &types.InputValidationError{Err: fmt.Errorf("uncompressed jar metadata of size %d exceeds max allowed size %d", f.UncompressedSize64, viper.GetUint64("max_jar_metadata_size"))}
+		if config.MaxJarMetadataSize > 0 && f.UncompressedSize64 > config.MaxJarMetadataSize {
+			return nil, nil, &types.InputValidationError{Err: fmt.Errorf("uncompressed jar metadata of size %d exceeds max allowed size %d", f.UncompressedSize64, config.MaxJarMetadataSize)}
 		}
 	}
 
@@ -389,6 +405,7 @@ func (v *V001Entry) CreateFromArtifactProperties(ctx context.Context, props type
 				return nil, fmt.Errorf("error opening JAR file: %w", err)
 			}
 		}
+		defer artifactReader.Close()
 		artifactBytes, err = io.ReadAll(artifactReader)
 		if err != nil {
 			return nil, fmt.Errorf("error reading JAR file: %w", err)

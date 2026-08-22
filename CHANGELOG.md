@@ -1,3 +1,87 @@
+# v1.5.4
+
+## Features
+
+* search: add `subject` field for SAN-based lookup (#2850)
+* Change default CLI upload type to hashedrekord (#2885)
+* separate read/write sql traffic for indexservice into separate pools (#2914)
+
+## Bug Fixes
+
+* better handle connection issues (#2931)
+* fix pprof arg (#2932)
+* fix shadowed err, wrong err label (#2907)
+* alpine: hash only the bytes read when computing the control.tar.gz digest (#2908)
+* return a 400 error for invalid TreeID (#2895)
+* Return the file error instead of the URL error for a missing artifact path (#2872)
+* Apply proactive hardening against malformed requests (#2945)
+
+## Improvements
+
+* remove repetitive viper lookups from api endpoints (#2922)
+* move CI containers to GHCR (#2943)
+* remove unused semver type version map (#2918)
+* test against valkey (#2916)
+* Remove unmaintained scripts/createdb.sh dev helper (#2905)
+* test mysql with production dsn strings (#2906)
+* create interface for TrillianClient (#2896)
+* use more efficient table schema for indexes (#2903)
+* Migrate off deprecated golang.org/x/crypto/openpgp (#2883)
+* minimize duplicative JSON parsing while handling entries (#2880)
+* remove duplicative log entry (#2881)
+* optimize DSSE memory and cpu while parsing and verifying envs (#2879)
+* update builder to use go1.26.4 (#2873)
+* upgrade grpc-ecosystem/go-grpc-middleware to v2 (#2921)
+* Migrate gopkg.in/yaml.v2 to sigs.k8s.io/yaml (#2919)
+* numerous upgraded dependencies
+
+## Documentation
+
+* docs(cli): add usage examples to rekor-cli commands (#2851)
+
+## Contributors
+
+* ahmagdyfb
+* Bob Callaway
+* Carlos Tadeu Panato Junior
+* Chiman Jain
+* Hayden
+* Jason Hall
+* Nikhil J
+* Ogulcan Aydogan
+* Pujitha Paladugu
+* Sueun Cho
+
+# v1.5.3
+
+## Features
+
+* return 499 when clients disconnect instead of 500 (#2870)
+
+## Improvements
+
+* Change max upperbound on latency metrics (#2868)
+
+# v1.5.2
+
+## Features
+
+* Support restricting kinds on insertion (#2814)
+
+## Bug Fixes
+
+* alpine: Enforce max size limit on decompression (#2831)
+* fix(trillianclient): strip dns:/// scheme from TLS ServerName in gRPC dial (#2812)
+* Fix internal error detail leakage in 500 responses (#2801)
+* add checks to ensure returned entries match client inputs to rekor-cli (#2799)
+* add defensive check to ensure tid is in config ahead of getting client (#2795)
+* add nil pointer check to resolve fuzzing crash (#2807)
+
+## Improvements
+
+* restapi: include inactiveShards in the homepage total count (#2797)
+* client: surface last-response details after retries are exhausted (#2796)
+
 # v1.5.1
 
 ## Features

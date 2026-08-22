@@ -152,7 +152,7 @@ func ValidateTreeID(t string) error {
 		// Check that it's a valid int64 in hex (base 16)
 		i, err := strconv.ParseInt(t, 16, 64)
 		if err != nil {
-			return fmt.Errorf("could not convert treeID %v to int64: %w", t, err)
+			return fmt.Errorf("%v is not a valid TreeID", t)
 		}
 
 		// Check for invalid TreeID values

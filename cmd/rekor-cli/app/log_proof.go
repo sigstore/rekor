@@ -50,7 +50,9 @@ func (l *logProofOutput) String() string {
 
 // logProof represents the consistency proof
 var logProofCmd = &cobra.Command{
-	Use:   "logproof",
+	Use: "logproof",
+	Example: `  rekor-cli logproof --last-size 10
+  rekor-cli logproof --first-size 5 --last-size 10`,
 	Short: "Rekor logproof command",
 	Long:  `Prints information required to compute the consistency proof of the transparency log`,
 	PreRunE: func(cmd *cobra.Command, _ []string) error {
@@ -82,13 +84,13 @@ var logProofCmd = &cobra.Command{
 		lastSize := int64(viper.GetUint64("last-size"))
 		treeID := viper.GetString("tree-id")
 
-		params := tlog.NewGetLogProofParamsWithContext(cmd.Context())
+		params := tlog.NewGetLogProofParams()
 		params.FirstSize = &firstSize
 		params.LastSize = lastSize
 		params.TreeID = &treeID
 		params.SetTimeout(viper.GetDuration("timeout"))
 
-		result, err := rekorClient.Tlog.GetLogProof(params)
+		result, err := rekorClient.Tlog.GetLogProofContext(cmd.Context(), params)
 		if err != nil {
 			return nil, err
 		}

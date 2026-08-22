@@ -54,17 +54,17 @@ func TestRfc3161Type(t *testing.T) {
 	}
 
 	u := UnmarshalTester{}
-	// ensure semver range parser is working
-	invalidSemVerRange := "not a valid semver range"
+	// ensure empty version is rejected
+	invalidSemVerRange := ""
 	err := VersionMap.SetEntryFactory(invalidSemVerRange, u.NewEntry)
 	if err == nil || VersionMap.Count() > 0 {
-		t.Error("invalid semver range was incorrectly added to SemVerToFacFnMap")
+		t.Error("invalid version was incorrectly added to SemVerToFacFnMap")
 	}
 
-	// valid semver range can be parsed
-	err = VersionMap.SetEntryFactory(">= 1.2.3", u.NewEntry)
+	// valid version can be parsed
+	err = VersionMap.SetEntryFactory("2.0.1", u.NewEntry)
 	if err != nil || VersionMap.Count() != 1 {
-		t.Error("valid semver range was not added to SemVerToFacFnMap")
+		t.Error("valid version was not added to SemVerToFacFnMap")
 	}
 
 	u.Rfc3161.APIVersion = nil
@@ -91,7 +91,7 @@ func TestRfc3161Type(t *testing.T) {
 	// error in Unmarshal call is raised appropriately
 	u.Rfc3161.APIVersion = conv.Pointer("2.2.0")
 	u2 := UnmarshalFailsTester{}
-	_ = VersionMap.SetEntryFactory(">= 1.2.3", u2.NewEntry)
+	_ = VersionMap.SetEntryFactory("2.2.0", u2.NewEntry)
 	if _, err := brt.UnmarshalEntry(&u.Rfc3161); err == nil {
 		t.Error("unexpected success in Unmarshal when error is thrown")
 	}

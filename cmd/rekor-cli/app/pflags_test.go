@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -37,6 +38,7 @@ func TestArtifactPFlags(t *testing.T) {
 		artifact              string
 		signature             string
 		publicKey             string
+		pkiFormat             string
 		multiPublicKey        []string
 		uuid                  string
 		aad                   string
@@ -90,12 +92,14 @@ func TestArtifactPFlags(t *testing.T) {
 	tests := []test{
 		{
 			caseDesc:              "valid rekord file",
+			typeStr:               "rekord",
 			entry:                 "tests/rekor.json",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
 		{
 			caseDesc:              "valid rekord URL",
+			typeStr:               "rekord",
 			entry:                 testServer.URL + "/rekord",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
@@ -145,21 +149,35 @@ func TestArtifactPFlags(t *testing.T) {
 		},
 		{
 			caseDesc:              "non-existent rekord file",
+			typeStr:               "rekord",
 			entry:                 "tests/not_there.json",
 			expectParseSuccess:    false,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "non-existent rekord url",
+			typeStr:               "rekord",
 			entry:                 testServer.URL + "/not_found",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
 		{
 			caseDesc:              "valid rekord - local artifact with required flags",
+			typeStr:               "rekord",
 			artifact:              "tests/test_file.txt",
 			signature:             "tests/test_file.sig",
 			publicKey:             "tests/test_public_key.key",
+			pkiFormat:             "pgp",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "valid hashedrekord - local artifact without hash flag",
+			typeStr:               "hashedrekord",
+			artifact:              "tests/test_x509_artifact.txt",
+			signature:             "tests/test_x509.sig",
+			publicKey:             "tests/test_x509_public_key.pem",
+			pkiFormat:             "x509",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -251,9 +269,11 @@ func TestArtifactPFlags(t *testing.T) {
 		},
 		{
 			caseDesc:              "valid rekord - remote artifact with required flags",
+			typeStr:               "rekord",
 			artifact:              testServer.URL + "/artifact",
 			signature:             "tests/test_file.sig",
 			publicKey:             "tests/test_public_key.key",
+			pkiFormat:             "pgp",
 			expectParseSuccess:    true,
 			expectValidateSuccess: true,
 		},
@@ -422,6 +442,9 @@ func TestArtifactPFlags(t *testing.T) {
 		if tc.publicKey != "" {
 			args = append(args, "--public-key", tc.publicKey)
 		}
+		if tc.pkiFormat != "" {
+			args = append(args, "--pki-format", tc.pkiFormat)
+		}
 		if len(tc.multiPublicKey) > 0 {
 			for _, key := range tc.multiPublicKey {
 				args = append(args, "--public-key", key)
@@ -554,6 +577,7 @@ func TestSearchPFlags(t *testing.T) {
 		publicKey             string
 		sha                   string
 		email                 string
+		subject               string
 		pkiFormat             string
 		expectParseSuccess    bool
 		expectValidateSuccess bool
@@ -704,7 +728,19 @@ func TestSearchPFlags(t *testing.T) {
 			expectValidateSuccess: false,
 		},
 		{
-			caseDesc:              "no flags when either artifact, sha, public key, or email are needed",
+			caseDesc:              "valid GitHub OIDC SAN subject",
+			subject:               "https://github.com/owner/repo/.github/workflows/build.yml@refs/heads/main",
+			expectParseSuccess:    true,
+			expectValidateSuccess: true,
+		},
+		{
+			caseDesc:              "subject exceeding 512 byte cap",
+			subject:               strings.Repeat("a", 513),
+			expectParseSuccess:    false,
+			expectValidateSuccess: false,
+		},
+		{
+			caseDesc:              "no flags when either artifact, sha, public key, email, or subject are needed",
 			expectParseSuccess:    true,
 			expectValidateSuccess: false,
 		},
@@ -734,6 +770,9 @@ func TestSearchPFlags(t *testing.T) {
 		if tc.email != "" {
 			args = append(args, "--email", tc.email)
 		}
+		if tc.subject != "" {
+			args = append(args, "--subject", tc.subject)
+		}
 
 		if err := blankCmd.ParseFlags(args); (err == nil) != tc.expectParseSuccess {
 			t.Errorf("unexpected result parsing '%v': %v", tc.caseDesc, err)
@@ -746,6 +785,27 @@ func TestSearchPFlags(t *testing.T) {
 		if err := validateSearchPFlags(); (err == nil) != tc.expectValidateSuccess {
 			t.Errorf("unexpected result validating '%v': %v", tc.caseDesc, err)
 			continue
+		}
+	}
+}
+
+func TestSubjectFlagValidation(t *testing.T) {
+	tests := []struct {
+		caseDesc    string
+		value       string
+		expectError bool
+	}{
+		{caseDesc: "valid SAN URI", value: "https://github.com/owner/repo/.github/workflows/build.yml@refs/heads/main", expectError: false},
+		{caseDesc: "empty", value: "", expectError: true},
+		{caseDesc: "max length", value: strings.Repeat("a", 512), expectError: false},
+		{caseDesc: "over max length", value: strings.Repeat("a", 513), expectError: true},
+	}
+
+	for _, tc := range tests {
+		initializePFlagMap()
+		v := NewFlagValue(subjectFlag, "")
+		if err := v.Set(tc.value); (err != nil) != tc.expectError {
+			t.Errorf("%s: unexpected validation result: %v", tc.caseDesc, err)
 		}
 	}
 }
@@ -923,6 +983,37 @@ func TestParseTypeFlag(t *testing.T) {
 	for _, tc := range tests {
 		if _, _, err := ParseTypeFlag(tc.typeStr); (err == nil) != tc.expectSuccess {
 			t.Fatalf("unexpected error parsing type flag in '%v': %v", tc.caseDesc, err)
+		}
+	}
+}
+
+func TestValidateFileOrURL(t *testing.T) {
+	tests := []struct {
+		caseDesc  string
+		value     string
+		expectErr bool
+		errSubstr string
+	}{
+		{caseDesc: "valid local file", value: "tests/test_file.txt", expectErr: false},
+		{caseDesc: "valid https url", value: "https://example.com/artifact", expectErr: false},
+		{caseDesc: "missing file reports the file error, not the url error", value: "tests/not_a_file", expectErr: true, errSubstr: "not_a_file"},
+		{caseDesc: "malformed http url reports the url error", value: "http://", expectErr: true, errSubstr: "is not a valid url"},
+	}
+	for _, tc := range tests {
+		err := validateFileOrURL(tc.value)
+		if tc.expectErr {
+			if err == nil {
+				t.Errorf("%s: expected an error, got nil", tc.caseDesc)
+				continue
+			}
+			if tc.errSubstr != "" && !strings.Contains(err.Error(), tc.errSubstr) {
+				t.Errorf("%s: expected error containing %q, got %q", tc.caseDesc, tc.errSubstr, err.Error())
+			}
+			if !strings.HasPrefix(tc.value, "http") && strings.Contains(err.Error(), "is not a valid url") {
+				t.Errorf("%s: file error was masked by the url error: %q", tc.caseDesc, err.Error())
+			}
+		} else if err != nil {
+			t.Errorf("%s: expected no error, got %q", tc.caseDesc, err.Error())
 		}
 	}
 }

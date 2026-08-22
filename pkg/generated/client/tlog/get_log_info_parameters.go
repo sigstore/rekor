@@ -36,24 +36,28 @@ import (
 //
 // To enforce default values in parameter, use SetDefaults or WithDefaults.
 func NewGetLogInfoParams() *GetLogInfoParams {
-	return &GetLogInfoParams{
-		timeout: cr.DefaultTimeout,
-	}
+	return NewGetLogInfoParamsWithTimeout(cr.DefaultTimeout)
 }
 
 // NewGetLogInfoParamsWithTimeout creates a new GetLogInfoParams object
 // with the ability to set a timeout on a request.
 func NewGetLogInfoParamsWithTimeout(timeout time.Duration) *GetLogInfoParams {
 	return &GetLogInfoParams{
-		timeout: timeout,
+		inner: innerParams{
+			timeout: timeout,
+		},
 	}
 }
 
 // NewGetLogInfoParamsWithContext creates a new GetLogInfoParams object
 // with the ability to set a context for a request.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetLogInfoParams].
 func NewGetLogInfoParamsWithContext(ctx context.Context) *GetLogInfoParams {
 	return &GetLogInfoParams{
-		Context: ctx,
+		inner: innerParams{
+			ctx: ctx,
+		},
 	}
 }
 
@@ -73,9 +77,9 @@ GetLogInfoParams contains all the parameters to send to the API endpoint
 	Typically these are written to a http.Request.
 */
 type GetLogInfoParams struct {
-	timeout    time.Duration
-	Context    context.Context
 	HTTPClient *http.Client
+
+	inner innerParams
 }
 
 // WithDefaults hydrates default values in the get log info params (not the query body).
@@ -93,43 +97,46 @@ func (o *GetLogInfoParams) SetDefaults() {
 	// no default values defined for this parameter
 }
 
-// WithTimeout adds the timeout to the get log info params
+// WithTimeout adds the timeout to the get log info params.
 func (o *GetLogInfoParams) WithTimeout(timeout time.Duration) *GetLogInfoParams {
 	o.SetTimeout(timeout)
 	return o
 }
 
-// SetTimeout adds the timeout to the get log info params
+// SetTimeout adds the timeout to the get log info params.
 func (o *GetLogInfoParams) SetTimeout(timeout time.Duration) {
-	o.timeout = timeout
+	o.inner.timeout = timeout
 }
 
-// WithContext adds the context to the get log info params
+// WithContext adds the context to the get log info params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetLogInfoParams].
 func (o *GetLogInfoParams) WithContext(ctx context.Context) *GetLogInfoParams {
 	o.SetContext(ctx)
 	return o
 }
 
-// SetContext adds the context to the get log info params
+// SetContext adds the context to the get log info params.
+//
+// Deprecated: use the operation call with context to pass the context instead of [GetLogInfoParams].
 func (o *GetLogInfoParams) SetContext(ctx context.Context) {
-	o.Context = ctx
+	o.inner.ctx = ctx
 }
 
-// WithHTTPClient adds the HTTPClient to the get log info params
+// WithHTTPClient adds the HTTPClient to the get log info params.
 func (o *GetLogInfoParams) WithHTTPClient(client *http.Client) *GetLogInfoParams {
 	o.SetHTTPClient(client)
 	return o
 }
 
-// SetHTTPClient adds the HTTPClient to the get log info params
+// SetHTTPClient adds the HTTPClient to the get log info params.
 func (o *GetLogInfoParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
-// WriteToRequest writes these params to a swagger request
+// WriteToRequest writes these params to a [runtime.ClientRequest].
 func (o *GetLogInfoParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
-
-	if err := r.SetTimeout(o.timeout); err != nil {
+	if err := r.SetTimeout(o.inner.timeout); err != nil {
 		return err
 	}
 	var res []error

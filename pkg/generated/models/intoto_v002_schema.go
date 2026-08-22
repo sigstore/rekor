@@ -26,7 +26,8 @@ import (
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
+	"github.com/go-openapi/swag/typeutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -120,13 +121,13 @@ func (m *IntotoV002Schema) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *IntotoV002Schema) UnmarshalBinary(b []byte) error {
 	var res IntotoV002Schema
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -196,7 +197,7 @@ func (m *IntotoV002SchemaContent) validateEnvelope(formats strfmt.Registry) erro
 }
 
 func (m *IntotoV002SchemaContent) validateHash(formats strfmt.Registry) error {
-	if swag.IsZero(m.Hash) { // not required
+	if typeutils.IsZero(m.Hash) { // not required
 		return nil
 	}
 
@@ -219,7 +220,7 @@ func (m *IntotoV002SchemaContent) validateHash(formats strfmt.Registry) error {
 }
 
 func (m *IntotoV002SchemaContent) validatePayloadHash(formats strfmt.Registry) error {
-	if swag.IsZero(m.PayloadHash) { // not required
+	if typeutils.IsZero(m.PayloadHash) { // not required
 		return nil
 	}
 
@@ -288,7 +289,7 @@ func (m *IntotoV002SchemaContent) contextValidateHash(ctx context.Context, forma
 
 	if m.Hash != nil {
 
-		if swag.IsZero(m.Hash) { // not required
+		if typeutils.IsZero(m.Hash) { // not required
 			return nil
 		}
 
@@ -313,7 +314,7 @@ func (m *IntotoV002SchemaContent) contextValidatePayloadHash(ctx context.Context
 
 	if m.PayloadHash != nil {
 
-		if swag.IsZero(m.PayloadHash) { // not required
+		if typeutils.IsZero(m.PayloadHash) { // not required
 			return nil
 		}
 
@@ -339,13 +340,13 @@ func (m *IntotoV002SchemaContent) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *IntotoV002SchemaContent) UnmarshalBinary(b []byte) error {
 	var res IntotoV002SchemaContent
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -411,7 +412,7 @@ func (m *IntotoV002SchemaContentEnvelope) validateSignatures(formats strfmt.Regi
 	}
 
 	for i := 0; i < len(m.Signatures); i++ {
-		if swag.IsZero(m.Signatures[i]) { // not required
+		if typeutils.IsZero(m.Signatures[i]) { // not required
 			continue
 		}
 
@@ -455,7 +456,7 @@ func (m *IntotoV002SchemaContentEnvelope) contextValidateSignatures(ctx context.
 
 		if m.Signatures[i] != nil {
 
-			if swag.IsZero(m.Signatures[i]) { // not required
+			if typeutils.IsZero(m.Signatures[i]) { // not required
 				return nil
 			}
 
@@ -483,13 +484,13 @@ func (m *IntotoV002SchemaContentEnvelope) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *IntotoV002SchemaContentEnvelope) UnmarshalBinary(b []byte) error {
 	var res IntotoV002SchemaContentEnvelope
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -552,7 +553,7 @@ func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) validateSig(formats st
 }
 
 // ContextValidate validates this intoto v002 schema content envelope signatures items0 based on context it is used
-func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -561,13 +562,13 @@ func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) MarshalBinary() ([]byt
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *IntotoV002SchemaContentEnvelopeSignaturesItems0) UnmarshalBinary(b []byte) error {
 	var res IntotoV002SchemaContentEnvelopeSignaturesItems0
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -671,13 +672,13 @@ func (m *IntotoV002SchemaContentHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *IntotoV002SchemaContentHash) UnmarshalBinary(b []byte) error {
 	var res IntotoV002SchemaContentHash
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -781,13 +782,13 @@ func (m *IntotoV002SchemaContentPayloadHash) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *IntotoV002SchemaContentPayloadHash) UnmarshalBinary(b []byte) error {
 	var res IntotoV002SchemaContentPayloadHash
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res

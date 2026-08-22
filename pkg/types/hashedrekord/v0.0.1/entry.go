@@ -67,6 +67,13 @@ func NewEntry() types.EntryImpl {
 func (v V001Entry) IndexKeys() ([]string, error) {
 	var result []string
 
+	if v.HashedRekordObj.Signature == nil {
+		return nil, errors.New("hashedrekord v0.0.1 entry not initialized")
+	}
+	if v.HashedRekordObj.Signature.PublicKey == nil {
+		return nil, errors.New("hashedrekord v0.0.1 entry not initialized")
+	}
+
 	key := v.HashedRekordObj.Signature.PublicKey.Content
 	keyHash := sha256.Sum256(key)
 	result = append(result, strings.ToLower(hex.EncodeToString(keyHash[:])))
@@ -77,7 +84,8 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 	}
 	result = append(result, pub.Subjects()...)
 
-	if v.HashedRekordObj.Data.Hash != nil {
+	if v.HashedRekordObj.Data != nil && v.HashedRekordObj.Data.Hash != nil &&
+		v.HashedRekordObj.Data.Hash.Algorithm != nil && v.HashedRekordObj.Data.Hash.Value != nil {
 		hashKey := strings.ToLower(fmt.Sprintf("%s:%s", *v.HashedRekordObj.Data.Hash.Algorithm, *v.HashedRekordObj.Data.Hash.Value))
 		result = append(result, hashKey)
 	}
@@ -149,6 +157,9 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	rekord, ok := pe.(*models.Hashedrekord)
 	if !ok {
 		return errors.New("cannot unmarshal non Rekord v0.0.1 type")
+	}
+	if rekord == nil {
+		return errors.New("proposed entry cannot be nil")
 	}
 
 	if err := DecodeEntry(rekord.Spec, &v.HashedRekordObj); err != nil {
@@ -231,6 +242,10 @@ func (v *V001Entry) validate() (pkitypes.Signature, pkitypes.PublicKey, error) {
 		return nil, nil, &types.InputValidationError{Err: errors.New("missing hash")}
 	}
 
+	if hash.Value == nil {
+		return nil, nil, &types.InputValidationError{Err: errors.New("missing hash value")}
+	}
+
 	var alg crypto.Hash
 	switch conv.Value(hash.Algorithm) {
 	case models.HashedrekordV001SchemaDataHashAlgorithmSha384:
@@ -301,7 +316,7 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	re.HashedRekordObj.Signature.PublicKey = &models.HashedrekordV001SchemaSignaturePublicKey{}
 	publicKeyBytes := props.PublicKeyBytes
 	if len(publicKeyBytes) == 0 {
-		if len(props.PublicKeyPaths) != 1 {
+		if len(props.PublicKeyPaths) != 1 || props.PublicKeyPaths[0] == nil {
 			return nil, errors.New("only one public key must be provided to verify detached signature")
 		}
 		keyBytes, err := os.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))

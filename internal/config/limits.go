@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Sigstore Authors.
+// Copyright 2026 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,22 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package jar
+// Package config holds process-wide limits that rekor-server populates from
+// viper at startup. These are read on hot paths, so they are plain variables
+// rather than repeated viper lookups, which allocate on every call.
+package config
 
-import (
-	"testing"
-
-	"github.com/sigstore/rekor/pkg/generated/models"
+// Zero means unlimited. rekor-server overrides these from config at startup;
+// defaulting to zero preserves the unbounded behavior other callers (e.g.
+// rekor-cli) get when the flags were never registered with viper.
+var (
+	MaxAPKMetadataSize uint64
+	MaxJarMetadataSize uint64
 )
-
-func FuzzJarUnmarshal(f *testing.F) {
-	f.Fuzz(func(t *testing.T, raw []byte) {
-		m := &models.Jar{}
-		err := m.UnmarshalJSON(raw)
-		if err != nil {
-			t.Skip()
-		}
-		brt := New()
-		brt.UnmarshalEntry(m)
-	})
-}

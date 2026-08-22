@@ -36,10 +36,6 @@ linters:
           - gosec
         path: _test\.go
       - linters:
-          - staticcheck
-        # TODO, tracked in #286
-        text: 'SA1019: package golang.org/x/crypto/openpgp'
-      - linters:
           - gosec
         text: 'G115: '
       - linters:

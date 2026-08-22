@@ -20,7 +20,7 @@ type Identity struct {
 	// - *ecdsa.PublicKey
 	// - ed25519.PublicKey
 	// - *x509.Certificate
-	// - openpgp.EntityList (golang.org/x/crypto/openpgp)
+	// - openpgp.EntityList (github.com/ProtonMail/go-crypto/openpgp)
 	// - *minisign.PublicKey (github.com/jedisct1/go-minisign)
 	// - ssh.PublicKey (golang.org/x/crypto/ssh)
 	Crypto any

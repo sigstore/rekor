@@ -60,9 +60,10 @@ TreeID:                 %s
 
 // logInfoCmd represents the current information about the transparency log
 var logInfoCmd = &cobra.Command{
-	Use:   "loginfo",
-	Short: "Rekor loginfo command",
-	Long:  `Prints info about the transparency log`,
+	Use:     "loginfo",
+	Example: `  rekor-cli loginfo`,
+	Short:   "Rekor loginfo command",
+	Long:    `Prints info about the transparency log`,
 	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (interface{}, error) {
 		serverURL := viper.GetString("rekor_server")
 		ctx := cmd.Context()
@@ -71,9 +72,9 @@ var logInfoCmd = &cobra.Command{
 			return nil, err
 		}
 
-		params := tlog.NewGetLogInfoParamsWithContext(ctx)
+		params := tlog.NewGetLogInfoParams()
 		params.SetTimeout(viper.GetDuration("timeout"))
-		result, err := rekorClient.Tlog.GetLogInfo(params)
+		result, err := rekorClient.Tlog.GetLogInfoContext(ctx, params)
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +166,7 @@ func loadVerifier(ctx context.Context, rekorClient *rclient.Rekor, treeID string
 	publicKey := viper.GetString("rekor_server_public_key")
 	if publicKey == "" {
 		// fetch key from server
-		keyResp, err := rekorClient.Pubkey.GetPublicKey(pubkey.NewGetPublicKeyParamsWithContext(ctx).WithTreeID(conv.Pointer(treeID)))
+		keyResp, err := rekorClient.Pubkey.GetPublicKeyContext(ctx, pubkey.NewGetPublicKeyParams().WithTreeID(conv.Pointer(treeID)))
 		if err != nil {
 			return nil, err
 		}

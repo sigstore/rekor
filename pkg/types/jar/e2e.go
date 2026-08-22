@@ -26,9 +26,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sassoftware/relic/lib/certloader"
-	"github.com/sassoftware/relic/lib/signjar"
-	"github.com/sassoftware/relic/lib/zipslicer"
+	"github.com/sassoftware/relic/v8/lib/certloader"
+	"github.com/sassoftware/relic/v8/lib/signjar"
+	"github.com/sassoftware/relic/v8/lib/zipslicer"
 	e2ex509 "github.com/sigstore/rekor/pkg/pki/x509/e2ex509"
 	e2eutil "github.com/sigstore/rekor/pkg/util/e2eutil"
 )

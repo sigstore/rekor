@@ -19,7 +19,8 @@ all: rekor-cli rekor-server ## Build all binaries (rekor-cli and rekor-server)
 
 include Makefile.swagger
 
-OPENAPIDEPS = openapi.yaml $(shell find pkg/types -iname "*.json")
+SWAGGER_TEMPLATE_DIR := hack/swagger-templates
+OPENAPIDEPS = openapi.yaml $(shell find pkg/types -iname "*.json") $(shell find $(SWAGGER_TEMPLATE_DIR) -iname "*.gotmpl")
 SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go"|grep -v pkg/generated) pkg/generated/restapi/configure_rekor_server.go $(SWAGGER_GEN)
 TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
@@ -44,7 +45,7 @@ ifeq ($(DIFF), 1)
     GIT_TREESTATE = "dirty"
 endif
 
-KO_PREFIX ?= gcr.io/projectsigstore
+KO_PREFIX ?= ghcr.io/sigstore/rekor
 export KO_DOCKER_REPO=$(KO_PREFIX)
 REKOR_YAML ?= rekor-$(GIT_VERSION).yaml
 GHCR_PREFIX ?= ghcr.io/sigstore/rekor
@@ -65,10 +66,10 @@ SERVER_LDFLAGS=$(REKOR_LDFLAGS)
 
 Makefile.swagger: $(SWAGGER) $(OPENAPIDEPS) ## Generate Swagger code and Makefile
 	$(SWAGGER) validate openapi.yaml
-	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --additional-initialism=TUF --additional-initialism=DSSE
-	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated --exclude-main -A rekor_server --flag-strategy=pflag --default-produces application/json --additional-initialism=TUF --additional-initialism=DSSE
+	$(SWAGGER) generate client -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated -T $(SWAGGER_TEMPLATE_DIR) --allow-template-override --additional-initialism=TUF --additional-initialism=DSSE
+	$(SWAGGER) generate server -f openapi.yaml -q -r COPYRIGHT.txt -t pkg/generated -T $(SWAGGER_TEMPLATE_DIR) --allow-template-override --exclude-main -A rekor_server --flag-strategy=pflag --default-produces application/json --additional-initialism=TUF --additional-initialism=DSSE
 	@echo "# This file is generated after swagger runs as part of the build; do not edit!" > Makefile.swagger
-	@echo "SWAGGER_GEN=`find pkg/generated/client pkg/generated/models pkg/generated/restapi -iname '*.go' | grep -v 'configure_rekor_server' | sort -d | tr '\n' ' ' | sed 's/ $$//'`" >> Makefile.swagger;
+	@echo "SWAGGER_GEN=`find pkg/generated/client pkg/generated/models pkg/generated/restapi -iname '*.go' ! -iname '*_test.go' | grep -v 'configure_rekor_server' | sort -d | tr '\n' ' ' | sed 's/ $$//'`" >> Makefile.swagger;
 
 lint: ## Run golangci-lint checks
 	$(GOBIN)/golangci-lint run -v ./...
@@ -138,6 +139,7 @@ e2e: ## Build and prepare end-to-end tests
 sign-keyless-ci: ko ## Sign container images using keyless signing
 	cosign sign --yes -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
 	cosign sign --yes -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-cli:$(GIT_HASH)
+	cosign sign --yes -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/backfill-index:$(GIT_HASH)
 
 ko-local: ## Build container images locally using ko
 	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
@@ -156,15 +158,59 @@ ko-local: ## Build container images locally using ko
 		github.com/sigstore/rekor/cmd/backfill-index
 
 fuzz: ## Run fuzz tests for a configured duration
+	go test -fuzz FuzzKeys -fuzztime $(FUZZ_DURATION) ./pkg/pki
 	go test -fuzz FuzzCreateEntryIDFromParts -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzGetUUIDFromIDString -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzGetTreeIDFromIDString -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzPadToTreeIDLen -fuzztime $(FUZZ_DURATION) ./pkg/sharding
-	go test -fuzz FuzzReturnEntryIDString -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzTreeID -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzValidateUUID -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzValidateTreeID -fuzztime $(FUZZ_DURATION) ./pkg/sharding
 	go test -fuzz FuzzValidateEntryID -fuzztime $(FUZZ_DURATION) ./pkg/sharding
+	go test -fuzz FuzzNewFile -fuzztime $(FUZZ_DURATION) ./pkg/signer
+	go test -fuzz FuzzCoseCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/cose/v0.0.1
+	go test -fuzz FuzzCoseUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/cose/v0.0.1
+	go test -fuzz FuzzCoseDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/cose/v0.0.1
+	go test -fuzz FuzzHashedRekordCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/hashedrekord/v0.0.1
+	go test -fuzz FuzzHashedRekordUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/hashedrekord/v0.0.1
+	go test -fuzz FuzzHashedRekordDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/hashedrekord/v0.0.1
+	go test -fuzz FuzzPackageUnmarshal -fuzztime $(FUZZ_DURATION) ./pkg/types/alpine
+	go test -fuzz FuzzAlpineCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/alpine/v0.0.1
+	go test -fuzz FuzzAlpineUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/alpine/v0.0.1
+	go test -fuzz FuzzAlpineDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/alpine/v0.0.1
+	go test -fuzz FuzzJarCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/jar/v0.0.1
+	go test -fuzz FuzzJarUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/jar/v0.0.1
+	go test -fuzz FuzzJarDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/jar/v0.0.1
+	go test -fuzz FuzzJarutilsVerify -fuzztime $(FUZZ_DURATION) ./pkg/types/jar/v0.0.1
+	go test -fuzz FuzzIntotoCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/intoto/v0.0.1
+	go test -fuzz FuzzIntotoUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/intoto/v0.0.1
+	go test -fuzz FuzzIntotoV001DecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/intoto/v0.0.1
+	go test -fuzz FuzzIntotoCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/intoto/v0.0.2
+	go test -fuzz FuzzIntotoUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/intoto/v0.0.2
+	go test -fuzz FuzzIntotoDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/intoto/v0.0.2
+	go test -fuzz FuzzTufCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/tuf/v0.0.1
+	go test -fuzz FuzzTufUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/tuf/v0.0.1
+	go test -fuzz FuzzTufDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/tuf/v0.0.1
+	go test -fuzz FuzzRfc3161CreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/rfc3161/v0.0.1
+	go test -fuzz FuzzRfc3161UnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/rfc3161/v0.0.1
+	go test -fuzz FuzzRfc3161DecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/rfc3161/v0.0.1
+	go test -fuzz FuzzRpmCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/rpm/v0.0.1
+	go test -fuzz FuzzRpmUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/rpm/v0.0.1
+	go test -fuzz FuzzRpmDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/rpm/v0.0.1
+	go test -fuzz FuzzHelmCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/helm/v0.0.1
+	go test -fuzz FuzzHelmUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/helm/v0.0.1
+	go test -fuzz FuzzHelmProvenanceUnmarshal -fuzztime $(FUZZ_DURATION) ./pkg/types/helm/v0.0.1
+	go test -fuzz FuzzHelmDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/helm/v0.0.1
+	go test -fuzz FuzzRekordCreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/rekord/v0.0.1
+	go test -fuzz FuzzRekordUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/rekord/v0.0.1
+	go test -fuzz FuzzRekordDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/rekord/v0.0.1
+	go test -fuzz FuzzDSSECreateProposedEntry -fuzztime $(FUZZ_DURATION) ./pkg/types/dsse/v0.0.1
+	go test -fuzz FuzzDSSEUnmarshalAndCanonicalize -fuzztime $(FUZZ_DURATION) ./pkg/types/dsse/v0.0.1
+	go test -fuzz FuzzDSSEDecodeEntryDirectMapAndRaw -fuzztime $(FUZZ_DURATION) ./pkg/types/dsse/v0.0.1
+	go test -fuzz FuzzSignedNoteRoundTrip -fuzztime $(FUZZ_DURATION) ./pkg/util
+	go test -fuzz FuzzCheckpointRoundTrip -fuzztime $(FUZZ_DURATION) ./pkg/util
+	go test -fuzz FuzzSignedCheckpoint -fuzztime $(FUZZ_DURATION) ./pkg/util
+	go test -fuzz FuzzGenerateTransparencyLogEntry -fuzztime $(FUZZ_DURATION) ./pkg/tle
 
 ## --------------------------------------
 ## Tooling Binaries

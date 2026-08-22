@@ -34,7 +34,7 @@ services:
       "--attestation_storage_bucket=file:///var/run/attestations",
       "--max_request_body_size=32792576",
       "--search_index.storage_provider=${INDEX_BACKEND:-mysql}",
-      "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test",
+      "--search_index.mysql.dsn=test:zaphod@tcp(mysql:3306)/test?parseTime=true&interpolateParams=true",
       ]
     ports:
       - "3000:3000"

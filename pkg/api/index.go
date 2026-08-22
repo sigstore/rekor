@@ -98,6 +98,18 @@ func SearchIndexHandler(params index.SearchIndexParams) middleware.Responder {
 			result.Add(resultUUIDs)
 		}
 	}
+	if params.Query.Subject != "" {
+		subjectStr := strings.ToLower(params.Query.Subject)
+		if queryOperator == "or" {
+			lookupKeys = append(lookupKeys, subjectStr)
+		} else {
+			resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, []string{subjectStr})
+			if err != nil {
+				return handleRekorAPIError(params, http.StatusInternalServerError, fmt.Errorf("index storage error: %w", err), indexStorageUnexpectedResult)
+			}
+			result.Add(resultUUIDs)
+		}
+	}
 	if len(lookupKeys) > 0 {
 		resultUUIDs, err := indexStorageClient.LookupIndices(httpReqCtx, lookupKeys)
 		if err != nil {
@@ -120,11 +132,7 @@ func SearchIndexNotImplementedHandler(_ index.SearchIndexParams) middleware.Resp
 }
 
 func addToIndex(ctx context.Context, keys []string, value string) error {
-	err := indexStorageClient.WriteIndex(ctx, keys, value)
-	if err != nil {
-		return fmt.Errorf("redis client: %w", err)
-	}
-	return nil
+	return indexStorageClient.WriteIndex(ctx, keys, value)
 }
 
 func storeAttestation(ctx context.Context, uuid string, attestation []byte) error {

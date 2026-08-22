@@ -16,12 +16,15 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"regexp"
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
@@ -31,9 +34,33 @@ import (
 	"github.com/sigstore/rekor/pkg/log"
 )
 
+// statusClientClosedRequest is the nginx-style code for a client that hung up
+// before we could respond; it has no net/http constant or StatusText entry.
+const statusClientClosedRequest = 499
+
+func mapGRPCToHTTP(code int, err error) int {
+	// Only try to be smart if current code is a generic 500
+	if code != http.StatusInternalServerError {
+		return code
+	}
+
+	// FromError walks the whole error tree, so wrapped and joined errors resolve too.
+	// The list of handled codes is intentionally limited to specific cases
+	if st, ok := status.FromError(err); ok {
+		switch st.Code() {
+		case codes.Canceled:
+			return statusClientClosedRequest
+		case codes.DeadlineExceeded:
+			return http.StatusGatewayTimeout
+		}
+	}
+	return code
+}
+
 const (
 	trillianCommunicationError     = "unexpected error communicating with transparency log"
 	trillianUnexpectedResult       = "unexpected result from transparency log"
+	clientDisconnected             = "client disconnected during request"
 	validationError                = "error processing entry: %v"
 	failedToGenerateCanonicalEntry = "error generating canonicalized entry"
 	entryAlreadyExists             = "an equivalent entry already exists in the transparency log with UUID %v"
@@ -59,17 +86,33 @@ func errorMsg(message string, code int) *models.Error {
 
 var re = regexp.MustCompile("^(.*)Params$")
 
-func handleRekorAPIError(params interface{}, code int, err error, message string, fields ...interface{}) middleware.Responder {
+func handleRekorAPIError(params any, code int, err error, message string, fields ...any) middleware.Responder {
+	code = mapGRPCToHTTP(code, err)
+
 	if message == "" {
-		message = http.StatusText(code)
+		// http.StatusText has no entry for the nonstandard 499
+		if code == statusClientClosedRequest {
+			message = clientDisconnected
+		} else {
+			message = http.StatusText(code)
+		}
 	}
 
 	typeStr := fmt.Sprintf("%T", params)
 	handler := re.FindStringSubmatch(typeStr)[1]
 
-	logMsg := func(r *http.Request, inputs ...interface{}) {
+	logMsg := func(r *http.Request, inputs ...any) {
 		ctx := r.Context()
-		fields := append([]interface{}{"handler", handler, "statusCode", code, "clientMessage", message}, fields...)
+		// If the client disconnected before we could respond, rewrite the
+		// status to 499 (nginx-style "client closed request") so that the
+		// response, request log, and metrics all agree that this wasn't a
+		// server-side error we could have prevented. Also replace the
+		// client-facing message so the JSON body reflects the true cause.
+		if code >= 500 && ctx.Err() == context.Canceled {
+			code = statusClientClosedRequest
+			message = clientDisconnected
+		}
+		fields := append([]any{"handler", handler, "statusCode", code, "clientMessage", message}, fields...)
 		if code >= 500 {
 			fields = append(fields, inputs...)
 			log.ContextLogger(ctx).Errorw(err.Error(), fields...)
@@ -116,12 +159,12 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 			}
 			return resp
 		default:
-			requestFields := []interface{}{"requestBody", params.ProposedEntry}
+			requestFields := []any{"requestBody", params.ProposedEntry}
 			logMsg(params.HTTPRequest, requestFields...)
 			return entries.NewCreateLogEntryDefault(code).WithPayload(errorMsg(message, code))
 		}
 	case entries.SearchLogQueryParams:
-		requestFields := []interface{}{}
+		requestFields := []any{}
 		if params.Entry != nil {
 			requestFields = append(requestFields, "requestBody", *params.Entry)
 		}
@@ -149,7 +192,7 @@ func handleRekorAPIError(params interface{}, code int, err error, message string
 		logMsg(params.HTTPRequest)
 		return pubkey.NewGetPublicKeyDefault(code).WithPayload(errorMsg(message, code))
 	case index.SearchIndexParams:
-		requestFields := []interface{}{}
+		requestFields := []any{}
 		if params.Query != nil {
 			requestFields = append(requestFields, "requestBody", *params.Query)
 		}

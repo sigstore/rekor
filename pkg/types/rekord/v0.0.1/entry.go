@@ -68,6 +68,18 @@ func NewEntry() types.EntryImpl {
 }
 
 func (v V001Entry) IndexKeys() ([]string, error) {
+	if v.RekordObj.Signature == nil || v.RekordObj.Signature.Format == nil || v.RekordObj.Signature.PublicKey == nil || v.RekordObj.Signature.PublicKey.Content == nil {
+		return nil, errors.New("missing signature properties")
+	}
+	if v.RekordObj.Data == nil {
+		return nil, errors.New("missing data property")
+	}
+	if v.RekordObj.Data.Hash != nil {
+		if v.RekordObj.Data.Hash.Algorithm == nil || v.RekordObj.Data.Hash.Value == nil {
+			return nil, errors.New("missing hash properties")
+		}
+	}
+
 	var result []string
 
 	af, err := pki.NewArtifactFactory(pki.Format(*v.RekordObj.Signature.Format))
@@ -99,7 +111,7 @@ func (v V001Entry) IndexKeys() ([]string, error) {
 
 func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	rekord, ok := pe.(*models.Rekord)
-	if !ok {
+	if !ok || rekord == nil {
 		return errors.New("cannot unmarshal non Rekord v0.0.1 type")
 	}
 
@@ -193,6 +205,13 @@ func DecodeEntry(input any, output *models.RekordV001Schema) error {
 }
 
 func (v *V001Entry) fetchExternalEntities(_ context.Context) (pki.PublicKey, pki.Signature, error) {
+	if v.RekordObj.Signature == nil || v.RekordObj.Signature.Format == nil {
+		return nil, nil, &types.InputValidationError{Err: errors.New("missing signature format")}
+	}
+	if v.RekordObj.Data == nil {
+		return nil, nil, &types.InputValidationError{Err: errors.New("missing data")}
+	}
+
 	af, err := pki.NewArtifactFactory(pki.Format(*v.RekordObj.Signature.Format))
 	if err != nil {
 		return nil, nil, err
@@ -240,6 +259,10 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (pki.PublicKey, pki
 }
 
 func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
+	if v.RekordObj.Data == nil {
+		return nil, &types.InputValidationError{Err: errors.New("missing data")}
+	}
+
 	keyObj, sigObj, err := v.fetchExternalEntities(ctx)
 	if err != nil {
 		return nil, err
@@ -289,8 +312,11 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 // validate performs cross-field validation for fields in object
 func (v V001Entry) validate() error {
 	sig := v.RekordObj.Signature
-	if v.RekordObj.Signature == nil {
+	if sig == nil {
 		return errors.New("missing signature")
+	}
+	if sig.Format == nil || len(*sig.Format) == 0 {
+		return errors.New("missing signature format")
 	}
 	if sig.Content == nil || len(*sig.Content) == 0 {
 		return errors.New("'content' must be specified for signature")
@@ -311,8 +337,14 @@ func (v V001Entry) validate() error {
 
 	hash := data.Hash
 	if hash != nil {
+		if hash.Algorithm == nil || *hash.Algorithm == "" {
+			return errors.New("missing hash algorithm")
+		}
+		if hash.Value == nil || len(*hash.Value) == 0 {
+			return errors.New("missing hash value")
+		}
 		// Rekord v0.0.1 schema enumerates sha256; enforce length accordingly.
-		if hash.Value == nil || len(*hash.Value) != crypto.SHA256.Size()*2 {
+		if len(*hash.Value) != crypto.SHA256.Size()*2 {
 			return errors.New("invalid value for hash")
 		}
 		if _, err := hex.DecodeString(*hash.Value); err != nil {
@@ -390,6 +422,9 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		if len(props.PublicKeyPaths) != 1 {
 			return nil, errors.New("only one public key must be provided to verify detached signature")
 		}
+		if props.PublicKeyPaths[0] == nil {
+			return nil, errors.New("public key path cannot be nil")
+		}
 		keyBytes, err := os.ReadFile(filepath.Clean(props.PublicKeyPaths[0].Path))
 		if err != nil {
 			return nil, fmt.Errorf("error reading public key file: %w", err)
@@ -416,8 +451,8 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 }
 
 func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
-	if v.RekordObj.Signature == nil || v.RekordObj.Signature.PublicKey == nil || v.RekordObj.Signature.PublicKey.Content == nil {
-		return nil, errors.New("rekord v0.0.1 entry not initialized")
+	if v.RekordObj.Signature == nil || v.RekordObj.Signature.Format == nil || v.RekordObj.Signature.PublicKey == nil || v.RekordObj.Signature.PublicKey.Content == nil {
+		return nil, errors.New("missing signature properties")
 	}
 
 	var key pki.PublicKey
@@ -441,8 +476,16 @@ func (v V001Entry) Verifiers() ([]pki.PublicKey, error) {
 }
 
 func (v V001Entry) ArtifactHash() (string, error) {
-	if v.RekordObj.Data == nil || v.RekordObj.Data.Hash == nil || v.RekordObj.Data.Hash.Value == nil || v.RekordObj.Data.Hash.Algorithm == nil {
-		return "", errors.New("rekord v0.0.1 entry not initialized")
+	if v.RekordObj.Data == nil {
+		return "", errors.New("missing data property")
+	}
+	if v.RekordObj.Data.Hash != nil {
+		if v.RekordObj.Data.Hash.Algorithm == nil || v.RekordObj.Data.Hash.Value == nil {
+			return "", errors.New("missing hash properties")
+		}
+	}
+	if v.RekordObj.Data.Hash == nil {
+		return "", errors.New("rekord v0.0.1 entry not initialized (missing hash)")
 	}
 	return strings.ToLower(fmt.Sprintf("%s:%s", *v.RekordObj.Data.Hash.Algorithm, *v.RekordObj.Data.Hash.Value)), nil
 }

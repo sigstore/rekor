@@ -23,7 +23,7 @@ import (
 	"net/url"
 	golangswaggerpaths "path"
 
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 )
 
 // GetLogProofURL generates an URL for the get log proof operation
@@ -65,13 +65,13 @@ func (o *GetLogProofURL) Build() (*url.URL, error) {
 
 	var firstSizeQ string
 	if o.FirstSize != nil {
-		firstSizeQ = swag.FormatInt64(*o.FirstSize)
+		firstSizeQ = conv.FormatInteger(*o.FirstSize)
 	}
 	if firstSizeQ != "" {
 		qs.Set("firstSize", firstSizeQ)
 	}
 
-	lastSizeQ := swag.FormatInt64(o.LastSize)
+	lastSizeQ := conv.FormatInteger(o.LastSize)
 	if lastSizeQ != "" {
 		qs.Set("lastSize", lastSizeQ)
 	}

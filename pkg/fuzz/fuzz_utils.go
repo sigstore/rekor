@@ -18,17 +18,24 @@ package fuzz
 import (
 	"archive/zip"
 	"bytes"
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
+	"testing"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
+	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/strfmt"
 
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types"
 )
@@ -43,27 +50,30 @@ func setArtifactHash(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties) er
 	return nil
 }
 
-// creates a file on disk and returns the url of it.
-func createAbsFile(_ *fuzz.ConsumeFuzzer, fileName string, fileContents []byte) (*url.URL, error) {
-	file, err := os.Create(fileName)
+// creates a temp file on disk and returns its url plus a cleanup func.
+// Uses os.CreateTemp so parallel fuzz workers don't race on a fixed path in CWD.
+func createAbsFile(_ *fuzz.ConsumeFuzzer, namePrefix string, fileContents []byte) (*url.URL, func(), error) {
+	cleanup := func() {}
+	file, err := os.CreateTemp("", namePrefix)
 	if err != nil {
-		return nil, err
+		return nil, cleanup, err
 	}
+	filePath := file.Name()
+	cleanup = func() { os.Remove(filePath) }
 	defer file.Close()
 
-	filePath, err := filepath.Abs(fileName)
+	absPath, err := filepath.Abs(filePath)
 	if err != nil {
-		return nil, err
+		return nil, cleanup, err
 	}
-	fileURL, err := url.Parse(filePath)
+	fileURL, err := url.Parse(absPath)
 	if err != nil {
-		return nil, err
+		return nil, cleanup, err
 	}
-	_, err = file.Write(fileContents)
-	if err != nil {
-		return nil, err
+	if _, err := file.Write(fileContents); err != nil {
+		return nil, cleanup, err
 	}
-	return fileURL, err
+	return fileURL, cleanup, nil
 }
 
 // Sets the signature fields of a props.
@@ -84,17 +94,13 @@ func setSignatureFields(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties)
 		props.SignatureBytes = signatureBytes
 		return cleanup, nil
 	}
-	signatureURL, err := createAbsFile(ff, "SignatureFile", signatureBytes)
-
+	signatureURL, sigCleanup, err := createAbsFile(ff, "SignatureFile", signatureBytes)
 	if err != nil {
-		os.Remove("SignatureFile")
+		sigCleanup()
 		return cleanup, err
 	}
 	props.SignaturePath = signatureURL
-	return func() {
-		os.Remove("SignatureFile")
-	}, nil
-
+	return sigCleanup, nil
 }
 
 func setPublicKeyFields(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties) (func(), error) {
@@ -118,15 +124,13 @@ func setPublicKeyFields(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties)
 	if err != nil {
 		return cleanup, err
 	}
-	publicKeyURL, err := createAbsFile(ff, "PublicKeyFile", publicKeyBytes)
+	publicKeyURL, pkCleanup, err := createAbsFile(ff, "PublicKeyFile", publicKeyBytes)
 	if err != nil {
-		os.Remove("PublicKeyFile")
+		pkCleanup()
 		return cleanup, err
 	}
 	props.PublicKeyPaths = []*url.URL{publicKeyURL}
-	return func() {
-		os.Remove("PublicKeyFile")
-	}, nil
+	return pkCleanup, nil
 }
 
 // Sets the "AdditionalAuthenticatedData" field of the props
@@ -145,6 +149,11 @@ func setAdditionalAuthenticatedData(ff *fuzz.ConsumeFuzzer, props *types.Artifac
 	return nil
 }
 
+// validPKIFormats mirrors pki.SupportedFormats(); duplicated here to avoid an
+// import cycle and to keep the fuzzer's choice space small enough that the
+// mutator can actually reach key-parsing code.
+var validPKIFormats = []string{"pgp", "minisign", "ssh", "x509", "pkcs7", "tuf"}
+
 // Sets the PKI format if the fuzzer decides to.
 func setPKIFormat(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties) error {
 	shouldSetPKIFormat, err := ff.GetBool()
@@ -153,11 +162,11 @@ func setPKIFormat(ff *fuzz.ConsumeFuzzer, props *types.ArtifactProperties) error
 	}
 
 	if shouldSetPKIFormat {
-		pkiFormat, err := ff.GetString()
+		idx, err := ff.GetInt()
 		if err != nil {
 			return err
 		}
-		props.PKIFormat = pkiFormat
+		props.PKIFormat = validPKIFormats[idx%len(validPKIFormats)]
 	}
 
 	return nil
@@ -239,15 +248,14 @@ func CreateProps(ff *fuzz.ConsumeFuzzer, fuzzType string) (types.ArtifactPropert
 	if setArtifactBytes {
 		props.ArtifactBytes = artifactBytes
 	} else {
-		artifactFile, err := createAbsFile(ff, "ArtifactFile", artifactBytes)
-		cleanups = append(cleanups, func() { os.Remove("ArtifactFile") })
+		artifactFile, artifactCleanup, err := createAbsFile(ff, "ArtifactFile", artifactBytes)
+		cleanups = append(cleanups, artifactCleanup)
 		if err != nil {
 			return *props, cleanups, fmt.Errorf("failed converting artifact bytes: %w", err)
 		}
 		props.ArtifactPath = artifactFile
 	}
 
-	props.ArtifactBytes = artifactBytes
 	return *props, cleanups, nil
 }
 
@@ -274,6 +282,85 @@ func defaultTarToBytes(artifactFiles []*fuzz.TarFile) ([]byte, error) {
 
 	w.Close()
 	return b.Bytes(), nil
+}
+
+// AssertCanonicalIdempotent enforces the log-stability invariant: bytes
+// produced by types.CanonicalizeEntry must, when re-parsed and
+// re-canonicalized, yield the exact same bytes. A violation means the
+// canonical form stored in the Merkle tree is not actually canonical.
+func AssertCanonicalIdempotent(ctx context.Context, t *testing.T, canonical []byte) {
+	t.Helper()
+	pe, err := models.UnmarshalProposedEntry(bytes.NewReader(canonical), runtime.JSONConsumer())
+	if err != nil {
+		t.Fatalf("canonical bytes failed to re-parse as ProposedEntry: %v\ncanonical: %s", err, canonical)
+	}
+	ei, err := types.UnmarshalEntry(pe)
+	if err != nil {
+		t.Fatalf("canonical bytes failed types.UnmarshalEntry: %v\ncanonical: %s", err, canonical)
+	}
+	canonical2, err := types.CanonicalizeEntry(ctx, ei)
+	if err != nil {
+		t.Fatalf("re-canonicalization of canonical bytes failed: %v\ncanonical: %s", err, canonical)
+	}
+	if !bytes.Equal(canonical, canonical2) {
+		t.Fatalf("canonicalization not idempotent:\n first: %s\nsecond: %s", canonical, canonical2)
+	}
+}
+
+// AssertDecodeEntryEquivalent feeds the same logical content to DecodeEntry
+// once as a typed model and once as the map[string]any that encoding/json
+// would produce, then asserts both code paths yield equivalent results. The
+// per-type DecodeEntry functions hand-roll the map fast-path; divergence here
+// means a field was forgotten or decoded differently.
+func AssertDecodeEntryEquivalent[T any](t *testing.T, typed *T, decode func(any, *T) error) {
+	t.Helper()
+	raw, err := json.Marshal(typed)
+	if err != nil {
+		return
+	}
+	var asMap map[string]any
+	if err := json.Unmarshal(raw, &asMap); err != nil {
+		return
+	}
+
+	var fromTyped, fromMap T
+	errT := decode(typed, &fromTyped)
+	errM := decode(asMap, &fromMap)
+	if (errT == nil) != (errM == nil) {
+		t.Fatalf("DecodeEntry error mismatch: typed=%v map=%v\ninput: %s", errT, errM, raw)
+	}
+	if errT != nil {
+		return
+	}
+	// Restrict the byte-equality check to instances where both decode paths
+	// produce schema-valid output. The hand-written map fast paths collapse
+	// empty sub-objects to nil (which then fails Required validation),
+	// whereas the typed path preserves the empty struct; reporting that for
+	// every empty-field permutation across 11 types would drown out
+	// meaningful field-level divergences.
+	type validatable interface {
+		Validate(strfmt.Registry) error
+	}
+	vt, okT := any(&fromTyped).(validatable)
+	vm, okM := any(&fromMap).(validatable)
+	if okT && okM {
+		if vt.Validate(strfmt.Default) != nil || vm.Validate(strfmt.Default) != nil {
+			return
+		}
+	}
+	// Compare via JSON-semantic equality rather than byte equality:
+	// encoding/json replaces invalid UTF-8 in Go strings with the \ufffd
+	// escape on marshal, but emits the same code point as raw UTF-8 if it
+	// was already valid, so a marshal/unmarshal round-trip on each side
+	// normalises that before comparison.
+	jt, _ := json.Marshal(fromTyped)
+	jm, _ := json.Marshal(fromMap)
+	var nt, nm any
+	_ = json.Unmarshal(jt, &nt)
+	_ = json.Unmarshal(jm, &nm)
+	if !reflect.DeepEqual(nt, nm) {
+		t.Fatalf("DecodeEntry divergence between typed and map paths:\ntyped: %s\n  map: %s\ninput: %s", jt, jm, raw)
+	}
 }
 
 func SetFuzzLogger() {

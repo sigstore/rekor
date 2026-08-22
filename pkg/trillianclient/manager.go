@@ -23,11 +23,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
+	internalclient "github.com/sigstore/rekor/internal/trillianclient"
 	"github.com/sigstore/rekor/pkg/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -44,8 +46,8 @@ type ClientManager struct {
 
 	// Mutex for trillianClients map
 	clientMu sync.RWMutex
-	// trillianClients caches the TrillianClient wrappers.
-	trillianClients map[int64]*TrillianClient
+	// trillianClients caches the client wrappers.
+	trillianClients map[int64]internalclient.Client
 	// flag to indicate whether the client manager is shutting down
 	shutdown bool
 
@@ -61,7 +63,7 @@ func NewClientManager(treeIDToConfig map[int64]GRPCConfig, defaultConfig GRPCCon
 		connections:     make(map[GRPCConfig]*grpc.ClientConn),
 		treeIDToConfig:  treeIDToConfig,
 		defaultConfig:   defaultConfig,
-		trillianClients: make(map[int64]*TrillianClient),
+		trillianClients: make(map[int64]internalclient.Client),
 	}
 }
 
@@ -98,17 +100,17 @@ func (cm *ClientManager) getConn(treeID int64) (*grpc.ClientConn, error) {
 	return newConn, nil
 }
 
-// GetTrillianClient returns a Rekor Trillian client wrapper for the given tree ID.
-func (cm *ClientManager) GetTrillianClient(treeID int64) (*TrillianClient, error) {
+// GetClient returns a Rekor Trillian client wrapper for the given tree ID.
+func (cm *ClientManager) GetClient(treeID int64) (internalclient.Client, error) {
 	cm.clientMu.RLock()
 	if cm.shutdown {
 		cm.clientMu.RUnlock()
 		return nil, errors.New("client manager is shutting down")
 	}
-	client, ok := cm.trillianClients[treeID]
+	c, ok := cm.trillianClients[treeID]
 	cm.clientMu.RUnlock()
 	if ok {
-		return client, nil
+		return c, nil
 	}
 
 	conn, err := cm.getConn(treeID)
@@ -122,11 +124,11 @@ func (cm *ClientManager) GetTrillianClient(treeID int64) (*TrillianClient, error
 	if cm.shutdown {
 		return nil, errors.New("client manager is shutting down")
 	}
-	if client, ok = cm.trillianClients[treeID]; ok {
-		return client, nil
+	if c, ok = cm.trillianClients[treeID]; ok {
+		return c, nil
 	}
 
-	newClient := newTrillianClient(trillian.NewTrillianLogClient(conn), treeID)
+	newClient := newDirectTrillianClient(trillian.NewTrillianLogClient(conn), treeID)
 	cm.trillianClients[treeID] = newClient
 	return newClient, nil
 }
@@ -157,13 +159,25 @@ func CreateAndInitTree(ctx context.Context, config GRPCConfig) (*trillian.Tree, 
 	return t, nil
 }
 
+// cleanDialHostname strips gRPC resolver scheme prefixes (e.g. "dns:///")
+// from a hostname, returning the bare hostname suitable for TLS SNI and
+// certificate verification. The original address with its scheme must be
+// preserved for the grpc.NewClient target so the chosen resolver stays active.
+func cleanDialHostname(hostname string) string {
+	return strings.TrimPrefix(hostname, "dns:///")
+}
+
 func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStore bool, serviceConfig string) (*grpc.ClientConn, error) {
-	// Set up and test connection to rpc server
+	// Strip gRPC resolver scheme before TLS: if hostname is e.g.
+	// "dns:///host.svc", passing it raw into tls.Config.ServerName causes
+	// x509 verification to fail with `certificate valid for host.svc, not dns`.
+	cleanHostname := cleanDialHostname(hostname)
+
 	var creds credentials.TransportCredentials
 	switch {
 	case useSystemTrustStore:
 		creds = credentials.NewTLS(&tls.Config{
-			ServerName: hostname,
+			ServerName: cleanHostname,
 			MinVersion: tls.VersionTLS12,
 		})
 	case tlsCACertFile != "":
@@ -176,7 +190,7 @@ func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStor
 			return nil, fmt.Errorf("failed to append CA certificate to pool")
 		}
 		creds = credentials.NewTLS(&tls.Config{
-			ServerName: hostname,
+			ServerName: cleanHostname,
 			RootCAs:    certPool,
 			MinVersion: tls.VersionTLS12,
 		})
@@ -184,10 +198,17 @@ func dial(hostname string, port uint16, tlsCACertFile string, useSystemTrustStor
 		creds = insecure.NewCredentials()
 	}
 
-	opts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(creds),
+		grpc.WithAuthority(cleanHostname),
+	}
+
 	if serviceConfig != "" {
 		opts = append(opts, grpc.WithDefaultServiceConfig(serviceConfig))
 	}
+	// hostname (not cleanHostname) is intentional: the dns:/// scheme must
+	// reach grpc.NewClient so gRPC uses the DNS resolver for client-side
+	// load balancing. TLS and authority are handled separately above.
 	conn, err := grpc.NewClient(fmt.Sprintf("%s:%d", hostname, port), opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to RPC server: %w", err)
@@ -203,7 +224,7 @@ func (cm *ClientManager) Close() error {
 	// set shutdown flag to true and clear cache of clients
 	cm.clientMu.Lock()
 	cm.shutdown = true
-	cm.trillianClients = make(map[int64]*TrillianClient)
+	cm.trillianClients = make(map[int64]internalclient.Client)
 	cm.clientMu.Unlock()
 
 	cm.connMu.Lock()

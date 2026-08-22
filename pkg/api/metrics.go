@@ -54,7 +54,7 @@ var (
 		Help: "Api Latency (in ns) by path and method",
 		Buckets: prometheus.ExponentialBucketsRange(
 			float64(time.Millisecond),
-			float64(4*time.Second),
+			float64(60*time.Second),
 			10),
 	}, []string{"path", "method"})
 

@@ -44,7 +44,7 @@ func New() types.TypeImpl {
 	return &btt
 }
 
-var VersionMap = types.NewSemVerEntryFactoryMap()
+var VersionMap = types.NewEntryFactoryMap()
 
 func (btt BaseTufType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl, error) {
 	if pe == nil {
@@ -54,6 +54,10 @@ func (btt BaseTufType) UnmarshalEntry(pe models.ProposedEntry) (types.EntryImpl,
 	tuf, ok := pe.(*models.TUF)
 	if !ok {
 		return nil, fmt.Errorf("cannot unmarshal non-tuf types %+v", pe)
+	}
+
+	if tuf == nil {
+		return nil, errors.New("proposed entry cannot be nil")
 	}
 
 	if tuf.APIVersion == nil {

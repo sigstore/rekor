@@ -25,7 +25,8 @@ import (
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/jsonutils"
+	"github.com/go-openapi/swag/typeutils"
 	"github.com/go-openapi/validate"
 )
 
@@ -48,6 +49,11 @@ type SearchIndex struct {
 
 	// public key
 	PublicKey *SearchIndexPublicKey `json:"publicKey,omitempty"`
+
+	// A SAN value (URI, DNS, IP, OtherName) as stored on the entry. Lookup is case-insensitive — e.g. a GitHub OIDC SAN such as `https://github.com/owner/repo/.github/workflows/build.yml@refs/heads/main`.
+	// Max Length: 512
+	// Min Length: 1
+	Subject string `json:"subject,omitempty"`
 }
 
 // Validate validates this search index
@@ -70,6 +76,10 @@ func (m *SearchIndex) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateSubject(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
@@ -77,7 +87,7 @@ func (m *SearchIndex) Validate(formats strfmt.Registry) error {
 }
 
 func (m *SearchIndex) validateEmail(formats strfmt.Registry) error {
-	if swag.IsZero(m.Email) { // not required
+	if typeutils.IsZero(m.Email) { // not required
 		return nil
 	}
 
@@ -89,7 +99,7 @@ func (m *SearchIndex) validateEmail(formats strfmt.Registry) error {
 }
 
 func (m *SearchIndex) validateHash(formats strfmt.Registry) error {
-	if swag.IsZero(m.Hash) { // not required
+	if typeutils.IsZero(m.Hash) { // not required
 		return nil
 	}
 
@@ -130,7 +140,7 @@ func (m *SearchIndex) validateOperatorEnum(path, location string, value string) 
 }
 
 func (m *SearchIndex) validateOperator(formats strfmt.Registry) error {
-	if swag.IsZero(m.Operator) { // not required
+	if typeutils.IsZero(m.Operator) { // not required
 		return nil
 	}
 
@@ -143,7 +153,7 @@ func (m *SearchIndex) validateOperator(formats strfmt.Registry) error {
 }
 
 func (m *SearchIndex) validatePublicKey(formats strfmt.Registry) error {
-	if swag.IsZero(m.PublicKey) { // not required
+	if typeutils.IsZero(m.PublicKey) { // not required
 		return nil
 	}
 
@@ -160,6 +170,22 @@ func (m *SearchIndex) validatePublicKey(formats strfmt.Registry) error {
 
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (m *SearchIndex) validateSubject(formats strfmt.Registry) error {
+	if typeutils.IsZero(m.Subject) { // not required
+		return nil
+	}
+
+	if err := validate.MinLength("subject", "body", m.Subject, 1); err != nil {
+		return err
+	}
+
+	if err := validate.MaxLength("subject", "body", m.Subject, 512); err != nil {
+		return err
 	}
 
 	return nil
@@ -183,7 +209,7 @@ func (m *SearchIndex) contextValidatePublicKey(ctx context.Context, formats strf
 
 	if m.PublicKey != nil {
 
-		if swag.IsZero(m.PublicKey) { // not required
+		if typeutils.IsZero(m.PublicKey) { // not required
 			return nil
 		}
 
@@ -209,13 +235,13 @@ func (m *SearchIndex) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *SearchIndex) UnmarshalBinary(b []byte) error {
 	var res SearchIndex
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res
@@ -304,7 +330,7 @@ func (m *SearchIndexPublicKey) validateFormat(formats strfmt.Registry) error {
 }
 
 // ContextValidate validates this search index public key based on context it is used
-func (m *SearchIndexPublicKey) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m *SearchIndexPublicKey) ContextValidate(_ context.Context, _ strfmt.Registry) error {
 	return nil
 }
 
@@ -313,13 +339,13 @@ func (m *SearchIndexPublicKey) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
-	return swag.WriteJSON(m)
+	return jsonutils.WriteJSON(m)
 }
 
 // UnmarshalBinary interface implementation
 func (m *SearchIndexPublicKey) UnmarshalBinary(b []byte) error {
 	var res SearchIndexPublicKey
-	if err := swag.ReadJSON(b, &res); err != nil {
+	if err := jsonutils.ReadJSON(b, &res); err != nil {
 		return err
 	}
 	*m = res

@@ -58,6 +58,8 @@ func addSearchPFlags(cmd *cobra.Command) error {
 
 	cmd.Flags().Var(NewFlagValue(emailFlag, ""), "email", "email associated with the public key's subject")
 
+	cmd.Flags().Var(NewFlagValue(subjectFlag, ""), "subject", "Subject Alternative Name (URI, DNS, or OtherName) stored on the entry — e.g. a GitHub OIDC SAN like https://github.com/owner/repo/.github/workflows/build.yml@refs/heads/main. Lookup is case-insensitive.")
+
 	cmd.Flags().Var(NewFlagValue(operatorFlag, ""), "operator", "operator to use for the search. supported values are 'and' and 'or'")
 	return nil
 }
@@ -68,9 +70,10 @@ func validateSearchPFlags() error {
 	publicKey := viper.GetString("public-key")
 	sha := viper.GetString("sha")
 	email := viper.GetString("email")
+	subject := viper.GetString("subject")
 
-	if artifactStr == "" && publicKey == "" && sha == "" && email == "" {
-		return errors.New("either 'sha' or 'artifact' or 'public-key' or 'email' must be specified")
+	if artifactStr == "" && publicKey == "" && sha == "" && email == "" && subject == "" {
+		return errors.New("either 'sha' or 'artifact' or 'public-key' or 'email' or 'subject' must be specified")
 	}
 	if publicKey != "" {
 		if viper.GetString("pki-format") == "" {
@@ -82,9 +85,13 @@ func validateSearchPFlags() error {
 
 // searchCmd represents the get command
 var searchCmd = &cobra.Command{
-	Use:   "search",
+	Use: "search",
+	Example: `  rekor-cli search --artifact <path-or-url>
+  rekor-cli search --public-key <path> --pki-format=x509
+  rekor-cli search --email <email>
+  rekor-cli search --sha <sha256>`,
 	Short: "Rekor search command",
-	Long:  `Searches the Rekor index to find entries by sha, artifact,  public key, or e-mail`,
+	Long:  `Searches the Rekor index to find entries by sha, artifact, public key, e-mail, or SAN subject`,
 	PreRun: func(cmd *cobra.Command, _ []string) {
 		// these are bound here so that they are not overwritten by other commands
 		if err := viper.BindPFlags(cmd.Flags()); err != nil {
@@ -103,7 +110,7 @@ var searchCmd = &cobra.Command{
 			return nil, err
 		}
 
-		params := index.NewSearchIndexParamsWithContext(cmd.Context())
+		params := index.NewSearchIndexParams()
 		params.SetTimeout(viper.GetDuration("timeout"))
 		params.Query = &models.SearchIndex{}
 
@@ -192,7 +199,11 @@ var searchCmd = &cobra.Command{
 		if emailStr != "" {
 			params.Query.Email = strfmt.Email(emailStr)
 		}
-		resp, err := rekorClient.Index.SearchIndex(params)
+		subjectStr := viper.GetString("subject")
+		if subjectStr != "" {
+			params.Query.Subject = subjectStr
+		}
+		resp, err := rekorClient.Index.SearchIndexContext(cmd.Context(), params)
 		if err != nil {
 			switch t := err.(type) {
 			case *index.SearchIndexDefault:
