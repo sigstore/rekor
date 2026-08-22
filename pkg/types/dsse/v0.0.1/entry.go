@@ -64,17 +64,19 @@ type V001Entry struct {
 	isInsertable       bool
 }
 
-type indexKeyExtract struct {
-	Subject []struct {
-		Digest map[string]string `json:"digest"`
-	} `json:"subject"`
-	Predicate json.RawMessage `json:"predicate"`
+type digestExtract struct {
+	Digest map[string]string `json:"digest"`
 }
 
-type materialsExtract struct {
-	Materials []struct {
-		Digest map[string]string `json:"digest"`
-	} `json:"materials"`
+type subjectExtract struct {
+	Subject []digestExtract `json:"subject"`
+}
+
+type indexKeyExtract struct {
+	Subject   []digestExtract `json:"subject"`
+	Predicate *struct {
+		Materials []digestExtract `json:"materials"`
+	} `json:"predicate"`
 }
 
 func (v V001Entry) APIVersion() string {
@@ -267,11 +269,13 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		return errors.New("either proposedContent or envelopeHash, payloadHash, and signatures must be present but not both")
 	}
 
-	env := &dsse.Envelope{}
 	if dsseObj.ProposedContent.Envelope == nil {
 		return errors.New("proposed content envelope is missing")
 	}
-	if err := json.Unmarshal([]byte(*dsseObj.ProposedContent.Envelope), env); err != nil {
+
+	envelopeBytes := []byte(*dsseObj.ProposedContent.Envelope)
+	env := &dsse.Envelope{}
+	if err := json.Unmarshal(envelopeBytes, env); err != nil {
 		return err
 	}
 
@@ -292,6 +296,7 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	if err != nil {
 		return err
 	}
+	envelopeHash := sha256.Sum256(envelopeBytes)
 
 	// we need to ensure we canonicalize the ordering of signatures
 	sortedSigs := make([]string, 0, len(sigToKeyMap))
@@ -317,20 +322,31 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 	// extraction of index keys - done here so we can clear the huge strings from memory
 	if env.PayloadType == in_toto.PayloadType {
 		var extract indexKeyExtract
-		if err := json.Unmarshal(decodedPayload, &extract); err == nil {
-			for _, s := range extract.Subject {
-				for alg, ds := range s.Digest {
-					v.extractedIndexKeys = append(v.extractedIndexKeys, alg+":"+ds)
-				}
+		if err := json.Unmarshal(decodedPayload, &extract); err != nil {
+			// Predicate can legally have an arbitrary shape. Retry without decoding it
+			// so valid subject digests are still indexed.
+			var subjects subjectExtract
+			if err := json.Unmarshal(decodedPayload, &subjects); err == nil {
+				extract.Subject = subjects.Subject
 			}
-			if extract.Predicate != nil {
-				var materials materialsExtract
-				if err := json.Unmarshal(extract.Predicate, &materials); err == nil {
-					for _, m := range materials.Materials {
-						for alg, ds := range m.Digest {
-							v.extractedIndexKeys = append(v.extractedIndexKeys, alg+":"+ds)
-						}
-					}
+		}
+
+		for _, subject := range extract.Subject {
+			for algorithm, digest := range subject.Digest {
+				v.extractedIndexKeys = append(
+					v.extractedIndexKeys,
+					algorithm+":"+digest,
+				)
+			}
+		}
+
+		if extract.Predicate != nil {
+			for _, material := range extract.Predicate.Materials {
+				for algorithm, digest := range material.Digest {
+					v.extractedIndexKeys = append(
+						v.extractedIndexKeys,
+						algorithm+":"+digest,
+					)
 				}
 			}
 		}
@@ -342,7 +358,6 @@ func (v *V001Entry) Unmarshal(pe models.ProposedEntry) error {
 		Value:     conv.Pointer(hex.EncodeToString(payloadHash[:])),
 	}
 
-	envelopeHash := sha256.Sum256([]byte(*dsseObj.ProposedContent.Envelope))
 	dsseObj.EnvelopeHash = &models.DSSEV001SchemaEnvelopeHash{
 		Algorithm: conv.Pointer(models.DSSEV001SchemaEnvelopeHashAlgorithmSha256),
 		Value:     conv.Pointer(hex.EncodeToString(envelopeHash[:])),
