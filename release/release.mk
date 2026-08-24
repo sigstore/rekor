@@ -5,12 +5,12 @@
 # used when releasing together with GCP CloudBuild
 .PHONY: release
 release:
-	CLI_LDFLAGS="$(CLI_LDFLAGS)" SERVER_LDFLAGS="$(SERVER_LDFLAGS)" goreleaser release --clean --timeout 120m
+	CLI_LDFLAGS="$(CLI_LDFLAGS)" SERVER_LDFLAGS="$(SERVER_LDFLAGS)" goreleaser release --clean --timeout 120m --verbose
 
 # used when need to validate the goreleaser
 .PHONY: snapshot
 snapshot:
-	CLI_LDFLAGS="$(CLI_LDFLAGS)" SERVER_LDFLAGS="$(SERVER_LDFLAGS)" goreleaser release --skip=sign,publish --snapshot --clean --timeout 120m
+	CLI_LDFLAGS="$(CLI_LDFLAGS)" SERVER_LDFLAGS="$(SERVER_LDFLAGS)" goreleaser release --skip=sign,publish --snapshot --clean --timeout 120m --verbose
 
 ###########################
 # sign section
