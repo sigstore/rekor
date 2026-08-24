@@ -53,7 +53,7 @@ require (
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-openapi/swag/cmdutils v0.29.0
 	github.com/go-openapi/swag/conv v0.29.0
-	github.com/go-openapi/swag/jsonutils v0.28.0
+	github.com/go-openapi/swag/jsonutils v0.29.0
 	github.com/go-openapi/swag/netutils v0.26.1
 	github.com/go-openapi/swag/typeutils v0.29.0
 	github.com/go-redis/redismock/v9 v9.2.0
@@ -133,7 +133,7 @@ require (
 	github.com/go-openapi/swag/fileutils v0.28.0 // indirect
 	github.com/go-openapi/swag/loading v0.28.0 // indirect
 	github.com/go-openapi/swag/mangling v0.28.0 // indirect
-	github.com/go-openapi/swag/pools v0.28.0 // indirect
+	github.com/go-openapi/swag/pools v0.29.0 // indirect
 	github.com/go-openapi/swag/stringutils v0.28.0 // indirect
 	github.com/go-openapi/swag/yamlutils v0.28.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
