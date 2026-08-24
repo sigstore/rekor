@@ -713,10 +713,7 @@ func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, e
 
 	uuid, err := sharding.GetUUIDFromIDString(entryUUID)
 	if err != nil {
-		if len(entryUUID) == sharding.EntryIDHexStringLen {
-			return nil, &types.InputValidationError{Err: err}
-		}
-		return nil, sharding.ErrPlainUUID
+		return nil, &types.InputValidationError{Err: err}
 	}
 
 	// Get the tree ID and check that shard for the entry
