@@ -50,6 +50,7 @@ func TestReadPublicKey(t *testing.T) {
 		{caseDesc: "Binary private key (should fail)", inputFile: "testdata/binary_private.pgp", errorFound: true},
 		{caseDesc: "Valid binary public key", inputFile: "testdata/valid_binary_public.pgp", errorFound: false},
 		{caseDesc: "Valid binary public key with multiple subentries", inputFile: "testdata/valid_binary_complex_public.pgp", errorFound: false},
+		{caseDesc: "Valid armored public key for V3 signature", inputFile: "testdata/repomd_armored_public.pgp", errorFound: false},
 	}
 
 	for _, tc := range tests {
@@ -76,8 +77,10 @@ func TestReadSignature(t *testing.T) {
 		{caseDesc: "Invalid armored signature", inputFile: "testdata/valid_armored_public.pgp", errorFound: true},
 		{caseDesc: "Valid armored signature", inputFile: "testdata/hello_world.txt.asc.sig", errorFound: false},
 		{caseDesc: "Valid binary signature", inputFile: "testdata/hello_world.txt.sig", errorFound: false},
-		{caseDesc: "Valid armored V3 signature", inputFile: "testdata/hello_world.txt.asc.v3.sig", errorFound: false},
-		{caseDesc: "Valid binary V3 signature", inputFile: "testdata/hello_world.txt.v3.sig", errorFound: false},
+		{caseDesc: "Valid armored V4 signature", inputFile: "testdata/hello_world.txt.asc.v4.sig", errorFound: false},
+		{caseDesc: "Valid binary V4 signature", inputFile: "testdata/hello_world.txt.v4.sig", errorFound: false},
+		{caseDesc: "Valid armored V3 signature", inputFile: "testdata/repomd.xml.asc.sig", errorFound: false},
+		{caseDesc: "Valid binary V3 signature", inputFile: "testdata/repomd.xml.sig", errorFound: false},
 	}
 
 	for _, tc := range tests {
@@ -221,17 +224,31 @@ func TestCanonicalValueSignature(t *testing.T) {
 			expectSuccess: true,
 		},
 		{
-			caseDesc:      "Binary V3 signature and canonicalized (armored) signature both verify the same file",
+			caseDesc:      "Binary V4 signature and canonicalized (armored) signature both verify the same file",
 			inputFile:     "testdata/hello_world.txt",
 			keyFile:       "testdata/valid_armored_public.pgp",
-			sigFile:       "testdata/hello_world.txt.v3.sig",
+			sigFile:       "testdata/hello_world.txt.v4.sig",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "Armored V4 signature and canonicalized (armored) signature both verify the same file",
+			inputFile:     "testdata/hello_world.txt",
+			keyFile:       "testdata/valid_armored_public.pgp",
+			sigFile:       "testdata/hello_world.txt.asc.v4.sig",
+			expectSuccess: true,
+		},
+		{
+			caseDesc:      "Binary V3 signature and canonicalized (armored) signature both verify the same file",
+			inputFile:     "testdata/repomd.xml",
+			keyFile:       "testdata/repomd_armored_public.pgp",
+			sigFile:       "testdata/repomd.xml.sig",
 			expectSuccess: true,
 		},
 		{
 			caseDesc:      "Armored V3 signature and canonicalized (armored) signature both verify the same file",
-			inputFile:     "testdata/hello_world.txt",
-			keyFile:       "testdata/valid_armored_public.pgp",
-			sigFile:       "testdata/hello_world.txt.asc.v3.sig",
+			inputFile:     "testdata/repomd.xml",
+			keyFile:       "testdata/repomd_armored_public.pgp",
+			sigFile:       "testdata/repomd.xml.asc.sig",
 			expectSuccess: true,
 		},
 	}
@@ -414,10 +431,13 @@ func TestVerifySignature(t *testing.T) {
 		{caseDesc: "Valid Armored Signature, Binary Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.asc.sig", keyFile: "testdata/valid_binary_public.pgp", verified: true},
 		{caseDesc: "Valid Binary Signature, Armored Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.sig", keyFile: "testdata/valid_armored_public.pgp", verified: true},
 		{caseDesc: "Valid Binary Signature, Binary Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.sig", keyFile: "testdata/valid_binary_public.pgp", verified: true},
-		{caseDesc: "Valid V3 Armored Signature, Armored Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.asc.v3.sig", keyFile: "testdata/valid_armored_public.pgp", verified: true},
-		{caseDesc: "Valid V3 Armored Signature, Binary Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.asc.v3.sig", keyFile: "testdata/valid_binary_public.pgp", verified: true},
-		{caseDesc: "Valid V3 Binary Signature, Armored Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.v3.sig", keyFile: "testdata/valid_armored_public.pgp", verified: true},
-		{caseDesc: "Valid V3 Binary Signature, Binary Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.v3.sig", keyFile: "testdata/valid_binary_public.pgp", verified: true},
+		{caseDesc: "Valid V4 Armored Signature, Armored Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.asc.v4.sig", keyFile: "testdata/valid_armored_public.pgp", verified: true},
+		{caseDesc: "Valid V4 Armored Signature, Binary Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.asc.v4.sig", keyFile: "testdata/valid_binary_public.pgp", verified: true},
+		{caseDesc: "Valid V4 Binary Signature, Armored Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.v4.sig", keyFile: "testdata/valid_armored_public.pgp", verified: true},
+		{caseDesc: "Valid V4 Binary Signature, Binary Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.v4.sig", keyFile: "testdata/valid_binary_public.pgp", verified: true},
+		{caseDesc: "Valid V3 Armored Signature, Armored Key", dataFile: "testdata/repomd.xml", sigFile: "testdata/repomd.xml.asc.sig", keyFile: "testdata/repomd_armored_public.pgp", verified: true},
+		{caseDesc: "Valid V3 Binary Signature, Armored Key", dataFile: "testdata/repomd.xml", sigFile: "testdata/repomd.xml.sig", keyFile: "testdata/repomd_armored_public.pgp", verified: true},
+		{caseDesc: "Valid V3 Signature, Incorrect Key", dataFile: "testdata/repomd.xml", sigFile: "testdata/repomd.xml.asc.sig", keyFile: "testdata/valid_armored_public.pgp", verified: false},
 		{caseDesc: "Valid Signature, Incorrect Key", dataFile: "testdata/hello_world.txt", sigFile: "testdata/hello_world.txt.sig", keyFile: "testdata/valid_binary_complex_public.pgp", verified: false},
 		{caseDesc: "Data does not match Signature", dataFile: "testdata/armored_private.pgp", sigFile: "testdata/hello_world.txt.sig", keyFile: "testdata/valid_binary_complex_public.pgp", verified: false},
 	}

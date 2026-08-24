@@ -228,3 +228,5 @@ require (
 	google.golang.org/api v0.290.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/ProtonMail/go-crypto => github.com/pgpkeys-eu/go-crypto v1.4.2-0.20260816224830-d2a8cc303a65

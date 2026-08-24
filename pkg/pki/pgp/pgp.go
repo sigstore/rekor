@@ -82,7 +82,9 @@ func NewSignature(r io.Reader) (*Signature, error) {
 		return nil, fmt.Errorf("invalid PGP signature: %w", err)
 	}
 
-	if _, ok := sigPkt.(*packet.Signature); !ok {
+	switch sigPkt.(type) {
+	case *packet.Signature, *packet.SignatureV3:
+	default:
 		return nil, errors.New("valid PGP signature was not detected")
 	}
 
@@ -171,8 +173,13 @@ func (s Signature) Verify(r io.Reader, k interface{}, _ ...sigsig.VerifyOption) 
 	if err != nil {
 		return fmt.Errorf("error reading PGP signature: %w", err)
 	}
-	sig, ok := sigPkt.(*packet.Signature)
-	if !ok {
+	var creationTime time.Time
+	switch sig := sigPkt.(type) {
+	case *packet.Signature:
+		creationTime = sig.CreationTime
+	case *packet.SignatureV3:
+		creationTime = sig.CreationTime
+	default:
 		return errors.New("valid PGP signature was not detected")
 	}
 
@@ -181,7 +188,7 @@ func (s Signature) Verify(r io.Reader, k interface{}, _ ...sigsig.VerifyOption) 
 	// still verify after key expiry, matching prior x/crypto/openpgp behavior
 	// needed for transparency-log replay and existing fixtures.
 	cfg := &packet.Config{
-		Time: func() time.Time { return sig.CreationTime },
+		Time: func() time.Time { return creationTime },
 	}
 	if _, err := sigReader.Seek(0, io.SeekStart); err != nil {
 		return err
