@@ -50,21 +50,28 @@ func TestRetrieveUUIDFromTree_UnconfiguredTreeID(t *testing.T) {
 	}
 }
 
-func TestGetLogEntryByUUIDHandler_InvalidTreeID(t *testing.T) {
-	invalidEntryID := "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-
-	req := httptest.NewRequest("GET", "/api/v1/log/entries/"+invalidEntryID, nil)
-	params := entries.GetLogEntryByUUIDParams{
-		HTTPRequest: req,
-		EntryUUID:   invalidEntryID,
+func TestGetLogEntryByUUIDHandler_InvalidID(t *testing.T) {
+	tests := map[string]string{
+		"invalid tree ID": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		"malformed UUID":  "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
 	}
 
-	responder := GetLogEntryByUUIDHandler(params)
+	for name, invalidID := range tests {
+		t.Run(name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/api/v1/log/entries/"+invalidID, nil)
+			params := entries.GetLogEntryByUUIDParams{
+				HTTPRequest: req,
+				EntryUUID:   invalidID,
+			}
 
-	recorder := httptest.NewRecorder()
-	responder.WriteResponse(recorder, runtime.JSONProducer())
+			responder := GetLogEntryByUUIDHandler(params)
 
-	if recorder.Code != http.StatusBadRequest {
-		t.Errorf("Expected status code %d (Bad Request), got %d", http.StatusBadRequest, recorder.Code)
+			recorder := httptest.NewRecorder()
+			responder.WriteResponse(recorder, runtime.JSONProducer())
+
+			if recorder.Code != http.StatusBadRequest {
+				t.Errorf("Expected status code %d (Bad Request), got %d", http.StatusBadRequest, recorder.Code)
+			}
+		})
 	}
 }
