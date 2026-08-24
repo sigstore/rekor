@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: all test clean clean-gen lint gosec ko ko-local cross-cli gocovmerge
+.PHONY: all test clean clean-gen lint gosec ko ko-local cross-cli
 
 all: rekor-cli rekor-server ## Build all binaries (rekor-cli and rekor-server)
 
@@ -54,7 +54,6 @@ GOBIN ?= $(shell go env GOPATH)/bin
 # Binaries
 SWAGGER := $(TOOLS_BIN_DIR)/swagger
 GO-FUZZ-BUILD := $(TOOLS_BIN_DIR)/go-fuzz-build
-GOCOVMERGE := $(TOOLS_BIN_DIR)/gocovmerge
 
 REKOR_LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
               -X sigs.k8s.io/release-utils/version.gitCommit=$(GIT_HASH) \
@@ -88,8 +87,6 @@ backfill-index: $(SRCS) ## Build the backfill-index utility
 
 test: ## Run all tests
 	go test ./...
-
-gocovmerge: $(GOCOVMERGE) ## Merge coverage profiles
 
 clean: ## Remove built binaries and artifacts
 	rm -rf dist
@@ -221,9 +218,6 @@ $(GO-FUZZ-BUILD): $(TOOLS_DIR)/go.mod ## Build go-fuzz-build tool
 
 $(SWAGGER): $(TOOLS_DIR)/go.mod ## Build swagger tool
 	cd $(TOOLS_DIR); go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/swagger github.com/go-swagger/go-swagger/cmd/swagger
-
-$(GOCOVMERGE): $(TOOLS_DIR)/go.mod ## Build gocovmerge tool
-	cd $(TOOLS_DIR); go build -trimpath -tags=tools -o $(TOOLS_BIN_DIR)/gocovmerge github.com/wadey/gocovmerge
 
 ##################
 # help

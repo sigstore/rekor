@@ -47,16 +47,13 @@ func outputContains(t *testing.T, output, sub string) {
 
 func run(t *testing.T, stdin, cmd string, arg ...string) string {
 	t.Helper()
-	// Coverage flag must be the first arg passed to coverage binary
-	// No impact when running with regular binary
-	arg = append([]string{coverageFlag()}, arg...)
 	c := exec.Command(cmd, arg...)
 	if stdin != "" {
 		c.Stdin = strings.NewReader(stdin)
 	}
 	if os.Getenv("REKORTMPDIR") != "" {
 		// ensure that we use a clean state.json file for each run
-		c.Env = append(c.Env, "HOME="+os.Getenv("REKORTMPDIR"))
+		c.Env = append(os.Environ(), "HOME="+os.Getenv("REKORTMPDIR"))
 	}
 	b, err := c.CombinedOutput()
 	if err != nil {
@@ -78,15 +75,12 @@ func runCli(t *testing.T, arg ...string) string {
 
 func runCliStdout(t *testing.T, arg ...string) string {
 	t.Helper()
-	// Coverage flag must be the first arg passed to coverage binary
-	// No impact when running with regular binary
-	arg = append([]string{coverageFlag()}, arg...)
 	arg = append(arg, rekorServerFlag())
 	c := exec.Command(cli, arg...)
 
 	if os.Getenv("REKORTMPDIR") != "" {
 		// ensure that we use a clean state.json file for each run
-		c.Env = append(c.Env, "HOME="+os.Getenv("REKORTMPDIR"))
+		c.Env = append(os.Environ(), "HOME="+os.Getenv("REKORTMPDIR"))
 	}
 	b, err := c.Output()
 	if err != nil {
@@ -98,9 +92,6 @@ func runCliStdout(t *testing.T, arg ...string) string {
 
 func runCliErr(t *testing.T, arg ...string) string {
 	t.Helper()
-	// Coverage flag must be the first arg passed to coverage binary
-	// No impact when running with regular binary
-	arg = append([]string{coverageFlag()}, arg...)
 	arg = append(arg, rekorServerFlag())
 	// use a blank config file to ensure no collision
 	if os.Getenv("REKORTMPDIR") != "" {
@@ -124,10 +115,6 @@ func rekorServer() string {
 		return s
 	}
 	return "http://localhost:3000"
-}
-
-func coverageFlag() string {
-	return "-test.coverprofile=/tmp/rekor-cli." + randomSuffix(8) + ".cov"
 }
 
 func stripCoverageOutput(out string) string {

@@ -5,7 +5,6 @@ go 1.25.0
 require (
 	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230329111138-12e09aba5ebd
 	github.com/go-swagger/go-swagger v0.36.4
-	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
 )
 
 require (
