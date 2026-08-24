@@ -29,7 +29,7 @@ ADD ./internal/ $APP_ROOT/src/internal/
 ARG SERVER_LDFLAGS
 RUN go build -ldflags "${SERVER_LDFLAGS}" ./cmd/rekor-server
 RUN CGO_ENABLED=0 go build -gcflags "all=-N -l" -ldflags "${SERVER_LDFLAGS}" -o rekor-server_debug ./cmd/rekor-server
-RUN go test -c -ldflags "${SERVER_LDFLAGS}" -cover -covermode=count -coverpkg=./... -o rekor-server_test ./cmd/rekor-server
+RUN go build -ldflags "${SERVER_LDFLAGS}" -cover -covermode=count -coverpkg=./... -o rekor-server_test ./cmd/rekor-server
 
 # Multi-Stage production build
 FROM golang:1.27.0@sha256:65b6f280bf050ec5af12716857e8ea8439d694dbba8f31ceeb7630670071f2bb AS deploy
@@ -50,3 +50,4 @@ COPY --from=builder /opt/app-root/src/rekor-server_debug /usr/local/bin/rekor-se
 FROM deploy AS test
 # overwrite server with test build with code coverage
 COPY --from=builder /opt/app-root/src/rekor-server_test /usr/local/bin/rekor-server
+RUN mkdir -p /go/coverage

@@ -22,9 +22,9 @@ if ! ${docker_compose} version >/dev/null 2>&1; then
     docker_compose="docker-compose -f docker-compose.yml -f docker-compose.test.yml"
 fi
 
-rm -f /tmp/pkg-rekor-*.cov
-echo "installing gocovmerge"
-make gocovmerge
+coverage_dir=$(mktemp -d -t pkg_rekor_coverage.XXXXXX)
+mkdir -p "$coverage_dir/cli" "$coverage_dir/server" "$coverage_dir/merged"
+trap 'rm -rf "$coverage_dir"' EXIT
 
 echo "building test-only containers"
 docker build -t gcp-pubsub-emulator -f Dockerfile.pubsub-emulator .
@@ -36,8 +36,8 @@ ${docker_compose} up -d --build
 echo "building CLI and server"
 # set the path to the root of the repo
 dir=$(git rev-parse --show-toplevel)
-go test -c ./cmd/rekor-cli -o rekor-cli -cover -covermode=count -coverpkg=./...
-go test -c ./cmd/rekor-server -o rekor-server -covermode=count -coverpkg=./...
+go build -o rekor-cli -cover -covermode=count -coverpkg=./... ./cmd/rekor-cli
+go build -o rekor-server -cover -covermode=count -coverpkg=./... ./cmd/rekor-server
 
 count=0
 echo -n "waiting up to 120 sec for system to start"
@@ -58,8 +58,8 @@ echo "running tests"
 REKORTMPDIR="$(mktemp -d -t rekor_test.XXXXXX)"
 cp $dir/rekor-cli $REKORTMPDIR/rekor-cli
 touch $REKORTMPDIR.rekor.yaml
-trap "rm -rf $REKORTMPDIR" EXIT
-if ! REKORTMPDIR=$REKORTMPDIR go test  -tags=e2e $(go list ./... | grep -v ./tests) ; then
+trap 'rm -rf "$REKORTMPDIR" "$coverage_dir"' EXIT
+if ! GOCOVERDIR="$coverage_dir/cli" REKORTMPDIR=$REKORTMPDIR go test -tags=e2e $(go list ./... | grep -v ./tests) ; then
    ${docker_compose} logs --no-color > /tmp/docker-compose.log
    exit 1
 fi
@@ -71,15 +71,17 @@ if ${docker_compose} logs --no-color | grep -q "panic: runtime error:" ; then
 fi
 
 echo "generating code coverage"
-${docker_compose} restart rekor-server
+${docker_compose} stop rekor-server
 
-if ! docker cp $(docker ps -aqf "name=rekor_rekor-server" -f "name=rekor-rekor-server"):go/rekor-server.cov /tmp/pkg-rekor-server.cov ; then
+if ! docker cp $(docker ps -aqf "name=rekor_rekor-server" -f "name=rekor-rekor-server"):/go/coverage/. "$coverage_dir/server" ; then
    # failed to copy code coverage report from server
    echo "Failed to retrieve server code coverage report"
    ${docker_compose} logs --no-color > /tmp/docker-compose.log
    exit 1
 fi
 
-# merging coverage reports and filtering out /pkg/generated from final report
-hack/tools/bin/gocovmerge /tmp/pkg-rekor-*.cov | grep -v "/pkg/generated/" > /tmp/pkg-rekor-merged.cov
+# Merge the binary coverage data, convert it to a cover profile, and filter generated code.
+go tool covdata merge -i="$coverage_dir/cli,$coverage_dir/server" -o="$coverage_dir/merged"
+go tool covdata textfmt -i="$coverage_dir/merged" -o="$coverage_dir/all.cov"
+grep -v "/pkg/generated/" "$coverage_dir/all.cov" > /tmp/pkg-rekor-merged.cov
 echo "code coverage $(go tool cover -func=/tmp/pkg-rekor-merged.cov | grep -E '^total\:' | sed -E 's/\s+/ /g')"

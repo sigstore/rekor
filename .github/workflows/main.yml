@@ -99,9 +99,6 @@ jobs:
         with:
           go-version: ${{ env.GOVERSION }}
           cache: false
-      - name: install gocovmerge
-        run: make gocovmerge
-
       - name: CLI mysql index
         run: ./tests/e2e-test.sh
         env:

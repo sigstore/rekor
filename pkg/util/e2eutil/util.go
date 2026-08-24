@@ -280,14 +280,13 @@ func OutputContains(t *testing.T, output, sub string) {
 
 func Run(t *testing.T, stdin, cmd string, arg ...string) string {
 	t.Helper()
-	arg = append([]string{coverageFlag()}, arg...)
 	c := exec.Command(cmd, arg...)
 	if stdin != "" {
 		c.Stdin = strings.NewReader(stdin)
 	}
 	if os.Getenv("REKORTMPDIR") != "" {
 		// ensure that we use a clean state.json file for each Run
-		c.Env = append(c.Env, "HOME="+os.Getenv("REKORTMPDIR"))
+		c.Env = append(os.Environ(), "HOME="+os.Getenv("REKORTMPDIR"))
 	}
 	b, err := c.CombinedOutput()
 	if err != nil {
@@ -309,7 +308,6 @@ func RunCli(t *testing.T, arg ...string) string {
 
 func RunCliErr(t *testing.T, arg ...string) string {
 	t.Helper()
-	arg = append([]string{coverageFlag()}, arg...)
 	arg = append(arg, rekorServerFlag())
 	// use a blank config file to ensure no collision
 	if os.Getenv("REKORTMPDIR") != "" {
@@ -333,10 +331,6 @@ func rekorServer() string {
 		return s
 	}
 	return "http://localhost:3000"
-}
-
-func coverageFlag() string {
-	return "-test.coverprofile=/tmp/pkg-rekor-cli." + RandomSuffix(8) + ".cov"
 }
 
 func stripCoverageOutput(out string) string {
