@@ -1,3 +1,38 @@
+# v1.5.5
+
+## Features
+
+* feat: serve the API over TLS with a configurable TLS policy (#2920)
+
+## Bug Fixes
+
+* re-implement pgp v3 signature support (#3018)
+* fix broken PGP sigv3 parsing, add tests (#2959)
+* ensure invalid treeIDs always return with 400 errors (#2958)
+* use WithCancel ctx for async tasks (#2947)
+* Update 413 status code error handling (#2813)
+
+## Improvements
+
+* Replace cyberphone/json-canonicalization with encoding/json/jsontext (#3028)
+* Replace hashicorp/go-retryablehttp with std lib retry transport (#2933)
+* Drop patch version from go directive in go.mod (#3027)
+* Bump sigstore/sigstore to v1.11, bump min Go version to 1.27, modernize code (#2992)
+* bump go-openapi and mysql driver (#2985)
+* remove gocovmerge for go tool cover (#2963)
+* build releases w/ go 1.27.0 toolchain (#2960)
+* dsse parsing cpu/memory optimization (#2946)
+* numerous upgraded dependencies
+* builds use go 1.27 (including JSON, gc improvements)
+
+## Contributors
+
+* Anitha Natarajan
+* Bob Callaway
+* Hayden
+* Radoslav Dimitrov
+* Stef Graces
+
 # v1.5.4
 
 ## Features
