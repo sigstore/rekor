@@ -31,10 +31,12 @@ import (
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	pgperrors "github.com/ProtonMail/go-crypto/openpgp/errors"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/asaskevich/govalidator"
 
 	"github.com/sigstore/rekor/pkg/pki/identity"
+	"github.com/sigstore/rekor/pkg/pki/pgp/internal/sigv3"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
@@ -43,6 +45,52 @@ import (
 type Signature struct {
 	isArmored bool
 	signature []byte
+}
+
+type parsedSignature struct {
+	v3 *sigv3.Signature
+	v4 *packet.Signature
+}
+
+func isSkippablePacketError(err error) bool {
+	// Detached-signature streams cannot meaningfully contain data packets, so
+	// all unknown and unsupported packets are ignored while looking for a
+	// signature, including types packet.Reader treats more conservatively.
+	switch err.(type) {
+	case pgperrors.UnknownPacketTypeError, pgperrors.UnsupportedError:
+		return true
+	default:
+		return false
+	}
+}
+
+func parseSignaturePacket(op *packet.OpaquePacket) (*parsedSignature, bool, error) {
+	if sigv3.IsV3Packet(op.Tag, op.Contents) {
+		sig, err := sigv3.Parse(op.Contents)
+		if isSkippablePacketError(err) {
+			return nil, true, nil
+		}
+		if err != nil {
+			return nil, false, err
+		}
+		return &parsedSignature{v3: sig}, false, nil
+	}
+
+	p, err := op.Parse()
+	if isSkippablePacketError(err) {
+		return nil, true, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	switch p := p.(type) {
+	case *packet.Marker:
+		return nil, true, nil
+	case *packet.Signature:
+		return &parsedSignature{v4: p}, false, nil
+	default:
+		return nil, false, pgperrors.StructuralError("non signature packet found")
+	}
 }
 
 // NewSignature creates and validates a PGP signature object
@@ -76,20 +124,84 @@ func NewSignature(r io.Reader) (*Signature, error) {
 		sigReader = sigByteReader
 	}
 
-	sigPktReader := packet.NewReader(sigReader)
-	sigPkt, err := sigPktReader.Next()
+	sigBody, err := io.ReadAll(sigReader)
 	if err != nil {
-		return nil, fmt.Errorf("invalid PGP signature: %w", err)
+		return nil, fmt.Errorf("unable to read PGP signature: %w", err)
 	}
 
-	switch sigPkt.(type) {
-	case *packet.Signature, *packet.SignatureV3:
-	default:
-		return nil, errors.New("valid PGP signature was not detected")
+	packets := packet.NewOpaqueReader(bytes.NewReader(sigBody))
+	for {
+		op, err := packets.Next()
+		if err != nil {
+			return nil, fmt.Errorf("invalid PGP signature: %w", err)
+		}
+		_, skip, err := parseSignaturePacket(op)
+		if err != nil {
+			return nil, fmt.Errorf("invalid PGP signature: %w", err)
+		}
+		if !skip {
+			break
+		}
 	}
 
 	s.signature = inputBuffer.Bytes()
 	return &s, nil
+}
+
+// verifyDetached verifies the first signature whose issuer is present in
+// keyring, including legacy v3 signatures unsupported by packet.Read.
+func verifyDetached(keyring openpgp.EntityList, signed io.Reader, body []byte) error {
+	r := bytes.NewReader(body)
+	packets := packet.NewOpaqueReader(r)
+	var verificationTime time.Time
+
+	for {
+		packetStart := len(body) - r.Len()
+		op, err := packets.Next()
+		if err == io.EOF {
+			return pgperrors.ErrUnknownIssuer
+		}
+		if err != nil {
+			return err
+		}
+		packetEnd := len(body) - r.Len()
+
+		sig, skip, err := parseSignaturePacket(op)
+		if err != nil {
+			return err
+		}
+		if skip {
+			continue
+		}
+
+		if sig.v3 != nil {
+			if verificationTime.IsZero() {
+				verificationTime = sig.v3.CreationTime
+			}
+			keys := keyring.KeysByIdUsage(sig.v3.IssuerKeyID, packet.KeyFlagSign)
+			if len(keys) == 0 {
+				continue
+			}
+			_, err = sig.v3.VerifyDetached(keys, signed)
+			return err
+		}
+
+		if verificationTime.IsZero() {
+			verificationTime = sig.v4.CreationTime
+		}
+		if sig.v4.IssuerKeyId == nil {
+			return pgperrors.StructuralError("signature doesn't have an issuer")
+		}
+		if len(keyring.KeysByIdUsage(*sig.v4.IssuerKeyId, packet.KeyFlagSign)) == 0 {
+			continue
+		}
+
+		// Check key validity when the signature stream was created, allowing
+		// historical entries to verify after their signing key expires.
+		cfg := &packet.Config{Time: func() time.Time { return verificationTime }}
+		_, err = openpgp.CheckDetachedSignature(keyring, signed, bytes.NewReader(body[packetStart:packetEnd]), cfg)
+		return err
+	}
 }
 
 // FetchSignature implements pki.Signature interface
@@ -156,53 +268,19 @@ func (s Signature) Verify(r io.Reader, k interface{}, _ ...sigsig.VerifyOption) 
 		return errors.New("PGP public key has not been initialized")
 	}
 
-	sigReader := bytes.NewReader(s.signature)
-	var (
-		sigPkt packet.Packet
-		err    error
-	)
+	sigBody := s.signature
 	if s.isArmored {
-		block, decodeErr := armor.Decode(sigReader)
+		block, decodeErr := armor.Decode(bytes.NewReader(s.signature))
 		if decodeErr != nil {
 			return fmt.Errorf("error decoding armored PGP signature: %w", decodeErr)
 		}
-		sigPkt, err = packet.Read(block.Body)
-	} else {
-		sigPkt, err = packet.Read(sigReader)
-	}
-	if err != nil {
-		return fmt.Errorf("error reading PGP signature: %w", err)
-	}
-	var creationTime time.Time
-	switch sig := sigPkt.(type) {
-	case *packet.Signature:
-		creationTime = sig.CreationTime
-	case *packet.SignatureV3:
-		creationTime = sig.CreationTime
-	default:
-		return errors.New("valid PGP signature was not detected")
+		var err error
+		if sigBody, err = io.ReadAll(block.Body); err != nil {
+			return fmt.Errorf("error reading armored PGP signature: %w", err)
+		}
 	}
 
-	// ProtonMail's verifier checks key validity against Config.Time (default:
-	// now). Use the signature creation time so historically valid signatures
-	// still verify after key expiry, matching prior x/crypto/openpgp behavior
-	// needed for transparency-log replay and existing fixtures.
-	cfg := &packet.Config{
-		Time: func() time.Time { return creationTime },
-	}
-	if _, err := sigReader.Seek(0, io.SeekStart); err != nil {
-		return err
-	}
-	if s.isArmored {
-		_, err = openpgp.CheckArmoredDetachedSignature(key.key, r, sigReader, cfg)
-	} else {
-		_, err = openpgp.CheckDetachedSignature(key.key, r, sigReader, cfg)
-	}
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return verifyDetached(key.key, r, sigBody)
 }
 
 // PublicKey Public Key that follows the PGP standard; supports both armored & binary detached signatures
