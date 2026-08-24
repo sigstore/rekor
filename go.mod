@@ -51,7 +51,7 @@ require (
 	github.com/ProtonMail/go-crypto v1.4.1
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7
 	github.com/go-chi/chi/v5 v5.3.2
-	github.com/go-openapi/swag/cmdutils v0.26.1
+	github.com/go-openapi/swag/cmdutils v0.29.0
 	github.com/go-openapi/swag/conv v0.29.0
 	github.com/go-openapi/swag/jsonutils v0.28.0
 	github.com/go-openapi/swag/netutils v0.26.1
