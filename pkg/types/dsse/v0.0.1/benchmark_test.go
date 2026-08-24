@@ -297,6 +297,7 @@ func benchmarkUnmarshalBefore(v *V001Entry, pe models.ProposedEntry) error {
 		})
 	}
 
+	// old index key extraction struct defs pre #2946
 	type indexKeyExtract struct {
 		Subject []struct {
 			Digest map[string]string `json:"digest"`
