@@ -297,6 +297,19 @@ func benchmarkUnmarshalBefore(v *V001Entry, pe models.ProposedEntry) error {
 		})
 	}
 
+	// old index key extraction struct defs pre #2946
+	type indexKeyExtract struct {
+		Subject []struct {
+			Digest map[string]string `json:"digest"`
+		} `json:"subject"`
+		Predicate json.RawMessage `json:"predicate"`
+	}
+	type materialsExtract struct {
+		Materials []struct {
+			Digest map[string]string `json:"digest"`
+		} `json:"materials"`
+	}
+
 	if env.PayloadType == in_toto.PayloadType {
 		var extract indexKeyExtract
 		if err := json.Unmarshal(decodedPayload, &extract); err == nil {
