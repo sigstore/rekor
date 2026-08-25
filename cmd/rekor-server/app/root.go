@@ -26,6 +26,7 @@ import (
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/sigstore/rekor/internal/config"
+	"github.com/sigstore/rekor/internal/tlspolicy"
 	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types"
@@ -181,7 +182,28 @@ Memory and file-based signers should only be used for testing.`)
 	keyAlgorithmHelp := fmt.Sprintf("signing algorithm to use for signing/hashing (allowed %s)", strings.Join(keyAlgorithmTypes, ", "))
 	rootCmd.PersistentFlags().StringSlice("client-signing-algorithms", keyAlgorithmTypes, keyAlgorithmHelp)
 
+	// TLS on the API listener.
+	tlsCipherSuitesHelp := fmt.Sprintf("allowed cipher suites for the API listener (comma-separated); applies to TLS 1.2 only and has no effect on TLS 1.3, whose suites are fixed by Go. Empty keeps the Go default. Allowed values: %s", strings.Join(tlspolicy.CipherSuiteNames(), ", "))
+
+	rootCmd.PersistentFlags().StringSlice("scheme", []string{"http"}, "listener scheme for the API; 'http' or 'https' (mutually exclusive). Set 'https' to serve TLS")
+	rootCmd.PersistentFlags().String("tls-certificate", "", "the certificate file to use for serving TLS on the API listener")
+	rootCmd.PersistentFlags().String("tls-key", "", "the private key file (without passphrase) to use for serving TLS on the API listener")
+	rootCmd.PersistentFlags().String("tls-ca", "", "the certificate authority file used to verify client certificates for mutual TLS on the API listener")
+	rootCmd.PersistentFlags().Uint16("tls-port", 0, "the port to serve TLS on for the API listener; defaults to a random port when unset")
+	rootCmd.PersistentFlags().String("tls-min-version", "1.3", "minimum TLS version for the API listener (1.2 or 1.3)")
+	rootCmd.PersistentFlags().StringSlice("tls-cipher-suites", nil, tlsCipherSuitesHelp)
+
 	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
+		log.Logger.Fatal(err)
+	}
+
+	// Bind the TLS policy flags to environment variables. rekor-server sets no
+	// env prefix or key replacer, so bind by name; this mirrors the TLS_* vars the
+	// go-swagger server already reads for the certificate, key, CA, and port.
+	if err := viper.BindEnv("tls-min-version", "TLS_MIN_VERSION"); err != nil {
+		log.Logger.Fatal(err)
+	}
+	if err := viper.BindEnv("tls-cipher-suites", "TLS_CIPHER_SUITES"); err != nil {
 		log.Logger.Fatal(err)
 	}
 

@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -31,6 +32,7 @@ import (
 	"github.com/spf13/viper"
 	"sigs.k8s.io/release-utils/version"
 
+	"github.com/sigstore/rekor/internal/tlspolicy"
 	"github.com/sigstore/rekor/pkg/api"
 	"github.com/sigstore/rekor/pkg/generated/restapi"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations"
@@ -139,7 +141,35 @@ var serveCmd = &cobra.Command{
 
 		server.Host = viper.GetString("rekor_server.address")
 		server.Port = int(viper.GetUint("port"))
-		server.EnabledListeners = []string{"http"}
+
+		// Scheme defaults to plaintext HTTP only, so existing deployments are unaffected.
+		schemes := viper.GetStringSlice("scheme")
+		server.EnabledListeners = schemes
+		server.TLSHost = server.Host
+
+		// Override cert fields only when set, preserving the TLS_* env fallbacks.
+		if v := viper.GetString("tls-certificate"); v != "" {
+			server.TLSCertificate = v
+		}
+		if v := viper.GetString("tls-key"); v != "" {
+			server.TLSCertificateKey = v
+		}
+		if v := viper.GetString("tls-ca"); v != "" {
+			server.TLSCACertificate = v
+		}
+		if v := viper.GetUint("tls-port"); v != 0 {
+			server.TLSPort = int(v)
+		}
+
+		policy, err := tlspolicy.Parse(viper.GetString("tls-min-version"), viper.GetStringSlice("tls-cipher-suites"))
+		if err != nil {
+			log.Logger.Fatalf("invalid TLS policy: %v", err)
+		}
+		tlspolicy.Set(policy)
+
+		if err := validateSchemes(schemes, server.TLSCertificate, server.TLSCertificateKey); err != nil {
+			log.Logger.Fatal(err)
+		}
 
 		treeID := viper.GetInt64("trillian_log_server.tlog_id")
 
@@ -164,6 +194,31 @@ var serveCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
+}
+
+// validateSchemes enforces the API listener scheme policy: only http, https,
+// and unix are recognized; plaintext http and TLS https are mutually exclusive
+// (serving both would leave a plaintext hop open); and https requires a
+// certificate/key pair.
+func validateSchemes(schemes []string, tlsCert, tlsKey string) error {
+	for _, s := range schemes {
+		switch s {
+		case "http", "https", "unix":
+		default:
+			return fmt.Errorf("unsupported scheme %q: supported schemes are http, https, and unix", s)
+		}
+	}
+
+	hasHTTP := slices.Contains(schemes, "http")
+	hasHTTPS := slices.Contains(schemes, "https")
+
+	if hasHTTP && hasHTTPS {
+		return fmt.Errorf("schemes 'http' and 'https' are mutually exclusive; enable only one on the API listener")
+	}
+	if hasHTTPS && (tlsCert == "" || tlsKey == "") {
+		return fmt.Errorf("scheme 'https' requires both --tls-certificate and --tls-key (or the TLS_CERTIFICATE and TLS_PRIVATE_KEY environment variables)")
+	}
+	return nil
 }
 
 // filterEntryTypes filters the list of compiled-in entry types
