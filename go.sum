@@ -25,8 +25,8 @@ cloud.google.com/go/profiler v0.6.0 h1:Vwxqgnp8CQwBNcKjO8luwLCh7qblEkcZCtMUvhU9Y
 cloud.google.com/go/profiler v0.6.0/go.mod h1:cJV7Qfj0o9PAC7q/xQTkM6qn2FO9So3TFk4P5O5yLis=
 cloud.google.com/go/pubsub v1.51.1 h1:R3G1wCOxBO7jRpL8x2pdZMv1GAJDF6ax/m2zPOtvTNE=
 cloud.google.com/go/pubsub v1.51.1/go.mod h1:y2T0IKtW1iWwVvazYaRpqOAFO4gy2+O7dTDt9TWY/5U=
-cloud.google.com/go/pubsub/v2 v2.6.2 h1:YPeEXnf4LZz9eVdpbXqBMRlxdwk4breCUsoIp7uDet4=
-cloud.google.com/go/pubsub/v2 v2.6.2/go.mod h1:JaFvWNVRk3Knoil/4M1ECeLOaI9D8drbmJWypQlK5aM=
+cloud.google.com/go/pubsub/v2 v2.7.0 h1:MFrBTZZa6PDWZzCi4NJRsHKMm2w0a4oAaYNqwjgbQTE=
+cloud.google.com/go/pubsub/v2 v2.7.0/go.mod h1:JaFvWNVRk3Knoil/4M1ECeLOaI9D8drbmJWypQlK5aM=
 cloud.google.com/go/storage v1.62.0 h1:w2pQJhpUqVerMON45vatE2FpCYsNTf7OHjkn6ux5mMU=
 cloud.google.com/go/storage v1.62.0/go.mod h1:T5hz3qzcpnxZ5LdKc7y8Tw7lh4v9zeeVyrD/cLJAzZU=
 cloud.google.com/go/trace v1.16.0 h1:GmQovzFc5F0CNfl0VLgL64aoTtu7xsM0YajW2GlG9+E=

@@ -45,7 +45,7 @@ require (
 require (
 	cloud.google.com/go/profiler v0.6.0
 	cloud.google.com/go/pubsub v1.51.1
-	cloud.google.com/go/pubsub/v2 v2.6.2
+	cloud.google.com/go/pubsub/v2 v2.7.0
 	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230919221257-8b5d3ce2d11d
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/ProtonMail/go-crypto v1.4.1
