@@ -14,7 +14,7 @@
 
 FROM ghcr.io/sigstore/scaffolding/trillian_log_signer:v1.7.3@sha256:28c5ff40963f83ffdf4e2d9ea1e4e2c877c33cfb0ff068f3daad1c1080aad0ac AS server
 
-FROM golang:1.27.0@sha256:65b6f280bf050ec5af12716857e8ea8439d694dbba8f31ceeb7630670071f2bb AS deploy
+FROM golang:1.27.0@sha256:4013ae0f9e7994f8535c58c811f8f863fbed38b72e0d51e6592156f758d66146 AS deploy
 
 COPY --from=server /ko-app/trillian_log_signer /usr/local/bin/trillian-log-signer
 
