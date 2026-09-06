@@ -5,11 +5,11 @@ go 1.25.11
 require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/go-openapi/errors v0.22.8
-	github.com/go-openapi/loads v0.25.1
+	github.com/go-openapi/loads v0.25.2
 	github.com/go-openapi/runtime v0.32.5
-	github.com/go-openapi/spec v0.22.9
+	github.com/go-openapi/spec v0.22.11
 	github.com/go-openapi/strfmt v0.27.0
-	github.com/go-openapi/validate v0.26.3
+	github.com/go-openapi/validate v0.26.5
 	github.com/google/rpmpack v0.7.1
 	github.com/google/trillian v1.7.3
 	github.com/in-toto/in-toto-golang v0.11.0
@@ -51,29 +51,29 @@ require (
 	github.com/ProtonMail/go-crypto v1.4.1
 	github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7
 	github.com/go-chi/chi/v5 v5.3.2
-	github.com/go-openapi/swag/cmdutils v0.29.0
-	github.com/go-openapi/swag/conv v0.29.0
-	github.com/go-openapi/swag/jsonutils v0.29.0
+	github.com/go-openapi/swag/cmdutils v0.29.1
+	github.com/go-openapi/swag/conv v0.29.1
+	github.com/go-openapi/swag/jsonutils v0.29.1
 	github.com/go-openapi/swag/netutils v0.26.1
-	github.com/go-openapi/swag/typeutils v0.29.0
+	github.com/go-openapi/swag/typeutils v0.29.1
 	github.com/go-redis/redismock/v9 v9.2.0
 	github.com/go-sql-driver/mysql v1.10.0
 	github.com/go-viper/mapstructure/v2 v2.5.0
 	github.com/golang/mock v1.7.0-rc.1
 	github.com/google/go-cmp v0.7.0
-	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.4
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/sassoftware/go-rpmutils v0.4.0
 	github.com/sassoftware/relic/v8 v8.2.0
-	github.com/sigstore/protobuf-specs v0.5.1
+	github.com/sigstore/protobuf-specs v0.5.2
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.9
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.9
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.9
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.9
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 	github.com/tink-crypto/tink-go-awskms/v3 v3.0.0
 	github.com/tink-crypto/tink-go-gcpkms/v2 v2.4.0
 	github.com/tink-crypto/tink-go/v2 v2.7.0
@@ -130,12 +130,12 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/runtime/server-middleware v0.30.0 // indirect
-	github.com/go-openapi/swag/fileutils v0.28.0 // indirect
-	github.com/go-openapi/swag/loading v0.28.0 // indirect
-	github.com/go-openapi/swag/mangling v0.28.0 // indirect
-	github.com/go-openapi/swag/pools v0.29.0 // indirect
-	github.com/go-openapi/swag/stringutils v0.28.0 // indirect
-	github.com/go-openapi/swag/yamlutils v0.28.0 // indirect
+	github.com/go-openapi/swag/fileutils v0.29.1 // indirect
+	github.com/go-openapi/swag/loading v0.29.1 // indirect
+	github.com/go-openapi/swag/mangling v0.29.1 // indirect
+	github.com/go-openapi/swag/pools v0.29.1 // indirect
+	github.com/go-openapi/swag/stringutils v0.29.1 // indirect
+	github.com/go-openapi/swag/yamlutils v0.29.1 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/pprof v0.0.0-20260402051712-545e8a4df936 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
@@ -155,7 +155,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/natefinch/atomic v1.0.1 // indirect
-	github.com/oklog/ulid/v2 v2.1.1 // indirect
+	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
@@ -195,9 +195,9 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
-	github.com/go-openapi/analysis v0.26.0 // indirect
+	github.com/go-openapi/analysis v0.26.2 // indirect
 	github.com/go-openapi/jsonpointer v1.0.0 // indirect
-	github.com/go-openapi/jsonreference v1.0.0 // indirect
+	github.com/go-openapi/jsonreference v1.0.1 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/go-containerregistry v0.21.7 // indirect
 	github.com/google/uuid v1.6.0 // indirect
