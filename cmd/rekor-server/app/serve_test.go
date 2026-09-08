@@ -130,3 +130,57 @@ func TestFilterEntryTypes_DuplicatesAreIdempotent(t *testing.T) {
 		t.Errorf("duplicate kinds should de-dupe\n got: %v\nwant: %v", got, want)
 	}
 }
+
+func TestValidateScheme(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		scheme    string
+		tlsCert   string
+		tlsKey    string
+		wantErr   bool
+		errSubstr string
+	}{
+		{name: "default http only", scheme: "http"},
+		{name: "https with cert and key", scheme: "https", tlsCert: "c", tlsKey: "k"},
+		{
+			name:      "unknown scheme rejected",
+			scheme:    "htps",
+			wantErr:   true,
+			errSubstr: "unsupported scheme",
+		},
+		{
+			name:      "https without cert",
+			scheme:    "https",
+			tlsKey:    "k",
+			wantErr:   true,
+			errSubstr: "requires both",
+		},
+		{
+			name:      "https without key",
+			scheme:    "https",
+			tlsCert:   "c",
+			wantErr:   true,
+			errSubstr: "requires both",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateScheme(tc.scheme, tc.tlsCert, tc.tlsKey)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+				if tc.errSubstr != "" && !strings.Contains(err.Error(), tc.errSubstr) {
+					t.Errorf("error %q should contain %q", err.Error(), tc.errSubstr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
