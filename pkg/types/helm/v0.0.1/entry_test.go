@@ -23,6 +23,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/clearsign"
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
@@ -363,6 +366,110 @@ func TestInsertable(t *testing.T) {
 		t.Run(tc.caseDesc, func(t *testing.T) {
 			if ok, err := tc.entry.Insertable(); ok != tc.expectSuccess {
 				t.Errorf("unexpected result calling Insertable: %v", err)
+			}
+		})
+	}
+}
+
+// signedProvenance builds a clear-signed Helm provenance whose files: block records the chart
+// under the given "<algorithm>:<value>" pair, and returns it with the matching armored public key.
+func signedProvenance(t *testing.T, hashField string) (provenance []byte, publicKey []byte) {
+	t.Helper()
+
+	entity, err := openpgp.NewEntity("rekor test", "helm provenance", "rekor-test@example.com", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	body := "apiVersion: v2\nname: test\nversion: 0.1.0\n\n...\nfiles:\n  test-0.1.0.tgz: " + hashField + "\n"
+
+	var provBuf bytes.Buffer
+	writer, err := clearsign.Encode(&provBuf, entity.PrivateKey, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writer.Write([]byte(body)); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	var keyBuf bytes.Buffer
+	armorWriter, err := armor.Encode(&keyBuf, openpgp.PublicKeyType, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := entity.Serialize(armorWriter); err != nil {
+		t.Fatal(err)
+	}
+	if err := armorWriter.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	return provBuf.Bytes(), keyBuf.Bytes()
+}
+
+// The chart hash algorithm is taken verbatim out of the signed provenance, but the field it is
+// copied into is enum-constrained to sha256. Without a check on the way in, Canonicalize produces
+// a leaf that the read path's own Validate then rejects.
+func TestCanonicalizeRejectsNonSchemaChartHashAlgorithm(t *testing.T) {
+	for _, tc := range []struct {
+		caseDesc     string
+		hashField    string
+		expectsError bool
+	}{
+		{
+			caseDesc:     "sha256, as the schema requires",
+			hashField:    "sha256:6dec7ea21e655d5796c1e214cfb75b73428b2abfa2e66c8f7bc64ff4a7b3b29f",
+			expectsError: false,
+		},
+		{
+			caseDesc:     "algorithm outside the schema enum",
+			hashField:    "not-a-hash-algorithm:../../etc/passwd",
+			expectsError: true,
+		},
+	} {
+		t.Run(tc.caseDesc, func(t *testing.T) {
+			provenanceBytes, publicKeyBytes := signedProvenance(t, tc.hashField)
+
+			v := &V001Entry{}
+			r := models.Helm{
+				APIVersion: conv.Pointer("0.0.1"),
+				Spec: models.HelmV001Schema{
+					PublicKey: &models.HelmV001SchemaPublicKey{
+						Content: (*strfmt.Base64)(&publicKeyBytes),
+					},
+					Chart: &models.HelmV001SchemaChart{
+						Provenance: &models.HelmV001SchemaChartProvenance{
+							Content: strfmt.Base64(provenanceBytes),
+						},
+					},
+				},
+			}
+
+			if err := v.Unmarshal(&r); err != nil {
+				t.Fatalf("unmarshal failed, so the test never reaches Canonicalize: %v", err)
+			}
+
+			canonicalized, err := v.Canonicalize(context.TODO())
+			if tc.expectsError {
+				if err == nil {
+					t.Fatalf("expected canonicalization to fail, got leaf: %s", canonicalized)
+				}
+				var validationErr *types.InputValidationError
+				if !errors.As(err, &validationErr) {
+					t.Errorf("expected a types.InputValidationError, got %T: %v", err, err)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("positive control failed to canonicalize: %v", err)
+			}
+
+			if len(canonicalized) == 0 {
+				t.Fatal("positive control produced an empty leaf")
 			}
 		})
 	}
