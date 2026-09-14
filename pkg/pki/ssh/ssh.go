@@ -180,11 +180,8 @@ func (k PublicKey) Identities() ([]identity.Identity, error) {
 			if w.Curve != "nistp256" {
 				return nil, errors.New("ssh: unsupported curve")
 			}
-			ecdsaPubKey := new(ecdsa.PublicKey)
-			ecdsaPubKey.Curve = elliptic.P256()
-			//nolint:staticcheck // ignore SA1019 for old code
-			ecdsaPubKey.X, ecdsaPubKey.Y = elliptic.Unmarshal(ecdsaPubKey.Curve, w.KeyBytes)
-			if ecdsaPubKey.X == nil || ecdsaPubKey.Y == nil {
+			ecdsaPubKey, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), w.KeyBytes)
+			if err != nil {
 				return nil, errors.New("ssh: invalid curve point")
 			}
 			cryptoPubKey = ecdsaPubKey
