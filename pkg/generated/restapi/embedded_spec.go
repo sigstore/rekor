@@ -118,6 +118,7 @@ func init() {
         "operationId": "getLogEntryByIndex",
         "parameters": [
           {
+            "minimum": 0,
             "type": "integer",
             "description": "specifies the index of the entry in the transparency log to be retrieved",
             "name": "logIndex",
@@ -434,7 +435,8 @@ func init() {
         },
         "logIndex": {
           "description": "The index of the entry in the transparency log",
-          "type": "integer"
+          "type": "integer",
+          "minimum": 0
         },
         "rootHash": {
           "description": "The hash value stored at the root of the merkle tree at the time the proof was generated",
@@ -482,7 +484,8 @@ func init() {
             "pattern": "^[0-9a-fA-F]{64}$"
           },
           "logIndex": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": 0
           },
           "verification": {
             "type": "object",
@@ -622,7 +625,8 @@ func init() {
           "maxItems": 10,
           "minItems": 1,
           "items": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": 0
           }
         }
       }
