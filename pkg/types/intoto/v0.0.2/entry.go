@@ -392,11 +392,38 @@ func (v *V002Entry) Canonicalize(_ context.Context) ([]byte, error) {
 		return nil, errors.New("missing signatures")
 	}
 
+	// Re-derive each signature's public key/certificate through
+	// CanonicalValue() instead of copying the client-submitted bytes
+	// verbatim. Without this, a legally-encoded but non-canonical PEM
+	// (e.g. missing a trailing newline) is persisted as-is, unlike
+	// hashedrekord's Canonicalize(), which always re-encodes via
+	// keyObj.CanonicalValue(). See https://github.com/sigstore/rekor/issues/1170.
+	canonicalSignatures := make([]*models.IntotoV002SchemaContentEnvelopeSignaturesItems0, 0, len(v.IntotoObj.Content.Envelope.Signatures))
+	for _, sig := range v.IntotoObj.Content.Envelope.Signatures {
+		if sig == nil || sig.PublicKey == nil {
+			return nil, errors.New("malformed or missing signature")
+		}
+		keyObj, err := x509.NewPublicKey(bytes.NewReader(*sig.PublicKey))
+		if err != nil {
+			return nil, fmt.Errorf("could not parse public key: %w", err)
+		}
+		canonKey, err := keyObj.CanonicalValue()
+		if err != nil {
+			return nil, fmt.Errorf("could not canonicize key: %w", err)
+		}
+		canonKeyBytes := strfmt.Base64(canonKey)
+		canonicalSignatures = append(canonicalSignatures, &models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
+			Keyid:     sig.Keyid,
+			Sig:       sig.Sig,
+			PublicKey: &canonKeyBytes,
+		})
+	}
+
 	canonicalEntry := models.IntotoV002Schema{
 		Content: &models.IntotoV002SchemaContent{
 			Envelope: &models.IntotoV002SchemaContentEnvelope{
 				PayloadType: v.IntotoObj.Content.Envelope.PayloadType,
-				Signatures:  v.IntotoObj.Content.Envelope.Signatures,
+				Signatures:  canonicalSignatures,
 			},
 			Hash:        v.IntotoObj.Content.Hash,
 			PayloadHash: v.IntotoObj.Content.PayloadHash,
