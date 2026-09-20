@@ -1,3 +1,23 @@
+# v1.5.5
+
+## Bug Fixes
+
+* fix broken PGP sigv3 parsing, add tests (#2959)
+* ensure invalid treeIDs always return with 400 errors (#2958)
+* use WithCancel ctx for async tasks (#2947)
+* Update 413 status code error handling (#2813)
+
+## Improvements
+
+* dsse parsing cpu/memory optimization (#2946)
+* numerous upgraded dependencies
+* builds use go 1.27 (including JSON, gc improvements)
+
+## Contributors
+
+* Bob Callaway
+* Stef Graces
+
 # v1.5.4
 
 ## Features
