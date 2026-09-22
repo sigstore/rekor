@@ -27,7 +27,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag/conv"
 	"go.uber.org/goleak"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -71,7 +70,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format: conv.Pointer("pgp"),
+						Format: new("pgp"),
 					},
 				},
 			},
@@ -83,7 +82,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:  conv.Pointer("pgp"),
+						Format:  new("pgp"),
 						Content: (*strfmt.Base64)(&sigBytes),
 					},
 				},
@@ -96,7 +95,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:    conv.Pointer("pgp"),
+						Format:    new("pgp"),
 						Content:   (*strfmt.Base64)(&sigBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{},
 					},
@@ -110,7 +109,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:  conv.Pointer("pgp"),
+						Format:  new("pgp"),
 						Content: (*strfmt.Base64)(&sigBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: (*strfmt.Base64)(&keyBytes),
@@ -126,7 +125,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:  conv.Pointer("pgp"),
+						Format:  new("pgp"),
 						Content: (*strfmt.Base64)(&sigBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: (*strfmt.Base64)(&keyBytes),
@@ -143,7 +142,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:  conv.Pointer("pgp"),
+						Format:  new("pgp"),
 						Content: (*strfmt.Base64)(&dataBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: (*strfmt.Base64)(&keyBytes),
@@ -163,7 +162,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:  conv.Pointer("pgp"),
+						Format:  new("pgp"),
 						Content: (*strfmt.Base64)(&sigBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: (*strfmt.Base64)(&dataBytes),
@@ -183,7 +182,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:  conv.Pointer("pgp"),
+						Format:  new("pgp"),
 						Content: (*strfmt.Base64)(&sigBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: (*strfmt.Base64)(&keyBytes),
@@ -203,7 +202,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			entry: V001Entry{
 				RekordObj: models.RekordV001Schema{
 					Signature: &models.RekordV001SchemaSignature{
-						Format:  conv.Pointer("pgp"),
+						Format:  new("pgp"),
 						Content: (*strfmt.Base64)(&sigBytes),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: (*strfmt.Base64)(&keyBytes),
@@ -223,7 +222,7 @@ func TestCrossFieldValidation(t *testing.T) {
 	for _, tc := range testCases {
 		v := &V001Entry{}
 		r := models.Rekord{
-			APIVersion: conv.Pointer(tc.entry.APIVersion()),
+			APIVersion: new(tc.entry.APIVersion()),
 			Spec:       tc.entry.RekordObj,
 		}
 
@@ -243,8 +242,7 @@ func TestCrossFieldValidation(t *testing.T) {
 		if (err == nil) != tc.expectCanonicalizeSuccess {
 			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
 		} else if err != nil {
-			var validationErr *types.InputValidationError
-			if !errors.As(err, &validationErr) {
+			if _, ok := errors.AsType[*types.InputValidationError](err); !ok {
 				t.Errorf("canonicalize returned an unexpected error that isn't of type types.ValidationError: %v", err)
 			}
 		}
@@ -327,7 +325,7 @@ func TestInsertable(t *testing.T) {
 					},
 					Signature: &models.RekordV001SchemaSignature{
 						Content: &sig,
-						Format:  conv.Pointer("format"),
+						Format:  new("format"),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: &pub,
 						},
@@ -345,7 +343,7 @@ func TestInsertable(t *testing.T) {
 					},
 					Signature: &models.RekordV001SchemaSignature{
 						Content:   &sig,
-						Format:    conv.Pointer("format"),
+						Format:    new("format"),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							//Content: &pub,
 						},
@@ -363,7 +361,7 @@ func TestInsertable(t *testing.T) {
 					},
 					Signature: &models.RekordV001SchemaSignature{
 						Content: &sig,
-						Format:  conv.Pointer("format"),
+						Format:  new("format"),
 						/*
 							PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 								Content: &pub,
@@ -401,7 +399,7 @@ func TestInsertable(t *testing.T) {
 					},
 					Signature: &models.RekordV001SchemaSignature{
 						//Content: &sig,
-						Format: conv.Pointer("format"),
+						Format: new("format"),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: &pub,
 						},
@@ -439,7 +437,7 @@ func TestInsertable(t *testing.T) {
 					},
 					Signature: &models.RekordV001SchemaSignature{
 						Content: &sig,
-						Format:  conv.Pointer("format"),
+						Format:  new("format"),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: &pub,
 						},
@@ -459,7 +457,7 @@ func TestInsertable(t *testing.T) {
 					*/
 					Signature: &models.RekordV001SchemaSignature{
 						Content: &sig,
-						Format:  conv.Pointer("format"),
+						Format:  new("format"),
 						PublicKey: &models.RekordV001SchemaSignaturePublicKey{
 							Content: &pub,
 						},

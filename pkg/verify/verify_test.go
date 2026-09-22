@@ -23,7 +23,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/tlog"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -200,12 +199,12 @@ func TestInclusion(t *testing.T) {
 				Body:           "eyJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoicmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiJlY2RjNTUzNmY3M2JkYWU4ODE2ZjBlYTQwNzI2ZWY1ZTliODEwZDkxNDQ5MzA3NTkwM2JiOTA2MjNkOTdiMWQ4In19LCJzaWduYXR1cmUiOnsiY29udGVudCI6Ik1FWUNJUUQvUGRQUW1LV0MxKzBCTkVkNWdLdlFHcjF4eGwzaWVVZmZ2M2prMXp6Skt3SWhBTEJqM3hmQXlXeGx6NGpwb0lFSVYxVWZLOXZua1VVT1NvZVp4QlpQSEtQQyIsImZvcm1hdCI6Ing1MDkiLCJwdWJsaWNLZXkiOnsiY29udGVudCI6IkxTMHRMUzFDUlVkSlRpQlFWVUpNU1VNZ1MwVlpMUzB0TFMwS1RVWnJkMFYzV1VoTGIxcEplbW93UTBGUldVbExiMXBKZW1vd1JFRlJZMFJSWjBGRlRVOWpWR1pTUWxNNWFtbFlUVGd4UmxvNFoyMHZNU3R2YldWTmR3cHRiaTh6TkRjdk5UVTJaeTlzY21sVE56SjFUV2haT1V4alZDczFWVW8yWmtkQ1oyeHlOVm80VERCS1RsTjFZWE41WldRNVQzUmhVblozUFQwS0xTMHRMUzFGVGtRZ1VGVkNURWxESUV0RldTMHRMUzB0Q2c9PSJ9fX19",
 				IntegratedTime: &time,
 				LogID:          &logID,
-				LogIndex:       conv.Pointer(int64(1)),
+				LogIndex:       new(int64(1)),
 				Verification: &models.LogEntryAnonVerification{
 					InclusionProof: &models.InclusionProof{
-						TreeSize: conv.Pointer(int64(2)),
-						RootHash: conv.Pointer("5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"),
-						LogIndex: conv.Pointer(int64(1)),
+						TreeSize: new(int64(2)),
+						RootHash: new("5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"),
+						LogIndex: new(int64(1)),
 						Hashes: []string{
 							"59a575f157274702c38de3ab1e1784226f391fb79500ebf9f02b4439fb77574c",
 						},
@@ -221,12 +220,12 @@ func TestInclusion(t *testing.T) {
 				Body:           "ayJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoicmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiJlY2RjNTUzNmY3M2JkYWU4ODE2ZjBlYTQwNzI2ZWY1ZTliODEwZDkxNDQ5MzA3NTkwM2JiOTA2MjNkOTdiMWQ4In19LCJzaWduYXR1cmUiOnsiY29udGVudCI6Ik1FWUNJUUQvUGRQUW1LV0MxKzBCTkVkNWdLdlFHcjF4eGwzaWVVZmZ2M2prMXp6Skt3SWhBTEJqM3hmQXlXeGx6NGpwb0lFSVYxVWZLOXZua1VVT1NvZVp4QlpQSEtQQyIsImZvcm1hdCI6Ing1MDkiLCJwdWJsaWNLZXkiOnsiY29udGVudCI6IkxTMHRMUzFDUlVkSlRpQlFWVUpNU1VNZ1MwVlpMUzB0TFMwS1RVWnJkMFYzV1VoTGIxcEplbW93UTBGUldVbExiMXBKZW1vd1JFRlJZMFJSWjBGRlRVOWpWR1pTUWxNNWFtbFlUVGd4UmxvNFoyMHZNU3R2YldWTmR3cHRiaTh6TkRjdk5UVTJaeTlzY21sVE56SjFUV2haT1V4alZDczFWVW8yWmtkQ1oyeHlOVm80VERCS1RsTjFZWE41WldRNVQzUmhVblozUFQwS0xTMHRMUzFGVGtRZ1VGVkNURWxESUV0RldTMHRMUzB0Q2c9PSJ9fX19",
 				IntegratedTime: &time,
 				LogID:          &logID,
-				LogIndex:       conv.Pointer(int64(1)),
+				LogIndex:       new(int64(1)),
 				Verification: &models.LogEntryAnonVerification{
 					InclusionProof: &models.InclusionProof{
-						TreeSize: conv.Pointer(int64(2)),
-						RootHash: conv.Pointer("5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"),
-						LogIndex: conv.Pointer(int64(1)),
+						TreeSize: new(int64(2)),
+						RootHash: new("5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"),
+						LogIndex: new(int64(1)),
 						Hashes: []string{
 							"59a575f157274702c38de3ab1e1784226f391fb79500ebf9f02b4439fb77574c",
 						},
@@ -242,12 +241,12 @@ func TestInclusion(t *testing.T) {
 				Body:           123,
 				IntegratedTime: &time,
 				LogID:          &logID,
-				LogIndex:       conv.Pointer(int64(1)),
+				LogIndex:       new(int64(1)),
 				Verification: &models.LogEntryAnonVerification{
 					InclusionProof: &models.InclusionProof{
-						TreeSize: conv.Pointer(int64(2)),
-						RootHash: conv.Pointer("5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"),
-						LogIndex: conv.Pointer(int64(1)),
+						TreeSize: new(int64(2)),
+						RootHash: new("5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"),
+						LogIndex: new(int64(1)),
 						Hashes: []string{
 							"59a575f157274702c38de3ab1e1784226f391fb79500ebf9f02b4439fb77574c",
 						},
@@ -300,16 +299,16 @@ func TestCheckpoint(t *testing.T) {
 				Body:           "eyJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoicmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiJlY2RjNTUzNmY3M2JkYWU4ODE2ZjBlYTQwNzI2ZWY1ZTliODEwZDkxNDQ5MzA3NTkwM2JiOTA2MjNkOTdiMWQ4In19LCJzaWduYXR1cmUiOnsiY29udGVudCI6Ik1FWUNJUUQvUGRQUW1LV0MxKzBCTkVkNWdLdlFHcjF4eGwzaWVVZmZ2M2prMXp6Skt3SWhBTEJqM3hmQXlXeGx6NGpwb0lFSVYxVWZLOXZua1VVT1NvZVp4QlpQSEtQQyIsImZvcm1hdCI6Ing1MDkiLCJwdWJsaWNLZXkiOnsiY29udGVudCI6IkxTMHRMUzFDUlVkSlRpQlFWVUpNU1VNZ1MwVlpMUzB0TFMwS1RVWnJkMFYzV1VoTGIxcEplbW93UTBGUldVbExiMXBKZW1vd1JFRlJZMFJSWjBGRlRVOWpWR1pTUWxNNWFtbFlUVGd4UmxvNFoyMHZNU3R2YldWTmR3cHRiaTh6TkRjdk5UVTJaeTlzY21sVE56SjFUV2haT1V4alZDczFWVW8yWmtkQ1oyeHlOVm80VERCS1RsTjFZWE41WldRNVQzUmhVblozUFQwS0xTMHRMUzFGVGtRZ1VGVkNURWxESUV0RldTMHRMUzB0Q2c9PSJ9fX19",
 				IntegratedTime: &time,
 				LogID:          &logID,
-				LogIndex:       conv.Pointer(int64(1)),
+				LogIndex:       new(int64(1)),
 				Verification: &models.LogEntryAnonVerification{
 					InclusionProof: &models.InclusionProof{
-						TreeSize: conv.Pointer(int64(2)),
-						RootHash: conv.Pointer(rootHashString),
-						LogIndex: conv.Pointer(int64(1)),
+						TreeSize: new(int64(2)),
+						RootHash: new(rootHashString),
+						LogIndex: new(int64(1)),
 						Hashes: []string{
 							"59a575f157274702c38de3ab1e1784226f391fb79500ebf9f02b4439fb77574c",
 						},
-						Checkpoint: conv.Pointer(string(scBytes)),
+						Checkpoint: new(string(scBytes)),
 					},
 					SignedEntryTimestamp: strfmt.Base64("MEUCIHJj8xP+oPTd4BAXhO2lcbRplnKW2FafMiFo0gIDGUcYAiEA80BJ8QikiupGAv3R3dtSvZ1ICsAOQat10cFKPqBkLBM="),
 				},
@@ -322,16 +321,16 @@ func TestCheckpoint(t *testing.T) {
 				Body:           "ayJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoicmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiJlY2RjNTUzNmY3M2JkYWU4ODE2ZjBlYTQwNzI2ZWY1ZTliODEwZDkxNDQ5MzA3NTkwM2JiOTA2MjNkOTdiMWQ4In19LCJzaWduYXR1cmUiOnsiY29udGVudCI6Ik1FWUNJUUQvUGRQUW1LV0MxKzBCTkVkNWdLdlFHcjF4eGwzaWVVZmZ2M2prMXp6Skt3SWhBTEJqM3hmQXlXeGx6NGpwb0lFSVYxVWZLOXZua1VVT1NvZVp4QlpQSEtQQyIsImZvcm1hdCI6Ing1MDkiLCJwdWJsaWNLZXkiOnsiY29udGVudCI6IkxTMHRMUzFDUlVkSlRpQlFWVUpNU1VNZ1MwVlpMUzB0TFMwS1RVWnJkMFYzV1VoTGIxcEplbW93UTBGUldVbExiMXBKZW1vd1JFRlJZMFJSWjBGRlRVOWpWR1pTUWxNNWFtbFlUVGd4UmxvNFoyMHZNU3R2YldWTmR3cHRiaTh6TkRjdk5UVTJaeTlzY21sVE56SjFUV2haT1V4alZDczFWVW8yWmtkQ1oyeHlOVm80VERCS1RsTjFZWE41WldRNVQzUmhVblozUFQwS0xTMHRMUzFGVGtRZ1VGVkNURWxESUV0RldTMHRMUzB0Q2c9PSJ9fX19",
 				IntegratedTime: &time,
 				LogID:          &logID,
-				LogIndex:       conv.Pointer(int64(1)),
+				LogIndex:       new(int64(1)),
 				Verification: &models.LogEntryAnonVerification{
 					InclusionProof: &models.InclusionProof{
-						TreeSize: conv.Pointer(int64(2)),
-						RootHash: conv.Pointer("5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"),
-						LogIndex: conv.Pointer(int64(1)),
+						TreeSize: new(int64(2)),
+						RootHash: new("5be1758dd2228acfaf2546b4b6ce8aa40c82a3748f3dcb550e0d67ba34f02a45"),
+						LogIndex: new(int64(1)),
 						Hashes: []string{
 							"59a575f157274702c38de3ab1e1784226f391fb79500ebf9f02b4439fb77574c",
 						},
-						Checkpoint: conv.Pointer(string(scBytes)),
+						Checkpoint: new(string(scBytes)),
 					},
 					SignedEntryTimestamp: strfmt.Base64("MEUCIHJj8xP+oPTd4BAXhO2lcbRplnKW2FafMiFo0gIDGUcYAiEA80BJ8QikiupGAv3R3dtSvZ1ICsAOQat10cFKPqBkLBM="),
 				},
@@ -374,8 +373,8 @@ func TestCheckpointRootHashCaseFolding(t *testing.T) {
 	e := models.LogEntryAnon{
 		Verification: &models.LogEntryAnonVerification{
 			InclusionProof: &models.InclusionProof{
-				RootHash:   conv.Pointer(hex.EncodeToString(mismatch[:])),
-				Checkpoint: conv.Pointer(string(scBytes)),
+				RootHash:   new(hex.EncodeToString(mismatch[:])),
+				Checkpoint: new(string(scBytes)),
 			},
 		},
 	}

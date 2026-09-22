@@ -294,7 +294,7 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	}
 
 	itObj := models.Intoto{}
-	itObj.APIVersion = conv.Pointer(APIVERSION)
+	itObj.APIVersion = new(APIVERSION)
 	itObj.Spec = &canonicalEntry
 
 	return json.Marshal(&itObj)
@@ -352,13 +352,13 @@ func (v *V001Entry) validate() error {
 	attHash := sha256.Sum256(attBytes)
 	v.IntotoObj.Content.PayloadHash = &models.IntotoV001SchemaContentPayloadHash{
 		Algorithm: conv.Pointer(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
-		Value:     conv.Pointer(hex.EncodeToString(attHash[:])),
+		Value:     new(hex.EncodeToString(attHash[:])),
 	}
 
 	h := sha256.Sum256([]byte(v.IntotoObj.Content.Envelope))
 	v.IntotoObj.Content.Hash = &models.IntotoV001SchemaContentHash{
 		Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
-		Value:     conv.Pointer(hex.EncodeToString(h[:])),
+		Value:     new(hex.EncodeToString(h[:])),
 	}
 	return nil
 }
@@ -429,11 +429,11 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	h := sha256.Sum256([]byte(re.IntotoObj.Content.Envelope))
 	re.IntotoObj.Content.Hash = &models.IntotoV001SchemaContentHash{
 		Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
-		Value:     conv.Pointer(hex.EncodeToString(h[:])),
+		Value:     new(hex.EncodeToString(h[:])),
 	}
 
 	returnVal.Spec = re.IntotoObj
-	returnVal.APIVersion = conv.Pointer(re.APIVersion())
+	returnVal.APIVersion = new(re.APIVersion())
 
 	return &returnVal, nil
 }

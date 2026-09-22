@@ -75,16 +75,12 @@ func GetLogInfoHandler(params tlog.GetLogInfoParams) middleware.Responder {
 	logInfo := models.LogInfo{
 		RootHash:       &hashString,
 		TreeSize:       &treeSize,
-		SignedTreeHead: stringPointer(string(scBytes)),
-		TreeID:         stringPointer(fmt.Sprintf("%d", api.ActiveTreeID())),
+		SignedTreeHead: new(string(scBytes)),
+		TreeID:         new(fmt.Sprintf("%d", api.ActiveTreeID())),
 		InactiveShards: inactiveShards,
 	}
 
 	return tlog.NewGetLogInfoOK().WithPayload(&logInfo)
-}
-
-func stringPointer(s string) *string {
-	return &s
 }
 
 // GetLogProofHandler returns information required to compute a consistency proof between two snapshots of log
@@ -168,8 +164,8 @@ func inactiveShardLogInfo(ctx context.Context, tid int64, cachedCheckpoints map[
 	m := models.InactiveShardLogInfo{
 		RootHash:       &hashString,
 		TreeSize:       &treeSize,
-		TreeID:         stringPointer(fmt.Sprintf("%d", tid)),
-		SignedTreeHead: stringPointer(cachedCheckpoints[tid]),
+		TreeID:         new(fmt.Sprintf("%d", tid)),
+		SignedTreeHead: new(cachedCheckpoints[tid]),
 	}
 	return &m, nil
 }

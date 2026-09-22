@@ -76,7 +76,7 @@ func TestReadPublicKey(t *testing.T) {
 			if _, ok := ids[0].Crypto.(*minisign.PublicKey); !ok {
 				t.Fatalf("key is of unexpected type, expected *minisign.PublicKey, got %v", reflect.TypeOf(ids[0].Crypto))
 			}
-			expectedDer, err := cryptoutils.MarshalPublicKeyToDER(ed25519.PublicKey(rawBytes))
+			expectedDer, err := x509.MarshalPKIXPublicKey(ed25519.PublicKey(rawBytes))
 			if err != nil {
 				t.Fatalf("unexpected error generating DER: %v", err)
 			}
@@ -328,7 +328,7 @@ func TestCanonicalValuePublicKey(t *testing.T) {
 		if _, ok := ids[0].Crypto.(*minisign.PublicKey); !ok {
 			t.Fatalf("key is of unexpected type, expected *minisign.PublicKey, got %v", reflect.TypeOf(ids[0].Crypto))
 		}
-		expectedDer, err := cryptoutils.MarshalPublicKeyToDER(ed25519.PublicKey(rt.key.PublicKey[:]))
+		expectedDer, err := x509.MarshalPKIXPublicKey(ed25519.PublicKey(rt.key.PublicKey[:]))
 		if err != nil {
 			t.Fatalf("unexpected error generating DER: %v", err)
 		}

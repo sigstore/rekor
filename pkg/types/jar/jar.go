@@ -37,9 +37,9 @@ func init() {
 }
 
 func New() types.TypeImpl {
-	bjt := BaseJARType{}
-	bjt.Kind = KIND
-	bjt.VersionMap = VersionMap
+	bjt := BaseJARType{
+		Kind:       KIND,
+		VersionMap: VersionMap}
 	return &bjt
 }
 

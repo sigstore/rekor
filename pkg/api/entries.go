@@ -103,10 +103,10 @@ func logEntryFromLeaf(ctx context.Context, leaf *trillian.LogLeaf, signedLogRoot
 	}
 
 	logEntryAnon := models.LogEntryAnon{
-		LogID:          conv.Pointer(logRange.LogID),
+		LogID:          new(logRange.LogID),
 		LogIndex:       &virtualIndex,
 		Body:           leaf.LeafValue,
-		IntegratedTime: conv.Pointer(leaf.IntegrateTimestamp.AsTime().Unix()),
+		IntegratedTime: new(leaf.IntegrateTimestamp.AsTime().Unix()),
 	}
 
 	signature, err := signEntry(ctx, logRange.Signer, logEntryAnon)
@@ -128,11 +128,11 @@ func logEntryFromLeaf(ctx context.Context, leaf *trillian.LogLeaf, signedLogRoot
 	}
 
 	inclusionProof := models.InclusionProof{
-		TreeSize:   conv.Pointer(int64(root.TreeSize)), //nolint:gosec
-		RootHash:   conv.Pointer(hex.EncodeToString(root.RootHash)),
-		LogIndex:   conv.Pointer(proof.GetLeafIndex()),
+		TreeSize:   new(int64(root.TreeSize)), //nolint:gosec
+		RootHash:   new(hex.EncodeToString(root.RootHash)),
+		LogIndex:   new(proof.GetLeafIndex()),
 		Hashes:     hashes,
-		Checkpoint: stringPointer(sc),
+		Checkpoint: new(sc),
 	}
 
 	uuid := hex.EncodeToString(leaf.MerkleLeafHash)
@@ -209,9 +209,9 @@ func getArtifactHashValue(entry types.EntryImpl) crypto.Hash {
 	}
 
 	var artifactHashAlgorithm string
-	algoPosition := strings.Index(artifactHash, ":")
-	if algoPosition != -1 {
-		artifactHashAlgorithm = artifactHash[:algoPosition]
+	before, _, ok := strings.Cut(artifactHash, ":")
+	if ok {
+		artifactHashAlgorithm = before
 	}
 	switch artifactHashAlgorithm {
 	case "sha256":
@@ -325,8 +325,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 
 	leaf, err := types.CanonicalizeEntry(ctx, entry)
 	if err != nil {
-		var validationErr *types.InputValidationError
-		if errors.As(err, &validationErr) {
+		if _, ok := errors.AsType[*types.InputValidationError](err); ok {
 			return nil, handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf(validationError, err))
 		}
 		return nil, handleRekorAPIError(params, http.StatusInternalServerError, err, failedToGenerateCanonicalEntry)
@@ -382,10 +381,10 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	// The log index should be the virtual log index across all shards
 	virtualIndex := sharding.VirtualLogIndex(queuedLeaf.LeafIndex, api.logRanges.GetActive().TreeID, api.logRanges)
 	logEntryAnon := models.LogEntryAnon{
-		LogID:          conv.Pointer(api.logRanges.GetActive().LogID),
-		LogIndex:       conv.Pointer(virtualIndex),
+		LogID:          new(api.logRanges.GetActive().LogID),
+		LogIndex:       new(virtualIndex),
 		Body:           queuedLeaf.GetLeafValue(),
-		IntegratedTime: conv.Pointer(queuedLeaf.IntegrateTimestamp.AsTime().Unix()),
+		IntegratedTime: new(queuedLeaf.IntegrateTimestamp.AsTime().Unix()),
 	}
 
 	if indexStorageClient != nil {
@@ -447,11 +446,11 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 	}
 
 	inclusionProof := models.InclusionProof{
-		TreeSize:   conv.Pointer(int64(root.TreeSize)), //nolint:gosec
-		RootHash:   conv.Pointer(hex.EncodeToString(root.RootHash)),
-		LogIndex:   conv.Pointer(queuedLeaf.LeafIndex),
+		TreeSize:   new(int64(root.TreeSize)), //nolint:gosec
+		RootHash:   new(hex.EncodeToString(root.RootHash)),
+		LogIndex:   new(queuedLeaf.LeafIndex),
 		Hashes:     hashes,
-		Checkpoint: conv.Pointer(string(scBytes)),
+		Checkpoint: new(string(scBytes)),
 	}
 
 	logEntryAnon.Verification = &models.LogEntryAnonVerification{
@@ -557,8 +556,7 @@ func GetLogEntryByUUIDHandler(params entries.GetLogEntryByUUIDParams) middleware
 		if errors.Is(err, ErrNotFound) {
 			return handleRekorAPIError(params, http.StatusNotFound, err, "")
 		}
-		var validationErr *types.InputValidationError
-		if errors.As(err, &validationErr) {
+		if _, ok := errors.AsType[*types.InputValidationError](err); ok {
 			return handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf("validation error: %v", err))
 		}
 		return handleRekorAPIError(params, http.StatusInternalServerError, err, trillianCommunicationError)

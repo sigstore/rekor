@@ -178,7 +178,7 @@ func TestSignature_Verify(t *testing.T) {
 			}
 
 			pubKey, _ := cryptoutils.UnmarshalPEMToPublicKey([]byte(tt.pub))
-			derKey, _ := cryptoutils.MarshalPublicKeyToDER(pubKey)
+			derKey, _ := x509.MarshalPKIXPublicKey(pubKey)
 			digest := sha256.Sum256(derKey)
 			expectedID := identity.Identity{Crypto: pubKey, Raw: derKey, Fingerprint: hex.EncodeToString(digest[:])}
 			ids, err := pub.Identities()
@@ -382,7 +382,7 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 
 	// Verify error with long chain
 	chain := []*x509.Certificate{}
-	for i := 0; i < 11; i++ {
+	for range 11 {
 		chain = append(chain, leafCert)
 	}
 	pemCertChain, _ = cryptoutils.MarshalCertificatesToPEM(chain)

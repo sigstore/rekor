@@ -17,6 +17,7 @@ package tlspolicy
 
 import (
 	"crypto/tls"
+	"slices"
 	"testing"
 )
 
@@ -58,10 +59,8 @@ func TestParseMinVersion(t *testing.T) {
 func firstTLS12Suite(t *testing.T) *tls.CipherSuite {
 	t.Helper()
 	for _, c := range tls.CipherSuites() {
-		for _, v := range c.SupportedVersions {
-			if v == tls.VersionTLS12 {
-				return c
-			}
+		if slices.Contains(c.SupportedVersions, tls.VersionTLS12) {
+			return c
 		}
 	}
 	t.Fatal("no TLS 1.2 cipher suite found")

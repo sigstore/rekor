@@ -36,5 +36,5 @@ type PublicKey interface {
 // Signature Generic object representing a signature (regardless of format & algorithm)
 type Signature interface {
 	CanonicalValue() ([]byte, error)
-	Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOption) error
+	Verify(r io.Reader, k any, opts ...sigsig.VerifyOption) error
 }

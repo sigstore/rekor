@@ -141,9 +141,9 @@ func (isp *IndexStorageProvider) WriteIndex(ctx context.Context, keys []string, 
 		return errors.New("sql client has not been initialized")
 	}
 
-	valueMaps := make([]map[string]interface{}, 0, len(keys))
+	valueMaps := make([]map[string]any, 0, len(keys))
 	for _, key := range keys {
-		valueMaps = append(valueMaps, map[string]interface{}{"key": key, "uuid": index})
+		valueMaps = append(valueMaps, map[string]any{"key": key, "uuid": index})
 	}
 	result, err := isp.writeDB.NamedExecContext(ctx, writeStmt, valueMaps)
 	if err != nil {

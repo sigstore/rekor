@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -35,17 +36,18 @@ type logProofOutput struct {
 }
 
 func (l *logProofOutput) String() string {
-	s := fmt.Sprintf("Current Root Hash: %v\n", l.RootHash)
-	s += "Hashes: ["
+	var s strings.Builder
+	fmt.Fprintf(&s, "Current Root Hash: %v\n", l.RootHash)
+	s.WriteString("Hashes: [")
 	for i, hash := range l.Hashes {
 		if i+1 == len(l.Hashes) {
-			s += hash
+			s.WriteString(hash)
 		} else {
-			s += fmt.Sprintf("%v,", hash)
+			fmt.Fprintf(&s, "%v,", hash)
 		}
 	}
-	s += "]\n"
-	return s
+	s.WriteString("]\n")
+	return s.String()
 }
 
 // logProof represents the consistency proof
@@ -74,7 +76,7 @@ var logProofCmd = &cobra.Command{
 		}
 		return nil
 	},
-	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (interface{}, error) {
+	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (any, error) {
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {
 			return nil, err

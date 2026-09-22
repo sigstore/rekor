@@ -237,7 +237,7 @@ func (k PublicKey) Identities() ([]identity.Identity, error) {
 		return nil, errors.New("PKCS7 public key has not been initialized")
 	}
 	// pkcs7 structure may contain both a key and certificate chain
-	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(k.key)
+	pkixKey, err := x509.MarshalPKIXPublicKey(k.key)
 	if err != nil {
 		return nil, err
 	}

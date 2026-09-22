@@ -239,17 +239,17 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 		Data: &models.CoseV001SchemaData{
 			PayloadHash: &models.CoseV001SchemaDataPayloadHash{
 				Algorithm: conv.Pointer(models.CoseV001SchemaDataPayloadHashAlgorithmSha256),
-				Value:     conv.Pointer(hex.EncodeToString(h[:])),
+				Value:     new(hex.EncodeToString(h[:])),
 			},
 			EnvelopeHash: &models.CoseV001SchemaDataEnvelopeHash{
 				Algorithm: conv.Pointer(models.CoseV001SchemaDataEnvelopeHashAlgorithmSha256),
-				Value:     conv.Pointer(hex.EncodeToString(v.envelopeHash)),
+				Value:     new(hex.EncodeToString(v.envelopeHash)),
 			},
 		},
 	}
 
 	itObj := models.Cose{}
-	itObj.APIVersion = conv.Pointer(APIVERSION)
+	itObj.APIVersion = new(APIVERSION)
 	itObj.Spec = &canonicalEntry
 
 	return json.Marshal(&itObj)
@@ -456,7 +456,7 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	}
 
 	returnVal.Spec = re.CoseObj
-	returnVal.APIVersion = conv.Pointer(re.APIVersion())
+	returnVal.APIVersion = new(re.APIVersion())
 
 	return &returnVal, nil
 }

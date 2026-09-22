@@ -38,7 +38,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag/conv"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/in-toto/in-toto-golang/in_toto"
@@ -157,7 +156,7 @@ func createRekorEnvelope(dsseEnv *dsse.Envelope, pub [][]byte) *models.DSSEV001S
 
 	envelopeBytes, _ := json.Marshal(dsseEnv)
 	proposedContent := &models.DSSEV001SchemaProposedContent{
-		Envelope: conv.Pointer(string(envelopeBytes)),
+		Envelope: new(string(envelopeBytes)),
 	}
 	for _, key := range pub {
 		proposedContent.Verifiers = append(proposedContent.Verifiers, strfmt.Base64(key))
@@ -322,7 +321,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 			name: "null verifier in array",
 			it: &models.DSSEV001Schema{
 				ProposedContent: &models.DSSEV001SchemaProposedContent{
-					Envelope:  conv.Pointer(string(validEnvBytes)),
+					Envelope:  new(string(validEnvBytes)),
 					Verifiers: []strfmt.Base64{pub, nil},
 				},
 			},
@@ -518,7 +517,7 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 				t.Fatal(err)
 			}
 			pe := &models.DSSE{
-				APIVersion: conv.Pointer(APIVERSION),
+				APIVersion: new(APIVERSION),
 				Spec: &models.DSSEV001Schema{
 					ProposedContent: createRekorEnvelope(envelope(t, key, b), [][]byte{pub}),
 				},
@@ -573,7 +572,7 @@ func TestInsertable(t *testing.T) {
 			entry: V001Entry{
 				DSSEObj: models.DSSEV001Schema{
 					ProposedContent: &models.DSSEV001SchemaProposedContent{
-						Envelope: conv.Pointer("envelope"),
+						Envelope: new("envelope"),
 						Verifiers: []strfmt.Base64{
 							[]byte("keys"),
 						},
@@ -587,7 +586,7 @@ func TestInsertable(t *testing.T) {
 			entry: V001Entry{
 				DSSEObj: models.DSSEV001Schema{
 					ProposedContent: &models.DSSEV001SchemaProposedContent{
-						Envelope: conv.Pointer("envelope"),
+						Envelope: new("envelope"),
 						/*
 							Verifiers: []strfmt.Base64{
 								[]byte("keys"),

@@ -113,7 +113,7 @@ func CreateSignedCheckpoint(c Checkpoint) (*SignedCheckpoint, error) {
 	}
 	return &SignedCheckpoint{
 		Checkpoint: c,
-		SignedNote: SignedNote{Note: string(text)},
+		Note:       string(text),
 	}, nil
 }
 

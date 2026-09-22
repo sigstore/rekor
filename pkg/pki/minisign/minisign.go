@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -28,7 +29,6 @@ import (
 
 	minisign "github.com/jedisct1/go-minisign"
 	"github.com/sigstore/rekor/pkg/pki/identity"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/crypto/blake2b"
 )
@@ -208,7 +208,7 @@ func (k PublicKey) Identities() ([]identity.Identity, error) {
 		return nil, errors.New("minisign public key has not been initialized")
 	}
 	// PKIX encode ed25519 public key
-	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(ed25519.PublicKey(k.key.PublicKey[:]))
+	pkixKey, err := x509.MarshalPKIXPublicKey(ed25519.PublicKey(k.key.PublicKey[:]))
 	if err != nil {
 		return nil, err
 	}

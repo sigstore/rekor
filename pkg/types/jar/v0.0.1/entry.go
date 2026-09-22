@@ -272,7 +272,7 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pkcs7.PublicKey, 
 	if oldSHA == "" {
 		v.JARModel.Archive.Hash = &models.JarV001SchemaArchiveHash{
 			Algorithm: conv.Pointer(models.JarV001SchemaArchiveHashAlgorithmSha256),
-			Value:     conv.Pointer(computedSHA),
+			Value:     new(computedSHA),
 		}
 
 	}
@@ -315,7 +315,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	v.JARModel = canonicalEntry
 	// wrap in valid object with kind and apiVersion set
 	jar := models.Jar{}
-	jar.APIVersion = conv.Pointer(APIVERSION)
+	jar.APIVersion = new(APIVERSION)
 	jar.Spec = &canonicalEntry
 
 	return json.Marshal(&jar)
@@ -421,7 +421,7 @@ func (v *V001Entry) CreateFromArtifactProperties(ctx context.Context, props type
 		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
-	returnVal.APIVersion = conv.Pointer(re.APIVersion())
+	returnVal.APIVersion = new(re.APIVersion())
 	returnVal.Spec = re.JARModel
 
 	return &returnVal, nil

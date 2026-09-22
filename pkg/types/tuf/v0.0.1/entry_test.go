@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/go-openapi/runtime"
-	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
 	"github.com/theupdateframework/go-tuf/data"
@@ -206,7 +205,7 @@ func TestCrossFieldValidation(t *testing.T) {
 
 			v := &V001Entry{}
 			r := models.TUF{
-				APIVersion: conv.Pointer(tc.entry.APIVersion()),
+				APIVersion: new(tc.entry.APIVersion()),
 				Spec:       tc.entry.TufObj,
 			}
 
@@ -230,8 +229,7 @@ func TestCrossFieldValidation(t *testing.T) {
 			if (err == nil) != tc.expectCanonicalizeSuccess {
 				t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
 			} else if err != nil {
-				var validationErr *types.InputValidationError
-				if !errors.As(err, &validationErr) {
+				if _, ok := errors.AsType[*types.InputValidationError](err); !ok {
 					t.Errorf("canonicalize returned an unexpected error that isn't of type types.ValidationError: %v", err)
 				}
 			}

@@ -32,7 +32,6 @@ import (
 	"github.com/sigstore/rekor/pkg/types/rfc3161"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag/conv"
 	"github.com/sassoftware/relic/v8/lib/pkcs9"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
@@ -74,7 +73,7 @@ func NewEntryFromBytes(timestamp []byte) models.ProposedEntry {
 
 	return &models.Rfc3161{
 		Spec:       re.Rfc3161Obj,
-		APIVersion: conv.Pointer(re.APIVersion()),
+		APIVersion: new(re.APIVersion()),
 	}
 }
 
@@ -171,7 +170,7 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 
 	// wrap in valid object with kind and apiVersion set
 	ref3161Obj := models.Rfc3161{}
-	ref3161Obj.APIVersion = conv.Pointer(APIVERSION)
+	ref3161Obj.APIVersion = new(APIVERSION)
 	ref3161Obj.Spec = &canonicalEntry
 
 	return json.Marshal(&ref3161Obj)
@@ -247,7 +246,7 @@ func (v V001Entry) CreateFromArtifactProperties(_ context.Context, props types.A
 	}
 
 	returnVal.Spec = re.Rfc3161Obj
-	returnVal.APIVersion = conv.Pointer(re.APIVersion())
+	returnVal.APIVersion = new(re.APIVersion())
 
 	return &returnVal, nil
 }

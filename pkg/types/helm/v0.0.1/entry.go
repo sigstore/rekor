@@ -30,7 +30,6 @@ import (
 	"strings"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
@@ -273,7 +272,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	// wrap in valid object with kind and apiVersion set
 	helmObj := models.Helm{}
-	helmObj.APIVersion = conv.Pointer(APIVERSION)
+	helmObj.APIVersion = new(APIVERSION)
 	helmObj.Spec = &canonicalEntry
 
 	return json.Marshal(&helmObj)
@@ -375,7 +374,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
-	returnVal.APIVersion = conv.Pointer(re.APIVersion())
+	returnVal.APIVersion = new(re.APIVersion())
 	returnVal.Spec = re.HelmObj
 
 	return &returnVal, nil

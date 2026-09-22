@@ -215,8 +215,8 @@ type zapLogEntry struct {
 	r *http.Request
 }
 
-func (z *zapLogEntry) Write(status, bytes int, _ http.Header, elapsed time.Duration, extra interface{}) {
-	var fields []interface{}
+func (z *zapLogEntry) Write(status, bytes int, _ http.Header, elapsed time.Duration, extra any) {
+	var fields []any
 
 	// follows https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry as a convention
 	// append HTTP Request / Response Information
@@ -243,8 +243,8 @@ func (z *zapLogEntry) Write(status, bytes int, _ http.Header, elapsed time.Durat
 	log.ContextLogger(z.r.Context()).With(fields...).Info("completed request")
 }
 
-func (z *zapLogEntry) Panic(v interface{}, stack []byte) {
-	fields := []interface{}{zap.String("message", fmt.Sprintf("%v\n%v", v, string(stack)))}
+func (z *zapLogEntry) Panic(v any, stack []byte) {
+	fields := []any{zap.String("message", fmt.Sprintf("%v\n%v", v, string(stack)))}
 	log.ContextLogger(z.r.Context()).With(fields...).Errorf("panic detected: %v", v)
 }
 
@@ -368,7 +368,7 @@ func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
 			}
 		}
 	}
-	requestFields := map[string]interface{}{}
+	requestFields := map[string]any{}
 	if decodeErr := mapstructure.Decode(r, &requestFields); decodeErr == nil {
 		log.ContextLogger(ctx).Debug(requestFields)
 	}
@@ -395,7 +395,7 @@ func recoverer(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rvr := recover(); rvr != nil && rvr != http.ErrAbortHandler {
-				var fields []interface{}
+				var fields []any
 
 				// get context before dump request in case there is an error
 				ctx := r.Context()
