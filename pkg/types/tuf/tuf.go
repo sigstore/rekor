@@ -38,9 +38,9 @@ func init() {
 }
 
 func New() types.TypeImpl {
-	btt := BaseTufType{}
-	btt.Kind = KIND
-	btt.VersionMap = VersionMap
+	btt := BaseTufType{
+		Kind:       KIND,
+		VersionMap: VersionMap}
 	return &btt
 }
 

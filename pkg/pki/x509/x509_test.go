@@ -382,7 +382,7 @@ func TestPublicKeyWithCertChain(t *testing.T) {
 
 	// Verify error with long chain
 	chain := []*x509.Certificate{}
-	for i := 0; i < 11; i++ {
+	for range 11 {
 		chain = append(chain, leafCert)
 	}
 	pemCertChain, _ = cryptoutils.MarshalCertificatesToPEM(chain)

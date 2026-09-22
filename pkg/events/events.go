@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"google.golang.org/protobuf/encoding/protojson"
@@ -130,9 +131,7 @@ func (e *Event) MarshalJSON() ([]byte, error) {
 		"datacontenttype": ContentTypeJSON,
 		"data":            string(data),
 	}
-	for k, v := range e.attrs {
-		event[k] = v
-	}
+	maps.Copy(event, e.attrs)
 
 	return json.Marshal(event)
 }

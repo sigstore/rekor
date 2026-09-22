@@ -39,9 +39,9 @@ func init() {
 }
 
 func New() types.TypeImpl {
-	bit := BaseIntotoType{}
-	bit.Kind = KIND
-	bit.VersionMap = VersionMap
+	bit := BaseIntotoType{
+		Kind:       KIND,
+		VersionMap: VersionMap}
 	return &bit
 }
 

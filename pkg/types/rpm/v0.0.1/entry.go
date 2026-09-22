@@ -223,7 +223,7 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pgp.PublicKey, *r
 	if oldSHA == "" {
 		v.RPMModel.Package.Hash = &models.RpmV001SchemaPackageHash{}
 		v.RPMModel.Package.Hash.Algorithm = conv.Pointer(models.RpmV001SchemaPackageHashAlgorithmSha256)
-		v.RPMModel.Package.Hash.Value = conv.Pointer(computedSHAHex)
+		v.RPMModel.Package.Hash.Value = new(computedSHAHex)
 	}
 
 	return keyObj, rpmObj, nil
@@ -279,7 +279,7 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 
 	// wrap in valid object with kind and apiVersion set
 	rpm := models.Rpm{}
-	rpm.APIVersion = conv.Pointer(APIVERSION)
+	rpm.APIVersion = new(APIVERSION)
 	rpm.Spec = &canonicalEntry
 
 	return json.Marshal(&rpm)
@@ -377,7 +377,7 @@ func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types
 		return nil, fmt.Errorf("error retrieving external entities: %w", err)
 	}
 
-	returnVal.APIVersion = conv.Pointer(re.APIVersion())
+	returnVal.APIVersion = new(re.APIVersion())
 	returnVal.Spec = re.RPMModel
 
 	return &returnVal, nil

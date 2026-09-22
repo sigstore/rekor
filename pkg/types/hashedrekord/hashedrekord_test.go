@@ -19,8 +19,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/go-openapi/swag/conv"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/types"
@@ -79,7 +77,7 @@ func TestRekordType(t *testing.T) {
 		t.Error("unexpected success in Unmarshal for nil api version")
 	}
 
-	u.Hashedrekord.APIVersion = conv.Pointer("2.0.1")
+	u.Hashedrekord.APIVersion = new("2.0.1")
 
 	// version requested matches implementation in map
 	if _, err := brt.UnmarshalEntry(&u.Hashedrekord); err != nil {
@@ -87,13 +85,13 @@ func TestRekordType(t *testing.T) {
 	}
 
 	// version requested fails to match implementation in map
-	u.Hashedrekord.APIVersion = conv.Pointer("1.2.2")
+	u.Hashedrekord.APIVersion = new("1.2.2")
 	if _, err := brt.UnmarshalEntry(&u.Hashedrekord); err == nil {
 		t.Error("unexpected success in Unmarshal for non-matching version")
 	}
 
 	// error in Unmarshal call is raised appropriately
-	u.Hashedrekord.APIVersion = conv.Pointer("2.2.0")
+	u.Hashedrekord.APIVersion = new("2.2.0")
 	u2 := UnmarshalFailsTester{}
 	_ = VersionMap.SetEntryFactory("2.2.0", u2.NewEntry)
 	if _, err := brt.UnmarshalEntry(&u.Hashedrekord); err == nil {
@@ -101,7 +99,7 @@ func TestRekordType(t *testing.T) {
 	}
 
 	// version requested fails to match implementation in map
-	u.Hashedrekord.APIVersion = conv.Pointer("not_a_version")
+	u.Hashedrekord.APIVersion = new("not_a_version")
 	if _, err := brt.UnmarshalEntry(&u.Hashedrekord); err == nil {
 		t.Error("unexpected success in Unmarshal for invalid version")
 	}

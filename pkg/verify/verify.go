@@ -188,8 +188,8 @@ func VerifySignedEntryTimestamp(ctx context.Context, e *models.LogEntryAnon, ver
 	}
 
 	type bundle struct {
-		Body           interface{} `json:"body"`
-		IntegratedTime int64       `json:"integratedTime"`
+		Body           any   `json:"body"`
+		IntegratedTime int64 `json:"integratedTime"`
 		// Note that this is the virtual index.
 		LogIndex int64  `json:"logIndex"`
 		LogID    string `json:"logID"`

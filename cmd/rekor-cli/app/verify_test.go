@@ -60,7 +60,7 @@ func TestVerifyBodyMatchesUUID(t *testing.T) {
 
 	for _, tc := range []struct {
 		name      string
-		body      interface{}
+		body      any
 		entryUUID string
 		wantErr   bool
 	}{
@@ -137,13 +137,13 @@ func createHashedRekordProposedEntry(t *testing.T, data []byte) (models.Proposed
 			},
 			Data: &models.HashedrekordV001SchemaData{
 				Hash: &models.HashedrekordV001SchemaDataHash{
-					Value:     conv.Pointer(dataSHA256),
+					Value:     new(dataSHA256),
 					Algorithm: conv.Pointer(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
 				},
 			},
 		},
 	}
-	entry.APIVersion = conv.Pointer("0.0.1")
+	entry.APIVersion = new("0.0.1")
 
 	return entry, key, pubBytes
 }

@@ -120,7 +120,7 @@ func parseCipherSuites(names []string) ([]uint16, error) {
 	for _, raw := range names {
 		// pflag splits StringSlice flags on commas, but an env-sourced value
 		// (e.g. TLS_CIPHER_SUITES="A,B") arrives as one element; split both.
-		for _, field := range strings.Split(raw, ",") {
+		for field := range strings.SplitSeq(raw, ",") {
 			name := strings.TrimSpace(field)
 			if name == "" {
 				continue

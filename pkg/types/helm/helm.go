@@ -37,9 +37,9 @@ func init() {
 }
 
 func New() types.TypeImpl {
-	bit := BaseHelmType{}
-	bit.Kind = KIND
-	bit.VersionMap = VersionMap
+	bit := BaseHelmType{
+		Kind:       KIND,
+		VersionMap: VersionMap}
 	return &bit
 }
 

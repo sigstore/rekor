@@ -37,9 +37,9 @@ func init() {
 }
 
 func New() types.TypeImpl {
-	btt := BaseTimestampType{}
-	btt.Kind = KIND
-	btt.VersionMap = VersionMap
+	btt := BaseTimestampType{
+		Kind:       KIND,
+		VersionMap: VersionMap}
 	return &btt
 }
 

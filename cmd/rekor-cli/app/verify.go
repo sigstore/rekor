@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"math/bits"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -49,17 +50,18 @@ type verifyCmdOutput struct {
 
 func (v *verifyCmdOutput) String() string {
 	leafHash, _ := sharding.GetUUIDFromIDString(v.EntryUUID)
-	s := fmt.Sprintf("Current Root Hash: %v\n", v.RootHash)
-	s += fmt.Sprintf("Entry Hash: %v\n", leafHash)
-	s += fmt.Sprintf("Entry Index in Current Tree: %v\n", v.Index)
-	s += fmt.Sprintf("Current Tree Size: %v\n", v.Size)
+	var s strings.Builder
+	fmt.Fprintf(&s, "Current Root Hash: %v\n", v.RootHash)
+	fmt.Fprintf(&s, "Entry Hash: %v\n", leafHash)
+	fmt.Fprintf(&s, "Entry Index in Current Tree: %v\n", v.Index)
+	fmt.Fprintf(&s, "Current Tree Size: %v\n", v.Size)
 	if len(v.Checkpoint) > 0 {
-		s += fmt.Sprintf("Checkpoint:\n%v\n\n", v.Checkpoint)
+		fmt.Fprintf(&s, "Checkpoint:\n%v\n\n", v.Checkpoint)
 	} else {
-		s += "\n"
+		s.WriteString("\n")
 	}
 
-	s += "Inclusion Proof:\n"
+	s.WriteString("Inclusion Proof:\n")
 	hasher := rfc6962.DefaultHasher
 	inner := bits.Len64(uint64(v.Index ^ (v.Size - 1)))
 	var left, right []byte
@@ -73,12 +75,12 @@ func (v *verifyCmdOutput) String() string {
 			right = result
 		}
 		result = hasher.HashChildren(left, right)
-		s += fmt.Sprintf("SHA256(0x01 | %v | %v) =\n\t%v\n\n",
+		fmt.Fprintf(&s, "SHA256(0x01 | %v | %v) =\n\t%v\n\n",
 			hex.EncodeToString(left), hex.EncodeToString(right), hex.EncodeToString(result))
 	}
 
-	s += fmt.Sprintf("Computed Root Hash: %s\nExpected Root Hash: %s\n", hex.EncodeToString(result), v.RootHash)
-	return s
+	fmt.Fprintf(&s, "Computed Root Hash: %s\nExpected Root Hash: %s\n", hex.EncodeToString(result), v.RootHash)
+	return s.String()
 }
 
 // verifyCmd represents the get command
@@ -95,7 +97,7 @@ var verifyCmd = &cobra.Command{
 		}
 		return validateArtifactPFlags(true, true)
 	},
-	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (interface{}, error) {
+	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (any, error) {
 		ctx := cmd.Context()
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {

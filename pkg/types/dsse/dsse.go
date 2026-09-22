@@ -37,9 +37,9 @@ func init() {
 }
 
 func New() types.TypeImpl {
-	bit := BaseDSSEType{}
-	bit.Kind = KIND
-	bit.VersionMap = VersionMap
+	bit := BaseDSSEType{
+		Kind:       KIND,
+		VersionMap: VersionMap}
 	return &bit
 }
 

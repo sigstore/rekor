@@ -210,7 +210,7 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					Envelope: createRekorEnvelope(envelope(t, key, []byte(validPayload)), [][]byte{pub}),
 					Hash: &models.IntotoV002SchemaContentHash{
 						Algorithm: conv.Pointer(models.IntotoV002SchemaContentHashAlgorithmSha256),
-						Value:     conv.Pointer(envelopeHash(t, envelope(t, key, []byte(validPayload)))),
+						Value:     new(envelopeHash(t, envelope(t, key, []byte(validPayload)))),
 					},
 				},
 			},
@@ -225,7 +225,7 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					Envelope: createRekorEnvelope(envelope(t, priv, []byte(validPayload)), [][]byte{pemBytes}),
 					Hash: &models.IntotoV002SchemaContentHash{
 						Algorithm: conv.Pointer(models.IntotoV002SchemaContentHashAlgorithmSha256),
-						Value:     conv.Pointer(envelopeHash(t, envelope(t, priv, []byte(validPayload)))),
+						Value:     new(envelopeHash(t, envelope(t, priv, []byte(validPayload)))),
 					},
 				},
 			},
@@ -240,7 +240,7 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					Envelope: createRekorEnvelope(&invalid, [][]byte{pub}),
 					Hash: &models.IntotoV002SchemaContentHash{
 						Algorithm: conv.Pointer(models.IntotoV002SchemaContentHashAlgorithmSha256),
-						Value:     conv.Pointer(envelopeHash(t, &invalid)),
+						Value:     new(envelopeHash(t, &invalid)),
 					},
 				},
 			},
@@ -255,7 +255,7 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					Envelope: createRekorEnvelope(envelope(t, key, []byte(validPayload)), [][]byte{[]byte("notavalidkey")}),
 					Hash: &models.IntotoV002SchemaContentHash{
 						Algorithm: conv.Pointer(models.IntotoV002SchemaContentHashAlgorithmSha256),
-						Value:     conv.Pointer(envelopeHash(t, envelope(t, key, []byte(validPayload)))),
+						Value:     new(envelopeHash(t, envelope(t, key, []byte(validPayload)))),
 					},
 				},
 			},
@@ -270,7 +270,7 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					Envelope: createRekorEnvelope(multiSignEnvelope(t, []*ecdsa.PrivateKey{key, priv}, []byte(validPayload)), [][]byte{pub, pemBytes}),
 					Hash: &models.IntotoV002SchemaContentHash{
 						Algorithm: conv.Pointer(models.IntotoV002SchemaContentHashAlgorithmSha256),
-						Value:     conv.Pointer(envelopeHash(t, multiSignEnvelope(t, []*ecdsa.PrivateKey{key, priv}, []byte(validPayload)))),
+						Value:     new(envelopeHash(t, multiSignEnvelope(t, []*ecdsa.PrivateKey{key, priv}, []byte(validPayload)))),
 					},
 				},
 			},
@@ -284,7 +284,7 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 				Content: &models.IntotoV002SchemaContent{
 					Envelope: &models.IntotoV002SchemaContentEnvelope{
 						Payload:     strfmt.Base64("cGF5bG9hZAo="),
-						PayloadType: conv.Pointer("payloadType"),
+						PayloadType: new("payloadType"),
 						Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 							{
 								PublicKey: &keyBytes,
@@ -295,7 +295,7 @@ func TestV002Entry_Unmarshal(t *testing.T) {
 					},
 					Hash: &models.IntotoV002SchemaContentHash{
 						Algorithm: conv.Pointer(models.IntotoV002SchemaContentHashAlgorithmSha256),
-						Value:     conv.Pointer(envelopeHash(t, envelope(t, key, []byte(validPayload)))),
+						Value:     new(envelopeHash(t, envelope(t, key, []byte(validPayload)))),
 					},
 				},
 			},
@@ -518,11 +518,11 @@ func TestV002Entry_IndexKeys(t *testing.T) {
 						Envelope: createRekorEnvelope(envelope(t, key, b), [][]byte{pub}),
 						Hash: &models.IntotoV002SchemaContentHash{
 							Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
-							Value:     conv.Pointer(envelopeHash(t, envelope(t, key, b))),
+							Value:     new(envelopeHash(t, envelope(t, key, b))),
 						},
 						PayloadHash: &models.IntotoV002SchemaContentPayloadHash{
 							Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
-							Value:     conv.Pointer(hex.EncodeToString(payloadHash[:])),
+							Value:     new(hex.EncodeToString(payloadHash[:])),
 						},
 					},
 				},
@@ -571,7 +571,7 @@ func TestInsertable(t *testing.T) {
 					Content: &models.IntotoV002SchemaContent{
 						Envelope: &models.IntotoV002SchemaContentEnvelope{
 							Payload:     strfmt.Base64("payload"),
-							PayloadType: conv.Pointer("payloadType"),
+							PayloadType: new("payloadType"),
 							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 								{
 									PublicKey: &keyBytes,
@@ -592,7 +592,7 @@ func TestInsertable(t *testing.T) {
 					Content: &models.IntotoV002SchemaContent{
 						Envelope: &models.IntotoV002SchemaContentEnvelope{
 							Payload:     strfmt.Base64("payload"),
-							PayloadType: conv.Pointer("payloadType"),
+							PayloadType: new("payloadType"),
 							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 								{
 									PublicKey: &keyBytes,
@@ -613,7 +613,7 @@ func TestInsertable(t *testing.T) {
 					Content: &models.IntotoV002SchemaContent{
 						Envelope: &models.IntotoV002SchemaContentEnvelope{
 							Payload:     strfmt.Base64("payload"),
-							PayloadType: conv.Pointer("payloadType"),
+							PayloadType: new("payloadType"),
 							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 								{
 									PublicKey: &keyBytes,
@@ -634,7 +634,7 @@ func TestInsertable(t *testing.T) {
 					Content: &models.IntotoV002SchemaContent{
 						Envelope: &models.IntotoV002SchemaContentEnvelope{
 							Payload:     strfmt.Base64("payload"),
-							PayloadType: conv.Pointer("payloadType"),
+							PayloadType: new("payloadType"),
 							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 								{
 									//PublicKey: strfmt.Base64([]byte("key")),
@@ -655,7 +655,7 @@ func TestInsertable(t *testing.T) {
 					Content: &models.IntotoV002SchemaContent{
 						Envelope: &models.IntotoV002SchemaContentEnvelope{
 							Payload:     strfmt.Base64("payload"),
-							PayloadType: conv.Pointer("payloadType"),
+							PayloadType: new("payloadType"),
 							Signatures:  []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{},
 							/*
 								Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
@@ -700,7 +700,7 @@ func TestInsertable(t *testing.T) {
 					Content: &models.IntotoV002SchemaContent{
 						Envelope: &models.IntotoV002SchemaContentEnvelope{
 							//Payload:     strfmt.Base64("payload"),
-							PayloadType: conv.Pointer("payloadType"),
+							PayloadType: new("payloadType"),
 							Signatures: []*models.IntotoV002SchemaContentEnvelopeSignaturesItems0{
 								{
 									PublicKey: &keyBytes,

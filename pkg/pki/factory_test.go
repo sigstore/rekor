@@ -93,7 +93,6 @@ func TestFactoryNewKey(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			factory, err := NewArtifactFactory(Format(tc.format))
 			if tc.expectValidFormat != (err == nil) {

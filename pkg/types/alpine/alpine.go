@@ -37,9 +37,9 @@ func init() {
 }
 
 func New() types.TypeImpl {
-	bat := BaseAlpineType{}
-	bat.Kind = KIND
-	bat.VersionMap = VersionMap
+	bat := BaseAlpineType{
+		Kind:       KIND,
+		VersionMap: VersionMap}
 	return &bat
 }
 

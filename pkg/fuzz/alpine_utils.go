@@ -82,7 +82,7 @@ func createPkgInfoFileContents(ff *fuzz.ConsumeFuzzer) ([]byte, error) {
 	}
 	b.Write(header)
 
-	for i := 0; i < noOfRows; i++ {
+	for range noOfRows {
 		key, err := ff.GetBytes()
 		if err != nil {
 			return []byte(""), err

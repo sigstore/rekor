@@ -24,7 +24,6 @@ import (
 
 	fuzz "github.com/AdamKorcz/go-fuzz-headers-1"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag/conv"
 
 	fuzzUtils "github.com/sigstore/rekor/pkg/fuzz"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -87,7 +86,7 @@ func FuzzHelmUnmarshalAndCanonicalize(f *testing.F) {
 		}
 
 		targetEntry := &models.Helm{
-			APIVersion: conv.Pointer(APIVERSION),
+			APIVersion: new(APIVERSION),
 			Spec:       targetV001,
 		}
 

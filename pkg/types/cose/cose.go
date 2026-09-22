@@ -37,9 +37,9 @@ func init() {
 }
 
 func New() types.TypeImpl {
-	bit := BaseCOSEType{}
-	bit.Kind = KIND
-	bit.VersionMap = VersionMap
+	bit := BaseCOSEType{
+		Kind:       KIND,
+		VersionMap: VersionMap}
 	return &bit
 }
 

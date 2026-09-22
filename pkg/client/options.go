@@ -32,7 +32,7 @@ type options struct {
 	RetryWaitMax        time.Duration
 	InsecureTLS         bool
 	TLSConfig           *tls.Config
-	Logger              interface{}
+	Logger              any
 	NoDisableKeepalives bool
 	Headers             map[string][]string
 }
@@ -84,7 +84,7 @@ func WithRetryWaitMax(t time.Duration) Option {
 }
 
 // WithLogger sets the logger; it must implement either retryablehttp.Logger or retryablehttp.LeveledLogger; if not, this will not take effect.
-func WithLogger(logger interface{}) Option {
+func WithLogger(logger any) Option {
 	return func(o *options) {
 		switch logger.(type) {
 		case retryablehttp.Logger, retryablehttp.LeveledLogger:

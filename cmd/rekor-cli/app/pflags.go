@@ -329,8 +329,8 @@ func validateID(v string) error {
 
 // validateOID ensures that the supplied string is a valid ASN.1 object identifier
 func validateOID(v string) error {
-	values := strings.Split(v, ".")
-	for _, value := range values {
+	values := strings.SplitSeq(v, ".")
+	for value := range values {
 		if !validator.IsNumeric(value) {
 			return fmt.Errorf("field '%v' is not a valid number", value)
 		}

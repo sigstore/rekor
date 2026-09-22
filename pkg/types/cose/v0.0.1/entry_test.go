@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/go-openapi/runtime"
@@ -109,7 +110,7 @@ func p(b []byte) *strfmt.Base64 {
 	return &b64
 }
 
-func makeSignedCose(t *testing.T, priv *ecdsa.PrivateKey, payload, aad []byte, contentType interface{}) []byte {
+func makeSignedCose(t *testing.T, priv *ecdsa.PrivateKey, payload, aad []byte, contentType any) []byte {
 	m := gocose.NewSign1Message()
 	m.Payload = payload
 	m.Headers.Protected[gocose.HeaderLabelAlgorithm] = gocose.AlgorithmES256
@@ -717,10 +718,8 @@ func TestV001Entry_Validate(t *testing.T) {
 }
 
 func mustContain(t *testing.T, want string, l []string) {
-	for _, s := range l {
-		if s == want {
-			return
-		}
+	if slices.Contains(l, want) {
+		return
 	}
 	t.Fatalf("list %v does not contain %s", l, want)
 }

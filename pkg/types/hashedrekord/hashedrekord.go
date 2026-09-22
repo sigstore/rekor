@@ -37,9 +37,9 @@ func init() {
 }
 
 func New() types.TypeImpl {
-	brt := BaseRekordType{}
-	brt.Kind = KIND
-	brt.VersionMap = VersionMap
+	brt := BaseRekordType{
+		Kind:       KIND,
+		VersionMap: VersionMap}
 	return &brt
 }
 

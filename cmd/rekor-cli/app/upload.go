@@ -67,7 +67,7 @@ var uploadCmd = &cobra.Command{
 		return validateArtifactPFlags(false, false)
 	},
 	Long: `This command takes the public key, signature and URL of the release artifact and uploads it to the rekor server.`,
-	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (interface{}, error) {
+	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (any, error) {
 		ctx := cmd.Context()
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {

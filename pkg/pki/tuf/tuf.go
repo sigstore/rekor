@@ -85,7 +85,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(_ io.Reader, k interface{}, _ ...sigsig.VerifyOption) error {
+func (s Signature) Verify(_ io.Reader, k any, _ ...sigsig.VerifyOption) error {
 	key, ok := k.(*PublicKey)
 	if !ok || key == nil {
 		return fmt.Errorf("invalid public key type for: %v", k)

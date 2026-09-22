@@ -179,7 +179,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					Envelope: envelope(t, key, validPayload, "application/vnd.in-toto+json"),
 					Hash: &models.IntotoV001SchemaContentHash{
 						Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
-						Value:     conv.Pointer("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+						Value:     new("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
 					},
 				},
 			},
@@ -194,7 +194,7 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					Envelope: envelope(t, key, validPayload, "application/vnd.in-toto+json"),
 					PayloadHash: &models.IntotoV001SchemaContentPayloadHash{
 						Algorithm: conv.Pointer(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
-						Value:     conv.Pointer("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+						Value:     new("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
 					},
 				},
 			},
@@ -209,11 +209,11 @@ func TestV001Entry_Unmarshal(t *testing.T) {
 					Envelope: envelope(t, key, validPayload, "application/vnd.in-toto+json"),
 					Hash: &models.IntotoV001SchemaContentHash{
 						Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
-						Value:     conv.Pointer("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+						Value:     new("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
 					},
 					PayloadHash: &models.IntotoV001SchemaContentPayloadHash{
 						Algorithm: conv.Pointer(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
-						Value:     conv.Pointer("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+						Value:     new("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
 					},
 				},
 			},
@@ -390,7 +390,7 @@ func TestV001EntryWithoutEnvelopeOrPayloadHash(t *testing.T) {
 		Content: &models.IntotoV001SchemaContent{
 			Hash: &models.IntotoV001SchemaContentHash{
 				Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
-				Value:     conv.Pointer("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
+				Value:     new("1a1707bb54e5fb4deddd19f07adcb4f1e022ca7879e3c8348da8d4fa496ae8e2"),
 			},
 		},
 	}
@@ -482,11 +482,11 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 					Content: &models.IntotoV001SchemaContent{
 						Hash: &models.IntotoV001SchemaContentHash{
 							Algorithm: conv.Pointer(models.IntotoV001SchemaContentHashAlgorithmSha256),
-							Value:     conv.Pointer(dataSHA),
+							Value:     new(dataSHA),
 						},
 						PayloadHash: &models.IntotoV001SchemaContentPayloadHash{
 							Algorithm: conv.Pointer(models.IntotoV001SchemaContentPayloadHashAlgorithmSha256),
-							Value:     conv.Pointer(hex.EncodeToString(payloadHash[:])),
+							Value:     new(hex.EncodeToString(payloadHash[:])),
 						},
 					},
 				},

@@ -37,9 +37,9 @@ func init() {
 }
 
 func New() types.TypeImpl {
-	brt := BaseRPMType{}
-	brt.Kind = KIND
-	brt.VersionMap = VersionMap
+	brt := BaseRPMType{
+		Kind:       KIND,
+		VersionMap: VersionMap}
 	return &brt
 }
 

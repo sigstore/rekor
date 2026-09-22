@@ -29,7 +29,7 @@ import (
 
 type CobraCmd func(cmd *cobra.Command, args []string)
 
-type formatCmd func(cmd *cobra.Command, args []string) (interface{}, error)
+type formatCmd func(cmd *cobra.Command, args []string) (any, error)
 
 func WrapCmd(f formatCmd) CobraCmd {
 	return func(cmd *cobra.Command, args []string) {
@@ -63,7 +63,7 @@ func WrapCmd(f formatCmd) CobraCmd {
 	}
 }
 
-func toJSON(i interface{}) string {
+func toJSON(i any) string {
 	b, err := json.Marshal(i)
 	if err != nil {
 		log.CliLogger.Fatal(err)

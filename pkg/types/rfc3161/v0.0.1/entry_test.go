@@ -32,7 +32,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag/conv"
 	"go.uber.org/goleak"
 
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -158,7 +157,7 @@ func TestCrossFieldValidation(t *testing.T) {
 	for _, tc := range testCases {
 		v := &V001Entry{}
 		ts := models.Rfc3161{
-			APIVersion: conv.Pointer(tc.entry.APIVersion()),
+			APIVersion: new(tc.entry.APIVersion()),
 			Spec:       tc.entry.Rfc3161Obj,
 		}
 
@@ -180,8 +179,7 @@ func TestCrossFieldValidation(t *testing.T) {
 		if (err == nil) != tc.expectCanonicalizeSuccess {
 			t.Errorf("unexpected result from Canonicalize for '%v': %v", tc.caseDesc, err)
 		} else if err != nil {
-			var validationErr *types.InputValidationError
-			if !errors.As(err, &validationErr) {
+			if _, ok := errors.AsType[*types.InputValidationError](err); !ok {
 				t.Errorf("canonicalize returned an unexpected error that isn't of type types.ValidationError: %v", err)
 			}
 		}
@@ -210,7 +208,7 @@ func TestCrossFieldValidation(t *testing.T) {
 
 func tTooBig() []byte {
 	lotsOfBytes := make([]byte, 10*1024+1)
-	for i := 0; i < len(lotsOfBytes); i++ {
+	for i := range lotsOfBytes {
 		lotsOfBytes[i] = 1
 	}
 	return lotsOfBytes

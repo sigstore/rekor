@@ -42,7 +42,7 @@ import (
 type getCmdOutput struct {
 	Attestation     string
 	AttestationType string
-	Body            interface{}
+	Body            any
 	LogIndex        int
 	IntegratedTime  int64
 	UUID            string
@@ -81,7 +81,7 @@ var getCmd = &cobra.Command{
 			log.CliLogger.Fatalf("Error initializing cmd line args: %w", err)
 		}
 	},
-	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (interface{}, error) {
+	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (any, error) {
 		ctx := cmd.Context()
 		rekorClient, err := client.GetRekorClient(viper.GetString("rekor_server"), client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
 		if err != nil {
@@ -218,7 +218,7 @@ func compareEntryUUIDs(requestEntryUUID string, responseEntryUUID string) error 
 	return nil
 }
 
-func parseEntry(uuid string, e models.LogEntryAnon) (interface{}, error) {
+func parseEntry(uuid string, e models.LogEntryAnon) (any, error) {
 	if viper.GetString("format") == "tle" {
 		return tle.GenerateTransparencyLogEntry(e)
 	}

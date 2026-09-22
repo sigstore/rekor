@@ -64,7 +64,7 @@ var logInfoCmd = &cobra.Command{
 	Example: `  rekor-cli loginfo`,
 	Short:   "Rekor loginfo command",
 	Long:    `Prints info about the transparency log`,
-	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (interface{}, error) {
+	Run: format.WrapCmd(func(cmd *cobra.Command, _ []string) (any, error) {
 		serverURL := viper.GetString("rekor_server")
 		ctx := cmd.Context()
 		rekorClient, err := client.GetRekorClient(serverURL, client.WithUserAgent(UserAgent()), client.WithRetryCount(viper.GetUint("retry")), client.WithLogger(log.CliLogger))
@@ -166,7 +166,7 @@ func loadVerifier(ctx context.Context, rekorClient *rclient.Rekor, treeID string
 	publicKey := viper.GetString("rekor_server_public_key")
 	if publicKey == "" {
 		// fetch key from server
-		keyResp, err := rekorClient.Pubkey.GetPublicKeyContext(ctx, pubkey.NewGetPublicKeyParams().WithTreeID(conv.Pointer(treeID)))
+		keyResp, err := rekorClient.Pubkey.GetPublicKeyContext(ctx, pubkey.NewGetPublicKeyParams().WithTreeID(new(treeID)))
 		if err != nil {
 			return nil, err
 		}
