@@ -19,8 +19,22 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hashicorp/go-retryablehttp"
+	"github.com/sigstore/sigstore/pkg/httpretry"
 )
+
+// logger interface allows to use other loggers than standard log.Logger.
+type logger interface {
+	Printf(string, ...any)
+}
+
+// leveledLogger is an interface that can be implemented by any logger or a
+// logger wrapper to provide leveled logging.
+type leveledLogger interface {
+	Error(msg string, keysAndValues ...any)
+	Info(msg string, keysAndValues ...any)
+	Debug(msg string, keysAndValues ...any)
+	Warn(msg string, keysAndValues ...any)
+}
 
 // Option is a functional option for customizing static signatures.
 type Option func(*options)
@@ -40,12 +54,18 @@ type options struct {
 const (
 	// DefaultRetryCount is the default number of retries.
 	DefaultRetryCount = 3
+	// DefaultRetryWaitMin is the default minimum wait time between retries.
+	DefaultRetryWaitMin = httpretry.DefaultWaitMin
+	// DefaultRetryWaitMax is the default maximum wait time between retries.
+	DefaultRetryWaitMax = httpretry.DefaultWaitMax
 )
 
 func makeOptions(opts ...Option) *options {
 	o := &options{
-		UserAgent:  "",
-		RetryCount: DefaultRetryCount,
+		UserAgent:    "",
+		RetryCount:   DefaultRetryCount,
+		RetryWaitMin: DefaultRetryWaitMin,
+		RetryWaitMax: DefaultRetryWaitMax,
 	}
 
 	for _, opt := range opts {
@@ -83,12 +103,15 @@ func WithRetryWaitMax(t time.Duration) Option {
 	}
 }
 
-// WithLogger sets the logger; it must implement either retryablehttp.Logger or retryablehttp.LeveledLogger; if not, this will not take effect.
-func WithLogger(logger any) Option {
+// WithLogger sets the logger; it must implement either a simple logger interface
+// with a `Printf(string, ...any)` method, or a leveled logger interface with
+// `Error`, `Info`, `Debug`, and `Warn` methods that take a message string and
+// variadic `keysAndValues`.
+func WithLogger(l any) Option {
 	return func(o *options) {
-		switch logger.(type) {
-		case retryablehttp.Logger, retryablehttp.LeveledLogger:
-			o.Logger = logger
+		switch l.(type) {
+		case logger, leveledLogger:
+			o.Logger = l
 		}
 	}
 }
