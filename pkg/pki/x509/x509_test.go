@@ -178,7 +178,7 @@ func TestSignature_Verify(t *testing.T) {
 			}
 
 			pubKey, _ := cryptoutils.UnmarshalPEMToPublicKey([]byte(tt.pub))
-			derKey, _ := cryptoutils.MarshalPublicKeyToDER(pubKey)
+			derKey, _ := x509.MarshalPKIXPublicKey(pubKey)
 			digest := sha256.Sum256(derKey)
 			expectedID := identity.Identity{Crypto: pubKey, Raw: derKey, Fingerprint: hex.EncodeToString(digest[:])}
 			ids, err := pub.Identities()

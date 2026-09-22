@@ -512,7 +512,7 @@ A6ydFG8HXGWcnVVIVQ==
 
 			// compare public key
 			key, _ := cryptoutils.UnmarshalPEMToPublicKey([]byte(tt.identities[1]))
-			pkixKey, _ := cryptoutils.MarshalPublicKeyToDER(key)
+			pkixKey, _ := x509.MarshalPKIXPublicKey(key)
 			digest = sha256.Sum256(pkixKey)
 			expectedID = identity.Identity{Crypto: key, Raw: pkixKey, Fingerprint: hex.EncodeToString(digest[:])}
 			if err := cryptoutils.EqualKeys(expectedID.Crypto, ids[1].Crypto); err != nil {

@@ -224,7 +224,7 @@ func (k PublicKey) Subjects() []string {
 func (k PublicKey) Identities() ([]identity.Identity, error) {
 	// k contains either a key, a cert, or a list of certs
 	if k.key != nil {
-		pkixKey, err := cryptoutils.MarshalPublicKeyToDER(k.key)
+		pkixKey, err := x509.MarshalPKIXPublicKey(k.key)
 		if err != nil {
 			return nil, err
 		}

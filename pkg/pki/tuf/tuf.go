@@ -28,7 +28,6 @@ import (
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/sigstore/rekor/pkg/pki/identity"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 	"github.com/theupdateframework/go-tuf/data"
 	"github.com/theupdateframework/go-tuf/pkg/keys"
@@ -212,7 +211,7 @@ func (k PublicKey) Identities() ([]identity.Identity, error) {
 			if err != nil {
 				return nil, err
 			}
-			pkixKey, err := cryptoutils.MarshalPublicKeyToDER(pub)
+			pkixKey, err := x509.MarshalPKIXPublicKey(pub)
 			if err != nil {
 				return nil, err
 			}
@@ -225,7 +224,7 @@ func (k PublicKey) Identities() ([]identity.Identity, error) {
 		case data.KeyTypeEd25519:
 			// key is stored as a 32-byte string
 			pub := ed25519.PublicKey(verifier.Public())
-			pkixKey, err := cryptoutils.MarshalPublicKeyToDER(pub)
+			pkixKey, err := x509.MarshalPKIXPublicKey(pub)
 			if err != nil {
 				return nil, err
 			}

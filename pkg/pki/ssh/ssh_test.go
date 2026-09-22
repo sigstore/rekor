@@ -15,13 +15,13 @@
 package ssh
 
 import (
+	"crypto/x509"
 	"encoding/base64"
 	"math/rand"
 	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -43,7 +43,7 @@ func TestIdentities(t *testing.T) {
 	}
 
 	keyVal := expectedKey.(ssh.CryptoPublicKey).CryptoPublicKey()
-	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(keyVal)
+	pkixKey, err := x509.MarshalPKIXPublicKey(keyVal)
 	if err != nil {
 		t.Fatal(err)
 	}

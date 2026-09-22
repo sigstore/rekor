@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/x509"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -28,7 +29,6 @@ import (
 
 	"github.com/asaskevich/govalidator"
 	"github.com/sigstore/rekor/pkg/pki/identity"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 	"golang.org/x/crypto/ssh"
 )
@@ -208,7 +208,7 @@ func (k PublicKey) Identities() ([]identity.Identity, error) {
 		}
 	}
 
-	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(cryptoPubKey)
+	pkixKey, err := x509.MarshalPKIXPublicKey(cryptoPubKey)
 	if err != nil {
 		return nil, err
 	}
