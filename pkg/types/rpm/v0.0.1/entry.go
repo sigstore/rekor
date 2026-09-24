@@ -211,11 +211,11 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pgp.PublicKey, *r
 	}
 
 	// Verify GPG signature and parse RPM headers
-	rpmObj, sigs, err := rpmutils.Verify(bytes.NewReader(pkgBytes), keyring)
+	rpmObj, sigs, err := verifyRPM(pkgBytes, keyring)
 	if err != nil {
 		return nil, nil, &types.InputValidationError{Err: err}
 	}
-	if len(sigs) == 0 {
+	if sigs == 0 {
 		return nil, nil, &types.InputValidationError{Err: errors.New("no supported PGP signature found in RPM")}
 	}
 
