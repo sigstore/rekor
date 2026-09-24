@@ -25,6 +25,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,6 +33,83 @@ import (
 	protonpacket "github.com/ProtonMail/go-crypto/openpgp/packet"
 	"github.com/sassoftware/go-rpmutils"
 )
+
+func TestUnknownRPMPayloadDigestFallsBackToMD5(t *testing.T) {
+	lead := mustReadFile(t, "../tests/test.rpm")[:96]
+	// Encode minimal RPM headers to isolate payload-digest selection from
+	// signature verification. Each index entry is tag, type, offset, count.
+	encodeHeader := func(index []uint32, data []byte) []byte {
+		t.Helper()
+		buf := bytes.NewBuffer([]byte{0x8e, 0xad, 0xe8, 1, 0, 0, 0, 0})
+		for _, values := range [][]uint32{{uint32(len(index) / 4), uint32(len(data))}, index} {
+			if err := binary.Write(buf, binary.BigEndian, values); err != nil {
+				t.Fatal(err)
+			}
+		}
+		buf.Write(data)
+		return buf.Bytes()
+	}
+	for _, tc := range []struct {
+		name          string
+		tamperHeader  bool
+		tamperPayload bool
+		tamperMD5     bool
+		missingMD5    bool
+		wantErr       string
+	}{
+		{name: "valid fallback"},
+		{name: "changed header", tamperHeader: true, wantErr: "md5 digest mismatch"},
+		{name: "changed payload", tamperPayload: true, wantErr: "md5 digest mismatch"},
+		{name: "incorrect MD5", tamperMD5: true, wantErr: "md5 digest mismatch"},
+		{name: "missing MD5", missingMD5: true, wantErr: "no usable payload digest found"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			data := []byte{'a', 'b', 'c', 0, 0, 0, 0, 0}
+			binary.BigEndian.PutUint32(data[4:], 31337) // Unknown algorithm.
+			generalHeader := encodeHeader([]uint32{
+				rpmutils.PAYLOADDIGEST, rpmutils.RPM_STRING_ARRAY_TYPE, 0, 1,
+				rpmutils.PAYLOADDIGESTALGO, rpmutils.RPM_INT32_TYPE, 4, 1,
+			}, data)
+			payload := []byte("RPM payload")
+			h := crypto.MD5.New() //nolint:gosec // Exercise the legacy RPM integrity check.
+			h.Write(generalHeader)
+			h.Write(payload)
+			digest := h.Sum(nil)
+			if tc.tamperMD5 {
+				digest[0] ^= 1
+			}
+			// SIG_MD5's on-disk signature-header tag is 1004.
+			signatureHeader := encodeHeader([]uint32{1004, rpmutils.RPM_BIN_TYPE, 0, 16}, digest)
+			if tc.missingMD5 {
+				signatureHeader = encodeHeader(nil, nil)
+			}
+			if tc.tamperHeader {
+				generalHeader[len(generalHeader)-1] ^= 1
+			}
+			if tc.tamperPayload {
+				payload[len(payload)-1] ^= 1
+			}
+			packageBytes := bytes.Join([][]byte{lead, signatureHeader, generalHeader, payload}, nil)
+			header, err := rpmutils.ReadHeader(bytes.NewReader(packageBytes))
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = verifyRPMPayloadDigest(header, generalHeader, payload)
+			// Compare with the upstream path on exactly the same encoded bytes.
+			_, _, upstreamErr := rpmutils.Verify(bytes.NewReader(packageBytes), nil)
+			if (err == nil) != (upstreamErr == nil) || (err != nil && err.Error() != upstreamErr.Error()) {
+				t.Fatalf("legacy digest check returned %v; go-rpmutils returned %v", err, upstreamErr)
+			}
+			if tc.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+					t.Fatalf("got %v, want %s", err, tc.wantErr)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
 
 func TestVerifyRPMV3Signatures(t *testing.T) {
 	packageBytes := mustReadFile(t, "../tests/test.rpm")

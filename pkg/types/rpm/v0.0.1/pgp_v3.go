@@ -175,18 +175,21 @@ func verifyRPMPayloadDigest(header *rpmutils.RpmHeader, generalHeader, payload [
 	digests, digestErr := header.GetStrings(rpmutils.PAYLOADDIGEST)
 	algorithms, algorithmErr := header.GetUint32s(rpmutils.PAYLOADDIGESTALGO)
 	if digestErr == nil && algorithmErr == nil && len(digests) > 0 && len(algorithms) > 0 {
-		hashAlgorithm, ok := rpmHash(algorithms[0])
-		if !ok || !hashAlgorithm.Available() {
-			return fmt.Errorf("unknown RPM payload digest algorithm %d", algorithms[0])
+		// Like go-rpmutils, treat an unrecognized algorithm as no payload
+		// digest and fall back to SIG_MD5 over the header and payload below.
+		if hashAlgorithm, ok := rpmHash(algorithms[0]); ok {
+			if !hashAlgorithm.Available() {
+				return fmt.Errorf("unknown RPM payload digest algorithm %d", algorithms[0])
+			}
+			h := hashAlgorithm.New()
+			if _, err := h.Write(payload); err != nil {
+				return err
+			}
+			if calculated := hex.EncodeToString(h.Sum(nil)); calculated != digests[0] {
+				return fmt.Errorf("payload %s digest mismatch", hashAlgorithm)
+			}
+			return nil
 		}
-		h := hashAlgorithm.New()
-		if _, err := h.Write(payload); err != nil {
-			return err
-		}
-		if calculated := hex.EncodeToString(h.Sum(nil)); calculated != digests[0] {
-			return fmt.Errorf("payload %s digest mismatch", hashAlgorithm)
-		}
-		return nil
 	}
 
 	expectedMD5, err := header.GetBytes(rpmutils.SIG_MD5)
