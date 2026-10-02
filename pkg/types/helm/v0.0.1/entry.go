@@ -226,6 +226,18 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*helm.Provenance, 
 		return nil, nil, nil, &types.InputValidationError{Err: err}
 	}
 
+	// The algorithm comes verbatim out of the signed provenance, while the field it lands
+	// in is enum-constrained, so reject it here rather than persisting a leaf that the
+	// read path's own Validate then refuses.
+	algorithm, chartHash, err := provenance.GetChartAlgorithmHash()
+	if err != nil {
+		return nil, nil, nil, &types.InputValidationError{Err: err}
+	}
+	chartHashModel := models.HelmV001SchemaChartHash{Algorithm: &algorithm, Value: &chartHash}
+	if err := chartHashModel.Validate(strfmt.Default); err != nil {
+		return nil, nil, nil, &types.InputValidationError{Err: err}
+	}
+
 	return provenance, keyObj, sig, nil
 }
 
@@ -260,14 +272,6 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	canonicalEntry.Chart.Hash = &models.HelmV001SchemaChartHash{}
 	canonicalEntry.Chart.Hash.Algorithm = &algorithm
 	canonicalEntry.Chart.Hash.Value = &chartHash
-
-	// The algorithm comes verbatim out of the signed provenance, while the field it
-	// lands in is enum-constrained. Without this the create path will happily persist
-	// a leaf that the read path's own Validate then refuses, which breaks the
-	// canonicalization invariant that AssertCanonicalIdempotent checks for.
-	if err := canonicalEntry.Chart.Hash.Validate(strfmt.Default); err != nil {
-		return nil, &types.InputValidationError{Err: err}
-	}
 
 	canonicalEntry.Chart.Provenance = &models.HelmV001SchemaChartProvenance{}
 	canonicalEntry.Chart.Provenance.Signature = &models.HelmV001SchemaChartProvenanceSignature{}
