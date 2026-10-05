@@ -429,8 +429,8 @@ github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.9 h1:zcg/EG6JW/8RSx9T
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.9/go.mod h1:e7QngtHib0McuP1C/+Dt9f/7a8ic8FXvPB75OQzWgU4=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.11.0 h1:dgF6eB+Zo5lZ2eVF10PEr/6O/vsdciYavXFbQj9PaFk=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.11.0/go.mod h1:3gngj4JSuMNXe0oxseFREX0T8dgh4SdxuhP9Wfgix7o=
-github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.9 h1:V+spyeSHypvLHSOvPMT+V72dxDlS0LDkDd6lwCsUOXM=
-github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.9/go.mod h1:o7u5bQNLqpDQFaST29dpo6P6ihMV+wicwqfMmMW6H3c=
+github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.11.0 h1:oy1UWO224WuoYn75952UtTGTDMHgPuju5p2Kzb0UPWw=
+github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.11.0/go.mod h1:DmkPPrqAmxjlYK82K3NpuWM9wql/I9/b2S6gXDBBnYY=
 github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 h1:+jumHNA0Wrelhe64i8F6HNlS8pkoyMv5sreGx2Ry5Rw=
 github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8/go.mod h1:3n1Cwaq1E1/1lhQhtRK2ts/ZwZEhjcQeJQ1RuC6Q/8U=
 github.com/spf13/afero v1.15.0 h1:b/YBCLWAJdFWJTN9cLhiXXcD7mzKn9Dm86dNnfyQw1I=
