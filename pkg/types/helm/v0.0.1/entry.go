@@ -225,6 +225,18 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*helm.Provenance, 
 		return nil, nil, nil, &types.InputValidationError{Err: err}
 	}
 
+	// The algorithm comes verbatim out of the signed provenance, while the field it lands
+	// in is enum-constrained, so reject it here rather than persisting a leaf that the
+	// read path's own Validate then refuses.
+	algorithm, chartHash, err := provenance.GetChartAlgorithmHash()
+	if err != nil {
+		return nil, nil, nil, &types.InputValidationError{Err: err}
+	}
+	chartHashModel := models.HelmV001SchemaChartHash{Algorithm: &algorithm, Value: &chartHash}
+	if err := chartHashModel.Validate(strfmt.Default); err != nil {
+		return nil, nil, nil, &types.InputValidationError{Err: err}
+	}
+
 	return provenance, keyObj, sig, nil
 }
 
