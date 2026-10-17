@@ -153,7 +153,6 @@ func NewSignature(r io.Reader) (*Signature, error) {
 func verifyDetached(keyring openpgp.EntityList, signed io.Reader, body []byte) error {
 	r := bytes.NewReader(body)
 	packets := packet.NewOpaqueReader(r)
-	var verificationTime time.Time
 
 	for {
 		packetStart := len(body) - r.Len()
@@ -175,9 +174,6 @@ func verifyDetached(keyring openpgp.EntityList, signed io.Reader, body []byte) e
 		}
 
 		if sig.v3 != nil {
-			if verificationTime.IsZero() {
-				verificationTime = sig.v3.CreationTime
-			}
 			keys := keyring.KeysByIdUsage(sig.v3.IssuerKeyID, packet.KeyFlagSign)
 			if len(keys) == 0 {
 				continue
@@ -186,9 +182,6 @@ func verifyDetached(keyring openpgp.EntityList, signed io.Reader, body []byte) e
 			return err
 		}
 
-		if verificationTime.IsZero() {
-			verificationTime = sig.v4.CreationTime
-		}
 		if sig.v4.IssuerKeyId == nil {
 			return pgperrors.StructuralError("signature doesn't have an issuer")
 		}
@@ -196,9 +189,9 @@ func verifyDetached(keyring openpgp.EntityList, signed io.Reader, body []byte) e
 			continue
 		}
 
-		// Check key validity when the signature stream was created, allowing
+		// Check key validity when this signature was created, allowing
 		// historical entries to verify after their signing key expires.
-		cfg := &packet.Config{Time: func() time.Time { return verificationTime }}
+		cfg := &packet.Config{Time: func() time.Time { return sig.v4.CreationTime }}
 		_, err = openpgp.CheckDetachedSignature(keyring, signed, bytes.NewReader(body[packetStart:packetEnd]), cfg)
 		return err
 	}

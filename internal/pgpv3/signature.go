@@ -95,7 +95,7 @@ func (sig *Signature) VerifyDetached(keys []openpgp.Key, signed io.Reader) (*ope
 				break
 			}
 			if err := u.UnmarshalBinary(state); err != nil {
-				break
+				return nil, err
 			}
 		}
 		if err = sig.Verify(h, key.PublicKey); err == nil {

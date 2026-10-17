@@ -34,6 +34,10 @@ import (
 	"github.com/sigstore/rekor/internal/pgpv3"
 )
 
+// The verification helpers below adapt github.com/sassoftware/go-rpmutils
+// v0.4.0. Upstream source paths in the comments are relative to that module.
+// Function mappings and local differences are recorded for dependency updates.
+
 type rpmSignatureRegion struct {
 	tag        int
 	headerOnly bool
@@ -50,7 +54,7 @@ var rpmSignatureRegions = []rpmSignatureRegion{
 // ReadHeader validates the general-header digest in both paths. The legacy
 // path must also validate the payload digest and every signature tag.
 func verifyRPM(packageBytes []byte, keyring openpgp.EntityList) (*rpmutils.RpmHeader, int, error) {
-	v3Header, err := rpmHeaderWithV3Signature(packageBytes)
+	v3Header, v3Signatures, err := rpmHeaderWithV3Signature(packageBytes)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -58,36 +62,46 @@ func verifyRPM(packageBytes []byte, keyring openpgp.EntityList) (*rpmutils.RpmHe
 		header, signatures, err := rpmutils.Verify(bytes.NewReader(packageBytes), keyring)
 		return header, len(signatures), err
 	}
-	signatureCount, v3Err := verifyRPMWithV3(packageBytes, v3Header, keyring)
+	signatureCount, v3Err := verifyRPMWithV3(packageBytes, v3Header, v3Signatures, keyring)
 	if v3Err != nil {
 		return nil, 0, v3Err
 	}
 	return v3Header, signatureCount, nil
 }
 
-func rpmHeaderWithV3Signature(packageBytes []byte) (*rpmutils.RpmHeader, error) {
+// rpmHeaderWithV3Signature collects every v3 signature by tag for reuse during
+// verification. A nil header means all present signatures require the upstream verifier.
+func rpmHeaderWithV3Signature(packageBytes []byte) (*rpmutils.RpmHeader, map[int]*pgpv3.Signature, error) {
 	header, err := rpmutils.ReadHeader(bytes.NewReader(packageBytes))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	v3Signatures := make(map[int]*pgpv3.Signature)
 	for _, region := range rpmSignatureRegions {
 		encoded, err := header.GetBytes(region.tag)
 		if isMissingRPMTag(err) {
 			continue
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		if _, err := pgpv3.ParseStrict(encoded); err == nil {
-			return header, nil
+		if sig, err := pgpv3.ParseStrict(encoded); err == nil {
+			v3Signatures[region.tag] = sig
 		} else if !errors.Is(err, pgpv3.ErrNotV3) {
-			return nil, err
+			return nil, nil, err
 		}
 	}
-	return nil, nil
+	if len(v3Signatures) == 0 {
+		return nil, nil, nil
+	}
+	return header, v3Signatures, nil
 }
 
-func verifyRPMWithV3(packageBytes []byte, header *rpmutils.RpmHeader, keyring openpgp.EntityList) (int, error) {
+// verifyRPMWithV3 adapts verify_digests.go: digestAndVerify and verify.go: Verify.
+// Local changes: use byte ranges from an already-parsed header instead of
+// streaming digesters; reuse parsed v3 signatures; verify each signature
+// directly and return a count instead of upstream signature metadata.
+func verifyRPMWithV3(packageBytes []byte, header *rpmutils.RpmHeader, v3Signatures map[int]*pgpv3.Signature, keyring openpgp.EntityList) (int, error) {
 	headerRange := header.GetRange()
 	if headerRange.Start < 0 || headerRange.Start > headerRange.End || headerRange.End > len(packageBytes) {
 		return 0, errors.New("invalid RPM header range")
@@ -110,18 +124,14 @@ func verifyRPMWithV3(packageBytes []byte, header *rpmutils.RpmHeader, keyring op
 		if region.headerOnly {
 			signedBytes = packageBytes[headerRange.Start:headerRange.End]
 		}
-		v3Signature, err := pgpv3.ParseStrict(encoded)
-		switch {
-		case err == nil:
+		if v3Signature := v3Signatures[region.tag]; v3Signature != nil {
 			if _, err := v3Signature.VerifyDetached(keyring.KeysById(v3Signature.IssuerKeyID), bytes.NewReader(signedBytes)); err != nil {
 				return 0, err
 			}
-		case errors.Is(err, pgpv3.ErrNotV3):
+		} else {
 			if err := verifyRPMModernSignature(encoded, signedBytes, keyring); err != nil {
 				return 0, err
 			}
-		default:
-			return 0, err
 		}
 		signatureCount++
 	}
@@ -132,6 +142,11 @@ func verifyRPMWithV3(packageBytes []byte, header *rpmutils.RpmHeader, keyring op
 // verifyRPMModernSignature preserves go-rpmutils' direct packet verification
 // for modern signatures in an RPM that also contains a legacy signature.
 // RPM verification does not apply the detached verifier's key expiry policy.
+//
+// Upstream: verify_v4.go: parseSignature, parseSignatureV4, and findKey.
+// Local changes: combine parsing, key lookup, hashing, and verification in one
+// call; check hash availability and skip nil entities/keys. Require a matching
+// key even for a nil keyring, rather than offering upstream's digest-only mode.
 func verifyRPMModernSignature(encoded, signed []byte, keyring openpgp.EntityList) error {
 	r := bytes.NewReader(encoded)
 	p, err := packet.Read(r)
@@ -171,6 +186,10 @@ func verifyRPMModernSignature(encoded, signed []byte, keyring openpgp.EntityList
 	return rpmutils.KeyNotFoundError{KeyID: keyID, Fingerprint: sig.IssuerFingerprint}
 }
 
+// verifyRPMPayloadDigest adapts verify_digests.go: digestPayload and
+// signatures.go: getPayloadDigest. Local changes: hash byte slices instead of
+// streaming to multiple digesters, and use exported RpmHeader accessors.
+// Preserve upstream's payload-digest selection and legacy MD5 fallback.
 func verifyRPMPayloadDigest(header *rpmutils.RpmHeader, generalHeader, payload []byte) error {
 	digests, digestErr := header.GetStrings(rpmutils.PAYLOADDIGEST)
 	algorithms, algorithmErr := header.GetUint32s(rpmutils.PAYLOADDIGESTALGO)
@@ -209,6 +228,9 @@ func verifyRPMPayloadDigest(header *rpmutils.RpmHeader, generalHeader, payload [
 	return nil
 }
 
+// rpmHash extracts the algorithm switch from signatures.go: getPayloadDigest.
+// Local change: return the hash and whether it is recognized, without reading
+// the digest value from a header.
 func rpmHash(id uint32) (crypto.Hash, bool) {
 	switch id {
 	case rpmutils.HASH_MD5:
