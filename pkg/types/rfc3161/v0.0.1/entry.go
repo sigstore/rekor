@@ -169,9 +169,9 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 	}
 
 	// wrap in valid object with kind and apiVersion set
-	ref3161Obj := models.Rfc3161{}
-	ref3161Obj.APIVersion = new(APIVERSION)
-	ref3161Obj.Spec = &canonicalEntry
+	ref3161Obj := models.Rfc3161{
+		APIVersion: new(APIVERSION),
+		Spec:       &canonicalEntry}
 
 	return json.Marshal(&ref3161Obj)
 }

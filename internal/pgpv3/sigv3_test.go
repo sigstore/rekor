@@ -255,8 +255,8 @@ func TestVerifyDSATruncatesHash(t *testing.T) {
 	pub := &packet.PublicKey{
 		PubKeyAlgo: packet.PubKeyAlgoDSA,
 		PublicKey: &dsa.PublicKey{
-			Parameters: dsa.Parameters{P: big.NewInt(1), Q: big.NewInt(128), G: big.NewInt(1)},
-			Y:          big.NewInt(1),
+			P: big.NewInt(1), Q: big.NewInt(128), G: big.NewInt(1),
+			Y: big.NewInt(1),
 		},
 	}
 	if err := sig.Verify(h, pub); err == nil {

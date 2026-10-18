@@ -238,9 +238,9 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 		return nil, errors.New("key object not initialized before canonicalization")
 	}
 
-	canonicalEntry := models.HelmV001Schema{}
+	canonicalEntry := models.HelmV001Schema{
 
-	canonicalEntry.PublicKey = &models.HelmV001SchemaPublicKey{}
+		PublicKey: &models.HelmV001SchemaPublicKey{}}
 	keyContent, err := keyObj.CanonicalValue()
 	if err != nil {
 		return nil, err
@@ -271,9 +271,9 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	canonicalEntry.Chart.Provenance.Signature.Content = sigContent
 
 	// wrap in valid object with kind and apiVersion set
-	helmObj := models.Helm{}
-	helmObj.APIVersion = new(APIVERSION)
-	helmObj.Spec = &canonicalEntry
+	helmObj := models.Helm{
+		APIVersion: new(APIVERSION),
+		Spec:       &canonicalEntry}
 
 	return json.Marshal(&helmObj)
 }
@@ -315,10 +315,10 @@ func (v V001Entry) validate() error {
 func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	//TODO: how to select version of item to create
 	returnVal := models.Helm{}
-	re := V001Entry{}
+	re := V001Entry{
 
-	// we will need provenance file and public-key
-	re.HelmObj = models.HelmV001Schema{}
+		// we will need provenance file and public-key
+		HelmObj: models.HelmV001Schema{}}
 	re.HelmObj.Chart = &models.HelmV001SchemaChart{}
 	re.HelmObj.Chart.Provenance = &models.HelmV001SchemaChartProvenance{}
 

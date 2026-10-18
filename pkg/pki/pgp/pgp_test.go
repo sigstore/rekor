@@ -812,8 +812,7 @@ func TestVerifyRejectsNonSignaturePacket(t *testing.T) {
 		t.Fatal(err)
 	}
 	err := verifyDetached(nil, bytes.NewReader(nil), body.Bytes())
-	var structuralError pgperrors.StructuralError
-	if !errors.As(err, &structuralError) {
+	if _, ok := errors.AsType[pgperrors.StructuralError](err); !ok {
 		t.Fatalf("verifyDetached() error = %v, want StructuralError", err)
 	}
 }
@@ -847,8 +846,7 @@ func TestVerifyRejectsSignatureWithoutIssuer(t *testing.T) {
 	}
 
 	err = verifyDetached(nil, bytes.NewReader(nil), body.Bytes())
-	var structuralError pgperrors.StructuralError
-	if !errors.As(err, &structuralError) {
+	if _, ok := errors.AsType[pgperrors.StructuralError](err); !ok {
 		t.Fatalf("verifyDetached() error = %v, want StructuralError", err)
 	}
 }

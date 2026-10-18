@@ -263,9 +263,9 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	canonicalEntry.Package.Pkginfo = apkObj.Pkginfo
 
 	// wrap in valid object with kind and apiVersion set
-	apk := models.Alpine{}
-	apk.APIVersion = new(APIVERSION)
-	apk.Spec = &canonicalEntry
+	apk := models.Alpine{
+		APIVersion: new(APIVERSION),
+		Spec:       &canonicalEntry}
 
 	v.AlpineModel = canonicalEntry
 
@@ -305,10 +305,10 @@ func (v V001Entry) validate() error {
 
 func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	returnVal := models.Alpine{}
-	re := V001Entry{}
+	re := V001Entry{
 
-	// we will need artifact, public-key, signature
-	re.AlpineModel = models.AlpineV001Schema{}
+		// we will need artifact, public-key, signature
+		AlpineModel: models.AlpineV001Schema{}}
 	re.AlpineModel.Package = &models.AlpineV001SchemaPackage{}
 
 	var err error

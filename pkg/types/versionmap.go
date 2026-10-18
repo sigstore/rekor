@@ -39,8 +39,8 @@ type EntryFactoryMap struct {
 }
 
 func NewEntryFactoryMap() VersionEntryFactoryMap {
-	s := EntryFactoryMap{}
-	s.factoryMap = make(map[string]EntryFactory)
+	s := EntryFactoryMap{
+		factoryMap: make(map[string]EntryFactory)}
 	return &s
 }
 

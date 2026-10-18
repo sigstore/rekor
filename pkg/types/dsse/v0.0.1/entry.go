@@ -398,9 +398,9 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 		return *canonicalEntry.Signatures[i].Signature < *canonicalEntry.Signatures[j].Signature
 	})
 
-	itObj := models.DSSE{}
-	itObj.APIVersion = new(APIVERSION)
-	itObj.Spec = &canonicalEntry
+	itObj := models.DSSE{
+		APIVersion: new(APIVERSION),
+		Spec:       &canonicalEntry}
 
 	return json.Marshal(&itObj)
 }

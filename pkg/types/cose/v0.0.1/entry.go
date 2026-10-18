@@ -248,9 +248,9 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 		},
 	}
 
-	itObj := models.Cose{}
-	itObj.APIVersion = new(APIVERSION)
-	itObj.Spec = &canonicalEntry
+	itObj := models.Cose{
+		APIVersion: new(APIVERSION),
+		Spec:       &canonicalEntry}
 
 	return json.Marshal(&itObj)
 }
