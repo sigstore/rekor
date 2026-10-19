@@ -293,9 +293,9 @@ func (v *V001Entry) Canonicalize(_ context.Context) ([]byte, error) {
 		}
 	}
 
-	itObj := models.Intoto{}
-	itObj.APIVersion = new(APIVERSION)
-	itObj.Spec = &canonicalEntry
+	itObj := models.Intoto{
+		APIVersion: new(APIVERSION),
+		Spec:       &canonicalEntry}
 
 	return json.Marshal(&itObj)
 }

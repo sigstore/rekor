@@ -258,9 +258,9 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 	// wrap in valid object with kind and apiVersion set
-	tuf := models.TUF{}
-	tuf.APIVersion = new(APIVERSION)
-	tuf.Spec = &canonicalEntry
+	tuf := models.TUF{
+		APIVersion: new(APIVERSION),
+		Spec:       &canonicalEntry}
 
 	return json.Marshal(&tuf)
 }

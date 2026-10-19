@@ -268,10 +268,10 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 
-	canonicalEntry := models.RekordV001Schema{}
+	canonicalEntry := models.RekordV001Schema{
 
-	// need to canonicalize signature & key content
-	canonicalEntry.Signature = &models.RekordV001SchemaSignature{}
+		// need to canonicalize signature & key content
+		Signature: &models.RekordV001SchemaSignature{}}
 	// signature URL (if known) is not set deliberately
 	canonicalEntry.Signature.Format = v.RekordObj.Signature.Format
 
@@ -295,9 +295,9 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	// data content is not set deliberately
 
 	// wrap in valid object with kind and apiVersion set
-	rekordObj := models.Rekord{}
-	rekordObj.APIVersion = new(APIVERSION)
-	rekordObj.Spec = &canonicalEntry
+	rekordObj := models.Rekord{
+		APIVersion: new(APIVERSION),
+		Spec:       &canonicalEntry}
 
 	v.RekordObj = canonicalEntry
 

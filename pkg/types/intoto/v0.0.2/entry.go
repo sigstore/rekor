@@ -402,9 +402,9 @@ func (v *V002Entry) Canonicalize(_ context.Context) ([]byte, error) {
 			PayloadHash: v.IntotoObj.Content.PayloadHash,
 		},
 	}
-	itObj := models.Intoto{}
-	itObj.APIVersion = new(APIVERSION)
-	itObj.Spec = &canonicalEntry
+	itObj := models.Intoto{
+		APIVersion: new(APIVERSION),
+		Spec:       &canonicalEntry}
 
 	return json.Marshal(&itObj)
 }

@@ -211,11 +211,11 @@ func (v *V001Entry) fetchExternalEntities(_ context.Context) (*pgp.PublicKey, *r
 	}
 
 	// Verify GPG signature and parse RPM headers
-	rpmObj, sigs, err := rpmutils.Verify(bytes.NewReader(pkgBytes), keyring)
+	rpmObj, sigs, err := verifyRPM(pkgBytes, keyring)
 	if err != nil {
 		return nil, nil, &types.InputValidationError{Err: err}
 	}
-	if len(sigs) == 0 {
+	if sigs == 0 {
 		return nil, nil, &types.InputValidationError{Err: errors.New("no supported PGP signature found in RPM")}
 	}
 
@@ -278,9 +278,9 @@ func (v *V001Entry) Canonicalize(ctx context.Context) ([]byte, error) {
 	// }
 
 	// wrap in valid object with kind and apiVersion set
-	rpm := models.Rpm{}
-	rpm.APIVersion = new(APIVERSION)
-	rpm.Spec = &canonicalEntry
+	rpm := models.Rpm{
+		APIVersion: new(APIVERSION),
+		Spec:       &canonicalEntry}
 
 	return json.Marshal(&rpm)
 }
@@ -318,10 +318,10 @@ func (v V001Entry) validate() error {
 
 func (v V001Entry) CreateFromArtifactProperties(ctx context.Context, props types.ArtifactProperties) (models.ProposedEntry, error) {
 	returnVal := models.Rpm{}
-	re := V001Entry{}
+	re := V001Entry{
 
-	// we will need artifact, public-key, signature
-	re.RPMModel = models.RpmV001Schema{}
+		// we will need artifact, public-key, signature
+		RPMModel: models.RpmV001Schema{}}
 	re.RPMModel.Package = &models.RpmV001SchemaPackage{}
 
 	var err error

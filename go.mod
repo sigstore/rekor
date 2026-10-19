@@ -222,5 +222,3 @@ require (
 	k8s.io/klog/v2 v2.140.0 // indirect
 	software.sslmate.com/src/go-pkcs12 v0.5.0 // indirect
 )
-
-replace github.com/ProtonMail/go-crypto => github.com/pgpkeys-eu/go-crypto v1.4.2-0.20260816224830-d2a8cc303a65

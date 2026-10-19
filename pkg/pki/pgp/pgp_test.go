@@ -18,6 +18,8 @@ package pgp
 import (
 	"bytes"
 	"context"
+	"crypto"
+	"encoding/binary"
 	"errors"
 	"io"
 	"net/http"
@@ -26,7 +28,11 @@ import (
 	"reflect"
 	"sort"
 	"testing"
+	"time"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
+	pgperrors "github.com/ProtonMail/go-crypto/openpgp/errors"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"go.uber.org/goleak"
 )
 
@@ -483,5 +489,364 @@ func TestVerifySignature(t *testing.T) {
 
 	if err := validSig.Verify(bytes.NewReader([]byte("irrelevant")), &emptyKey); err == nil {
 		t.Errorf("expected error when using empty key to verify")
+	}
+}
+
+func TestVerifySkipsV3SignatureWithUnknownIssuer(t *testing.T) {
+	knownV3, err := os.ReadFile("testdata/repomd.xml.sig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	op, err := packet.NewOpaqueReader(bytes.NewReader(knownV3)).Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Change the issuer ID without changing the signed material, producing a
+	// structurally valid signature from an issuer absent from the keyring.
+	op.Contents[7] ^= 0xff
+	var unknownV3 bytes.Buffer
+	if err := op.Serialize(&unknownV3); err != nil {
+		t.Fatal(err)
+	}
+	sigBytes := append(append([]byte(nil), unknownV3.Bytes()...), knownV3...)
+	sig, err := NewSignature(bytes.NewReader(sigBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keyFile, err := os.Open("testdata/repomd_armored_public.pgp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer keyFile.Close()
+	key, err := NewPublicKey(keyFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.Open("testdata/repomd.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer data.Close()
+	if err := sig.Verify(data, key); err != nil {
+		t.Fatalf("verification did not skip the v3 signature with an unknown issuer: %v", err)
+	}
+}
+
+func TestVerifySkipsV4SignatureWithUnknownIssuer(t *testing.T) {
+	unknownV4, err := os.ReadFile("testdata/hello_world.txt.v4.sig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	knownV3, err := os.ReadFile("testdata/repomd.xml.sig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sigBytes := append(append([]byte(nil), unknownV4...), knownV3...)
+	sig, err := NewSignature(bytes.NewReader(sigBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keyFile, err := os.Open("testdata/repomd_armored_public.pgp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer keyFile.Close()
+	key, err := NewPublicKey(keyFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.Open("testdata/repomd.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer data.Close()
+	if err := sig.Verify(data, key); err != nil {
+		t.Fatalf("verification did not skip the v4 signature with an unknown issuer: %v", err)
+	}
+}
+
+func TestVerifyV4AfterUnknownV3(t *testing.T) {
+	unknownV3, err := os.ReadFile("testdata/repomd.xml.sig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	op, err := packet.NewOpaqueReader(bytes.NewReader(unknownV3)).Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	op.Contents[7] ^= 0xff
+
+	knownV4, err := os.ReadFile("testdata/hello_world.txt.v4.sig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var firstPacket bytes.Buffer
+	if err := op.Serialize(&firstPacket); err != nil {
+		t.Fatal(err)
+	}
+	sigBytes := append(append([]byte(nil), firstPacket.Bytes()...), knownV4...)
+	sig, err := NewSignature(bytes.NewReader(sigBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keyFile, err := os.Open("testdata/valid_armored_public.pgp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer keyFile.Close()
+	key, err := NewPublicKey(keyFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.Open("testdata/hello_world.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer data.Close()
+	if err := sig.Verify(data, key); err != nil {
+		t.Fatalf("verification did not reach the v4 signature after an unknown v3 signature: %v", err)
+	}
+}
+
+func TestVerifyV4UsesOwnCreationTime(t *testing.T) {
+	keyTime := time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC)
+	keyConfig := &packet.Config{
+		Algorithm:       packet.PubKeyAlgoEdDSA,
+		Time:            func() time.Time { return keyTime },
+		KeyLifetimeSecs: 3600,
+	}
+	signer, err := openpgp.NewEntity("signer", "", "signer@example.com", keyConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unknownSigner, err := openpgp.NewEntity("unknown", "", "unknown@example.com", keyConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v3Bytes, err := os.ReadFile("testdata/repomd.xml.sig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := []byte("signed data")
+	sign := func(t *testing.T, entity *openpgp.Entity, creationTime time.Time) []byte {
+		t.Helper()
+		var buf bytes.Buffer
+		cfg := &packet.Config{Time: func() time.Time { return creationTime }}
+		// Sign directly so the regression also exercises signatures made
+		// after the signing key has expired.
+		sig := &packet.Signature{
+			Version:      4,
+			SigType:      packet.SigTypeBinary,
+			PubKeyAlgo:   entity.PrimaryKey.PubKeyAlgo,
+			Hash:         crypto.SHA256,
+			CreationTime: creationTime,
+			IssuerKeyId:  &entity.PrimaryKey.KeyId,
+		}
+		h, err := sig.PrepareSign(cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := h.Write(data); err != nil {
+			t.Fatal(err)
+		}
+		if err := sig.Sign(h, entity.PrivateKey, cfg); err != nil {
+			t.Fatal(err)
+		}
+		if err := sig.Serialize(&buf); err != nil {
+			t.Fatal(err)
+		}
+		return buf.Bytes()
+	}
+
+	for _, tc := range []struct {
+		name       string
+		prefixTime time.Time
+		signedTime time.Time
+		wantErr    error
+	}{
+		{
+			name:       "valid signature after expired prefix",
+			prefixTime: keyTime.Add(2 * time.Hour),
+			signedTime: keyTime.Add(time.Minute),
+		},
+		{
+			name:       "expired key after valid prefix",
+			prefixTime: keyTime.Add(time.Minute),
+			signedTime: keyTime.Add(2 * time.Hour),
+			wantErr:    pgperrors.ErrKeyExpired,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			v3, err := packet.NewOpaqueReader(bytes.NewReader(v3Bytes)).Next()
+			if err != nil {
+				t.Fatal(err)
+			}
+			// The fixture's issuer is absent from the generated keyring. Its
+			// timestamp must not affect verification of the following signature.
+			binary.BigEndian.PutUint32(v3.Contents[3:7], uint32(tc.prefixTime.Unix()))
+			var v3Prefix bytes.Buffer
+			if err := v3.Serialize(&v3Prefix); err != nil {
+				t.Fatal(err)
+			}
+			knownV4 := sign(t, signer, tc.signedTime)
+			for name, prefix := range map[string][]byte{
+				"unknown v3": v3Prefix.Bytes(),
+				"unknown v4": sign(t, unknownSigner, tc.prefixTime),
+			} {
+				t.Run(name, func(t *testing.T) {
+					body := append(append([]byte(nil), prefix...), knownV4...)
+					sig, err := NewSignature(bytes.NewReader(body))
+					if err != nil {
+						t.Fatal(err)
+					}
+					err = sig.Verify(bytes.NewReader(data), &PublicKey{key: openpgp.EntityList{signer}})
+					if !errors.Is(err, tc.wantErr) {
+						t.Fatalf("Verify() error = %v, want %v", err, tc.wantErr)
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestVerifyReturnsUnknownIssuerAfterAllSignatures(t *testing.T) {
+	sigFile, err := os.Open("testdata/repomd.xml.sig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sigFile.Close()
+	sig, err := NewSignature(sigFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keyFile, err := os.Open("testdata/valid_armored_public.pgp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer keyFile.Close()
+	key, err := NewPublicKey(keyFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.Open("testdata/repomd.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer data.Close()
+	if err := sig.Verify(data, key); !errors.Is(err, pgperrors.ErrUnknownIssuer) {
+		t.Fatalf("Verify() error = %v, want ErrUnknownIssuer", err)
+	}
+}
+
+func TestVerifySkipsIgnoredPackets(t *testing.T) {
+	knownV3, err := os.ReadFile("testdata/repomd.xml.sig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	serialize := func(t *testing.T, op *packet.OpaquePacket) []byte {
+		t.Helper()
+		var buf bytes.Buffer
+		if err := op.Serialize(&buf); err != nil {
+			t.Fatal(err)
+		}
+		return buf.Bytes()
+	}
+
+	unknownPacket := serialize(t, &packet.OpaquePacket{Tag: 60, Contents: []byte("ignored")})
+	unsupportedSignature := serialize(t, &packet.OpaquePacket{Tag: 2, Contents: []byte{99}})
+	unsupportedV3, err := packet.NewOpaqueReader(bytes.NewReader(knownV3)).Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	unsupportedV3.Contents[16] = 99
+	unsupportedV3Packet := serialize(t, unsupportedV3)
+	var marker bytes.Buffer
+	if err := packet.SerializeMarker(&marker); err != nil {
+		t.Fatal(err)
+	}
+
+	keyFile, err := os.Open("testdata/repomd_armored_public.pgp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer keyFile.Close()
+	key, err := NewPublicKey(keyFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile("testdata/repomd.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for name, prefix := range map[string][]byte{
+		"unknown packet":        unknownPacket,
+		"unsupported signature": unsupportedSignature,
+		"unsupported v3 hash":   unsupportedV3Packet,
+		"marker":                marker.Bytes(),
+	} {
+		t.Run(name, func(t *testing.T) {
+			sigBytes := append(append([]byte(nil), prefix...), knownV3...)
+			sig, err := NewSignature(bytes.NewReader(sigBytes))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := sig.Verify(bytes.NewReader(data), key); err != nil {
+				t.Fatalf("verification did not skip prefix packet: %v", err)
+			}
+		})
+	}
+}
+
+func TestVerifyRejectsNonSignaturePacket(t *testing.T) {
+	var body bytes.Buffer
+	if err := (&packet.OpaquePacket{Tag: 13, Contents: []byte("user ID")}).Serialize(&body); err != nil {
+		t.Fatal(err)
+	}
+	err := verifyDetached(nil, bytes.NewReader(nil), body.Bytes())
+	if _, ok := errors.AsType[pgperrors.StructuralError](err); !ok {
+		t.Fatalf("verifyDetached() error = %v, want StructuralError", err)
+	}
+}
+
+func TestVerifyRejectsSignatureWithoutIssuer(t *testing.T) {
+	contents, err := os.ReadFile("testdata/hello_world.txt.v4.sig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := packet.Read(bytes.NewReader(contents))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sig, ok := p.(*packet.Signature)
+	if !ok {
+		t.Fatalf("fixture contains %T, want *packet.Signature", p)
+	}
+	withoutIssuer := &packet.Signature{
+		Version:      sig.Version,
+		SigType:      sig.SigType,
+		PubKeyAlgo:   sig.PubKeyAlgo,
+		Hash:         sig.Hash,
+		HashSuffix:   []byte{4, byte(sig.SigType), byte(sig.PubKeyAlgo), 8, 0, 0},
+		HashTag:      sig.HashTag,
+		CreationTime: sig.CreationTime,
+		RSASignature: sig.RSASignature,
+	}
+	var body bytes.Buffer
+	if err := withoutIssuer.Serialize(&body); err != nil {
+		t.Fatal(err)
+	}
+
+	err = verifyDetached(nil, bytes.NewReader(nil), body.Bytes())
+	if _, ok := errors.AsType[pgperrors.StructuralError](err); !ok {
+		t.Fatalf("verifyDetached() error = %v, want StructuralError", err)
 	}
 }
