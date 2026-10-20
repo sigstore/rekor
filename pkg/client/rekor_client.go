@@ -79,9 +79,9 @@ func (t *errorHandlingTransport) RoundTrip(req *http.Request) (*http.Response, e
 	if t.logger != nil {
 		switch v := t.logger.(type) {
 		case leveledLogger:
-			v.Debug("performing request", "method", req.Method, "url", req.URL.String())
+			v.Debug("performing request", "method", req.Method, "url", req.URL.Redacted())
 		case logger:
-			v.Printf("[DEBUG] %s %s", req.Method, req.URL.String())
+			v.Printf("[DEBUG] %s %s", req.Method, req.URL.Redacted())
 		}
 	}
 
@@ -93,9 +93,9 @@ func (t *errorHandlingTransport) RoundTrip(req *http.Request) (*http.Response, e
 			if err != nil && t.logger != nil {
 				switch v := t.logger.(type) {
 				case leveledLogger:
-					v.Error("request failed", "error", err, "method", attemptReq.Method, "url", attemptReq.URL.String())
+					v.Error("request failed", "error", err, "method", attemptReq.Method, "url", attemptReq.URL.Redacted())
 				case logger:
-					v.Printf("[ERR] %s %s request failed: %v", attemptReq.Method, attemptReq.URL.String(), err)
+					v.Printf("[ERR] %s %s request failed: %v", attemptReq.Method, attemptReq.URL.Redacted(), err)
 				}
 			}
 			return resp, err
@@ -106,7 +106,7 @@ func (t *errorHandlingTransport) RoundTrip(req *http.Request) (*http.Response, e
 		Backoff: func(waitMin, waitMax time.Duration, attempt int, resp *http.Response) time.Duration {
 			wait := httpretry.DefaultBackoff(waitMin, waitMax, attempt, resp)
 			if t.logger != nil {
-				desc := fmt.Sprintf("%s %s", req.Method, req.URL.String())
+				desc := fmt.Sprintf("%s %s", req.Method, req.URL.Redacted())
 				if resp != nil {
 					desc = fmt.Sprintf("%s (status: %d)", desc, resp.StatusCode)
 				}
