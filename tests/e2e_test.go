@@ -51,7 +51,6 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
 	"github.com/google/go-cmp/cmp"
@@ -68,6 +67,7 @@ import (
 	"github.com/sigstore/rekor/pkg/trillianclient"
 	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
 	rekord "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
+	"github.com/sigstore/rekor/pkg/util/jcs"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -289,7 +289,7 @@ func TestSignedEntryTimestamp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	canonicalized, err := jsoncanonicalizer.Transform(payload)
+	canonicalized, err := jcs.Canonicalize(payload)
 	if err != nil {
 		t.Fatal(err)
 	}

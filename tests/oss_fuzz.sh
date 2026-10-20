@@ -68,6 +68,7 @@ compile_native_go_fuzzer_v2 github.com/sigstore/rekor/pkg/types/dsse/v0.0.1 Fuzz
 compile_native_go_fuzzer_v2 github.com/sigstore/rekor/pkg/util FuzzSignedNoteRoundTrip FuzzSignedNoteRoundTrip
 compile_native_go_fuzzer_v2 github.com/sigstore/rekor/pkg/util FuzzCheckpointRoundTrip FuzzCheckpointRoundTrip
 compile_native_go_fuzzer_v2 github.com/sigstore/rekor/pkg/util FuzzSignedCheckpoint FuzzSignedCheckpoint
+compile_native_go_fuzzer_v2 github.com/sigstore/rekor/pkg/util/jcs FuzzCanonicalize FuzzCanonicalize
 compile_native_go_fuzzer_v2 github.com/sigstore/rekor/pkg/tle FuzzGenerateTransparencyLogEntry FuzzGenerateTransparencyLogEntry
 
 # Test 3rd party API that rekor/pkg/types/jar/v0.0.1 uses
