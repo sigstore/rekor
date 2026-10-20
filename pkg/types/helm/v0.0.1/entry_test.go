@@ -433,7 +433,7 @@ func TestCanonicalizeRejectsNonSchemaChartHashAlgorithm(t *testing.T) {
 
 			v := &V001Entry{}
 			r := models.Helm{
-				APIVersion: conv.Pointer("0.0.1"),
+				APIVersion: new("0.0.1"),
 				Spec: models.HelmV001Schema{
 					PublicKey: &models.HelmV001SchemaPublicKey{
 						Content: (*strfmt.Base64)(&publicKeyBytes),
@@ -455,8 +455,7 @@ func TestCanonicalizeRejectsNonSchemaChartHashAlgorithm(t *testing.T) {
 				if err == nil {
 					t.Fatalf("expected canonicalization to fail, got leaf: %s", canonicalized)
 				}
-				var validationErr *types.InputValidationError
-				if !errors.As(err, &validationErr) {
+				if _, ok := errors.AsType[*types.InputValidationError](err); !ok {
 					t.Errorf("expected a types.InputValidationError, got %T: %v", err, err)
 				}
 				return
