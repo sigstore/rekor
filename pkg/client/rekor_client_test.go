@@ -16,6 +16,9 @@
 package client
 
 import (
+	"bytes"
+	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -100,7 +103,7 @@ func TestGetRekorClientWithRetryCount(t *testing.T) {
 		}))
 	defer testServer.Close()
 
-	client, err := GetRekorClient(testServer.URL, WithRetryCount(2))
+	client, err := GetRekorClient(testServer.URL, WithRetryCount(2), WithRetryWaitMin(0))
 	if err != nil {
 		t.Error(err)
 	}
@@ -160,4 +163,76 @@ func TestRetryErrorHandlerSurfacesServerResponse(t *testing.T) {
 	if !strings.Contains(msg, "database unavailable") {
 		t.Errorf("expected error to include server body 'database unavailable', got: %s", msg)
 	}
+}
+
+type testLeveledLogger struct {
+	buf bytes.Buffer
+}
+
+func (l *testLeveledLogger) Error(msg string, keysAndValues ...any) {
+	fmt.Fprintf(&l.buf, "[ERROR] %s %v\n", msg, keysAndValues)
+}
+func (l *testLeveledLogger) Info(msg string, keysAndValues ...any) {
+	fmt.Fprintf(&l.buf, "[INFO] %s %v\n", msg, keysAndValues)
+}
+func (l *testLeveledLogger) Debug(msg string, keysAndValues ...any) {
+	fmt.Fprintf(&l.buf, "[DEBUG] %s %v\n", msg, keysAndValues)
+}
+func (l *testLeveledLogger) Warn(msg string, keysAndValues ...any) {
+	fmt.Fprintf(&l.buf, "[WARN] %s %v\n", msg, keysAndValues)
+}
+
+func TestGetRekorClientWithLogger(t *testing.T) {
+	t.Parallel()
+	var calls int
+	testServer := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			calls++
+			if calls%2 == 1 {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte{})
+		}))
+	defer testServer.Close()
+
+	t.Run("standard logger", func(t *testing.T) {
+		var buf bytes.Buffer
+		stdLogger := log.New(&buf, "", 0)
+		client, err := GetRekorClient(testServer.URL,
+			WithRetryCount(2), WithRetryWaitMin(0), WithLogger(stdLogger))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := client.Tlog.GetLogInfo(tlog.NewGetLogInfoParams()); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		out := buf.String()
+		if !strings.Contains(out, "[DEBUG] GET ") {
+			t.Errorf("expected request debug log, got: %s", out)
+		}
+		if !strings.Contains(out, "retrying in") {
+			t.Errorf("expected retry backoff debug log, got: %s", out)
+		}
+	})
+
+	t.Run("leveled logger", func(t *testing.T) {
+		lvlLogger := &testLeveledLogger{}
+		client, err := GetRekorClient(testServer.URL,
+			WithRetryCount(2), WithRetryWaitMin(0), WithLogger(lvlLogger))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := client.Tlog.GetLogInfo(tlog.NewGetLogInfoParams()); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		out := lvlLogger.buf.String()
+		if !strings.Contains(out, "[DEBUG] performing request") {
+			t.Errorf("expected performing request debug log, got: %s", out)
+		}
+		if !strings.Contains(out, "[DEBUG] retrying request") {
+			t.Errorf("expected retrying request debug log, got: %s", out)
+		}
+	})
 }

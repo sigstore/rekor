@@ -33,31 +33,31 @@ func TestMakeOptions(t *testing.T) {
 		want *options
 	}{{
 		desc: "no opts",
-		want: &options{RetryCount: DefaultRetryCount},
+		want: &options{RetryCount: DefaultRetryCount, RetryWaitMin: DefaultRetryWaitMin, RetryWaitMax: DefaultRetryWaitMax},
 	}, {
 		desc: "WithUserAgent",
 		opts: []Option{WithUserAgent("test user agent")},
-		want: &options{UserAgent: "test user agent", RetryCount: DefaultRetryCount},
+		want: &options{UserAgent: "test user agent", RetryCount: DefaultRetryCount, RetryWaitMin: DefaultRetryWaitMin, RetryWaitMax: DefaultRetryWaitMax},
 	}, {
 		desc: "WithRetryCount",
 		opts: []Option{WithRetryCount(2)},
-		want: &options{UserAgent: "", RetryCount: 2},
+		want: &options{UserAgent: "", RetryCount: 2, RetryWaitMin: DefaultRetryWaitMin, RetryWaitMax: DefaultRetryWaitMax},
 	}, {
 		desc: "WithLogger",
 		opts: []Option{WithLogger(customLogger)},
-		want: &options{UserAgent: "", RetryCount: DefaultRetryCount, Logger: customLogger},
+		want: &options{UserAgent: "", RetryCount: DefaultRetryCount, RetryWaitMin: DefaultRetryWaitMin, RetryWaitMax: DefaultRetryWaitMax, Logger: customLogger},
 	}, {
 		desc: "WithLoggerNil",
 		opts: []Option{WithLogger(nil)},
-		want: &options{UserAgent: "", RetryCount: DefaultRetryCount},
+		want: &options{UserAgent: "", RetryCount: DefaultRetryCount, RetryWaitMin: DefaultRetryWaitMin, RetryWaitMax: DefaultRetryWaitMax},
 	}, {
 		desc: "WithInsecureTLSEnabled",
 		opts: []Option{WithInsecureTLS(true)},
-		want: &options{UserAgent: "", RetryCount: DefaultRetryCount, InsecureTLS: true},
+		want: &options{UserAgent: "", RetryCount: DefaultRetryCount, RetryWaitMin: DefaultRetryWaitMin, RetryWaitMax: DefaultRetryWaitMax, InsecureTLS: true},
 	}, {
 		desc: "WithInsecureTLSDisabled",
 		opts: []Option{WithInsecureTLS(false)},
-		want: &options{UserAgent: "", RetryCount: DefaultRetryCount, InsecureTLS: false},
+		want: &options{UserAgent: "", RetryCount: DefaultRetryCount, RetryWaitMin: DefaultRetryWaitMin, RetryWaitMax: DefaultRetryWaitMax, InsecureTLS: false},
 	}}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
