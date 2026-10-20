@@ -33,13 +33,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
 	"github.com/google/trillian"
 	ttypes "github.com/google/trillian/types"
+	"github.com/sigstore/rekor/pkg/util/jcs"
 	"github.com/spf13/viper"
 	"github.com/transparency-dev/merkle/rfc6962"
 	"google.golang.org/genproto/googleapis/rpc/code"
@@ -70,7 +70,7 @@ func signEntry(ctx context.Context, signer signature.Signer, entry models.LogEnt
 	if err != nil {
 		return nil, fmt.Errorf("marshalling error: %w", err)
 	}
-	canonicalized, err := jsoncanonicalizer.Transform(payload)
+	canonicalized, err := jcs.Canonicalize(payload)
 	if err != nil {
 		return nil, fmt.Errorf("canonicalizing error: %w", err)
 	}

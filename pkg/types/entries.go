@@ -24,11 +24,11 @@ import (
 	"reflect"
 	"sync/atomic"
 
-	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	pkitypes "github.com/sigstore/rekor/pkg/pki/pkitypes"
+	"github.com/sigstore/rekor/pkg/util/jcs"
 )
 
 // EntryImpl specifies the behavior of a versioned type
@@ -189,7 +189,7 @@ func CanonicalizeEntry(ctx context.Context, entry EntryImpl) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return jsoncanonicalizer.Transform(canonicalEntry)
+	return jcs.Canonicalize(canonicalEntry)
 }
 
 // ArtifactProperties provide a consistent struct for passing values from

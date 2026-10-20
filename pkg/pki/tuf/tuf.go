@@ -26,8 +26,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/sigstore/rekor/pkg/pki/identity"
+	"github.com/sigstore/rekor/pkg/util/jcs"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 	"github.com/theupdateframework/go-tuf/data"
 	"github.com/theupdateframework/go-tuf/pkg/keys"
@@ -81,7 +81,7 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshalling signature: %w", err)
 	}
-	return jsoncanonicalizer.Transform(marshalledBytes)
+	return jcs.Canonicalize(marshalledBytes)
 }
 
 // Verify implements the pki.Signature interface
@@ -158,7 +158,7 @@ func (k PublicKey) CanonicalValue() (encoded []byte, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshalling tuf root: %w", err)
 	}
-	return jsoncanonicalizer.Transform(marshalledBytes)
+	return jcs.Canonicalize(marshalledBytes)
 }
 
 func (k PublicKey) SpecVersion() (string, error) {

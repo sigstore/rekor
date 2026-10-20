@@ -28,10 +28,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
+	"github.com/sigstore/rekor/pkg/util/jcs"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/transparency-dev/merkle/rfc6962"
@@ -346,7 +346,7 @@ func makeHRCanonicalJSON(t *testing.T, hash, algo string, sigContent, pubKeyCont
 	if err != nil {
 		t.Fatalf("marshalling JSON: %v", err)
 	}
-	canonical, err := jsoncanonicalizer.Transform(raw)
+	canonical, err := jcs.Canonicalize(raw)
 	if err != nil {
 		t.Fatalf("canonicalizing JSON: %v", err)
 	}
