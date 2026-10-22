@@ -101,11 +101,13 @@ func TestAlpineMetadataSizeBoundary(t *testing.T) {
 	origVal := config.MaxAPKMetadataSize
 	defer func() { config.MaxAPKMetadataSize = origVal }()
 
-	// The signature.tar.gz decompressed size in test_alpine.apk is exactly 1024 bytes.
+	// The signature.tar.gz decompressed size in test_alpine.apk is exactly 1024 bytes,
+	// and the control.tar.gz decompressed size is exactly 1536 bytes.
 	boundary := 1024
+	controlBoundary := 1536
 
-	// 1. Verify that max_apk_metadata_size = 1024 succeeds
-	config.MaxAPKMetadataSize = uint64(boundary)
+	// 1. Verify that max_apk_metadata_size = 1536 succeeds
+	config.MaxAPKMetadataSize = uint64(controlBoundary)
 	inputArchive, err := os.Open("tests/test_alpine.apk")
 	if err != nil {
 		t.Fatalf("could not open archive %v", err)
@@ -114,10 +116,29 @@ func TestAlpineMetadataSizeBoundary(t *testing.T) {
 	err = p.Unmarshal(inputArchive)
 	inputArchive.Close()
 	if err != nil {
-		t.Fatalf("expected success at size %d, got err: %v", boundary, err)
+		t.Fatalf("expected success at size %d, got err: %v", controlBoundary, err)
 	}
 
-	// 2. Verify that max_apk_metadata_size = 1023 fails
+	// 2. Verify that max_apk_metadata_size = 1535 fails on control.tar.gz
+	config.MaxAPKMetadataSize = uint64(controlBoundary - 1)
+	inputArchive, err = os.Open("tests/test_alpine.apk")
+	if err != nil {
+		t.Fatalf("could not open archive %v", err)
+	}
+	p = Package{}
+	err = p.Unmarshal(inputArchive)
+	inputArchive.Close()
+	if err == nil {
+		t.Fatalf("expected failure at size %d", controlBoundary-1)
+	}
+
+	// Decompressed size (1536) exceeds max allowed size (1535)
+	expectedErr := fmt.Sprintf("decompressed size (%d) for control.tar.gz exceeds max allowed size %d", controlBoundary, controlBoundary-1)
+	if !strings.Contains(err.Error(), expectedErr) {
+		t.Fatalf("expected error containing %q, got %q", expectedErr, err.Error())
+	}
+
+	// 3. Verify that max_apk_metadata_size = 1023 fails on signature.tar.gz
 	config.MaxAPKMetadataSize = uint64(boundary - 1)
 	inputArchive, err = os.Open("tests/test_alpine.apk")
 	if err != nil {
@@ -132,7 +153,7 @@ func TestAlpineMetadataSizeBoundary(t *testing.T) {
 	}
 
 	// Decompressed size (1024) exceeds max allowed size (1023)
-	expectedErr := fmt.Sprintf("decompressed size (%d) for signature.tar.gz exceeds max allowed size %d", boundary, boundary-1)
+	expectedErr = fmt.Sprintf("decompressed size (%d) for signature.tar.gz exceeds max allowed size %d", boundary, boundary-1)
 	if !strings.Contains(err.Error(), expectedErr) {
 		t.Fatalf("expected error containing %q, got %q", expectedErr, err.Error())
 	}
