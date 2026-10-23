@@ -1,2 +1,5 @@
 /pkg/generated/** linguist-generated
 /pkg/generated/restapi/configure_rekor_server.go -linguist-generated
+/pkg/generated/restapi/configure_rekor_server_test.go -linguist-generated
+/pkg/generated/restapi/rekorHomePage.html -linguist-generated
+/pkg/generated/restapi/robots.txt -linguist-generated
