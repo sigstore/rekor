@@ -132,14 +132,12 @@ func (p *Package) Unmarshal(pkgReader io.Reader) error {
 	gzipReader.Multistream(false)
 
 	controlTar := bytes.Buffer{}
-	for {
-		_, err := io.CopyN(&controlTar, gzipReader, 1024)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return fmt.Errorf("reading control.tar.gz: %w", err)
-		}
+	if _, err := io.Copy(&controlTar, io.LimitReader(gzipReader, int64(maxBufSize)+1)); err != nil {
+		return fmt.Errorf("reading control.tar.gz: %w", err)
+	}
+	if controlTar.Len() > int(maxBufSize) {
+		return fmt.Errorf("decompressed size (%d) for control.tar.gz exceeds max allowed size %d",
+			controlTar.Len(), maxBufSize)
 	}
 
 	// signature uses sha1 digest hardcoded in abuild-sign tool
