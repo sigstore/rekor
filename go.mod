@@ -35,7 +35,7 @@ require (
 	github.com/jedisct1/go-minisign v0.0.0-20211028175153-1c139d1cc84b
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/prometheus/client_golang v1.24.1
-	github.com/redis/go-redis/v9 v9.22.0
+	github.com/redis/go-redis/v9 v9.23.0
 	github.com/rs/cors v1.11.1
 	github.com/sassoftware/go-rpmutils v0.4.0
 	github.com/sassoftware/relic/v8 v8.2.0
@@ -205,7 +205,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.46.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.46.0 // indirect
 	go.opentelemetry.io/otel/trace v1.46.0 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
+	go.uber.org/atomic v1.12.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
