@@ -378,12 +378,21 @@ func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
 //go:embed rekorHomePage.html
 var homePageBytes []byte
 
+//go:embed robots.txt
+var robotsTxtBytes []byte
+
 func serveStaticContent(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
+		switch r.URL.Path {
+		case "/":
 			w.Header().Add("Content-Type", "text/html")
-			w.WriteHeader(200)
+			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write(homePageBytes)
+			return
+		case "/robots.txt":
+			w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(robotsTxtBytes)
 			return
 		}
 		handler.ServeHTTP(w, r)
