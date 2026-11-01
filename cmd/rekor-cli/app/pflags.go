@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/sigstore/rekor/pkg/pki"
 	"github.com/sigstore/rekor/pkg/sharding"
@@ -96,13 +97,14 @@ func initializePFlagMap() {
 		},
 		subjectFlag: func() pflag.Value {
 			// non-empty SAN value; cap mirrors openapi maxLength on SearchIndex.subject
-			// and the mysql EntryKey varchar(512) column width
+			// and the mysql EntryKey varchar(512) column width, both of which count
+			// characters rather than bytes
 			subjectValidator := func(val string) error {
 				if val == "" {
 					return errors.New("subject must not be empty")
 				}
-				if len(val) > 512 {
-					return fmt.Errorf("subject exceeds maximum length of 512 bytes")
+				if n := utf8.RuneCountInString(val); n > 512 {
+					return fmt.Errorf("subject exceeds maximum length of 512 characters")
 				}
 				return nil
 			}

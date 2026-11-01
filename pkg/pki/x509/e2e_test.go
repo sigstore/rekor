@@ -71,6 +71,6 @@ func TestX509(t *testing.T) {
 	uuid := e2eutil.GetUUIDFromUploadOutput(t, out)
 
 	// Search via email
-	out = e2eutil.RunCli(t, "search", "--email", "test@rekor.dev")
+	out = e2eutil.RunCliContains(t, uuid, "search", "--email", "test@rekor.dev")
 	e2eutil.OutputContains(t, out, uuid)
 }

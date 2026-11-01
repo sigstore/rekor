@@ -60,6 +60,6 @@ func TestSSH(t *testing.T) {
 		"--public-key", pubPath, "--pki-format", "ssh")
 	e2eutil.OutputContains(t, out, "Inclusion Proof")
 
-	out = e2eutil.RunCli(t, "search", "--public-key", pubPath, "--pki-format", "ssh")
+	out = e2eutil.RunCliContains(t, uuid, "search", "--public-key", pubPath, "--pki-format", "ssh")
 	e2eutil.OutputContains(t, out, uuid)
 }

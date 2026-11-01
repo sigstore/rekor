@@ -121,9 +121,17 @@ search_expect_fail() {
 
 search_expect_success() {
     local artifact=$1
-    rekor-cli --rekor_server $REKOR_ADDRESS search --artifact $artifact 2>/dev/null
-    if [ $? -ne 0 ] ; then
-        echo "Unexpected missing index."
-        exit 1
-    fi
+    local expected_uuid=${2:-}
+    local output
+    local count=0
+    until output=$(rekor-cli --rekor_server "$REKOR_ADDRESS" search --artifact "$artifact" 2>/dev/null) &&
+        [[ -z "$expected_uuid" || "$output" == *"$expected_uuid"* ]]; do
+        if [ $count -eq 20 ]; then
+            echo "Unexpected missing index after 5 seconds."
+            exit 1
+        fi
+        sleep 0.25
+        let 'count+=1'
+    done
+    printf '%s\n' "$output"
 }

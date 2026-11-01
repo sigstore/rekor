@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"cloud.google.com/go/profiler"
@@ -103,7 +104,8 @@ var serveCmd = &cobra.Command{
 		}
 
 		doc, _ := loads.Embedded(restapi.SwaggerJSON, restapi.FlatSwaggerJSON)
-		server := restapi.NewServer(operations.NewRekorServerAPI(doc))
+		serverAPI := operations.NewRekorServerAPI(doc)
+		server := restapi.NewServer(serverAPI)
 		defer func() {
 			if err := server.Shutdown(); err != nil {
 				log.Logger.Error(err)
@@ -176,6 +178,11 @@ var serveCmd = &cobra.Command{
 
 		api.ConfigureAPI(treeID)
 		server.ConfigureAPI()
+		// The generated server skips ServerShutdown when HTTP shutdown times out.
+		// Always clean up, and share the once guard with its normal shutdown hook.
+		stopAPI := sync.OnceFunc(api.StopAPI)
+		defer stopAPI()
+		serverAPI.ServerShutdown = stopAPI
 
 		http.Handle("/metrics", promhttp.Handler())
 		go func() {
@@ -188,6 +195,7 @@ var serveCmd = &cobra.Command{
 		}()
 
 		if err := server.Serve(); err != nil {
+			stopAPI()
 			log.Logger.Fatal(err)
 		}
 	},

@@ -39,6 +39,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -170,11 +171,14 @@ func main() {
 			log.Fatal("Redis port must be set")
 		}
 	}
-	if *startIndex == -1 {
+	if *startIndex < 0 {
 		log.Fatal("start must be set to >=0")
 	}
-	if *endIndex == -1 {
-		log.Fatal("end must be set to >=0")
+	if *endIndex < *startIndex {
+		log.Fatal("end must be >= start")
+	}
+	if *concurrency < 1 {
+		log.Fatal("concurrency must be positive")
 	}
 	if *rekorAddress == "" {
 		log.Fatal("rekor-address must be set")
@@ -201,6 +205,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("populating index: %v", err)
 	}
+	fmt.Println("Backfill complete")
 }
 
 // getIndexClient creates a client for the provided index backend.
@@ -239,7 +244,9 @@ func getIndexClient(backend provider) (indexClient, error) {
 
 // populate does the heavy lifting of populating the index storage for whichever client is passed in.
 func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) (err error) {
-	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	signalCtx := ctx
 	group, ctx := errgroup.WithContext(ctx)
 	group.SetLimit(*concurrency)
 
@@ -251,9 +258,11 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) (err erro
 	var resultChan = make(chan result)
 	parseErrs := make([]int, 0)
 	insertErrs := make([]int, 0)
-	runningInsertErrs := 0
+	var runningInsertErrs atomic.Int64
+	collected := make(chan struct{})
 
 	go func() {
+		defer close(collected)
 		for r := range resultChan {
 			if len(r.parseErrs) > 0 {
 				parseErrs = append(parseErrs, r.index)
@@ -266,11 +275,12 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) (err erro
 
 	defer func() {
 		close(resultChan)
+		<-collected
 		if len(parseErrs) > 0 {
-			err = fmt.Errorf("failed to parse %d entries: %v", len(parseErrs), parseErrs)
+			err = errors.Join(err, fmt.Errorf("failed to parse %d entries: %v", len(parseErrs), parseErrs))
 		}
 		if len(insertErrs) > 0 {
-			err = fmt.Errorf("failed to insert/remove %d entries: %v", len(insertErrs), insertErrs)
+			err = errors.Join(err, fmt.Errorf("failed to insert/remove %d entries: %v", len(insertErrs), insertErrs))
 		}
 	}()
 
@@ -320,8 +330,7 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) (err erro
 							return nil
 						}
 						insertErrs = append(insertErrs, fmt.Errorf("error inserting UUID %s with key %s: %w", uuid, key, err))
-						runningInsertErrs++
-						if runningInsertErrs > maxInsertErrors {
+						if runningInsertErrs.Add(1) > maxInsertErrors {
 							resultChan <- result{
 								index:      index,
 								parseErrs:  parseErrs,
@@ -347,7 +356,9 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) (err erro
 	if err != nil {
 		return fmt.Errorf("error running backfill: %v", err)
 	}
-	fmt.Println("Backfill complete")
+	if err := signalCtx.Err(); err != nil {
+		return err
+	}
 	return nil
 }
 

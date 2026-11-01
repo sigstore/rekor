@@ -29,9 +29,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
@@ -387,26 +385,7 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 		IntegratedTime: new(queuedLeaf.IntegrateTimestamp.AsTime().Unix()),
 	}
 
-	if indexStorageClient != nil {
-		go func() {
-			start := time.Now()
-			var err error
-			defer func() {
-				labels := map[string]string{
-					"success": strconv.FormatBool(err == nil),
-				}
-				metricIndexStorageLatency.With(labels).Observe(float64(time.Since(start)))
-			}()
-			keys, err := entry.IndexKeys()
-			if err != nil {
-				log.ContextLogger(ctx).Errorf("getting entry index keys: %v", err)
-				return
-			}
-			if err = addToIndex(context.WithoutCancel(ctx), keys, entryID); err != nil {
-				log.ContextLogger(ctx).Errorf("adding keys to index: %v", err)
-			}
-		}()
-	}
+	indexAcceptedEntry(ctx, entry, entryID)
 
 	if viper.GetBool("enable_attestation_storage") {
 		if entryWithAtt, ok := entry.(types.EntryWithAttestationImpl); ok {

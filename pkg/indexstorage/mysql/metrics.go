@@ -17,9 +17,60 @@ package mysql
 import (
 	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 var (
+	metricPendingEntries = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "rekor_index_storage_pending_entries",
+		Help: "Index entries buffered or being written",
+	})
+	metricPendingBytes = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "rekor_index_storage_pending_bytes",
+		Help: "Accounted bytes buffered or being written, including row string headers",
+	})
+	metricRejectedEntries = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "rekor_index_storage_rejected_entries_total",
+		Help: "Index entries rejected before buffering by reason (overflow, oversized, shutdown); uploads remain fail-open",
+	}, []string{"reason"})
+	metricShutdownTimeouts = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "rekor_index_storage_shutdown_timeouts_total",
+		Help: "Index drains canceled at the shutdown deadline",
+	})
+
+	// WriteIndex returns as soon as an entry's keys are buffered, so rekor_index_storage_latency_summary
+	// in pkg/api times key extraction and enqueueing in legacy nanoseconds, and cannot
+	// observe a failed insert. These cover the database write; batch latency uses seconds.
+	metricBatchWrites = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "rekor_index_storage_batch_writes_total",
+		Help: "Batched search index writes by outcome",
+	}, []string{"success"})
+
+	metricBatchWriteRows = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "rekor_index_storage_batch_write_rows_total",
+		Help: "Index keys carried by batched search index writes, by reported outcome; a commit error can leave the database outcome unknown",
+	}, []string{"success"})
+
+	metricBatchWriteLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "rekor_index_storage_batch_write_latency_seconds",
+		Help: "Latency in seconds of batched search index writes by outcome, including retries",
+	}, []string{"success"})
+
+	metricBatchWriteRetries = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "rekor_index_storage_batch_write_retries_total",
+		Help: "Retries of failed batched search index writes",
+	})
+
+	metricInvalidUTF8Keys = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "rekor_index_storage_invalid_utf8_keys_total",
+		Help: "Index keys dropped because they are not valid UTF-8 for the EntryKey column",
+	})
+
+	metricSkippedKeys = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "rekor_index_storage_oversized_keys_total",
+		Help: "Index keys dropped for exceeding the EntryKey column width",
+	})
+
 	openConnsDesc = prometheus.NewDesc(
 		"rekor_index_storage_db_connections_open",
 		"Established connections to the search index database, both in use and idle",

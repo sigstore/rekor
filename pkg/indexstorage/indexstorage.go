@@ -26,8 +26,12 @@ import (
 
 type IndexStorage interface {
 	LookupIndices(context.Context, []string) ([]string, error) // Returns indices for specified keys
-	WriteIndex(context.Context, []string, string) error        // Writes index for specified keys
-	Shutdown() error                                           // Method to run on shutdown
+	// WriteIndex accepts an index update. Backends may buffer the update, so a nil
+	// error does not necessarily mean it is durable. Shutdown attempts to drain all
+	// accepted updates; permanent failures remain observable through backend metrics
+	// and may require running backfill-index.
+	WriteIndex(context.Context, []string, string) error
+	Shutdown() error // Drains accepted updates and releases backend resources
 }
 
 // NewIndexStorage instantiates a new IndexStorage provider based on the requested type
@@ -43,7 +47,8 @@ func NewIndexStorage(providerType string) (IndexStorage, error) {
 			mysql.WithReadMaxIdleConns(limits.readIdle),
 			mysql.WithReadMaxOpenConns(limits.readOpen),
 			mysql.WithWriteMaxIdleConns(limits.writeIdle),
-			mysql.WithWriteMaxOpenConns(limits.writeOpen))
+			mysql.WithWriteMaxOpenConns(limits.writeOpen),
+			mysql.WithBatchDelay(viper.GetDuration("search_index.mysql.batch_delay")))
 	default:
 		return nil, fmt.Errorf("invalid index storage provider type: %v", providerType)
 	}

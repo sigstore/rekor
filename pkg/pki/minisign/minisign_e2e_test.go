@@ -54,7 +54,7 @@ func TestMinisign(t *testing.T) {
 		"--public-key", pubPath, "--pki-format", "minisign")
 	e2eutil.OutputContains(t, out, "Inclusion Proof")
 
-	out = e2eutil.RunCli(t, "search", "--public-key", pubPath, "--pki-format", "minisign")
+	out = e2eutil.RunCliContains(t, uuidA, "search", "--public-key", pubPath, "--pki-format", "minisign")
 	e2eutil.OutputContains(t, out, uuidA)
 
 	// crease a second artifact and sign it
@@ -67,6 +67,9 @@ func TestMinisign(t *testing.T) {
 		"--public-key", pubPath, "--pki-format", "minisign")
 	e2eutil.OutputContains(t, out, "Created entry at")
 	uuidB := e2eutil.GetUUIDFromUploadOutput(t, out)
+	// Wait until the second entry is searchable before assertions that compare the
+	// complete result set for this shared key.
+	e2eutil.RunCliContains(t, uuidB, "search", "--public-key", pubPath, "--pki-format", "minisign")
 
 	tests := []struct {
 		name               string

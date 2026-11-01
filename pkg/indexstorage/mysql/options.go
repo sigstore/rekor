@@ -29,6 +29,7 @@ type Options interface {
 	applyConnMaxLifetime(*sqlx.DB)
 	applyMaxIdleConns(*sqlx.DB, poolRole)
 	applyMaxOpenConns(*sqlx.DB, poolRole)
+	applyBatchDelay(*time.Duration)
 }
 
 // NoOpOptionImpl implements the MySQLOption interfaces as no-ops.
@@ -45,6 +46,30 @@ func (noOpOptionImpl) applyMaxOpenConns(_ *sqlx.DB, _ poolRole) {}
 
 // ApplyMaxIdleConns is a no-op required to fully implement the requisite interfaces
 func (noOpOptionImpl) applyMaxIdleConns(_ *sqlx.DB, _ poolRole) {}
+
+// applyBatchDelay is a no-op required to fully implement the requisite interfaces
+func (noOpOptionImpl) applyBatchDelay(_ *time.Duration) {}
+
+// RequestBatchDelay implements the functional option pattern for specifying how long index
+// writes are coalesced before being flushed to the database
+type RequestBatchDelay struct {
+	noOpOptionImpl
+	delay time.Duration
+}
+
+// applyBatchDelay sets the batch delay, leaving the default in place when unset
+func (r RequestBatchDelay) applyBatchDelay(delay *time.Duration) {
+	if r.delay > 0 {
+		*delay = r.delay
+	}
+}
+
+// WithBatchDelay specifies how long an index key may wait to be coalesced with others
+// before its batch is scheduled. Database queueing and retries can add further delay.
+// Larger values write fewer, wider INSERTs. Zero leaves the default in place.
+func WithBatchDelay(delay time.Duration) RequestBatchDelay {
+	return RequestBatchDelay{delay: delay}
+}
 
 // RequestConnMaxIdleTime implements the functional option pattern for specifying the maximum connection idle time
 type RequestConnMaxIdleTime struct {

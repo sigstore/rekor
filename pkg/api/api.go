@@ -20,6 +20,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"slices"
+	"sync"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
@@ -197,6 +198,12 @@ var (
 	api                      *API
 	attestationStorageClient storage.AttestationStorage
 	indexStorageClient       indexstorage.IndexStorage
+	// indexStorageWriters tracks work launched after a log entry is accepted but
+	// before it reaches the index backend. Server shutdown waits for these producers
+	// before asking the backend to drain its own queue.
+	indexStorageWriters sync.WaitGroup
+	indexStorageMu      sync.Mutex
+	indexStorageStopped bool
 )
 
 func ConfigureAPI(treeID int64) {
@@ -241,15 +248,24 @@ func NewRedisClient() *redis.Client {
 }
 
 func StopAPI() {
-	if api.newEntryPublisher != nil {
-		if err := api.newEntryPublisher.Close(); err != nil {
-			log.Logger.Errorf("shutting down newEntryPublisher: %v", err)
+	// The HTTP shutdown deadline can expire while a handler is still finishing.
+	// Serialize producer registration with Wait so late entries cannot restart it.
+	indexStorageMu.Lock()
+	indexStorageStopped = true
+	indexStorageMu.Unlock()
+
+	if indexStorageClient != nil {
+		indexStorageWriters.Wait()
+		if err := indexStorageClient.Shutdown(); err != nil {
+			log.Logger.Errorf("shutting down indexStorageClient: %v", err)
 		}
 	}
 
-	if indexStorageClient != nil {
-		if err := indexStorageClient.Shutdown(); err != nil {
-			log.Logger.Errorf("shutting down indexStorageClient: %v", err)
+	// Drain the index before waiting for external publishers. A stalled Pub/Sub
+	// flush must not consume the termination grace period before index shutdown.
+	if api.newEntryPublisher != nil {
+		if err := api.newEntryPublisher.Close(); err != nil {
+			log.Logger.Errorf("shutting down newEntryPublisher: %v", err)
 		}
 	}
 
