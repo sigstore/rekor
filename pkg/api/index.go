@@ -257,11 +257,9 @@ func indexAcceptedEntry(ctx context.Context, entry types.EntryImpl, entryID stri
 			if indexStorageStopped {
 				log.ContextLogger(ctx).Errorf("index storage is shutting down; entry %s may require backfill-index", entryID)
 			} else {
-				indexStorageWriters.Add(1)
-				go func() {
-					defer indexStorageWriters.Done()
+				indexStorageWriters.Go(func() {
 					writeIndex()
-				}()
+				})
 			}
 			indexStorageMu.Unlock()
 		}

@@ -1034,12 +1034,12 @@ func TestWriteBundleOrdersWholeTransaction(t *testing.T) {
 	p := IndexStorageProvider{writeDB: db, batchDelay: time.Hour}
 	defer p.Shutdown() //nolint:errcheck
 	var want []indexEntry
-	for i := 0; i < 501; i++ {
+	for i := range 501 {
 		key := fmt.Sprintf("key%04d", i)
 		want = append(want, indexEntry{Key: strings.ToUpper(key), UUID: "a"},
 			indexEntry{Key: key, UUID: "b"})
 	}
-	for attempt := 0; attempt < 2; attempt++ {
+	for attempt := range 2 {
 		mock.ExpectBegin()
 		for offset := 0; offset < len(want); offset += maxRowsPerInsert {
 			end := min(offset+maxRowsPerInsert, len(want))

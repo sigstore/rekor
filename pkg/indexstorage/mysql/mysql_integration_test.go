@@ -90,7 +90,7 @@ func TestMySQLBlockedBufferAndShutdown(t *testing.T) {
 	pendingBefore := testutil.ToFloat64(metricPendingBytes)
 	rejectsBefore := testutil.ToFloat64(metricRejectedEntries.WithLabelValues("overflow"))
 	var accepted, rejected int
-	for i := 0; i < 2000; i++ {
+	for i := range 2000 {
 		err := p.WriteIndex(context.Background(), []string{strings.Repeat("x", 500)}, fmt.Sprint(i))
 		switch {
 		case errors.Is(err, bundler.ErrOverflow):
@@ -172,7 +172,7 @@ func TestMySQLDeadlockRecovery(t *testing.T) {
 	// Make the competing transaction more expensive to roll back so InnoDB picks
 	// the smaller batch transaction as its deadlock victim.
 	var weight []indexEntry
-	for i := 0; i < 3000; i++ {
+	for i := range 3000 {
 		weight = append(weight, indexEntry{Key: fmt.Sprintf("weight%04d", i), UUID: "old"})
 	}
 	weight = append(weight, indexEntry{Key: "z", UUID: "uuid"})
@@ -193,7 +193,7 @@ func TestMySQLDeadlockRecovery(t *testing.T) {
 		t.Fatal(err)
 	}
 	keys := make([]string, 1001)
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		keys[i] = fmt.Sprintf("a%04d", i)
 	}
 	keys[1000] = "z"
@@ -275,11 +275,11 @@ func TestMySQLConcurrentHotKeyBundles(t *testing.T) {
 	b.HandlerLimit = writers
 	b.BundleCountThreshold = 1
 	failedBefore := testutil.ToFloat64(metricBatchWrites.WithLabelValues("false"))
-	for round := 0; round < 3; round++ {
+	for round := range 3 {
 		// Hold the table while all bundles enter their handlers, then release
 		// them together to avoid accidentally testing serial execution.
 		unlock := lockIndex(t, db)
-		for writer := 0; writer < writers; writer++ {
+		for writer := range writers {
 			keys := make([]string, keysPerEntry)
 			for i := range keys {
 				n := i
