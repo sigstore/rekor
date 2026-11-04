@@ -145,6 +145,15 @@ docker_up
 
 make_entries
 
+# All uploads must be indexed before deletion. Artifacts can have multiple UUIDs,
+# and batches can complete out of order, so finding only the last artifact is not
+# enough to prove there are no outstanding writes that could repopulate the index.
+for artifact in "${!expected_artifacts[@]}"; do
+    for uuid in ${expected_artifacts[$artifact]}; do
+        search_expect_success "$artifact" "$uuid"
+    done
+done
+
 set -e
 loginfo=$(rekor-cli --rekor_server $REKOR_ADDRESS loginfo --format=json)
 let end_index=$(echo $loginfo | jq .ActiveTreeSize)-1

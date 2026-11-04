@@ -22,14 +22,22 @@ import (
 	"net/http/httptest"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-
+	"github.com/sigstore/rekor/pkg/events"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
+	"github.com/sigstore/rekor/pkg/indexstorage"
+	"github.com/sigstore/rekor/pkg/indexstorage/mysql"
+	"github.com/sigstore/rekor/pkg/log"
+	"github.com/sigstore/rekor/pkg/types"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
+	"google.golang.org/api/support/bundler"
 )
 
 func Test_Collection(t *testing.T) {
@@ -98,6 +106,7 @@ type fakeIndexStorage struct {
 	keyToUUIDs map[string][]string
 	lookups    [][]string
 	err        error
+	shutdown   func()
 }
 
 func (f *fakeIndexStorage) LookupIndices(_ context.Context, keys []string) ([]string, error) {
@@ -115,16 +124,58 @@ func (f *fakeIndexStorage) LookupIndices(_ context.Context, keys []string) ([]st
 }
 
 func (f *fakeIndexStorage) WriteIndex(_ context.Context, _ []string, _ string) error {
+	return f.err
+}
+
+func (f *fakeIndexStorage) Shutdown() error {
+	if f.shutdown != nil {
+		f.shutdown()
+	}
 	return nil
 }
 
-func (f *fakeIndexStorage) Shutdown() error { return nil }
-
-func swapIndexStorage(t *testing.T, fake *fakeIndexStorage) {
+func swapIndexStorage(t *testing.T, replacement indexstorage.IndexStorage) {
 	t.Helper()
 	prev := indexStorageClient
-	indexStorageClient = fake
+	indexStorageClient = replacement
 	t.Cleanup(func() { indexStorageClient = prev })
+}
+
+func TestStopAPIWaitsForIndexWriters(t *testing.T) {
+	t.Cleanup(func() { indexStorageStopped = false })
+	previousAPI := api
+	api = &API{}
+	t.Cleanup(func() { api = previousAPI })
+
+	shutdownCalled := make(chan struct{})
+	swapIndexStorage(t, &fakeIndexStorage{shutdown: func() { close(shutdownCalled) }})
+
+	indexStorageWriters.Add(1)
+	writerReleased := false
+	defer func() {
+		if !writerReleased {
+			indexStorageWriters.Done()
+		}
+	}()
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		StopAPI()
+	}()
+
+	select {
+	case <-shutdownCalled:
+		t.Fatal("index storage shut down before its producer completed")
+	case <-time.After(25 * time.Millisecond):
+	}
+
+	indexStorageWriters.Done()
+	writerReleased = true
+	select {
+	case <-stopped:
+	case <-time.After(time.Second):
+		t.Fatal("StopAPI did not continue after its index producer completed")
+	}
 }
 
 func newSearchParams(t *testing.T, q models.SearchIndex) index.SearchIndexParams {
@@ -242,5 +293,132 @@ func TestSearchIndexHandler_SubjectAndShaOrOperator(t *testing.T) {
 		if got[i] != want[i] {
 			t.Fatalf("OR union: want %v, got %v", want, got)
 		}
+	}
+}
+
+// Embedding leaves irrelevant entry operations unimplemented; indexing must only
+// inspect keys, never alter the accepted log entry or its response.
+type acceptedIndexEntry struct{ types.EntryImpl }
+
+func (acceptedIndexEntry) IndexKeys() ([]string, error) { return []string{"key"}, nil }
+
+func TestIndexAcceptedEntryFailsOpen(t *testing.T) {
+	for _, failure := range []error{bundler.ErrOverflow, bundler.ErrOversizedItem} {
+		t.Run(failure.Error(), func(t *testing.T) {
+			swapIndexStorage(t, &fakeIndexStorage{err: failure})
+			core, observed := observer.New(zap.ErrorLevel)
+			previousLogger := log.Logger
+			log.Logger = zap.New(core).Sugar()
+			t.Cleanup(func() { log.Logger = previousLogger })
+			// This call deliberately has no error or responder return: indexing cannot
+			// override the upload response, even when enqueueing fails.
+			indexAcceptedEntry(context.Background(), acceptedIndexEntry{}, "uuid")
+			indexStorageWriters.Wait()
+			if observed.FilterMessageSnippet(failure.Error()).Len() != 1 {
+				t.Fatalf("enqueue failure was not reported: %v", observed.All())
+			}
+		})
+	}
+}
+
+// blockingIndexEntry holds IndexKeys open, standing in for a handler still parsing
+// its entry when the HTTP shutdown deadline expires.
+type blockingIndexEntry struct {
+	types.EntryImpl
+	started, release chan struct{}
+}
+
+func (e blockingIndexEntry) IndexKeys() ([]string, error) {
+	close(e.started)
+	<-e.release
+	return []string{"key"}, nil
+}
+
+func TestStopAPIWaitsForSynchronousMySQLProducer(t *testing.T) {
+	previousAPI, previousStopped := api, indexStorageStopped
+	t.Cleanup(func() { api, indexStorageStopped = previousAPI, previousStopped })
+	api = &API{}
+	// a zero-value provider takes the synchronous branch and shuts down without a database
+	swapIndexStorage(t, &mysql.IndexStorageProvider{})
+
+	entry := blockingIndexEntry{started: make(chan struct{}), release: make(chan struct{})}
+	indexed := make(chan struct{})
+	go func() {
+		defer close(indexed)
+		indexAcceptedEntry(context.Background(), entry, "uuid")
+	}()
+	<-entry.started
+
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		StopAPI()
+	}()
+	select {
+	case <-stopped:
+		t.Fatal("StopAPI finished while a MySQL producer was still computing keys")
+	case <-time.After(25 * time.Millisecond):
+	}
+
+	close(entry.release)
+	<-indexed
+	select {
+	case <-stopped:
+	case <-time.After(time.Second):
+		t.Fatal("StopAPI did not continue after its MySQL producer completed")
+	}
+}
+
+type stalledClosePublisher struct {
+	closing chan struct{}
+	release chan struct{}
+}
+
+func (*stalledClosePublisher) Publish(context.Context, *events.Event, events.EventContentType) error {
+	return nil
+}
+
+func (p *stalledClosePublisher) Close() error {
+	close(p.closing)
+	<-p.release
+	return nil
+}
+
+func TestStopAPIDrainsIndexBeforePublisherClose(t *testing.T) {
+	previousAPI, previousStopped := api, indexStorageStopped
+	t.Cleanup(func() {
+		api, indexStorageStopped = previousAPI, previousStopped
+	})
+	publisher := &stalledClosePublisher{closing: make(chan struct{}), release: make(chan struct{})}
+	api = &API{newEntryPublisher: publisher}
+	indexDrained := make(chan struct{})
+	swapIndexStorage(t, &fakeIndexStorage{shutdown: func() { close(indexDrained) }})
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		StopAPI()
+	}()
+	defer func() {
+		close(publisher.release)
+		select {
+		case <-stopped:
+		case <-time.After(time.Second):
+			t.Error("StopAPI did not finish after releasing publisher")
+		}
+	}()
+	select {
+	case <-publisher.closing:
+	case <-time.After(time.Second):
+		t.Fatal("publisher close was not reached")
+	}
+	select {
+	case <-indexDrained:
+	default:
+		t.Fatal("publisher close blocked before index drain")
+	}
+	select {
+	case <-stopped:
+		t.Fatal("StopAPI returned before publisher close completed")
+	default:
 	}
 }

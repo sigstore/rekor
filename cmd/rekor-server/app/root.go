@@ -155,6 +155,8 @@ Memory and file-based signers should only be used for testing.`)
 	rootCmd.PersistentFlags().Int("search_index.mysql.read.max_idle_connections", 0, "maximum idle connections retained in the index read pool")
 	rootCmd.PersistentFlags().Int("search_index.mysql.write.max_open_connections", 0, "maximum open connections in the index write pool; 0 for unlimited")
 	rootCmd.PersistentFlags().Int("search_index.mysql.write.max_idle_connections", 0, "maximum idle connections retained in the index write pool")
+	rootCmd.PersistentFlags().Duration("search_index.mysql.batch_delay", 0, "how long index writes are coalesced before being flushed to the database; "+
+		"larger values write fewer, wider INSERTs but keep new entries unsearchable for longer. 0 uses the default")
 
 	// superseded by the per-pool flags above; these sized the single pool that predates the
 	// read/write split and are now split 70/30 between the write and read pools

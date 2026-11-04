@@ -198,10 +198,10 @@ func TestGetCLI(t *testing.T) {
 	e2eutil.RunCli(t, "get", "--format=json", "--log-index", strconv.Itoa(g.LogIndex))
 
 	// check index via the file and public key to ensure that the index has updated correctly
-	out = e2eutil.RunCli(t, "search", "--artifact", artifactPath)
+	out = e2eutil.RunCliContains(t, uuid, "search", "--artifact", artifactPath)
 	e2eutil.OutputContains(t, out, uuid)
 
-	out = e2eutil.RunCli(t, "search", "--pki-format=pgp", "--public-key", pubPath)
+	out = e2eutil.RunCliContains(t, uuid, "search", "--pki-format=pgp", "--public-key", pubPath)
 	e2eutil.OutputContains(t, out, uuid)
 
 	artifactBytes, err := ioutil.ReadFile(artifactPath)
@@ -210,7 +210,7 @@ func TestGetCLI(t *testing.T) {
 	}
 	sha := sha256.Sum256(artifactBytes)
 
-	out = e2eutil.RunCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
+	out = e2eutil.RunCliContains(t, uuid, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
 	e2eutil.OutputContains(t, out, uuid)
 
 	// Exercise GET with the new EntryID (TreeID + UUID)
@@ -276,7 +276,7 @@ func TestSearchSHA512(t *testing.T) {
 		"--public-key", "tests/test_sha512.pub")
 	e2eutil.OutputContains(t, out, "Created entry at")
 	uuid := e2eutil.GetUUIDFromTimestampOutput(t, out)
-	out = e2eutil.RunCli(t, "search", "--sha", fmt.Sprintf("sha512:%s", sha512))
+	out = e2eutil.RunCliContains(t, uuid, "search", "--sha", fmt.Sprintf("sha512:%s", sha512))
 	e2eutil.OutputContains(t, out, uuid)
 }
 func TestVerifyNonExistentUUID(t *testing.T) {
@@ -474,13 +474,13 @@ func TestSearchBySANSubject(t *testing.T) {
 	e2eutil.OutputContains(t, out, "Created entry at")
 	uuid := e2eutil.GetUUIDFromUploadOutput(t, out)
 
-	out = e2eutil.RunCli(t, "search", "--subject", sanURI)
+	out = e2eutil.RunCliContains(t, uuid, "search", "--subject", sanURI)
 	e2eutil.OutputContains(t, out, uuid)
 
 	mangled := strings.ToUpper(sanURI)
 	if mangled == sanURI {
 		t.Fatalf("test setup: mangled string equals original")
 	}
-	out = e2eutil.RunCli(t, "search", "--subject", mangled)
+	out = e2eutil.RunCliContains(t, uuid, "search", "--subject", mangled)
 	e2eutil.OutputContains(t, out, uuid)
 }

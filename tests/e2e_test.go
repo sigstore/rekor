@@ -186,10 +186,10 @@ func TestGetCLI(t *testing.T) {
 	runCli(t, "get", "--format=json", "--log-index", strconv.Itoa(g.LogIndex))
 
 	// check index via the file and public key to ensure that the index has updated correctly
-	out = runCli(t, "search", "--artifact", artifactPath)
+	out = runCliContains(t, uuid, "search", "--artifact", artifactPath)
 	outputContains(t, out, uuid)
 
-	out = runCli(t, "search", "--pki-format=pgp", "--public-key", pubPath)
+	out = runCliContains(t, uuid, "search", "--pki-format=pgp", "--public-key", pubPath)
 	outputContains(t, out, uuid)
 
 	artifactBytes, err := ioutil.ReadFile(artifactPath)
@@ -198,7 +198,7 @@ func TestGetCLI(t *testing.T) {
 	}
 	sha := sha256.Sum256(artifactBytes)
 
-	out = runCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
+	out = runCliContains(t, uuid, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
 	outputContains(t, out, uuid)
 
 	// Exercise GET with the new EntryID (TreeID + UUID)

@@ -39,6 +39,6 @@ func TestTufVerifyUpload(t *testing.T) {
 	out = e2eutil.RunCli(t, "verify", "--artifact", artifactPath, "--public-key", rootPath, "--type", "tuf")
 	e2eutil.OutputContains(t, out, "Inclusion Proof")
 
-	out = e2eutil.RunCli(t, "search", "--public-key", rootPath, "--pki-format", "tuf")
+	out = e2eutil.RunCliContains(t, uuid, "search", "--public-key", rootPath, "--pki-format", "tuf")
 	e2eutil.OutputContains(t, out, uuid)
 }

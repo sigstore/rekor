@@ -36,7 +36,9 @@ var (
 
 	metricIndexStorageLatency = promauto.NewSummaryVec(prometheus.SummaryOpts{
 		Name: "rekor_index_storage_latency_summary",
-		Help: "Latency of backend index insertion by success/failure",
+		Help: "Latency in nanoseconds of index key extraction and backend insertion by success/failure. " +
+			"For mysql this includes extraction and buffering, not database writes; " +
+			"rekor_index_storage_batch_write_latency_seconds measures database writes in seconds",
 	}, []string{"success"})
 
 	MetricLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{

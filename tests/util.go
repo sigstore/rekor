@@ -73,6 +73,34 @@ func runCli(t *testing.T, arg ...string) string {
 	return run(t, "", cli, arg...)
 }
 
+func runCliContains(t *testing.T, expected string, arg ...string) string {
+	t.Helper()
+	arg = append(arg, rekorServerFlag())
+	if os.Getenv("REKORTMPDIR") != "" {
+		arg = append(arg, "--config="+os.Getenv("REKORTMPDIR")+".rekor.yaml")
+	}
+
+	deadline := time.Now().Add(5 * time.Second)
+	var lastOutput string
+	var lastErr error
+	for {
+		cmd := exec.Command(cli, arg...)
+		if os.Getenv("REKORTMPDIR") != "" {
+			cmd.Env = append(os.Environ(), "HOME="+os.Getenv("REKORTMPDIR"))
+		}
+		b, err := cmd.CombinedOutput()
+		lastOutput = stripCoverageOutput(string(b))
+		lastErr = err
+		if err == nil && strings.Contains(lastOutput, expected) {
+			return lastOutput
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("search index did not contain %q within 5s: %v\n%s", expected, lastErr, lastOutput)
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+}
+
 func runCliStdout(t *testing.T, arg ...string) string {
 	t.Helper()
 	arg = append(arg, rekorServerFlag())

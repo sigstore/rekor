@@ -42,9 +42,9 @@ func TestTimestampArtifact(t *testing.T) {
 	out = e2eutil.RunCli(t, "upload", "--type", "rfc3161", "--artifact", "tests/test.tsr")
 	e2eutil.OutputContains(t, out, "Entry already exists")
 
-	out = e2eutil.RunCli(t, "search", "--artifact", "tests/test.tsr")
+	out = e2eutil.RunCliContains(t, uuid, "search", "--artifact", "tests/test.tsr")
 	e2eutil.OutputContains(t, out, uuid)
 
-	out = e2eutil.RunCli(t, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
+	out = e2eutil.RunCliContains(t, uuid, "search", "--sha", fmt.Sprintf("sha256:%s", hex.EncodeToString(sha[:])))
 	e2eutil.OutputContains(t, out, uuid)
 }

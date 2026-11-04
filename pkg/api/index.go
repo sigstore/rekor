@@ -22,14 +22,18 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/swag/conv"
-
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
+	"github.com/sigstore/rekor/pkg/indexstorage/mysql"
+	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/pki"
+	"github.com/sigstore/rekor/pkg/types"
 	"github.com/sigstore/rekor/pkg/util"
 )
 
@@ -220,4 +224,53 @@ func (u *Collection) Values() []string {
 		}
 	}
 	return subset.Values()
+}
+
+// indexAcceptedEntry is best-effort: an indexing failure must never change the
+// response for an entry already accepted by the transparency log.
+func indexAcceptedEntry(ctx context.Context, entry types.EntryImpl, entryID string) {
+	if indexStorageClient != nil {
+		writeIndex := func() {
+			start := time.Now()
+			var err error
+			defer func() {
+				labels := map[string]string{
+					"success": strconv.FormatBool(err == nil),
+				}
+				metricIndexStorageLatency.With(labels).Observe(float64(time.Since(start)))
+			}()
+			keys, err := entry.IndexKeys()
+			if err != nil {
+				log.ContextLogger(ctx).Errorf("getting entry index keys: %v", err)
+				return
+			}
+			if err = addToIndex(context.WithoutCancel(ctx), keys, entryID); err != nil {
+				log.ContextLogger(ctx).Errorf("adding keys to index: %v", err)
+			}
+		}
+		// Register before computing keys, so StopAPI waits for this entry to reach the
+		// backend instead of shutting it down underneath a handler that outlived the
+		// HTTP shutdown deadline.
+		indexStorageMu.Lock()
+		stopped := indexStorageStopped
+		if !stopped {
+			indexStorageWriters.Add(1)
+		}
+		indexStorageMu.Unlock()
+		if stopped {
+			log.ContextLogger(ctx).Errorf("index storage is shutting down; entry %s may require backfill-index", entryID)
+			return
+		}
+		if _, buffered := indexStorageClient.(*mysql.IndexStorageProvider); buffered {
+			// MySQL only enqueues here; the bundler bounds concurrent database work.
+			// Avoid one detached producer goroutine per upload.
+			defer indexStorageWriters.Done()
+			writeIndex()
+			return
+		}
+		go func() {
+			defer indexStorageWriters.Done()
+			writeIndex()
+		}()
+	}
 }
