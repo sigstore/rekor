@@ -32,6 +32,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/index"
 	"github.com/sigstore/rekor/pkg/indexstorage"
+	"github.com/sigstore/rekor/pkg/indexstorage/mysql"
 	"github.com/sigstore/rekor/pkg/log"
 	"github.com/sigstore/rekor/pkg/types"
 	"go.uber.org/zap"
@@ -317,6 +318,54 @@ func TestIndexAcceptedEntryFailsOpen(t *testing.T) {
 				t.Fatalf("enqueue failure was not reported: %v", observed.All())
 			}
 		})
+	}
+}
+
+// blockingIndexEntry holds IndexKeys open, standing in for a handler still parsing
+// its entry when the HTTP shutdown deadline expires.
+type blockingIndexEntry struct {
+	types.EntryImpl
+	started, release chan struct{}
+}
+
+func (e blockingIndexEntry) IndexKeys() ([]string, error) {
+	close(e.started)
+	<-e.release
+	return []string{"key"}, nil
+}
+
+func TestStopAPIWaitsForSynchronousMySQLProducer(t *testing.T) {
+	previousAPI, previousStopped := api, indexStorageStopped
+	t.Cleanup(func() { api, indexStorageStopped = previousAPI, previousStopped })
+	api = &API{}
+	// a zero-value provider takes the synchronous branch and shuts down without a database
+	swapIndexStorage(t, &mysql.IndexStorageProvider{})
+
+	entry := blockingIndexEntry{started: make(chan struct{}), release: make(chan struct{})}
+	indexed := make(chan struct{})
+	go func() {
+		defer close(indexed)
+		indexAcceptedEntry(context.Background(), entry, "uuid")
+	}()
+	<-entry.started
+
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		StopAPI()
+	}()
+	select {
+	case <-stopped:
+		t.Fatal("StopAPI finished while a MySQL producer was still computing keys")
+	case <-time.After(25 * time.Millisecond):
+	}
+
+	close(entry.release)
+	<-indexed
+	select {
+	case <-stopped:
+	case <-time.After(time.Second):
+		t.Fatal("StopAPI did not continue after its MySQL producer completed")
 	}
 }
 

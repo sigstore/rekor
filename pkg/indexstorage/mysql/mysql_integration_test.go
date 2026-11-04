@@ -116,7 +116,11 @@ func TestMySQLBlockedBufferAndShutdown(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 	start := time.Now()
-	if err := p.shutdown(ctx); !errors.Is(err, context.DeadlineExceeded) {
+	// claim shutdownOnce so the Shutdown registered by integrationProvider cannot run
+	// a second, concurrent cleanup against the same pools
+	var err error
+	p.shutdownOnce.Do(func() { err = p.shutdown(ctx) })
+	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("shutdown: %v", err)
 	}
 	if time.Since(start) > time.Second {

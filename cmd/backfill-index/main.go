@@ -54,6 +54,7 @@ import (
 	rekorclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/indexstorage/mysql"
 	"github.com/sigstore/rekor/pkg/types"
 
 	// these imports are to call the packages' init methods
@@ -80,6 +81,10 @@ const (
 	)`
 	maxInsertErrors = 5
 )
+
+// errUnstorableKey marks a key the index cannot store unaltered. It is reported as a
+// parse error and skipped rather than counted toward maxInsertErrors.
+var errUnstorableKey = errors.New("unstorable index key")
 
 type provider int
 
@@ -285,6 +290,10 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) (err erro
 	}()
 
 	for i := *startIndex; i <= *endIndex; i++ {
+		// stop scheduling once a signal or a failed worker has canceled the run
+		if ctx.Err() != nil {
+			break
+		}
 		index := i // capture loop variable for closure
 		group.Go(func() error {
 			params := entries.NewGetLogEntryByIndexParams()
@@ -327,7 +336,19 @@ func populate(indexClient indexClient, rekorClient *rekorclient.Rekor) (err erro
 				for _, key := range keys {
 					if err := indexClient.idempotentAddToIndex(ctx, key, uuid); err != nil {
 						if errors.Is(err, context.Canceled) {
+							// report what earlier keys of this entry already hit
+							if len(parseErrs) != 0 || len(insertErrs) != 0 {
+								resultChan <- result{
+									index:      index,
+									parseErrs:  parseErrs,
+									insertErrs: insertErrs,
+								}
+							}
 							return nil
+						}
+						if errors.Is(err, errUnstorableKey) {
+							parseErrs = append(parseErrs, fmt.Errorf("skipping key %q for %s: %w", key, uuid, err))
+							continue
 						}
 						insertErrs = append(insertErrs, fmt.Errorf("error inserting UUID %s with key %s: %w", uuid, key, err))
 						if runningInsertErrs.Add(1) > maxInsertErrors {
@@ -396,9 +417,14 @@ func (c *redisClient) idempotentAddToIndex(ctx context.Context, key, value strin
 }
 
 func (c *mysqlClient) idempotentAddToIndex(ctx context.Context, key, value string) error {
+	// validate even in a dry run, so it reports the keys a real run would skip
+	key, err := mysql.NormalizeKey(key)
+	if err != nil {
+		return fmt.Errorf("%w: %w", errUnstorableKey, err)
+	}
 	if *dryRun {
 		return nil
 	}
-	_, err := c.client.NamedExecContext(ctx, mysqlWriteStmt, map[string]any{"key": key, "uuid": value})
+	_, err = c.client.NamedExecContext(ctx, mysqlWriteStmt, map[string]any{"key": key, "uuid": value})
 	return err
 }

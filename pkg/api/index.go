@@ -248,20 +248,29 @@ func indexAcceptedEntry(ctx context.Context, entry types.EntryImpl, entryID stri
 				log.ContextLogger(ctx).Errorf("adding keys to index: %v", err)
 			}
 		}
+		// Register before computing keys, so StopAPI waits for this entry to reach the
+		// backend instead of shutting it down underneath a handler that outlived the
+		// HTTP shutdown deadline.
+		indexStorageMu.Lock()
+		stopped := indexStorageStopped
+		if !stopped {
+			indexStorageWriters.Add(1)
+		}
+		indexStorageMu.Unlock()
+		if stopped {
+			log.ContextLogger(ctx).Errorf("index storage is shutting down; entry %s may require backfill-index", entryID)
+			return
+		}
 		if _, buffered := indexStorageClient.(*mysql.IndexStorageProvider); buffered {
 			// MySQL only enqueues here; the bundler bounds concurrent database work.
 			// Avoid one detached producer goroutine per upload.
+			defer indexStorageWriters.Done()
 			writeIndex()
-		} else {
-			indexStorageMu.Lock()
-			if indexStorageStopped {
-				log.ContextLogger(ctx).Errorf("index storage is shutting down; entry %s may require backfill-index", entryID)
-			} else {
-				indexStorageWriters.Go(func() {
-					writeIndex()
-				})
-			}
-			indexStorageMu.Unlock()
+			return
 		}
+		go func() {
+			defer indexStorageWriters.Done()
+			writeIndex()
+		}()
 	}
 }

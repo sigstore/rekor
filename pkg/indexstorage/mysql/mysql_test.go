@@ -789,14 +789,15 @@ func TestBusyBundlerTailCannotExceedByteLimit(t *testing.T) {
 		t.Fatal("missing explicit byte bounds")
 	}
 	mock.ExpectExec(first).WillReturnResult(sqlmock.NewResult(0, bundleCount))
-	// Each wide entry accounts for 217088 bytes. Only four fit in a 1 MiB
-	// bundle, even while the sole handler is blocked and tails coalesce.
-	for range 5 {
+	// Each wide entry accounts for 1736704 bytes. Only four fit in an 8 MiB
+	// bundle, even while the sole handler is blocked and tails coalesce. Sixteen
+	// of them stay under bufferedByteLimit.
+	for range 4 {
 		mock.ExpectBegin()
-		for range 4 {
+		for range 32 {
 			mock.ExpectExec(statement(maxRowsPerInsert)).WillReturnResult(sqlmock.NewResult(0, maxRowsPerInsert))
 		}
-		mock.ExpectExec(statement(96)).WillReturnResult(sqlmock.NewResult(0, 96))
+		mock.ExpectExec(statement(768)).WillReturnResult(sqlmock.NewResult(0, 768))
 		mock.ExpectCommit()
 	}
 	for i := range bundleCount {
@@ -809,11 +810,11 @@ func TestBusyBundlerTailCannotExceedByteLimit(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("handler never started")
 	}
-	keys := make([]string, 1024)
+	keys := make([]string, 8192)
 	for i := range keys {
-		keys[i] = fmt.Sprintf("%04d", i) + strings.Repeat("x", 96)
+		keys[i] = fmt.Sprintf("%05d", i) + strings.Repeat("x", 95)
 	}
-	for i := range 20 {
+	for i := range 16 {
 		if err := p.WriteIndex(context.Background(), keys, fmt.Sprintf("%080d", i)); err != nil {
 			t.Fatal(err)
 		}
@@ -830,14 +831,16 @@ func TestWriteIndexByteLimitBoundary(t *testing.T) {
 	p := IndexStorageProvider{writeDB: db, batchDelay: time.Hour}
 	defer p.Shutdown() //nolint:errcheck
 	id := strings.Repeat("a", 80)
-	keys := make([]string, 1024)
+	keys := make([]string, bundleByteLimit/1024)
 	for i := range keys {
 		// 912 UTF-8 bytes plus the 80-byte ID and 32-byte headers = 1024.
 		keys[i] = fmt.Sprintf("%012d", i) + strings.Repeat("界", 300)
 	}
 	mock.ExpectBegin()
-	mock.ExpectExec(positionalWriteStmt() + strings.Repeat(",(?, ?)", 999)).WillReturnResult(sqlmock.NewResult(0, 1000))
-	mock.ExpectExec(positionalWriteStmt() + strings.Repeat(",(?, ?)", 23)).WillReturnResult(sqlmock.NewResult(0, 24))
+	for start := 0; start < len(keys); start += maxRowsPerInsert {
+		n := min(maxRowsPerInsert, len(keys)-start)
+		mock.ExpectExec(positionalWriteStmt() + strings.Repeat(",(?, ?)", n-1)).WillReturnResult(sqlmock.NewResult(0, int64(n)))
+	}
 	mock.ExpectCommit()
 	if err := p.WriteIndex(context.Background(), keys, id); err != nil {
 		t.Fatalf("entry at the byte limit was rejected: %v", err)
@@ -1036,7 +1039,8 @@ func TestWriteBundleOrdersWholeTransaction(t *testing.T) {
 	var want []indexEntry
 	for i := range 501 {
 		key := fmt.Sprintf("key%04d", i)
-		want = append(want, indexEntry{Key: strings.ToUpper(key), UUID: "a"},
+		// entry "a" uploads uppercase keys, which are stored lowercased
+		want = append(want, indexEntry{Key: key, UUID: "a"},
 			indexEntry{Key: key, UUID: "b"})
 	}
 	for attempt := range 2 {
@@ -1076,6 +1080,77 @@ func TestWriteBundleOrdersWholeTransaction(t *testing.T) {
 		}
 	}
 	p.Flush()
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNormalizeKey(t *testing.T) {
+	for _, tc := range []struct {
+		name, key, want string
+		err             error
+	}{
+		{"lowercase", "sha256:abc", "sha256:abc", nil},
+		{"mixed_case", "User@Example.COM", "user@example.com", nil},
+		{"non_ascii_case", "ÄBC", "äbc", nil},
+		{"at_char_limit", strings.Repeat("界", maxEntryKeyChars), strings.Repeat("界", maxEntryKeyChars), nil},
+		{"over_char_limit", strings.Repeat("a", maxEntryKeyChars+1), "", ErrKeyTooLong},
+		{"invalid_utf8", "prefix\xff", "", ErrInvalidUTF8Key},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := NormalizeKey(tc.key)
+			if !errors.Is(err, tc.err) || got != tc.want {
+				t.Fatalf("got (%q, %v), want (%q, %v)", got, err, tc.want, tc.err)
+			}
+		})
+	}
+}
+
+func TestWriteIndexDeduplicatesCaseVariants(t *testing.T) {
+	db, mock := newMockDB(t, sqlmock.QueryMatcherEqual)
+	p := IndexStorageProvider{writeDB: db, batchDelay: time.Hour}
+	defer p.Shutdown() //nolint:errcheck
+	mock.ExpectExec(positionalWriteStmt()+",(?, ?)").
+		WithArgs("other", "uuid", "user@example.com", "uuid").
+		WillReturnResult(sqlmock.NewResult(0, 2))
+	before := testutil.ToFloat64(metricPendingBytes)
+	keys := []string{"User@Example.com", "user@example.com", "USER@EXAMPLE.COM", "Other"}
+	if err := p.WriteIndex(context.Background(), keys, "uuid"); err != nil {
+		t.Fatal(err)
+	}
+	want := (indexEntry{Key: "user@example.com", UUID: "uuid"}).size() + (indexEntry{Key: "other", UUID: "uuid"}).size()
+	if got := testutil.ToFloat64(metricPendingBytes) - before; got != float64(want) {
+		t.Fatalf("charged %v bytes, want %d for two unique rows", got, want)
+	}
+	p.Flush()
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWriteBundleAfterCancelReleasesAccounting(t *testing.T) {
+	db, mock := newMockDB(t, sqlmock.QueryMatcherEqual)
+	p := IndexStorageProvider{writeDB: db, batchDelay: time.Hour}
+	defer p.Shutdown() //nolint:errcheck
+	p.initBundler()
+	p.cancelWrites()
+	row := indexEntry{Key: "key", UUID: "uuid"}
+	metricPendingEntries.Inc()
+	metricPendingBytes.Add(float64(row.size()))
+	pending := testutil.ToFloat64(metricPendingBytes)
+	failed := testutil.ToFloat64(metricBatchWrites.WithLabelValues("false"))
+	failedRows := testutil.ToFloat64(metricBatchWriteRows.WithLabelValues("false"))
+
+	// with no expectation registered, any statement reaching the mock fails the test
+	p.writeBundle([][]indexEntry{{row}})
+
+	if got := pending - testutil.ToFloat64(metricPendingBytes); got != float64(row.size()) {
+		t.Fatalf("released %v pending bytes, want %d", got, row.size())
+	}
+	if testutil.ToFloat64(metricBatchWrites.WithLabelValues("false")) != failed+1 ||
+		testutil.ToFloat64(metricBatchWriteRows.WithLabelValues("false")) != failedRows+1 {
+		t.Fatal("canceled bundle was not recorded as a failed write")
+	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatal(err)
 	}

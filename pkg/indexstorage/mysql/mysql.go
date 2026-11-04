@@ -54,12 +54,16 @@ const (
 
 	// Bound caller-controlled fan-out before allocating rows or reserving buffer
 	// capacity. Oversized entries are rejected as a whole, not partially indexed.
-	maxIndexKeysPerEntry = 8192
+	// This is about the most a single INSERT of every key could hold (two
+	// placeholders per row against a 65,535 limit) before writes were batched.
+	maxIndexKeysPerEntry = 32 << 10
 
 	// This is a hard limit, including when the bundler coalesces a queued tail.
 	// Together with row size accounting it bounds SQL work per attempt, rather
 	// than merely bounding the number of entries (which can have many keys).
-	bundleByteLimit = 1 << 20
+	// Every entry must fit in one bundle, so this admits maxIndexKeysPerEntry
+	// sha512 digest keys (247 accounted bytes each).
+	bundleByteLimit = 8 << 20
 
 	// index writes are coalesced across entries so a burst of uploads costs a few wide
 	// INSERTs instead of one per entry. The delay bounds coalescing, not database queueing.
@@ -137,6 +141,30 @@ func (e indexEntry) size() int { return len(e.Key) + len(e.UUID) + 32 }
 // errShutdown is returned by WriteIndex once Shutdown has begun.
 var errShutdown = errors.New("search index storage is shut down")
 
+var (
+	// ErrInvalidUTF8Key is returned by NormalizeKey for a key that is not valid UTF-8.
+	ErrInvalidUTF8Key = errors.New("search index key is not valid UTF-8")
+	// ErrKeyTooLong is returned by NormalizeKey for a key EntryKey cannot hold.
+	ErrKeyTooLong = fmt.Errorf("search index key exceeds %d characters", maxEntryKeyChars)
+)
+
+// NormalizeKey returns key in the form it is stored in EntryIndex, or an error if
+// writeStmt cannot store it unaltered. Every writer to EntryIndex must use it.
+func NormalizeKey(key string) (string, error) {
+	// INSERT IGNORE must not silently alter an invalid utf8mb4 key.
+	if !utf8.ValidString(key) {
+		return "", ErrInvalidUTF8Key
+	}
+	// a key of at most maxEntryKeyChars bytes cannot exceed maxEntryKeyChars characters
+	if len(key) > maxEntryKeyChars && utf8.RuneCountInString(key) > maxEntryKeyChars {
+		return "", ErrKeyTooLong
+	}
+	// EntryKey's collation is case-insensitive and the search handlers lowercase their
+	// keys, so case variants would only collide on the primary key. Lowercasing maps
+	// rune by rune, so it cannot change the character count checked above.
+	return strings.ToLower(key), nil
+}
+
 func NewProvider(dsn string, opts ...Options) (*IndexStorageProvider, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), startupTimeout)
 	defer cancel()
@@ -209,37 +237,43 @@ func (isp *IndexStorageProvider) initBundler() *bundler.Bundler {
 // metrics and logs; the entries in a bundle that exhausts its retries stay unsearchable.
 func (isp *IndexStorageProvider) writeBundle(items any) {
 	bundle := items.([][]indexEntry)
-	defer func() {
-		bytes := 0
-		for _, rows := range bundle {
-			for _, row := range rows {
-				bytes += row.size()
-			}
+	rows, bytes := 0, 0
+	for _, entryRows := range bundle {
+		rows += len(entryRows)
+		for _, row := range entryRows {
+			bytes += row.size()
 		}
+	}
+	defer func() {
 		metricPendingEntries.Sub(float64(len(bundle)))
 		metricPendingBytes.Sub(float64(bytes))
 	}()
-	var entries []indexEntry
-	for _, rows := range bundle {
-		entries = append(entries, rows...)
+	start := time.Now()
+
+	// After the drain deadline the bundler still steps through every queued bundle to
+	// release its buffer accounting, so skip the work of building a doomed write.
+	if err := isp.writeCtx.Err(); err != nil {
+		recordBundle(len(bundle), rows, 0, start, err)
+		return
+	}
+
+	entries := make([]indexEntry, 0, rows)
+	for _, entryRows := range bundle {
+		entries = append(entries, entryRows...)
 	}
 
 	// Order the entire transaction before chunking, independently of arrival order.
-	// Folding case reduces lock-order inversions for common ASCII index keys.
-	// This is not an implementation of utf8mb4_general_ci (which also folds
-	// accents, for example), and InnoDB gap/duplicate locks can still deadlock.
-	// Keep the bounded transaction retries even with deterministic ordering.
+	// WriteIndex has already lowercased the keys, which covers common ASCII case
+	// variants. This is not an implementation of utf8mb4_general_ci (which also
+	// folds accents, for example), and InnoDB gap/duplicate locks can still
+	// deadlock. Keep the bounded transaction retries even with deterministic ordering.
 	slices.SortFunc(entries, func(a, b indexEntry) int {
-		if c := strings.Compare(strings.ToLower(a.Key), strings.ToLower(b.Key)); c != 0 {
+		if c := strings.Compare(a.Key, b.Key); c != 0 {
 			return c
 		}
-		if c := strings.Compare(a.UUID, b.UUID); c != 0 {
-			return c
-		}
-		return strings.Compare(a.Key, b.Key)
+		return strings.Compare(a.UUID, b.UUID)
 	})
 
-	start := time.Now()
 	attempts := 0
 	err := backoff.RetryNotify(func() error {
 		if err := isp.writeCtx.Err(); err != nil {
@@ -253,14 +287,18 @@ func (isp *IndexStorageProvider) writeBundle(items any) {
 		metricBatchWriteRetries.Inc()
 		log.Logger.Warnf("batched WriteIndex of %d entries (%d keys) failed, retrying in %s: %v", len(bundle), len(entries), wait, err)
 	})
+	recordBundle(len(bundle), rows, attempts, start, err)
+}
+
+func recordBundle(entries, rows, attempts int, start time.Time, err error) {
 	labels := prometheus.Labels{"success": strconv.FormatBool(err == nil)}
 	metricBatchWrites.With(labels).Inc()
-	metricBatchWriteRows.With(labels).Add(float64(len(entries)))
+	metricBatchWriteRows.With(labels).Add(float64(rows))
 	metricBatchWriteLatency.With(labels).Observe(time.Since(start).Seconds())
 
 	if err != nil {
 		log.Logger.Errorf("batched WriteIndex of %d entries (%d keys) failed after %d attempts; those keys may require backfill-index: %v",
-			len(bundle), len(entries), attempts, err)
+			entries, rows, attempts, err)
 	}
 }
 
@@ -372,8 +410,9 @@ func (isp *IndexStorageProvider) LookupIndices(ctx context.Context, keys []strin
 // WriteIndex queues the index for the specified keys. The rows are written
 // asynchronously in coalesced batches, so a nil return only means the keys were
 // buffered; MySQL failures are reported by writeBundle. Call Flush to wait for them.
-// Exact duplicate keys are charged once. Entries exceeding the key-count or byte
-// limit are rejected before buffering, without indexing a partial set of keys.
+// Keys are stored as NormalizeKey returns them, and keys that normalize to the same
+// value are charged once. Entries exceeding the key-count or byte limit are rejected
+// before buffering, without indexing a partial set of keys.
 func (isp *IndexStorageProvider) WriteIndex(ctx context.Context, keys []string, index string) error {
 	if isp.writeDB == nil {
 		return errors.New("sql client has not been initialized")
@@ -399,20 +438,22 @@ func (isp *IndexStorageProvider) WriteIndex(ctx context.Context, keys []string, 
 
 	size := 0
 	for _, key := range keys {
+		// seen holds normalized keys; most keys are already lowercase, so this skips
+		// exact repeats without normalizing them again
 		if _, duplicate := seen[key]; duplicate {
 			continue
 		}
-		// INSERT IGNORE must not silently alter an invalid utf8mb4 key.
-		if !utf8.ValidString(key) {
+		key, err := NormalizeKey(key)
+		switch {
+		case errors.Is(err, ErrInvalidUTF8Key):
 			invalidUTF8++
 			continue
+		case err != nil:
+			oversized++
+			continue
 		}
-		// a key of at most maxEntryKeyChars bytes cannot exceed maxEntryKeyChars characters
-		if len(key) > maxEntryKeyChars {
-			if n := utf8.RuneCountInString(key); n > maxEntryKeyChars {
-				oversized++
-				continue
-			}
+		if _, duplicate := seen[key]; duplicate {
+			continue
 		}
 		entry := indexEntry{Key: key, UUID: index}
 		if len(rows) == maxIndexKeysPerEntry || entry.size() > bundleByteLimit-size {
