@@ -9,7 +9,7 @@ require (
 	cloud.google.com/go/pubsub/v2 v2.8.0
 	github.com/AdamKorcz/go-fuzz-headers-1 v0.0.0-20230919221257-8b5d3ce2d11d
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/ProtonMail/go-crypto v1.4.1
+	github.com/ProtonMail/go-crypto v1.5.2
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/go-openapi/errors v0.22.9
