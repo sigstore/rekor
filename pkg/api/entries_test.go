@@ -53,6 +53,7 @@ func TestRetrieveUUIDFromTree_UnconfiguredTreeID(t *testing.T) {
 func TestGetLogEntryByUUIDHandler_InvalidID(t *testing.T) {
 	tests := map[string]string{
 		"invalid tree ID": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		"zero tree ID":    "00000000000000000000000000000000000000000000000000000000000000000000000000000000",
 		"malformed UUID":  "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
 	}
 

@@ -15,7 +15,10 @@
 
 package sharding
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 // Create some test data
 // Good data
@@ -208,6 +211,11 @@ func TestGetUUIDFromIDString(t *testing.T) {
 			t.Errorf("expected result %v for GetUUIDFromIDString(%v) but got %v", validUUID, s, res)
 		}
 	}
+
+	// Reject EntryID with zero TreeID
+	if _, err := GetUUIDFromIDString(invalidEntryID); !errors.Is(err, ErrInvalidTreeID) {
+		t.Errorf("expected ErrInvalidTreeID for GetUUIDFromIDString(%v) but got %v", invalidEntryID, err)
+	}
 }
 
 func TestGetTreeIDFromIDString(t *testing.T) {
@@ -226,8 +234,8 @@ func TestGetTreeIDFromIDString(t *testing.T) {
 
 	// tree IDs of zero should return an error
 	invalid, err := GetTreeIDFromIDString(invalidEntryID)
-	if invalid != "" || err.Error() != "0 is not a valid TreeID" {
-		t.Errorf("expected err 'unknown treeID', got: %v with error %v", invalid, err)
+	if invalid != "" || !errors.Is(err, ErrInvalidTreeID) {
+		t.Errorf("expected ErrInvalidTreeID, got: %v with error %v", invalid, err)
 	}
 
 	// invalid UUID should also return an error because we test inclusively for
@@ -328,11 +336,38 @@ func TestValidateTreeID(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "signed non-hex treeID",
+			args: args{
+				t: "-000000000000001",
+			},
+			wantErr: true,
+		},
+		{
+			name: "positive signed non-hex treeID",
+			args: args{
+				t: "+000000000000001",
+			},
+			wantErr: true,
+		},
+		{
+			name: "wrong length treeID",
+			args: args{
+				t: shortTreeID,
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := ValidateTreeID(tt.args.t); (err != nil) != tt.wantErr {
+			err := ValidateTreeID(tt.args.t)
+			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateTreeID() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			// every failure mode should be identifiable with errors.Is
+			if tt.wantErr && !errors.Is(err, ErrInvalidTreeID) {
+				t.Errorf("ValidateTreeID() error = %v, want ErrInvalidTreeID", err)
 			}
 		})
 	}
