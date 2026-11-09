@@ -296,7 +296,7 @@ func (m *DSSEV001Schema) contextValidateSignatures(ctx context.Context, formats 
 		if m.Signatures[i] != nil {
 
 			if typeutils.IsZero(m.Signatures[i]) { // not required
-				return nil
+				continue
 			}
 
 			if err := m.Signatures[i].ContextValidate(ctx, formats); err != nil {

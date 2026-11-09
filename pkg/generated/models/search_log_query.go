@@ -264,7 +264,7 @@ func (m *SearchLogQuery) contextValidateEntries(ctx context.Context, formats str
 	for i := 0; i < len(m.Entries()); i++ {
 
 		if typeutils.IsZero(m.entriesField[i]) { // not required
-			return nil
+			continue
 		}
 
 		if err := m.entriesField[i].ContextValidate(ctx, formats); err != nil {

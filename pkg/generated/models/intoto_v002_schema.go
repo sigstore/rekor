@@ -457,7 +457,7 @@ func (m *IntotoV002SchemaContentEnvelope) contextValidateSignatures(ctx context.
 		if m.Signatures[i] != nil {
 
 			if typeutils.IsZero(m.Signatures[i]) { // not required
-				return nil
+				continue
 			}
 
 			if err := m.Signatures[i].ContextValidate(ctx, formats); err != nil {
