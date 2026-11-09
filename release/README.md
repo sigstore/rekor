@@ -4,25 +4,7 @@ This directory contain the files and scripts to run a Rekor release.
 
 # Cutting a Rekor Release
 
-1. Release notes: Create a PR to update and review release notes in CHANGELOG.md.
-
-Check merged pull requests since the last release and make sure enhancements, bug fixes, and authors are reflected in the notes.
-
-You can get a list of pull requests since the last release by substituting in the date of the last release and running:
-
-```
-git log --pretty="* %s" --after="YYYY-MM-DD"
-```
-
-and a list of authors by running:
-
-```
-git log --pretty="* %an" --after="YYYY-MM-DD" | sort -u
-```
-
-2. Open a Pull Request to update CHANGELOG.md
-
-3. Tag the repository
+1. Tag the repository
 
 **WARNING**: Tags should not be updated to a new ref or deleted/recreated after creation. Go provides a [checksum database](https://sum.golang.org/)
 that persists an immutable mapping between version and ref, and updating the tag will break clients that have already downloaded the release.
@@ -35,7 +17,7 @@ $ git push upstream ${RELEASE_TAG}
 
 Note that `upstream` should be the upstream `sigstore/rekor` repository. You may have to change this if you've configured remotes.
 
-4. Then go to the `Actions` tab and click on the [Cut Release workflow](https://github.com/sigstore/rekor/actions/workflows/cut-release.yml). Note you need
+2. Then go to the `Actions` tab and click on the [Cut Release workflow](https://github.com/sigstore/rekor/actions/workflows/cut-release.yml). Note you need
 to be in [this list](https://github.com/sigstore/sigstore/blob/main/.github/workflows/reusable-release.yml#L45) to trigger this workflow.
 
 Click to run a workflow and insert the following parameters ("Cosign" is correct, this refers to the artifact signing key):
@@ -51,10 +33,10 @@ If you have permissions to access the project, you can follow the CloudBuild job
 
 As the last step of the CloudBuild job, `goreleaser` will create a `draft release` in GitHub.
 
-5. Navigate to the `Draft Release` in the Github repository. Click the `Publish Release` button to make the Release available.
+3. Navigate to the `Draft Release` in the Github repository. Click the `Publish Release` button to make the Release available.
 
 You might want/need to add any extra notes/breaking changes notices, upgrade paths.
 
-6. Post on the `#general` and `#rekor` Slack channels.
+4. Post on the `#general` and `#rekor` Slack channels.
 
-7. If it's a significant release, send an announcement email to sigstore-dev@googlegroups.com mailing list.
+5. If it's a significant release, send an announcement email to sigstore-dev@googlegroups.com mailing list.

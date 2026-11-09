@@ -1,3 +1,5 @@
+*All future changelog content will be posted in the GitHub release artifact, this file is no longer maintained*
+
 # v1.5.5
 
 ## Features
