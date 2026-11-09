@@ -105,9 +105,6 @@ func GetUUIDFromIDString(id string) (string, error) {
 
 	case EntryIDHexStringLen:
 		if err := ValidateEntryID(id); err != nil {
-			if err.Error() == "0 is not a valid TreeID" {
-				return id[len(id)-UUIDHexStringLen:], nil
-			}
 			return "", err
 		}
 		return id[len(id)-UUIDHexStringLen:], nil
@@ -137,6 +134,10 @@ func ValidateUUID(u string) error {
 	}
 }
 
+// ErrInvalidTreeID is returned when a TreeID is malformed or out of range.
+// Callers should test for it with errors.Is rather than comparing error strings.
+var ErrInvalidTreeID = errors.New("invalid TreeID")
+
 // ValidateTreeID This is permissive in that if passed an EntryID, it will find the TreeID and validate it.
 func ValidateTreeID(t string) error {
 	switch len(t) {
@@ -149,21 +150,25 @@ func ValidateTreeID(t string) error {
 		}
 		return nil
 	case TreeIDHexStringLen:
+		// Check that it's pure hex before parsing; ParseInt accepts a leading
+		// sign, so e.g. "+000000000000001" would otherwise parse as TreeID 1.
+		if _, err := hex.DecodeString(t); err != nil {
+			return fmt.Errorf("%w: %v is not a hex string", ErrInvalidTreeID, t)
+		}
 		// Check that it's a valid int64 in hex (base 16)
 		i, err := strconv.ParseInt(t, 16, 64)
 		if err != nil {
-			return fmt.Errorf("%v is not a valid TreeID", t)
+			return fmt.Errorf("%w: %v: %w", ErrInvalidTreeID, t, err)
 		}
 
 		// Check for invalid TreeID values
-		// TODO: test for more of these
-		if i == 0 {
-			return errors.New("0 is not a valid TreeID")
+		if i <= 0 {
+			return fmt.Errorf("%w: %v must be positive", ErrInvalidTreeID, t)
 		}
 
 		return nil
 	default:
-		return fmt.Errorf("TreeID len expected to be %v but got %v", TreeIDHexStringLen, len(t))
+		return fmt.Errorf("%w: len expected to be %v but got %v", ErrInvalidTreeID, TreeIDHexStringLen, len(t))
 	}
 }
 

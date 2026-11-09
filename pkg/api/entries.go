@@ -717,7 +717,7 @@ func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, e
 		return nil, ErrNotFound
 	}
 
-	return nil, err
+	return nil, &types.InputValidationError{Err: err}
 }
 
 func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.LogEntry, error) {
