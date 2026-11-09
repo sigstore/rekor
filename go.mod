@@ -21,7 +21,7 @@ require (
 	github.com/go-openapi/swag/cmdutils v0.29.2
 	github.com/go-openapi/swag/conv v0.29.2
 	github.com/go-openapi/swag/jsonutils v0.29.2
-	github.com/go-openapi/swag/netutils v0.27.1
+	github.com/go-openapi/swag/netutils v0.29.2
 	github.com/go-openapi/swag/typeutils v0.29.2
 	github.com/go-openapi/validate v1.0.1
 	github.com/go-redis/redismock/v9 v9.2.0
