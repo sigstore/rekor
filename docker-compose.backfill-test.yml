@@ -43,7 +43,7 @@ services:
       - redis-server
   mysql:
     platform: linux/amd64
-    image: gcr.io/trillian-opensource-ci/db_server:v1.4.0
+    image: gcr.io/trillian-opensource-ci/db_server:v1.8.0
     environment:
       - MYSQL_ROOT_PASSWORD=zaphod
       - MYSQL_DATABASE=test

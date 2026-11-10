@@ -16,7 +16,7 @@
 services:
   mysql:
     platform: linux/amd64
-    image: gcr.io/trillian-opensource-ci/db_server:v1.4.0
+    image: gcr.io/trillian-opensource-ci/db_server:v1.8.0
     environment:
       - MYSQL_ROOT_PASSWORD=zaphod
       - MYSQL_DATABASE=test
@@ -31,7 +31,7 @@ services:
       retries: 15
       start_period: 90s
   redis-server:
-    image: docker.io/valkey/valkey:9.1.1-alpine3.24
+    image: docker.io/valkey/valkey:9.1.3-alpine3.24
     command: [
       "--bind",
       "0.0.0.0",
