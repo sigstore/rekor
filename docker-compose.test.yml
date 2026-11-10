@@ -23,7 +23,6 @@ services:
       TMPDIR: /var/run/attestations # workaround for https://github.com/google/go-cloud/issues/3294
       PUBSUB_EMULATOR_HOST: gcp-pubsub-emulator:8085
     command: [
-      "rekor-server",
       "serve",
       "--trillian_log_server.address=trillian-log-server",
       "--trillian_log_server.port=8090",

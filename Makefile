@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: all test clean clean-gen lint gosec ko ko-local cross-cli
+.PHONY: all test clean clean-gen lint gosec ko-local cross-cli ldflags
 
 all: rekor-cli rekor-server ## Build all binaries (rekor-cli and rekor-server)
 
+ifneq ($(MAKECMDGOALS),ldflags)
 include Makefile.swagger
+endif
 
 SWAGGER_TEMPLATE_DIR := hack/swagger-templates
 OPENAPIDEPS = openapi.yaml $(shell find pkg/types -iname "*.json") $(shell find $(SWAGGER_TEMPLATE_DIR) -iname "*.gotmpl")
@@ -27,8 +29,6 @@ TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
 BIN_DIR := $(abspath $(ROOT_DIR)/bin)
 FUZZ_DURATION ?= 10s
 
-PROJECT_ID ?= projectsigstore
-RUNTIME_IMAGE ?= gcr.io/distroless/static
 # Set version variables for LDFLAGS
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
 GIT_HASH ?= $(shell git rev-parse HEAD)
@@ -39,23 +39,25 @@ ifdef SOURCE_DATE_EPOCH
 else
     BUILD_DATE ?= $(shell date "$(DATE_FMT)")
 endif
-GIT_TREESTATE = "clean"
+GIT_TREESTATE = clean
 DIFF = $(shell git diff --quiet >/dev/null 2>&1; if [ $$? -eq 1 ]; then echo "1"; fi)
 ifeq ($(DIFF), 1)
-    GIT_TREESTATE = "dirty"
+    GIT_TREESTATE = dirty
 endif
 
 KO_PREFIX ?= ghcr.io/sigstore/rekor
 export KO_DOCKER_REPO=$(KO_PREFIX)
-REKOR_YAML ?= rekor-$(GIT_VERSION).yaml
-GHCR_PREFIX ?= ghcr.io/sigstore/rekor
+KO_DEFAULTBASEIMAGE ?= gcr.io/distroless/static-debian13:nonroot
+export KO_DEFAULTBASEIMAGE
 GOBIN ?= $(shell go env GOPATH)/bin
+
+ZIZMOR ?= $(shell grep FROM Dockerfile.zizmor | cut -d' ' -f 2)
 
 # Binaries
 SWAGGER := $(TOOLS_BIN_DIR)/swagger
 GO-FUZZ-BUILD := $(TOOLS_BIN_DIR)/go-fuzz-build
 
-REKOR_LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
+REKOR_LDFLAGS=-buildid= -X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
               -X sigs.k8s.io/release-utils/version.gitCommit=$(GIT_HASH) \
               -X sigs.k8s.io/release-utils/version.gitTreeState=$(GIT_TREESTATE) \
               -X sigs.k8s.io/release-utils/version.buildDate=$(BUILD_DATE)
@@ -70,11 +72,20 @@ Makefile.swagger: $(SWAGGER) $(OPENAPIDEPS) ## Generate Swagger code and Makefil
 	@echo "# This file is generated after swagger runs as part of the build; do not edit!" > Makefile.swagger
 	@echo "SWAGGER_GEN=`find pkg/generated/client pkg/generated/models pkg/generated/restapi -iname '*.go' ! -iname '*_test.go' | grep -v 'configure_rekor_server' | sort -d | tr '\n' ' ' | sed 's/ $$//'`" >> Makefile.swagger;
 
-lint: ## Run golangci-lint checks
-	$(GOBIN)/golangci-lint run -v ./...
+lint: ## Run golangci-lint and zizmor checks
+	docker run -t --rm -v $(PWD):/app -w /app \
+		--user $(shell id -u):$(shell id -g) \
+		-v $(shell go env GOCACHE):/.cache/go-build -e GOCACHE=/.cache/go-build \
+		-v $(shell go env GOMODCACHE):/go/pkg/mod -e GOMODCACHE=/go/pkg/mod \
+		-v ~/.cache/golangci-lint:/.cache/golangci-lint -e GOLANGCI_LINT_CACHE=/.cache/golangci-lint \
+		$(shell awk -F '[ @]' '/FROM golangci\/golangci-lint/{print $$2; exit}' Dockerfile.golangci-lint) golangci-lint run -v ./...
+	docker run -t --rm -v $(PWD):/source $(ZIZMOR) /source
 
 gosec: ## Run gosec security scanner
 	$(GOBIN)/gosec ./...
+
+ldflags: ## Print LDFLAGS for builds
+	@echo $(REKOR_LDFLAGS)
 
 rekor-cli: $(SRCS) ## Build the rekor command-line interface
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(CLI_LDFLAGS)" -o rekor-cli ./cmd/rekor-cli
@@ -92,6 +103,7 @@ clean: ## Remove built binaries and artifacts
 	rm -rf dist
 	rm -rf hack/tools/bin
 	rm -rf rekor-cli rekor-server
+	rm -rf rekorImagerefs cliImagerefs
 	rm -f *fuzz.zip
 
 clean-gen: clean ## Clean generated files and swagger code
@@ -105,27 +117,8 @@ debug: ## Start services in debug mode
 	docker-compose -f docker-compose.yml -f docker-compose.debug.yml build --build-arg SERVER_LDFLAGS="$(SERVER_LDFLAGS)" rekor-server-debug
 	docker-compose -f docker-compose.yml -f docker-compose.debug.yml up rekor-server-debug
 
-ko: ## Build and publish container images using ko
-	# rekor-server
-	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	KO_DOCKER_REPO=$(KO_PREFIX)/rekor-server ko resolve --bare \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs rekorServerImagerefs --filename config/ > $(REKOR_YAML)
-
-	# rekor-cli
-	LDFLAGS="$(CLI_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs rekorCliImagerefs github.com/sigstore/rekor/cmd/rekor-cli
-
-	# backfill-index
-	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths \
-		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH) \
-		--image-refs bIndexImagerefs github.com/sigstore/rekor/cmd/backfill-index
-
 deploy: ## Deploy to Kubernetes using ko
-	LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) ko apply -f config/
+	ko apply -f config/
 
 e2e: ## Build and prepare end-to-end tests
 	go test -c -tags=e2e ./tests
@@ -133,26 +126,14 @@ e2e: ## Build and prepare end-to-end tests
 	go test -c -tags=e2e ./pkg/pki/tuf
 	go test -c -tags=e2e ./pkg/types/rekord
 
-sign-keyless-ci: ko ## Sign container images using keyless signing
-	cosign sign --yes -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-server:$(GIT_HASH)
-	cosign sign --yes -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/rekor-cli:$(GIT_HASH)
-	cosign sign --yes -a GIT_HASH=$(GIT_HASH) $(KO_DOCKER_REPO)/backfill-index:$(GIT_HASH)
-
 ko-local: ## Build container images locally using ko
-	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths \
+	KO_DOCKER_REPO=ko.local ko publish --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs rekorImagerefs \
 		github.com/sigstore/rekor/cmd/rekor-server
 
-	KO_DOCKER_REPO=ko.local LDFLAGS="$(CLI_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths \
+	KO_DOCKER_REPO=ko.local ko publish --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs cliImagerefs \
 		github.com/sigstore/rekor/cmd/rekor-cli
-
-	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
-	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs indexImagerefs \
-		github.com/sigstore/rekor/cmd/backfill-index
 
 fuzz: ## Run fuzz tests for a configured duration
 	go test -fuzz FuzzKeys -fuzztime $(FUZZ_DURATION) ./pkg/pki
@@ -228,5 +209,3 @@ help: ## Display this help message
 	@echo ""
 	@echo "Targets:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_-]+:.*?## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
-
-include release/release.mk

@@ -70,16 +70,24 @@ gcloud iam service-accounts add-iam-policy-binding "${SERVICE_ACCOUNT}" \
   --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/${LOCATION}/workloadIdentityPools/${POOL_NAME}/attribute.repository/${REPO}"
 
 # Adding binding is idempotent.
-# Used for kicking off cloud build.
+# Used for pushing images to GCR (Artifact Registry).
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --project="${PROJECT_ID}" \
-  --role="roles/cloudbuild.builds.editor" \
+  --role="roles/artifactregistry.writer" \
   --member="serviceAccount:${SERVICE_ACCOUNT}"
 
 # Adding binding is idempotent.
-# Permission needed to run `gcloud builds`
-# https://cloud.google.com/build/docs/securing-builds/configure-access-to-resources#granting_permissions_to_run_gcloud_commands
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+# Used for signing release artifacts and container images with Cloud KMS.
+gcloud kms keys add-iam-policy-binding cosign \
   --project="${PROJECT_ID}" \
-  --role="roles/serviceusage.serviceUsageConsumer" \
+  --location="${LOCATION}" \
+  --keyring="release-cosign" \
+  --role="roles/cloudkms.signerVerifier" \
+  --member="serviceAccount:${SERVICE_ACCOUNT}"
+
+gcloud kms keys add-iam-policy-binding cosign \
+  --project="${PROJECT_ID}" \
+  --location="${LOCATION}" \
+  --keyring="release-cosign" \
+  --role="roles/cloudkms.viewer" \
   --member="serviceAccount:${SERVICE_ACCOUNT}"

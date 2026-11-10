@@ -1,0 +1,177 @@
+#
+# Copyright 2026 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# From https://docs.github.com/en/actions/use-cases-and-examples/publishing-packages/publishing-docker-images#publishing-images-to-github-packages
+
+name: Create and publish Docker image
+
+on:
+  push:
+    branches:
+      - main
+  workflow_call:
+    outputs:
+      server-digest:
+        description: "The digest of the published per-tag rekor-server container image"
+        value: ${{ jobs.build-and-push-image.outputs.server-digest }}
+      cli-digest:
+        description: "The digest of the published per-tag rekor-cli container image"
+        value: ${{ jobs.build-and-push-image.outputs.cli-digest }}
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE_NAME: ${{ github.repository }}
+
+permissions: {}
+
+concurrency:
+  group: "build-container"
+  cancel-in-progress: false
+
+jobs:
+  build-and-push-image:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    outputs:
+      server-digest: ${{ steps.push-server-per-tag.outputs.digest }}
+      cli-digest: ${{ steps.push-cli-per-tag.outputs.digest }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for rekor-server Docker image
+        id: meta-server
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}/rekor-server
+
+      - name: Extract metadata (tags, labels) for rekor-cli Docker image
+        id: meta-cli
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}/rekor-cli
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          cache-binary: false # avoid cache-poisoning attacks
+
+      - name: Set build arguments
+        run: |
+          LDFLAGS=$(make ldflags)
+          echo "LDFLAGS=$LDFLAGS" >> $GITHUB_ENV
+
+      - name: Build and push per-commit rekor-server Docker image
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        id: push-server-per-commit
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: local-deploy
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta-server.outputs.tags }}
+          labels: ${{ steps.meta-server.outputs.labels }}
+          build-args: |
+            SERVER_LDFLAGS=${{ env.LDFLAGS }}
+
+      - name: Build and push per-commit rekor-cli Docker image
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        id: push-cli-per-commit
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: deploy-cli
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta-cli.outputs.tags }}
+          labels: ${{ steps.meta-cli.outputs.labels }}
+          build-args: |
+            CLI_LDFLAGS=${{ env.LDFLAGS }}
+
+      - name: Build and push per-tag rekor-server Docker image
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        id: push-server-per-tag
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: deploy
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta-server.outputs.tags }}
+          labels: ${{ steps.meta-server.outputs.labels }}
+          build-args: |
+            SERVER_LDFLAGS=${{ env.LDFLAGS }}
+
+      - name: Build and push per-tag rekor-cli Docker image
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        id: push-cli-per-tag
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: deploy-cli
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta-cli.outputs.tags }}
+          labels: ${{ steps.meta-cli.outputs.labels }}
+          build-args: |
+            CLI_LDFLAGS=${{ env.LDFLAGS }}
+
+      - name: Generate artifact attestation for per-commit rekor-server image
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}/rekor-server
+          subject-digest: ${{ steps.push-server-per-commit.outputs.digest }}
+          push-to-registry: true
+
+      - name: Generate artifact attestation for per-commit rekor-cli image
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}/rekor-cli
+          subject-digest: ${{ steps.push-cli-per-commit.outputs.digest }}
+          push-to-registry: true
+
+      - name: Generate artifact attestation for per-tag rekor-server image
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}/rekor-server
+          subject-digest: ${{ steps.push-server-per-tag.outputs.digest }}
+          push-to-registry: true
+
+      - name: Generate artifact attestation for per-tag rekor-cli image
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}/rekor-cli
+          subject-digest: ${{ steps.push-cli-per-tag.outputs.digest }}
+          push-to-registry: true

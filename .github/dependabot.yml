@@ -24,6 +24,8 @@ updates:
       all:
         update-types:
           - "patch"
+    cooldown:
+      default-days: 7
   - package-ecosystem: "gomod"
     directory: "hack/tools"
     schedule:
@@ -33,6 +35,8 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    cooldown:
+      default-days: 7
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -42,6 +46,8 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    cooldown:
+      default-days: 7
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
@@ -51,3 +57,16 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    cooldown:
+      default-days: 7
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      all:
+        update-types:
+          - "minor"
+          - "patch"
+    cooldown:
+      default-days: 7
