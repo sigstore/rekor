@@ -45,7 +45,7 @@ require (
 	github.com/sigstore/sigstore v1.11.3
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.11.3
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.11.3
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.11.1
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.11.2
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.11.3
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
