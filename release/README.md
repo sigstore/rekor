@@ -1,42 +1,54 @@
-# Release
+# Releasing Rekor
 
-This directory contain the files and scripts to run a Rekor release.
+## Publishing updated binaries and container
 
-# Cutting a Rekor Release
+This guide assumes that `upstream` references `github.com/sigstore/rekor`.
 
-1. Tag the repository
+Create and push a new tag. Note that you can't create a tag without creating a release in the GitHub UI, so you'll need to do this locally.
 
 **WARNING**: Tags should not be updated to a new ref or deleted/recreated after creation. Go provides a [checksum database](https://sum.golang.org/)
 that persists an immutable mapping between version and ref, and updating the tag will break clients that have already downloaded the release.
 
 ```shell
-$ export RELEASE_TAG=<release version, eg "v2.0.2">
-$ git tag -s ${RELEASE_TAG} -m "${RELEASE_TAG}"
-$ git push upstream ${RELEASE_TAG}
+git pull upstream main
+export RELEASE_TAG=v1.2.3 # Specify version
+git tag -s ${RELEASE_TAG} -m "${RELEASE_TAG}"
+git push upstream ${RELEASE_TAG}
 ```
 
-Note that `upstream` should be the upstream `sigstore/rekor` repository. You may have to change this if you've configured remotes.
+After the tag is pushed, the [Create release, push container image](https://github.com/sigstore/rekor/actions/workflows/release.yml) workflow will kick off. It will:
+* Build and attest the release binaries and create a draft GitHub release
+* Build, push, and attest the multi-arch container images on `ghcr.io/sigstore/rekor/rekor-server` and `ghcr.io/sigstore/rekor/rekor-cli`
+* Sign the release binaries and container images using the GCP KMS release key and upload the `.sigstore.json` bundles to the draft release
+* Copy the container images and their attestations/signatures to `gcr.io/projectsigstore/rekor/rekor-server` and `gcr.io/projectsigstore/rekor/rekor-cli`
 
-2. Then go to the `Actions` tab and click on the [Cut Release workflow](https://github.com/sigstore/rekor/actions/workflows/cut-release.yml). Note you need
-to be in [this list](https://github.com/sigstore/sigstore/blob/main/.github/workflows/reusable-release.yml#L45) to trigger this workflow.
+Once the workflow finishes, go to [Releases](https://github.com/sigstore/rekor/releases), select
+the latest draft release, add release notes, and publish it.
 
-Click to run a workflow and insert the following parameters ("Cosign" is correct, this refers to the artifact signing key):
+## Updating the infrastructure
 
-  - `Release tag`: the tag that use pushed for the release
-  - `Key ring for cosign key`: the value is `release-cosign`
-  - `Key name for cosign key`: the value is `cosign`
+Update the [Helm chart](https://github.com/sigstore/helm-charts/tree/main/charts/rekor) to the latest version.
 
-That will trigger a CloudBuild job and will run the release using `goreleaser`, which will publish images to
-`gcr.io` and `ghcr.io`, and the binaries will be available in the GitHub release.
+Get the container digest:
 
-If you have permissions to access the project, you can follow the CloudBuild job in the `projectsigstore`(https://console.cloud.google.com/cloud-build/builds?project=projectsigstore) GCP Project.
+```shell
+crane digest ghcr.io/sigstore/rekor/rekor-server:v1.2.3 # Specify version
+```
 
-As the last step of the CloudBuild job, `goreleaser` will create a `draft release` in GitHub.
+Update `charts/rekor/values.yaml` with the new container version and digest.
 
-3. Navigate to the `Draft Release` in the Github repository. Click the `Publish Release` button to make the Release available.
+Update `charts/rekor/Chart.yaml`, bumping `version`, `appVersion`, and the image reference.
 
-You might want/need to add any extra notes/breaking changes notices, upgrade paths.
+Run `helm-docs -g charts/rekor` to update the README.
 
-4. Post on the `#general` and `#rekor` Slack channels.
+Create a PR and wait for an oncall engineer to approve and merge.
 
-5. If it's a significant release, send an announcement email to sigstore-dev@googlegroups.com mailing list.
+Afterwards, update the [scaffold](https://github.com/sigstore/helm-charts/tree/main/charts/scaffold)
+chart with the bumped Rekor chart version.
+
+An oncall engineer also needs to update the scaffold chart version on the PGI repo.
+
+## Announcements
+
+1. Post on the `#general` and `#rekor` Slack channels.
+2. If it's a significant release, send an announcement email to `sigstore-dev@googlegroups.com` mailing list.

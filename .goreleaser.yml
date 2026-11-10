@@ -2,20 +2,13 @@ project_name: rekor
 version: 2
 
 env:
-  - GO111MODULE=on
   - CGO_ENABLED=0
-  - DOCKER_CLI_EXPERIMENTAL=enabled
-  - COSIGN_YES=true
 
 # Prevents parallel builds from stepping on eachothers toes downloading modules
 before:
   hooks:
     - go mod tidy
     - /bin/bash -c 'if [ -n "$(git --no-pager diff --exit-code go.mod go.sum)" ]; then exit 1; fi'
-# if running a release we will generate the images in this step
-# if running in the CI the CI env va is set by github action runner and we dont run the ko steps
-# this is needed because we are generating files that goreleaser was not aware to push to GH project release
-    - /bin/bash -c 'if [ -z "$CI" ]; then make sign-container-release; fi'
 
 gomod:
   proxy: true
@@ -24,25 +17,21 @@ sboms:
   - artifacts: binary
 
 builds:
-  - id: rekor-server-linux
-    binary: rekor-server-linux-{{ .Arch }}
+  - id: rekor-server
+    binary: rekor-server-{{ .Os }}-{{ .Arch }}
     no_unique_dist_dir: true
     main: ./cmd/rekor-server
     goos:
       - linux
+      - darwin
     goarch:
       - amd64
       - arm64
-      - arm
-      - s390x
-      - ppc64le
-    goarm:
-      - 7
     flags:
       - -trimpath
     mod_timestamp: '{{ .CommitTimestamp }}'
     ldflags:
-      - "{{ .Env.SERVER_LDFLAGS }}"
+      - "{{ .Env.LDFLAGS }}"
 
   - id: rekor-cli
     binary: rekor-cli-{{ .Os }}-{{ .Arch }}
@@ -51,47 +40,14 @@ builds:
     goos:
       - linux
       - darwin
-      - windows
     goarch:
       - amd64
       - arm64
-      - arm
-      - s390x
-      - ppc64le
-    goarm:
-      - 7
-    ignore:
-      - goos: windows
-        goarch: arm64
-      - goos: windows
-        goarch: arm
-      - goos: windows
-        goarch: s390x
-      - goos: windows
-        goarch: ppc64le
     flags:
       - -trimpath
     mod_timestamp: '{{ .CommitTimestamp }}'
     ldflags:
-     - "{{ .Env.CLI_LDFLAGS }}"
-
-signs:
-  - id: rekor
-    signature: "${artifact}.sigstore.json"
-    cmd: cosign
-    args: ["sign-blob", "--bundle", "${signature}", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
-    artifacts: binary
-  # Keyless
-  - id: rekor-keyless
-    signature: "${artifact}-keyless.sigstore.json"
-    cmd: cosign
-    args: ["sign-blob", "--bundle", "${signature}", "${artifact}"]
-    artifacts: binary
-  - id: checksum-keyless
-    signature: "${artifact}-keyless.sigstore.json"
-    cmd: cosign
-    args: ["sign-blob", "--bundle", "${signature}", "${artifact}"]
-    artifacts: checksum
+      - "{{ .Env.LDFLAGS }}"
 
 archives:
   - formats: [binary]
@@ -105,13 +61,8 @@ snapshot:
   version_template: SNAPSHOT-{{ .ShortCommit }}
 
 release:
-  prerelease: allow # remove this when we start publishing non-prerelease or set to auto
+  prerelease: auto
   draft: true # allow for manual edits
   github:
     owner: sigstore
     name: rekor
-  footer: |
-    ### Thanks for all contributors!
-
-  extra_files:
-    - glob: "./rekor*.yaml"

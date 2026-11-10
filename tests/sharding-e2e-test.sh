@@ -170,9 +170,8 @@ services:
   rekor-server:
     build:
       context: .
-      target: "deploy"
+      target: "local-deploy"
     command: [
-      "rekor-server",
       "serve",
       "--trillian_log_server.address=trillian-log-server",
       "--trillian_log_server.port=8090",

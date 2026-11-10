@@ -25,81 +25,43 @@ on:
 permissions: {}
 
 jobs:
-  check-signature:
-    name: Check Signature
+  snapshot:
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
-
-    container:
-      image: ghcr.io/sigstore/cosign/cosign:v3.1.4-dev@sha256:8af1a2cf9fba903fdfc6bdafdc25f7b13ef34ad722095543ea787fb96f7240c1
-
-    steps:
-      - name: Check Signature
-        run: |
-          cosign verify ghcr.io/gythialy/golang-cross:v1.27.3-0@sha256:c33ed060bb1817f4eed7957e3a22515823d194873a820722761ab5712298612e \
-          --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-          --certificate-identity "https://github.com/gythialy/golang-cross/.github/workflows/builder.yml@refs/tags/v1.27.3-0"
-        env:
-          TUF_ROOT: /tmp
-
-  validate-release-job:
-    name: Validate Release
-    runs-on: ubuntu-latest
-    needs:
-      - check-signature
-
-    permissions:
-      contents: read
-
-    container:
-      image: ghcr.io/gythialy/golang-cross:v1.27.3-0@sha256:c33ed060bb1817f4eed7957e3a22515823d194873a820722761ab5712298612e
-      volumes:
-        - /usr:/host_usr
-        - /opt:/host_opt
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      # Error: fatal: detected dubious ownership in repository at '/__w/rekor/rekor'
-      #      To add an exception for this directory, call:
-      #          git config --system --add safe.directory /__w/rekor/rekor
-      # Reason: Recent versions of git require the .git folder to be owned
-      # by the same user (see https://github.blog/2022-04-12-git-security-vulnerability-announced/).
-      # Related
-      # - https://github.com/actions/runner/issues/2033
-      # - https://github.com/actions/checkout/issues/1048
-      # - https://github.com/actions/runner-images/issues/6775
-      - run: git config --system --add safe.directory /__w/rekor/rekor
+      - name: Extract version of Go to use
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
 
-      # note this runs from within the golang-cross container, so if we want to free up space
-      # on the host, we have to reach through the bind mounts to clean up unused content on the runners
-      - name: free up disk space for the release
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0 # zizmor: ignore[cache-poisoning]
+        with:
+          go-version: ${{ env.GOVERSION }}
+          check-latest: true
+          cache: true
+
+      - uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+
+      - name: Set LDFLAGS
+        id: ldflags
         run: |
-          rm -rf /host_usr/share/dotnet || true
-          rm -rf /host_usr/share/swift || true
-          rm -rf /host_usr/local/lib/android || true
-          rm -rf /host_usr/local/.ghcup || true
-          rm -rf /host_usr/local/graalvm/ || true
-          rm -rf /host_usr/local/share/powershell || true
-          rm -rf /host_usr/local/share/chromium || true
-          rm -rf /host_usr/local/lib/node_modules || true
-          rm -rf /host_usr/lib/google-cloud-sdk || true
-          rm -rf /host_usr/local/share/boost || true
-          rm -rf /host_opt/hostedtoolcache/ || true
-          rm -rf /host_opt/ghc || true
-      - name: check disk space
-        run: df -h
+          LDFLAGS=$(make ldflags)
+          echo "LDFLAGS=$LDFLAGS" >> $GITHUB_ENV
 
-      - name: goreleaser snapshot
-        run: make snapshot
+      - name: Run GoReleaser
+        id: run-goreleaser
+        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0 # zizmor: ignore[cache-poisoning]
+        with:
+          version: latest
+          args: release --clean --snapshot
         env:
-          PROJECT_ID: honk-fake-project
-          GOTOOLCHAIN: go1.27.3
-          RUNTIME_IMAGE: gcr.io/distroless/static:debug-nonroot
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LDFLAGS: ${{ env.LDFLAGS }}
 
       - name: check binaries
         run: |

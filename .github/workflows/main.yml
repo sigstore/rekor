@@ -29,6 +29,94 @@ permissions:
   contents: read
 
 jobs:
+  docker-build:
+    name: Build Docker image (${{ matrix.os }}, ${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - ubuntu-26.04-arm
+        platform:
+          - linux/amd64
+          - linux/arm64
+        include:
+          - os: ubuntu-latest
+            platform: linux/amd64
+            load: true
+          - os: ubuntu-26.04-arm
+            platform: linux/arm64
+            load: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          cache-binary: false
+
+      - name: Set build arguments
+        run: |
+          LDFLAGS=$(make ldflags)
+          echo "LDFLAGS=$LDFLAGS" >> $GITHUB_ENV
+
+      - name: Build deploy Docker image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: deploy
+          push: false
+          load: ${{ matrix.load == true }}
+          platforms: ${{ matrix.platform }}
+          tags: rekor-server:deploy
+          build-args: |
+            SERVER_LDFLAGS=${{ env.LDFLAGS }}
+
+      - name: Test deploy Docker image
+        if: ${{ matrix.load == true }}
+        run: |
+          docker run --rm rekor-server:deploy version
+
+      - name: Build debug Docker image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: debug
+          push: false
+          load: ${{ matrix.load == true }}
+          platforms: ${{ matrix.platform }}
+          tags: rekor-server:debug
+          build-args: |
+            SERVER_LDFLAGS=${{ env.LDFLAGS }}
+
+      - name: Test debug Docker image
+        if: ${{ matrix.load == true }}
+        run: |
+          docker run --rm rekor-server:debug version
+          docker run --rm --entrypoint dlv rekor-server:debug version
+
+      - name: Build deploy-cli Docker image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: deploy-cli
+          push: false
+          load: ${{ matrix.load == true }}
+          platforms: ${{ matrix.platform }}
+          tags: rekor-cli:deploy
+          build-args: |
+            CLI_LDFLAGS=${{ env.LDFLAGS }}
+
+      - name: Test deploy-cli Docker image
+        if: ${{ matrix.load == true }}
+        run: |
+          docker run --rm rekor-cli:deploy version
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -38,7 +126,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GOVERSION }}
@@ -63,7 +151,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GOVERSION }}
@@ -76,7 +164,6 @@ jobs:
           make ko-local
           docker run --rm $(cat rekorImagerefs) version
           docker run --rm $(cat cliImagerefs) version
-          docker run --rm $(cat indexImagerefs) --version
 
   e2e:
     name: E2E Tests
@@ -94,7 +181,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GOVERSION }}
@@ -143,7 +230,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GOVERSION }}
@@ -192,7 +279,7 @@ jobs:
       - name: Docker Build
         run: docker compose build
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GOVERSION }}
@@ -219,7 +306,7 @@ jobs:
       - name: Docker Build
         run: docker compose build
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GOVERSION }}
@@ -246,7 +333,7 @@ jobs:
       - name: Docker Build
         run: docker compose build
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GOVERSION }}
@@ -282,7 +369,7 @@ jobs:
         run: git switch -c harness-test-branch
 
       - name: Extract version of Go to use
-        run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+        run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
