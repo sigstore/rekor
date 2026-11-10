@@ -61,6 +61,66 @@ the rekor server
 
 For examples of uploading signatures for all the supported types to rekor, see [the types documentation](types.md).
 
+### Verifying releases
+
+Starting with Rekor v1.6.0, release binaries and container images can be verified using either GitHub Artifact Attestations (`gh` CLI) or Sigstore's release artifact signing key (`artifact.pub` with `cosign`).
+
+In the commands below, replace `<version>` (e.g., `v1.6.0`), `<binary>` (`rekor-cli` or `rekor-server`), `<os>` (`linux` or `darwin`), and `<arch>` (`amd64` or `arm64`) with the release version, binary, and platform you are verifying.
+
+#### Using GitHub Artifact Attestations (`gh` CLI)
+
+Verify a release binary:
+
+```shell
+curl -sSfLO "https://github.com/sigstore/rekor/releases/download/<version>/<binary>-<os>-<arch>"
+
+gh attestation verify "<binary>-<os>-<arch>" \
+  --repo sigstore/rekor \
+  --signer-workflow sigstore/rekor/.github/workflows/release.yml
+```
+
+Verify a container image:
+
+```shell
+gh attestation verify "oci://ghcr.io/sigstore/rekor/<binary>:<version>" \
+  --repo sigstore/rekor \
+  --signer-workflow sigstore/rekor/.github/workflows/build_container.yml \
+  --bundle-from-oci
+```
+
+#### Using the Artifact Signing Key (`cosign`)
+
+Retrieve `artifact.pub` from [`sigstore/root-signing`](https://github.com/sigstore/root-signing/blob/main/targets/artifact.pub) or using [go-tuf](https://github.com/theupdateframework/go-tuf)'s CLI tools:
+
+```shell
+go install github.com/theupdateframework/go-tuf/v2/examples/cli/tuf-client@latest
+curl -sSfLo root.json https://raw.githubusercontent.com/sigstore/root-signing/main/metadata/root_history/10.root.json
+tuf-client init --url https://tuf-repo-cdn.sigstore.dev -f root.json
+tuf-client get --url https://tuf-repo-cdn.sigstore.dev -t https://tuf-repo-cdn.sigstore.dev/targets artifact.pub
+cp tuf_download/artifact.pub ./artifact.pub
+```
+
+Verify a release binary:
+
+```shell
+curl -sSfLO "https://github.com/sigstore/rekor/releases/download/<version>/<binary>-<os>-<arch>"
+curl -sSfLO "https://github.com/sigstore/rekor/releases/download/<version>/<binary>-<os>-<arch>.sigstore.json"
+
+cosign verify-blob \
+  --key artifact.pub \
+  --bundle "<binary>-<os>-<arch>.sigstore.json" \
+  "<binary>-<os>-<arch>"
+```
+
+Verify a container image:
+
+```shell
+cosign verify \
+  --key artifact.pub \
+  -a "GIT_VERSION=<version>" \
+  "ghcr.io/sigstore/rekor/<binary>:<version>"
+```
+
 ## Extensibility
 
 ### Custom schemas / manifests (rekor type)
