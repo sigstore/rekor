@@ -240,7 +240,7 @@ func (z *zapLogEntry) Write(status, bytes int, _ http.Header, elapsed time.Durat
 		fields = append(fields, zap.Any("extra", extra))
 	}
 
-	log.ContextLogger(z.r.Context()).With(fields...).Info("completed request")
+	log.ContextLogger(z.r.Context()).With(fields...).Debug("completed request")
 }
 
 func (z *zapLogEntry) Panic(v any, stack []byte) {
