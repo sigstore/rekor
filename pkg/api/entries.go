@@ -285,12 +285,46 @@ func checkEntryAlgorithms(entry types.EntryImpl) (checkedAlgorithmResult, error)
 	return checkedAlgorithmResult{allowed: true}, nil
 }
 
+// clearProposedEntrySpec nils the Spec field on the underlying ProposedEntry
+// struct so large decoded JSON maps can be GC'd before Trillian RPCs.
+func clearProposedEntrySpec(pe models.ProposedEntry) {
+	switch p := pe.(type) {
+	case *models.Alpine:
+		p.Spec = nil
+	case *models.Cose:
+		p.Spec = nil
+	case *models.DSSE:
+		p.Spec = nil
+	case *models.Hashedrekord:
+		p.Spec = nil
+	case *models.Helm:
+		p.Spec = nil
+	case *models.Intoto:
+		p.Spec = nil
+	case *models.Jar:
+		p.Spec = nil
+	case *models.Rekord:
+		p.Spec = nil
+	case *models.Rfc3161:
+		p.Spec = nil
+	case *models.Rpm:
+		p.Spec = nil
+	case *models.TUF:
+		p.Spec = nil
+	}
+}
+
 func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middleware.Responder) {
 	ctx := params.HTTPRequest.Context()
 	entry, err := types.CreateVersionedEntry(params.ProposedEntry)
 	if err != nil {
 		return nil, handleRekorAPIError(params, http.StatusBadRequest, err, fmt.Sprintf(validationError, err))
 	}
+	// Release the decoded Spec map (which can hold multi-MB payloads) before
+	// canonicalization and Trillian RPCs; clear the underlying Spec field too
+	// because caller frames (e.g., ServeHTTP) still hold params.ProposedEntry.
+	clearProposedEntrySpec(params.ProposedEntry)
+	params.ProposedEntry = nil
 
 	checkedAlgorithmResult, err := checkEntryAlgorithms(entry)
 	if err != nil {

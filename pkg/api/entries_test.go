@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/go-openapi/runtime"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
@@ -74,5 +75,26 @@ func TestGetLogEntryByUUIDHandler_InvalidID(t *testing.T) {
 				t.Errorf("Expected status code %d (Bad Request), got %d", http.StatusBadRequest, recorder.Code)
 			}
 		})
+	}
+}
+
+func TestClearProposedEntrySpec(t *testing.T) {
+	dsse := &models.DSSE{Spec: map[string]any{"k": "v"}}
+	intoto := &models.Intoto{Spec: map[string]any{"k": "v"}}
+	hashedrekord := &models.Hashedrekord{Spec: map[string]any{"k": "v"}}
+
+	clearProposedEntrySpec(dsse)
+	clearProposedEntrySpec(intoto)
+	clearProposedEntrySpec(hashedrekord)
+	clearProposedEntrySpec(nil)
+
+	if dsse.Spec != nil {
+		t.Errorf("expected DSSE.Spec to be nil, got %v", dsse.Spec)
+	}
+	if intoto.Spec != nil {
+		t.Errorf("expected Intoto.Spec to be nil, got %v", intoto.Spec)
+	}
+	if hashedrekord.Spec != nil {
+		t.Errorf("expected Hashedrekord.Spec to be nil, got %v", hashedrekord.Spec)
 	}
 }
