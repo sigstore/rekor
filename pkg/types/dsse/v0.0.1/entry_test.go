@@ -652,3 +652,86 @@ func TestCanonicalizeHandlesInvalidInput(t *testing.T) {
 		t.Fatalf("expected error canonicalizing nil signature")
 	}
 }
+
+func TestDecodeEntryProposedContentVerifiers(t *testing.T) {
+	t.Run("empty string verifier in []any matches typed path", func(t *testing.T) {
+		sig := "AAom"
+		verifier := strfmt.Base64(" ")
+		env := ""
+		typed := &models.DSSEV001Schema{
+			ProposedContent: &models.DSSEV001SchemaProposedContent{
+				Envelope:  &env,
+				Verifiers: []strfmt.Base64{{}, verifier},
+			},
+			Signatures: []*models.DSSEV001SchemaSignaturesItems0{
+				{Signature: &sig, Verifier: &verifier},
+			},
+		}
+
+		raw, err := json.Marshal(typed)
+		if err != nil {
+			t.Fatalf("marshal failed: %v", err)
+		}
+		var asMap map[string]any
+		if err := json.Unmarshal(raw, &asMap); err != nil {
+			t.Fatalf("unmarshal failed: %v", err)
+		}
+
+		var fromTyped, fromMap models.DSSEV001Schema
+		if err := DecodeEntry(typed, &fromTyped); err != nil {
+			t.Fatalf("DecodeEntry(typed) failed: %v", err)
+		}
+		if err := DecodeEntry(asMap, &fromMap); err != nil {
+			t.Fatalf("DecodeEntry(map) failed: %v", err)
+		}
+		if !reflect.DeepEqual(fromTyped, fromMap) {
+			t.Fatalf("DecodeEntry divergence:\ntyped: %#v\n  map: %#v", fromTyped, fromMap)
+		}
+	})
+
+	t.Run("empty string verifier in []string is preserved", func(t *testing.T) {
+		input := map[string]any{
+			"proposedContent": map[string]any{
+				"envelope":  "",
+				"verifiers": []string{"", "IA=="},
+			},
+		}
+		var out models.DSSEV001Schema
+		if err := DecodeEntry(input, &out); err != nil {
+			t.Fatalf("DecodeEntry failed: %v", err)
+		}
+		want := []strfmt.Base64{{}, strfmt.Base64(" ")}
+		if !reflect.DeepEqual(out.ProposedContent.Verifiers, want) {
+			t.Fatalf("got verifiers %#v, want %#v", out.ProposedContent.Verifiers, want)
+		}
+	})
+
+	t.Run("null verifier in []any is preserved as nil", func(t *testing.T) {
+		input := map[string]any{
+			"proposedContent": map[string]any{
+				"envelope":  "",
+				"verifiers": []any{nil, "IA=="},
+			},
+		}
+		var out models.DSSEV001Schema
+		if err := DecodeEntry(input, &out); err != nil {
+			t.Fatalf("DecodeEntry failed: %v", err)
+		}
+		if len(out.ProposedContent.Verifiers) != 2 || out.ProposedContent.Verifiers[0] != nil {
+			t.Fatalf("expected first verifier to be nil, got %#v", out.ProposedContent.Verifiers)
+		}
+	})
+
+	t.Run("non-string verifier in []any returns error", func(t *testing.T) {
+		input := map[string]any{
+			"proposedContent": map[string]any{
+				"envelope":  "",
+				"verifiers": []any{123, "IA=="},
+			},
+		}
+		var out models.DSSEV001Schema
+		if err := DecodeEntry(input, &out); err == nil {
+			t.Fatalf("expected error for non-string verifier")
+		}
+	})
+}

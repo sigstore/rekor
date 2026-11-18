@@ -156,21 +156,24 @@ func DecodeEntry(input any, output *models.DSSEV001Schema) error {
 			if vsIF, ok := pcRaw["verifiers"].([]any); ok {
 				m.ProposedContent.Verifiers = make([]strfmt.Base64, 0, len(vsIF))
 				for _, it := range vsIF {
-					if s, ok := it.(string); ok && s != "" {
-						outb := make([]byte, base64.StdEncoding.DecodedLen(len(s)))
-						n, err := base64.StdEncoding.Decode(outb, []byte(s))
-						if err != nil {
-							return fmt.Errorf("failed parsing base64 data for verifier: %w", err)
-						}
-						m.ProposedContent.Verifiers = append(m.ProposedContent.Verifiers, strfmt.Base64(outb[:n]))
+					if it == nil {
+						m.ProposedContent.Verifiers = append(m.ProposedContent.Verifiers, nil)
+						continue
 					}
+					s, ok := it.(string)
+					if !ok {
+						return fmt.Errorf("invalid verifier type %T", it)
+					}
+					outb := make([]byte, base64.StdEncoding.DecodedLen(len(s)))
+					n, err := base64.StdEncoding.Decode(outb, []byte(s))
+					if err != nil {
+						return fmt.Errorf("failed parsing base64 data for verifier: %w", err)
+					}
+					m.ProposedContent.Verifiers = append(m.ProposedContent.Verifiers, strfmt.Base64(outb[:n]))
 				}
 			} else if vsStr, ok := pcRaw["verifiers"].([]string); ok {
 				m.ProposedContent.Verifiers = make([]strfmt.Base64, 0, len(vsStr))
 				for _, s := range vsStr {
-					if s == "" {
-						continue
-					}
 					outb := make([]byte, base64.StdEncoding.DecodedLen(len(s)))
 					n, err := base64.StdEncoding.Decode(outb, []byte(s))
 					if err != nil {
