@@ -69,34 +69,52 @@ func (c Checkpoint) MarshalCheckpoint() ([]byte, error) {
 //
 // This will discard any content found after the checkpoint (including signatures)
 func (c *Checkpoint) UnmarshalCheckpoint(data []byte) error {
-	l := bytes.Split(data, []byte("\n"))
-	if len(l) < 4 {
+	originBytes, rem, ok := bytes.Cut(data, []byte("\n"))
+	if !ok {
 		return errors.New("invalid checkpoint - too few newlines")
 	}
-	origin := string(l[0])
-	if len(origin) == 0 {
+	sizeBytes, rem, ok := bytes.Cut(rem, []byte("\n"))
+	if !ok {
+		return errors.New("invalid checkpoint - too few newlines")
+	}
+	hashBytes, rem, ok := bytes.Cut(rem, []byte("\n"))
+	if !ok {
+		return errors.New("invalid checkpoint - too few newlines")
+	}
+	if len(originBytes) == 0 {
 		return errors.New("invalid checkpoint - empty ecosystem")
 	}
-	size, err := strconv.ParseUint(string(l[1]), 10, 64)
+	// A uint64 in base 10 has at most 20 digits. Reject oversized lines before
+	// calling strconv.ParseUint to avoid allocating and quoting huge untrusted
+	// inputs in strconv.NumError.
+	if len(sizeBytes) == 0 || len(sizeBytes) > 20 {
+		return errors.New("invalid checkpoint - size invalid")
+	}
+	size, err := strconv.ParseUint(string(sizeBytes), 10, 64)
 	if err != nil {
 		return fmt.Errorf("invalid checkpoint - size invalid: %w", err)
 	}
-	h, err := base64.StdEncoding.DecodeString(string(l[2]))
+	h := make([]byte, base64.StdEncoding.DecodedLen(len(hashBytes)))
+	n, err := base64.StdEncoding.Decode(h, hashBytes)
 	if err != nil {
 		return fmt.Errorf("invalid checkpoint - invalid hash: %w", err)
 	}
+	h = h[:n]
 	*c = Checkpoint{
-		Origin: origin,
+		Origin: string(originBytes),
 		Size:   size,
 		Hash:   h,
 	}
-	if len(l) >= 3 {
-		for _, line := range l[3:] {
-			if len(line) == 0 {
-				break
-			}
-			c.OtherContent = append(c.OtherContent, string(line))
+	for len(rem) > 0 {
+		line, rest, found := bytes.Cut(rem, []byte("\n"))
+		if len(line) == 0 {
+			break
 		}
+		c.OtherContent = append(c.OtherContent, string(line))
+		if !found {
+			break
+		}
+		rem = rest
 	}
 	return nil
 }
@@ -133,7 +151,7 @@ func CheckpointValidator(strToValidate string) bool {
 
 func (r *SignedCheckpoint) UnmarshalText(data []byte) error {
 	s := SignedNote{}
-	if err := s.UnmarshalText([]byte(data)); err != nil {
+	if err := s.UnmarshalText(data); err != nil {
 		return fmt.Errorf("unmarshalling signed note: %w", err)
 	}
 	c := Checkpoint{}

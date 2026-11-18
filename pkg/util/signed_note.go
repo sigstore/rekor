@@ -159,9 +159,7 @@ func (s *SignedNote) UnmarshalText(data []byte) error {
 		return errors.New("malformed note")
 	}
 
-	sn := SignedNote{
-		Note: string(text),
-	}
+	sn := SignedNote{}
 
 	b := bufio.NewScanner(bytes.NewReader(data))
 	for b.Scan() {
@@ -193,6 +191,8 @@ func (s *SignedNote) UnmarshalText(data []byte) error {
 	if len(sn.Signatures) == 0 {
 		return errors.New("no signatures found in input")
 	}
+
+	sn.Note = string(text)
 
 	// copy sc to s
 	*s = sn

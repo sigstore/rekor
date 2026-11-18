@@ -524,3 +524,20 @@ func TestSignCheckpoint(t *testing.T) {
 		t.Fatalf("unexpected tree size: got %d, expected %d", sth.Size, treeSize)
 	}
 }
+
+func TestUnmarshalCheckpointLargeInvalidSize(t *testing.T) {
+	largeSize := bytes.Repeat([]byte{0xbd}, 1<<20)
+	var buf bytes.Buffer
+	buf.WriteString("Log Checkpoint v0\n")
+	buf.Write(largeSize)
+	buf.WriteString("\nYmFuYW5hcw==\n\n\u2014 name pOhM+S/mYjEYtQsOF4lL8o/dR+nbjoz5Cvg/n486KIismpVq0s4wxBaakmryI7zThjWAqRUyECPL3WSEcVDEBQ==\n")
+
+	var sc SignedCheckpoint
+	err := sc.UnmarshalText(buf.Bytes())
+	if err == nil {
+		t.Fatal("expected error for oversized checkpoint size line")
+	}
+	if len(err.Error()) > 256 {
+		t.Fatalf("error message unexpectedly large (%d bytes); input must not be quoted into error", len(err.Error()))
+	}
+}
