@@ -149,12 +149,19 @@ func verifyRPMWithV3(packageBytes []byte, header *rpmutils.RpmHeader, v3Signatur
 // key even for a nil keyring, rather than offering upstream's digest-only mode.
 func verifyRPMModernSignature(encoded, signed []byte, keyring openpgp.EntityList) error {
 	r := bytes.NewReader(encoded)
-	p, err := packet.Read(r)
+	op, err := packet.NewOpaqueReader(r).Next()
 	if err != nil {
 		return err
 	}
 	if r.Len() != 0 {
 		return rpmutils.ErrTrailingGarbage
+	}
+	if op.Tag == 5 || op.Tag == 7 {
+		return rpmutils.ErrNoPGPSignature
+	}
+	p, err := op.Parse()
+	if err != nil {
+		return err
 	}
 	sig, ok := p.(*packet.Signature)
 	if !ok || (sig.IssuerKeyId == nil && len(sig.IssuerFingerprint) == 0) {

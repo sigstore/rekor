@@ -76,6 +76,10 @@ func parseSignaturePacket(op *packet.OpaquePacket) (*parsedSignature, bool, erro
 		return &parsedSignature{v3: sig}, false, nil
 	}
 
+	if op.Tag == packetTagPrivateKey || op.Tag == packetTagPrivateSubkey {
+		return nil, false, pgperrors.StructuralError("non signature packet found")
+	}
+
 	p, err := op.Parse()
 	if isSkippablePacketError(err) {
 		return nil, true, nil

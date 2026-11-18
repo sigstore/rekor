@@ -947,3 +947,46 @@ func TestNewPublicKeyRejectsPrivateKeyPackets(t *testing.T) {
 		})
 	}
 }
+
+func TestNewSignatureRejectsPrivateKeyPackets(t *testing.T) {
+	privKeyPkt := buildOversizedRSAPrivateKeyPacket(t, packetTagPrivateKey)
+	privSubkeyPkt := buildOversizedRSAPrivateKeyPacket(t, packetTagPrivateSubkey)
+
+	var armoredAsSig bytes.Buffer
+	aw, err := armor.Encode(&armoredAsSig, openpgp.SignatureType, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := aw.Write(privKeyPkt); err != nil {
+		t.Fatal(err)
+	}
+	if err := aw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{name: "binary private key packet", input: privKeyPkt},
+		{name: "binary private subkey packet", input: privSubkeyPkt},
+		{name: "private key packet inside armored signature block", input: armoredAsSig.Bytes()},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			start := time.Now()
+			got, err := NewSignature(bytes.NewReader(tc.input))
+			elapsed := time.Since(start)
+			if err == nil || got != nil {
+				t.Fatalf("NewSignature() = (%v, %v), want error", got, err)
+			}
+			if _, ok := errors.AsType[pgperrors.StructuralError](err); !ok {
+				t.Fatalf("NewSignature() error = %v, want StructuralError", err)
+			}
+			if elapsed > time.Second {
+				t.Fatalf("NewSignature() took %v, expected immediate rejection", elapsed)
+			}
+		})
+	}
+}
