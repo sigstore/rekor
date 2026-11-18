@@ -29,6 +29,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -158,14 +160,29 @@ func (s *SignedNote) UnmarshalText(data []byte) error {
 	if len(data) == 0 || data[len(data)-1] != '\n' {
 		return errors.New("malformed note")
 	}
+	if !utf8.Valid(data) {
+		return errors.New("malformed note: invalid UTF-8 in signatures")
+	}
 
 	sn := SignedNote{}
 
+	const sigPrefix = "\u2014 "
 	b := bufio.NewScanner(bytes.NewReader(data))
 	for b.Scan() {
-		var name, signature string
-		if _, err := fmt.Fscanf(strings.NewReader(b.Text()), "\u2014 %s %s\n", &name, &signature); err != nil {
-			return fmt.Errorf("parsing signature: %w", err)
+		line := b.Text()
+		rest, ok := strings.CutPrefix(line, sigPrefix)
+		if !ok {
+			return errors.New("parsing signature: missing signature prefix")
+		}
+		name, signature, ok := strings.Cut(rest, " ")
+		if !ok || name == "" || signature == "" {
+			return errors.New("parsing signature: invalid signature line")
+		}
+		if strings.IndexFunc(name, unicode.IsSpace) != -1 {
+			return errors.New("parsing signature: invalid whitespace in name")
+		}
+		if strings.ContainsAny(signature, "\r\n") {
+			return errors.New("parsing signature: invalid whitespace in signature")
 		}
 
 		sigBytes, err := base64.StdEncoding.DecodeString(signature)
@@ -182,7 +199,6 @@ func (s *SignedNote) UnmarshalText(data []byte) error {
 			Base64: base64.StdEncoding.EncodeToString(sigBytes[4:]),
 		}
 		sn.Signatures = append(sn.Signatures, sig)
-
 	}
 	if err := b.Err(); err != nil {
 		return fmt.Errorf("reading signed note: %w", err)
