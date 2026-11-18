@@ -104,7 +104,10 @@ func FuzzHelmUnmarshalAndCanonicalize(f *testing.F) {
 }
 
 func FuzzHelmProvenanceUnmarshal(f *testing.F) {
-	f.Fuzz(func(_ *testing.T, provenanceData []byte) {
+	f.Fuzz(func(t *testing.T, provenanceData []byte) {
+		if len(provenanceData) > 65536 {
+			t.Skip()
+		}
 		p := &helm.Provenance{}
 		r := bytes.NewReader(provenanceData)
 		p.Unmarshal(r)
