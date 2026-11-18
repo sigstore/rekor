@@ -276,6 +276,33 @@ func (s Signature) Verify(r io.Reader, k any, _ ...sigsig.VerifyOption) error {
 	return verifyDetached(key.key, r, sigBody)
 }
 
+const (
+	packetTagPrivateKey    uint8 = 5
+	packetTagPrivateSubkey uint8 = 7
+)
+
+// readPublicKeyRing verifies that the OpenPGP packet stream contains no
+// private key packets before passing it to openpgp.ReadKeyRing, avoiding
+// both accepting secret key material and expensive RSA private key validation
+// on untrusted inputs.
+func readPublicKeyRing(r io.Reader) (openpgp.EntityList, error) {
+	var raw bytes.Buffer
+	packets := packet.NewOpaqueReader(io.TeeReader(r, &raw))
+	for {
+		op, err := packets.Next()
+		if op != nil && (op.Tag == packetTagPrivateKey || op.Tag == packetTagPrivateSubkey) {
+			return nil, errors.New("PGP private keys are not supported")
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	return openpgp.ReadKeyRing(&raw)
+}
+
 // PublicKey Public Key that follows the PGP standard; supports both armored & binary detached signatures
 type PublicKey struct {
 	key openpgp.EntityList
@@ -312,10 +339,10 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 				// we have a complete armored message; process it
 				keyBlock, err := armor.Decode(&inputBuffer)
 				if err == nil {
-					if keyBlock.Type != openpgp.PublicKeyType && keyBlock.Type != openpgp.PrivateKeyType {
+					if keyBlock.Type != openpgp.PublicKeyType {
 						return nil, errors.New("invalid PGP type detected")
 					}
-					keys, err := openpgp.ReadKeyRing(keyBlock.Body)
+					keys, err := readPublicKeyRing(keyBlock.Body)
 					if err != nil {
 						return nil, fmt.Errorf("error reading PGP public key: %w", err)
 					}
@@ -335,7 +362,7 @@ func NewPublicKey(r io.Reader) (*PublicKey, error) {
 		}
 	} else {
 		// process as binary
-		k.key, err = openpgp.ReadKeyRing(bufferedReader)
+		k.key, err = readPublicKeyRing(bufferedReader)
 		if err != nil {
 			return nil, fmt.Errorf("error reading binary PGP public key: %w", err)
 		}

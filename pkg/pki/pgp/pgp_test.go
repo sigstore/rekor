@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
 	pgperrors "github.com/ProtonMail/go-crypto/openpgp/errors"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"go.uber.org/goleak"
@@ -848,5 +849,101 @@ func TestVerifyRejectsSignatureWithoutIssuer(t *testing.T) {
 	err = verifyDetached(nil, bytes.NewReader(nil), body.Bytes())
 	if _, ok := errors.AsType[pgperrors.StructuralError](err); !ok {
 		t.Fatalf("verifyDetached() error = %v, want StructuralError", err)
+	}
+}
+
+func buildOversizedRSAPrivateKeyPacket(t *testing.T, tag uint8) []byte {
+	t.Helper()
+	writeMPI := func(buf *bytes.Buffer, b []byte) {
+		bitLen := len(b) * 8
+		_ = binary.Write(buf, binary.BigEndian, uint16(bitLen))
+		buf.Write(b)
+	}
+
+	// Build a v4 unencrypted RSA secret-key packet with large MPIs so that if
+	// it ever reached openpgp.ReadKeyRing -> parseRSAPrivateKey -> rsa.Validate,
+	// it would trigger expensive modular exponentiation.
+	var payload bytes.Buffer
+	payload.WriteByte(4)                 // version 4
+	payload.Write([]byte{0, 0, 0, 1})    // creation time
+	payload.WriteByte(1)                 // RSA (Encrypt or Sign)
+	n := bytes.Repeat([]byte{0x80}, 512) // 4096-bit even modulus
+	e := []byte{0x01, 0x00, 0x01}        // 65537
+	d := bytes.Repeat([]byte{0x81}, 512)
+	p := bytes.Repeat([]byte{0x81}, 1024) // 8192-bit odd prime candidate
+	q := bytes.Repeat([]byte{0x81}, 1024)
+	u := []byte{0x01}
+	writeMPI(&payload, n)
+	writeMPI(&payload, e)
+	payload.WriteByte(0) // s2k usage = 0 (unencrypted)
+
+	var secret bytes.Buffer
+	writeMPI(&secret, d)
+	writeMPI(&secret, p)
+	writeMPI(&secret, q)
+	writeMPI(&secret, u)
+	var sum uint16
+	for _, b := range secret.Bytes() {
+		sum += uint16(b)
+	}
+	payload.Write(secret.Bytes())
+	_ = binary.Write(&payload, binary.BigEndian, sum)
+
+	var pkt bytes.Buffer
+	if err := (&packet.OpaquePacket{Tag: tag, Contents: payload.Bytes()}).Serialize(&pkt); err != nil {
+		t.Fatal(err)
+	}
+	return pkt.Bytes()
+}
+
+func TestNewPublicKeyRejectsPrivateKeyPackets(t *testing.T) {
+	privKeyPkt := buildOversizedRSAPrivateKeyPacket(t, packetTagPrivateKey)
+	privSubkeyPkt := buildOversizedRSAPrivateKeyPacket(t, packetTagPrivateSubkey)
+
+	validPub, err := os.ReadFile("testdata/valid_binary_public.pgp")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var armoredAsPublic bytes.Buffer
+	aw, err := armor.Encode(&armoredAsPublic, openpgp.PublicKeyType, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := aw.Write(privKeyPkt); err != nil {
+		t.Fatal(err)
+	}
+	if err := aw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Prefixing a byte without MSB set mimics the OSS-Fuzz testcase where
+	// openpgp.ReadKeyRing previously skipped past the invalid header via
+	// readToNextPublicKey and parsed the following private key packet.
+	corruptPrefixAndPriv := append([]byte{0x00}, privKeyPkt...)
+	pubWithPrivSubkey := append(append([]byte(nil), validPub...), privSubkeyPkt...)
+
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{name: "binary private key packet", input: privKeyPkt},
+		{name: "private key packet inside armored public key block", input: armoredAsPublic.Bytes()},
+		{name: "corrupt header followed by private key packet", input: corruptPrefixAndPriv},
+		{name: "valid public key followed by private subkey packet", input: pubWithPrivSubkey},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			start := time.Now()
+			got, err := NewPublicKey(bytes.NewReader(tc.input))
+			elapsed := time.Since(start)
+			if err == nil || got != nil {
+				t.Fatalf("NewPublicKey() = (%v, %v), want error", got, err)
+			}
+			if elapsed > time.Second {
+				t.Fatalf("NewPublicKey() took %v, expected immediate rejection", elapsed)
+			}
+		})
 	}
 }
