@@ -30,39 +30,53 @@ import (
 
 	"github.com/google/trillian"
 	"github.com/google/trillian/client"
+	"github.com/google/trillian/client/backoff"
 	"github.com/google/trillian/types"
 
 	internalclient "github.com/sigstore/rekor/internal/trillianclient"
 )
 
+const defaultRootPollMin = 100 * time.Millisecond
+
 // directTrillianClient is a stateless, per-RPC wrapper around the Trillian gRPC
 // client. It fetches a fresh root on every operation that requires one, with no
 // background goroutines or cached state.
 type directTrillianClient struct {
-	client trillian.TrillianLogClient
-	logID  int64
+	client  trillian.TrillianLogClient
+	logID   int64
+	pollMin time.Duration
 }
 
 // newDirectTrillianClient creates a TrillianClient with the given Trillian client and log/tree ID.
 func newDirectTrillianClient(logClient trillian.TrillianLogClient, logID int64) *directTrillianClient {
 	return &directTrillianClient{
-		client: logClient,
-		logID:  logID,
+		client:  logClient,
+		logID:   logID,
+		pollMin: defaultRootPollMin,
 	}
 }
 
-func (t *directTrillianClient) root(ctx context.Context) (types.LogRootV1, error) {
+func (t *directTrillianClient) root(ctx context.Context) (*trillian.SignedLogRoot, types.LogRootV1, error) {
 	rqst := &trillian.GetLatestSignedLogRootRequest{
 		LogId: t.logID,
 	}
 	resp, err := t.client.GetLatestSignedLogRoot(ctx, rqst)
 	if err != nil {
-		return types.LogRootV1{}, err
+		return nil, types.LogRootV1{}, err
 	}
-	return internalclient.UnmarshalLogRoot(resp.SignedLogRoot.LogRoot)
+	root, err := internalclient.UnmarshalLogRoot(resp.GetSignedLogRoot().GetLogRoot())
+	return resp.GetSignedLogRoot(), root, err
 }
 
 func (t *directTrillianClient) AddLeaf(ctx context.Context, byteValue []byte) *internalclient.Response {
+	_, beforeRoot, err := t.root(ctx)
+	if err != nil {
+		return &internalclient.Response{
+			Status: status.Code(err),
+			Err:    err,
+		}
+	}
+
 	leaf := &trillian.LogLeaf{
 		LeafValue: byteValue,
 	}
@@ -81,42 +95,43 @@ func (t *directTrillianClient) AddLeaf(ctx context.Context, byteValue []byte) *i
 		}
 	}
 
-	root, err := t.root(ctx)
-	if err != nil {
-		return &internalclient.Response{
-			Status:       status.Code(err),
-			Err:          err,
-			GetAddResult: resp,
+	waitForInclusion := func(ctx context.Context, hash []byte) *internalclient.Response {
+		minBackoff := max(t.pollMin, time.Millisecond)
+		b := &backoff.Backoff{
+			Min:    minBackoff,
+			Max:    max(10*time.Second, minBackoff),
+			Factor: 2,
+			Jitter: true,
 		}
-	}
-	v := client.NewLogVerifier(rfc6962.DefaultHasher)
-	logClient := client.New(t.logID, t.client, v, root)
-
-	waitForInclusion := func(ctx context.Context, _ []byte) *internalclient.Response {
-		if logClient.MinMergeDelay > 0 {
+		minSize := beforeRoot.TreeSize + 1
+		for {
+			timer := time.NewTimer(b.Duration())
 			select {
 			case <-ctx.Done():
+				timer.Stop()
+				err := status.FromContextError(ctx.Err()).Err()
 				return &internalclient.Response{
-					Status: codes.DeadlineExceeded,
-					Err:    ctx.Err(),
+					Status: status.Code(err),
+					Err:    err,
 				}
-			case <-time.After(logClient.MinMergeDelay):
-			}
-		}
-		for {
-			root = *logClient.GetRoot()
-			if root.TreeSize >= 1 {
-				proofResp := t.getProofByHash(ctx, resp.QueuedLeaf.Leaf.MerkleLeafHash)
-				// if this call succeeds or returns an error other than "not found", return
-				if proofResp.Err == nil || (proofResp.Err != nil && status.Code(proofResp.Err) != codes.NotFound) {
-					return proofResp
-				}
-				// otherwise wait for a root update before trying again
+			case <-timer.C:
 			}
 
-			if _, err := logClient.WaitForRootUpdate(ctx); err != nil {
+			slr, root, err := t.root(ctx)
+			switch status.Code(err) {
+			case codes.OK:
+				if root.TreeSize >= minSize {
+					proofResp := t.getProofByHashWithRoot(ctx, hash, slr, root)
+					if proofResp.Err == nil || status.Code(proofResp.Err) != codes.NotFound {
+						return proofResp
+					}
+					minSize = root.TreeSize + 1
+					b.Reset()
+				}
+			case codes.Unavailable, codes.NotFound, codes.FailedPrecondition:
+			default:
 				return &internalclient.Response{
-					Status: codes.Unknown,
+					Status: status.Code(err),
 					Err:    err,
 				}
 			}
@@ -196,15 +211,7 @@ func (t *directTrillianClient) GetLeafAndProofByHash(ctx context.Context, hash [
 }
 
 func (t *directTrillianClient) GetLeafAndProofByIndex(ctx context.Context, index int64) *internalclient.Response {
-	rootResp := t.GetLatest(ctx)
-	if rootResp.Err != nil {
-		return &internalclient.Response{
-			Status: status.Code(rootResp.Err),
-			Err:    rootResp.Err,
-		}
-	}
-
-	root, err := internalclient.UnmarshalLogRoot(rootResp.GetLatestResult.SignedLogRoot.LogRoot)
+	slr, root, err := t.root(ctx)
 	if err != nil {
 		return &internalclient.Response{
 			Status: status.Code(err),
@@ -232,7 +239,7 @@ func (t *directTrillianClient) GetLeafAndProofByIndex(ctx context.Context, index
 			GetLeafAndProofResult: &trillian.GetEntryAndProofResponse{
 				Proof:         resp.Proof,
 				Leaf:          resp.Leaf,
-				SignedLogRoot: rootResp.GetLatestResult.SignedLogRoot,
+				SignedLogRoot: slr,
 			},
 		}
 	}
@@ -272,21 +279,17 @@ func (t *directTrillianClient) GetConsistencyProof(ctx context.Context, firstSiz
 }
 
 func (t *directTrillianClient) getProofByHash(ctx context.Context, hashValue []byte) *internalclient.Response {
-	rootResp := t.GetLatest(ctx)
-	if rootResp.Err != nil {
-		return &internalclient.Response{
-			Status: status.Code(rootResp.Err),
-			Err:    rootResp.Err,
-		}
-	}
-	root, err := internalclient.UnmarshalLogRoot(rootResp.GetLatestResult.SignedLogRoot.LogRoot)
+	slr, root, err := t.root(ctx)
 	if err != nil {
 		return &internalclient.Response{
 			Status: status.Code(err),
 			Err:    err,
 		}
 	}
+	return t.getProofByHashWithRoot(ctx, hashValue, slr, root)
+}
 
+func (t *directTrillianClient) getProofByHashWithRoot(ctx context.Context, hashValue []byte, slr *trillian.SignedLogRoot, root types.LogRootV1) *internalclient.Response {
 	// issue 1308: if the tree is empty, there's no way we can return a proof
 	if root.TreeSize == 0 {
 		return &internalclient.Response{
@@ -318,7 +321,7 @@ func (t *directTrillianClient) getProofByHash(ctx context.Context, hashValue []b
 			Err:    err,
 			GetProofResult: &trillian.GetInclusionProofByHashResponse{
 				Proof:         resp.Proof,
-				SignedLogRoot: rootResp.GetLatestResult.SignedLogRoot,
+				SignedLogRoot: slr,
 			},
 		}
 	}

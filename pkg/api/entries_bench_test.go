@@ -35,6 +35,7 @@ import (
 	"testing"
 
 	"github.com/google/trillian"
+	"github.com/google/trillian/types"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/sharding"
@@ -49,6 +50,16 @@ type blockingTrillianServer struct {
 	trillian.UnimplementedTrillianLogServer
 	arrived chan struct{}
 	release chan struct{}
+}
+
+func (s *blockingTrillianServer) GetLatestSignedLogRoot(_ context.Context, _ *trillian.GetLatestSignedLogRootRequest) (*trillian.GetLatestSignedLogRootResponse, error) {
+	lr, err := (&types.LogRootV1{TreeSize: 0, RootHash: make([]byte, 32)}).MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+	return &trillian.GetLatestSignedLogRootResponse{
+		SignedLogRoot: &trillian.SignedLogRoot{LogRoot: lr},
+	}, nil
 }
 
 func (s *blockingTrillianServer) QueueLeaf(_ context.Context, _ *trillian.QueueLeafRequest) (*trillian.QueueLeafResponse, error) {
