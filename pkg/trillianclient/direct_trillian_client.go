@@ -36,7 +36,10 @@ import (
 	internalclient "github.com/sigstore/rekor/internal/trillianclient"
 )
 
-const defaultRootPollMin = 100 * time.Millisecond
+const (
+	defaultRootPollMin = 100 * time.Millisecond
+	defaultRootPollMax = 2 * time.Second
+)
 
 // directTrillianClient is a stateless, per-RPC wrapper around the Trillian gRPC
 // client. It fetches a fresh root on every operation that requires one, with no
@@ -99,7 +102,7 @@ func (t *directTrillianClient) AddLeaf(ctx context.Context, byteValue []byte) *i
 		minBackoff := max(t.pollMin, time.Millisecond)
 		b := &backoff.Backoff{
 			Min:    minBackoff,
-			Max:    max(10*time.Second, minBackoff),
+			Max:    max(defaultRootPollMax, minBackoff),
 			Factor: 2,
 			Jitter: true,
 		}
@@ -126,7 +129,6 @@ func (t *directTrillianClient) AddLeaf(ctx context.Context, byteValue []byte) *i
 						return proofResp
 					}
 					minSize = root.TreeSize + 1
-					b.Reset()
 				}
 			case codes.Unavailable, codes.NotFound, codes.FailedPrecondition:
 			default:
