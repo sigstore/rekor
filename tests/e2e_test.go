@@ -571,7 +571,7 @@ func TestEntryUpload(t *testing.T) {
 	}
 	topic, err := psc.CreateTopic(ctx, "new-entry")
 	if err != nil {
-		// Assume error is AlreadyExists if one occurrs unless it is context timeout.
+		// Assume error is AlreadyExists if one occurs unless it is context timeout.
 		// If the error was not AlreadyExists, it will be caught in later error
 		// checks in this test.
 		if errors.Is(err, os.ErrDeadlineExceeded) {
