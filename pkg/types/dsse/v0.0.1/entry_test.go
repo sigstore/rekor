@@ -487,7 +487,7 @@ func TestV001Entry_IndexKeys(t *testing.T) {
 			},
 		},
 		{
-			name: "slsa wit header",
+			name: "slsa with header",
 			want: []string{"sha256:foo", "sha256:bar"},
 			statement: testStatement{
 				Subject: []testSubject{
