@@ -80,7 +80,11 @@ func Decode(b []byte) (*Signature, error) {
 	if err := ssh.Unmarshal([]byte(sig.Signature), &sshSig); err != nil {
 		return nil, err
 	}
-	// TODO: check the format here (should be rsa-sha512)
+	// ssh-rsa (SHA-1) signatures are not allowed for RSA keys:
+	// https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.sshsig#L71
+	if sshSig.Format == ssh.KeyAlgoRSA {
+		return nil, fmt.Errorf("unsupported signature algorithm: %s", sshSig.Format)
+	}
 
 	pk, err := ssh.ParsePublicKey([]byte(sig.PublicKey))
 	if err != nil {
