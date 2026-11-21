@@ -923,6 +923,39 @@ func TestNewPublicKeyRejectsPrivateKeyPackets(t *testing.T) {
 	corruptPrefixAndPriv := append([]byte{0x00}, privKeyPkt...)
 	pubWithPrivSubkey := append(append([]byte(nil), validPub...), privSubkeyPkt...)
 
+	// Smuggling a private key packet inside a streaming packet (e.g. old-format
+	// indeterminate-length SymmetricallyEncrypted, tag 9, header byte 0xa7)
+	// previously bypassed OpaqueReader's tag scan because OpaqueReader consumed
+	// the entire body as one tag-9 packet while packet.Read left the body
+	// unread for openpgp.ReadKeyRing to re-parse (OSS-Fuzz issue 588659662).
+	indeterminateSymEncSmuggled := append([]byte{0xa7}, privKeyPkt...)
+
+	var determinateSymEncSmuggled bytes.Buffer
+	if err := (&packet.OpaquePacket{Tag: 9, Contents: privKeyPkt}).Serialize(&determinateSymEncSmuggled); err != nil {
+		t.Fatal(err)
+	}
+
+	// Smuggling a private key packet in trailing bytes of a Marker packet
+	// (tag 10), whose parser only reads the 3-byte "PGP" literal.
+	var markerTrailingSmuggled bytes.Buffer
+	if err := (&packet.OpaquePacket{Tag: 10, Contents: append([]byte("PGP"), privKeyPkt...)}).Serialize(&markerTrailingSmuggled); err != nil {
+		t.Fatal(err)
+	}
+
+	// Smuggling a private key packet in trailing bytes of a PublicKey packet
+	// (tag 6).
+	firstPubPkt, err := packet.NewOpaqueReader(bytes.NewReader(validPub)).Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pubKeyTrailingSmuggled bytes.Buffer
+	if err := (&packet.OpaquePacket{
+		Tag:      firstPubPkt.Tag,
+		Contents: append(append([]byte(nil), firstPubPkt.Contents...), privKeyPkt...),
+	}).Serialize(&pubKeyTrailingSmuggled); err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		name  string
 		input []byte
@@ -931,6 +964,10 @@ func TestNewPublicKeyRejectsPrivateKeyPackets(t *testing.T) {
 		{name: "private key packet inside armored public key block", input: armoredAsPublic.Bytes()},
 		{name: "corrupt header followed by private key packet", input: corruptPrefixAndPriv},
 		{name: "valid public key followed by private subkey packet", input: pubWithPrivSubkey},
+		{name: "private key packet smuggled in indeterminate symmetrically encrypted packet", input: indeterminateSymEncSmuggled},
+		{name: "private key packet smuggled in determinate symmetrically encrypted packet", input: determinateSymEncSmuggled.Bytes()},
+		{name: "private key packet smuggled in trailing bytes of marker packet", input: markerTrailingSmuggled.Bytes()},
+		{name: "private key packet smuggled in trailing bytes of public key packet", input: pubKeyTrailingSmuggled.Bytes()},
 	}
 
 	for _, tc := range tests {

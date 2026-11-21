@@ -286,25 +286,41 @@ const (
 )
 
 // readPublicKeyRing verifies that the OpenPGP packet stream contains no
-// private key packets before passing it to openpgp.ReadKeyRing, avoiding
-// both accepting secret key material and expensive RSA private key validation
-// on untrusted inputs.
+// private key packets and that every packet is fully consumed by packet.Read
+// before passing it to openpgp.ReadKeyRing. This avoids both accepting secret
+// key material and smuggling private key packets inside streaming packets
+// (e.g. SymmetricallyEncrypted, Compressed, LiteralData) or trailing bytes of
+// another packet, which would otherwise trigger expensive RSA private key
+// validation on untrusted inputs.
 func readPublicKeyRing(r io.Reader) (openpgp.EntityList, error) {
-	var raw bytes.Buffer
-	packets := packet.NewOpaqueReader(io.TeeReader(r, &raw))
+	var clean bytes.Buffer
+	packets := packet.NewOpaqueReader(r)
 	for {
 		op, err := packets.Next()
-		if op != nil && (op.Tag == packetTagPrivateKey || op.Tag == packetTagPrivateSubkey) {
-			return nil, errors.New("PGP private keys are not supported")
-		}
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
 			return nil, err
 		}
+		if op.Tag == packetTagPrivateKey || op.Tag == packetTagPrivateSubkey {
+			return nil, errors.New("PGP private keys are not supported")
+		}
+
+		var pktBuf bytes.Buffer
+		if err := op.Serialize(&pktBuf); err != nil {
+			return nil, err
+		}
+		pktBytes := pktBuf.Bytes()
+
+		pktReader := bytes.NewReader(pktBytes)
+		if _, _ = packet.Read(pktReader); pktReader.Len() > 0 {
+			return nil, pgperrors.StructuralError("unexpected trailing data in PGP packet")
+		}
+
+		clean.Write(pktBytes)
 	}
-	return openpgp.ReadKeyRing(&raw)
+	return openpgp.ReadKeyRing(&clean)
 }
 
 // PublicKey Public Key that follows the PGP standard; supports both armored & binary detached signatures
