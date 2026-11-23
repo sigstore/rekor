@@ -20,12 +20,30 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-openapi/runtime"
+	"github.com/google/trillian"
+	ttypes "github.com/google/trillian/types"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/generated/restapi/operations/entries"
 	"github.com/sigstore/rekor/pkg/sharding"
 	"github.com/sigstore/rekor/pkg/signer"
+	"github.com/sigstore/rekor/pkg/types"
+	_ "github.com/sigstore/rekor/pkg/types/alpine/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/cose/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/dsse/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/helm/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/intoto/v0.0.2"
+	_ "github.com/sigstore/rekor/pkg/types/jar/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/rekord/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/rfc3161/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/rpm/v0.0.1"
+	_ "github.com/sigstore/rekor/pkg/types/tuf/v0.0.1"
+	"github.com/spf13/viper"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // TestRetrieveUUIDFromTree_UnconfiguredTreeID tests that retrieveUUIDFromTree returns ErrNotFound when the tree ID is not in the configured shard set.
@@ -96,5 +114,137 @@ func TestClearProposedEntrySpec(t *testing.T) {
 	}
 	if hashedrekord.Spec != nil {
 		t.Errorf("expected Hashedrekord.Spec to be nil, got %v", hashedrekord.Spec)
+	}
+}
+
+func TestLeafKindAndVersion(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		wantKind    string
+		wantVersion string
+		wantErr     bool
+	}{
+		{
+			name:        "hashedrekord",
+			input:       `{"apiVersion":"0.0.1","kind":"hashedrekord","spec":{"data":{}}}`,
+			wantKind:    "hashedrekord",
+			wantVersion: "0.0.1",
+		},
+		{
+			name:        "intoto",
+			input:       `{"apiVersion":"0.0.2","kind":"intoto","spec":{}}`,
+			wantKind:    "intoto",
+			wantVersion: "0.0.2",
+		},
+		{
+			name:    "missing kind",
+			input:   `{"apiVersion":"0.0.1","spec":{}}`,
+			wantErr: true,
+		},
+		{
+			name:    "invalid json",
+			input:   `{not-json`,
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gotKind, gotVersion, err := leafKindAndVersion([]byte(tc.input))
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil (kind=%q, version=%q)", gotKind, gotVersion)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if gotKind != tc.wantKind || gotVersion != tc.wantVersion {
+				t.Fatalf("leafKindAndVersion() = (%q, %q), want (%q, %q)", gotKind, gotVersion, tc.wantKind, tc.wantVersion)
+			}
+		})
+	}
+}
+
+func TestSupportsAttestation(t *testing.T) {
+	// Verify all registered types match their EntryWithAttestationImpl interface.
+	types.TypeMap.Range(func(k, v any) bool {
+		kind := k.(string)
+		typeImpl := v.(func() types.TypeImpl)()
+		for _, ver := range typeImpl.SupportedVersions() {
+			type versionedUnmarshaler interface {
+				VersionedUnmarshal(models.ProposedEntry, string) (types.EntryImpl, error)
+			}
+			vu, ok := typeImpl.(versionedUnmarshaler)
+			if !ok {
+				t.Fatalf("type %q does not implement VersionedUnmarshal", kind)
+			}
+			entry, err := vu.VersionedUnmarshal(nil, ver)
+			if err != nil {
+				t.Fatalf("VersionedUnmarshal(%q, %q) error: %v", kind, ver, err)
+			}
+			_, want := entry.(types.EntryWithAttestationImpl)
+			if got := types.SupportsAttestation(kind, ver); got != want {
+				t.Errorf("SupportsAttestation(%q, %q) = %v, want %v", kind, ver, got, want)
+			}
+			// Second call exercises the cache.
+			if got := types.SupportsAttestation(kind, ver); got != want {
+				t.Errorf("cached SupportsAttestation(%q, %q) = %v, want %v", kind, ver, got, want)
+			}
+		}
+		return true
+	})
+
+	// Unknown kind or version should fail safe (return true) so callers fall back
+	// to full unmarshaling.
+	if !types.SupportsAttestation("unknown-kind", "0.0.1") {
+		t.Errorf("expected SupportsAttestation to return true for unknown kind")
+	}
+	if !types.SupportsAttestation("hashedrekord", "9.9.9") {
+		t.Errorf("expected SupportsAttestation to return true for unknown version")
+	}
+}
+
+func TestLogEntryFromLeaf_SkipsUnmarshalForNonAttestationKind(t *testing.T) {
+	origEnable := viper.GetBool("enable_attestation_storage")
+	viper.Set("enable_attestation_storage", true)
+	t.Cleanup(func() {
+		viper.Set("enable_attestation_storage", origEnable)
+	})
+
+	ranges, err := sharding.NewLogRanges(context.Background(), "", 1, signer.SigningConfig{SigningSchemeOrKeyPath: "memory"})
+	if err != nil {
+		t.Fatalf("NewLogRanges: %v", err)
+	}
+
+	logRoot := ttypes.LogRootV1{
+		TreeSize: 1,
+		RootHash: make([]byte, 32),
+	}
+	rootBytes, err := logRoot.MarshalBinary()
+	if err != nil {
+		t.Fatalf("MarshalBinary: %v", err)
+	}
+
+	// Intentionally omit required spec fields so that calling types.UnmarshalEntry
+	// would fail; logEntryFromLeaf must succeed because hashedrekord does not
+	// support attestations.
+	leaf := &trillian.LogLeaf{
+		LeafValue:          []byte(`{"apiVersion":"0.0.1","kind":"hashedrekord","spec":{}}`),
+		MerkleLeafHash:     make([]byte, 32),
+		LeafIndex:          0,
+		IntegrateTimestamp: timestamppb.New(time.Unix(1700000000, 0)),
+	}
+	signedLogRoot := &trillian.SignedLogRoot{LogRoot: rootBytes}
+	proof := &trillian.Proof{LeafIndex: 0}
+
+	entry, err := logEntryFromLeaf(context.Background(), leaf, signedLogRoot, proof, 1, ranges, map[int64]string{}, "rekor.example.com")
+	if err != nil {
+		t.Fatalf("logEntryFromLeaf returned unexpected error: %v", err)
+	}
+	if len(entry) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entry))
 	}
 }
