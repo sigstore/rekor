@@ -17,7 +17,6 @@ package log
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"strconv"
@@ -115,37 +114,71 @@ func (o operation) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	return nil
 }
 
+func isHexString(s string) bool {
+	if len(s) == 0 || len(s)%2 != 0 {
+		return false
+	}
+	for i := range len(s) {
+		c := s[i]
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') && (c < 'A' || c > 'F') {
+			return false
+		}
+	}
+	return true
+}
+
 // parseTraceContext extracts a trace ID and 16-char lowercase hex span ID from
 // either X-Cloud-Trace-Context ("<trace_id>/<decimal_span_id>[;o=<opts>]") or
 // W3C traceparent ("00-<32-hex-trace_id>-<16-hex-span_id>-<flags>").
 func parseTraceContext(raw string) (traceID, spanID string) {
-	if parts := strings.Split(raw, "-"); len(parts) == 4 && len(parts[1]) == 32 && len(parts[2]) == 16 {
-		if _, err := hex.DecodeString(parts[1]); err == nil {
-			if _, err := hex.DecodeString(parts[2]); err == nil {
-				return strings.ToLower(parts[1]), strings.ToLower(parts[2])
+	// Fast path for W3C traceparent: "<ver>-<32-hex>-<16-hex>-<flags>"
+	if _, rest, ok := strings.Cut(raw, "-"); ok {
+		if t, rest2, ok := strings.Cut(rest, "-"); ok && len(t) == 32 {
+			if s, rest3, ok := strings.Cut(rest2, "-"); ok && len(s) == 16 && !strings.Contains(rest3, "-") {
+				if isHexString(t) && isHexString(s) {
+					return strings.ToLower(t), strings.ToLower(s)
+				}
 			}
 		}
 	}
 
 	traceAndSpan, _, _ := strings.Cut(raw, ";")
 	t, s, hasSpan := strings.Cut(traceAndSpan, "/")
-	if len(t) != 32 {
-		return "", ""
-	}
-	if _, err := hex.DecodeString(t); err != nil {
+	if len(t) != 32 || !isHexString(t) {
 		return "", ""
 	}
 	traceID = strings.ToLower(t)
 	if hasSpan && s != "" {
 		if u, err := strconv.ParseUint(s, 10, 64); err == nil {
 			spanID = fmt.Sprintf("%016x", u)
-		} else if len(s) == 16 {
-			if _, err := hex.DecodeString(s); err == nil {
-				spanID = strings.ToLower(s)
-			}
+		} else if len(s) == 16 && isHexString(s) {
+			spanID = strings.ToLower(s)
 		}
 	}
 	return traceID, spanID
+}
+
+// IsDebugEnabled reports whether debug-level logging is enabled on Logger.
+func IsDebugEnabled() bool {
+	return Logger != nil && Logger.Level().Enabled(zapcore.DebugLevel)
+}
+
+// Debug logs args at debug level with request context attached, avoiding
+// ContextLogger allocation when debug logging is disabled.
+func Debug(ctx context.Context, args ...any) {
+	if !IsDebugEnabled() {
+		return
+	}
+	ContextLogger(ctx).WithOptions(zap.AddCallerSkip(1)).Debug(args...)
+}
+
+// Debugf formats and logs a message at debug level with request context
+// attached, avoiding ContextLogger allocation when debug logging is disabled.
+func Debugf(ctx context.Context, template string, args ...any) {
+	if !IsDebugEnabled() {
+		return
+	}
+	ContextLogger(ctx).WithOptions(zap.AddCallerSkip(1)).Debugf(template, args...)
 }
 
 func ContextLogger(ctx context.Context) *zap.SugaredLogger {
@@ -154,11 +187,20 @@ func ContextLogger(ctx context.Context) *zap.SugaredLogger {
 		if ctxRequestID, ok := ctx.Value(middleware.RequestIDKey).(string); ok && ctxRequestID != "" {
 			if traceStringPrefix != "" {
 				traceID, spanID := parseTraceContext(ctxRequestID)
-				if traceID != "" {
-					proposedLogger = proposedLogger.With(zap.String("logging.googleapis.com/trace", fmt.Sprintf("%s/%s", traceStringPrefix, traceID)))
-				}
-				if spanID != "" {
-					proposedLogger = proposedLogger.With(zap.String("logging.googleapis.com/spanId", spanID))
+				switch {
+				case traceID != "" && spanID != "":
+					proposedLogger = proposedLogger.With(
+						zap.String("logging.googleapis.com/trace", traceStringPrefix+"/"+traceID),
+						zap.String("logging.googleapis.com/spanId", spanID),
+					)
+				case traceID != "":
+					proposedLogger = proposedLogger.With(
+						zap.String("logging.googleapis.com/trace", traceStringPrefix+"/"+traceID),
+					)
+				case spanID != "":
+					proposedLogger = proposedLogger.With(
+						zap.String("logging.googleapis.com/spanId", spanID),
+					)
 				}
 			} else {
 				requestID := operation{ctxRequestID}
