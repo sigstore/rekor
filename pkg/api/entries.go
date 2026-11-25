@@ -25,6 +25,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -142,36 +143,42 @@ func logEntryFromLeaf(ctx context.Context, leaf *trillian.LogLeaf, signedLogRoot
 	entryID := entryIDstruct.ReturnEntryIDString()
 
 	if viper.GetBool("enable_attestation_storage") {
-		pe, err := models.UnmarshalProposedEntry(bytes.NewReader(leaf.LeafValue), runtime.JSONConsumer())
+		kind, apiVersion, err := leafKindAndVersion(leaf.LeafValue)
 		if err != nil {
 			return nil, err
 		}
-		eimpl, err := types.UnmarshalEntry(pe)
-		if err != nil {
-			return nil, err
-		}
+		if types.SupportsAttestation(kind, apiVersion) {
+			pe, err := models.UnmarshalProposedEntry(bytes.NewReader(leaf.LeafValue), runtime.JSONConsumer())
+			if err != nil {
+				return nil, err
+			}
+			eimpl, err := types.UnmarshalEntry(pe)
+			if err != nil {
+				return nil, err
+			}
 
-		if entryWithAtt, ok := eimpl.(types.EntryWithAttestationImpl); ok {
-			var att []byte
-			var fetchErr error
-			attKey := entryWithAtt.AttestationKey()
-			// if we're given a key by the type logic, let's try that first
-			if attKey != "" {
-				att, fetchErr = attestationStorageClient.FetchAttestation(ctx, attKey)
-				if fetchErr != nil {
-					log.ContextLogger(ctx).Debugf("error fetching attestation by key, trying by UUID: %s %v", attKey, fetchErr)
+			if entryWithAtt, ok := eimpl.(types.EntryWithAttestationImpl); ok {
+				var att []byte
+				var fetchErr error
+				attKey := entryWithAtt.AttestationKey()
+				// if we're given a key by the type logic, let's try that first
+				if attKey != "" {
+					att, fetchErr = attestationStorageClient.FetchAttestation(ctx, attKey)
+					if fetchErr != nil {
+						log.ContextLogger(ctx).Debugf("error fetching attestation by key, trying by UUID: %s %v", attKey, fetchErr)
+					}
 				}
-			}
-			// if looking up by key failed or we weren't able to generate a key, try looking up by uuid
-			if attKey == "" || fetchErr != nil {
-				att, fetchErr = attestationStorageClient.FetchAttestation(ctx, entryIDstruct.UUID)
-				if fetchErr != nil {
-					log.ContextLogger(ctx).Debugf("error fetching attestation by uuid: %s %v", entryIDstruct.UUID, fetchErr)
+				// if looking up by key failed or we weren't able to generate a key, try looking up by uuid
+				if attKey == "" || fetchErr != nil {
+					att, fetchErr = attestationStorageClient.FetchAttestation(ctx, entryIDstruct.UUID)
+					if fetchErr != nil {
+						log.ContextLogger(ctx).Debugf("error fetching attestation by uuid: %s %v", entryIDstruct.UUID, fetchErr)
+					}
 				}
-			}
-			if fetchErr == nil {
-				logEntryAnon.Attestation = &models.LogEntryAnonAttestation{
-					Data: att,
+				if fetchErr == nil {
+					logEntryAnon.Attestation = &models.LogEntryAnonAttestation{
+						Data: att,
+					}
 				}
 			}
 		}
@@ -184,6 +191,20 @@ func logEntryFromLeaf(ctx context.Context, leaf *trillian.LogLeaf, signedLogRoot
 
 	return models.LogEntry{
 		entryID: logEntryAnon}, nil
+}
+
+func leafKindAndVersion(leafValue []byte) (string, string, error) {
+	var header struct {
+		Kind       string `json:"kind"`
+		APIVersion string `json:"apiVersion"`
+	}
+	if err := json.Unmarshal(leafValue, &header); err != nil {
+		return "", "", err
+	}
+	if header.Kind == "" {
+		return "", "", errors.New("leaf entry missing required kind field")
+	}
+	return header.Kind, header.APIVersion, nil
 }
 
 // GetLogEntryByIndexHandler returns the entry and inclusion proof for a specified log index

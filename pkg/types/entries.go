@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"sync"
 	"sync/atomic"
 
 	"github.com/go-openapi/strfmt"
@@ -124,6 +125,50 @@ func CreateVersionedEntry(pe models.ProposedEntry) (EntryImpl, error) {
 	}
 
 	return ei, nil
+}
+
+type attestationSupportKey struct {
+	kind       string
+	apiVersion string
+}
+
+var attestationSupportCache sync.Map // map[attestationSupportKey]bool
+
+// SupportsAttestation reports whether the registered entry type for (kind, apiVersion)
+// implements EntryWithAttestationImpl without unmarshaling an entry payload.
+// If the kind or version cannot be inspected directly, it returns true so callers
+// fall back to full unmarshaling.
+func SupportsAttestation(kind, apiVersion string) bool {
+	key := attestationSupportKey{kind: kind, apiVersion: apiVersion}
+	if v, ok := attestationSupportCache.Load(key); ok {
+		return v.(bool)
+	}
+
+	tf, found := TypeMap.Load(kind)
+	if !found {
+		return true
+	}
+	t := tf.(func() TypeImpl)()
+	if t == nil {
+		return true
+	}
+
+	type versionedUnmarshaler interface {
+		VersionedUnmarshal(models.ProposedEntry, string) (EntryImpl, error)
+	}
+	vu, ok := t.(versionedUnmarshaler)
+	if !ok {
+		return true
+	}
+
+	entry, err := vu.VersionedUnmarshal(nil, apiVersion)
+	if err != nil {
+		return true
+	}
+
+	_, supports := entry.(EntryWithAttestationImpl)
+	attestationSupportCache.Store(key, supports)
+	return supports
 }
 
 // UnmarshalEntry returns the specific instance for the type and version specified in the doc
