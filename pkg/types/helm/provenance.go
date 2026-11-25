@@ -87,6 +87,12 @@ func (p *Provenance) GetChartAlgorithmHash() (string, string, error) {
 		return "", "", errors.New("unable to locate chart hash")
 	}
 
+	// a provenance file covers a single chart; with more than one entry, map
+	// iteration order would decide which hash gets validated, indexed and logged
+	if len(p.SumCollection.Files) > 1 {
+		return "", "", errors.New("provenance file must contain exactly one chart checksum")
+	}
+
 	for _, value := range p.SumCollection.Files {
 		parts := strings.Split(value, ":")
 		if len(parts) != 2 {

@@ -73,3 +73,18 @@ func TestProvenance(t *testing.T) {
 	}
 
 }
+
+func TestGetChartAlgorithmHashRejectsMultipleCharts(t *testing.T) {
+	provenance := Provenance{
+		SumCollection: &SumCollection{
+			Files: map[string]string{
+				"test-0.1.0.tgz":  "sha256:6dec7ea21e655d5796c1e214cfb75b73428b2abfa2e66c8f7bc64ff4a7b3b29f",
+				"other-0.1.0.tgz": "not-a-hash-algorithm:../../etc/passwd",
+			},
+		},
+	}
+
+	if algorithm, checksum, err := provenance.GetChartAlgorithmHash(); err == nil {
+		t.Fatalf("expected error for provenance with multiple charts, got %s:%s", algorithm, checksum)
+	}
+}
