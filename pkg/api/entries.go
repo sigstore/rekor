@@ -84,7 +84,7 @@ func logEntryFromLeaf(ctx context.Context, leaf *trillian.LogLeaf, signedLogRoot
 	proof *trillian.Proof, tid int64, ranges *sharding.LogRanges, cachedCheckpoints map[int64]string,
 	checkpointHostname string) (models.LogEntry, error) {
 
-	log.ContextLogger(ctx).Debugf("log entry from leaf %d", leaf.GetLeafIndex())
+	log.Debugf(ctx, "log entry from leaf %d", leaf.GetLeafIndex())
 	root := &ttypes.LogRootV1{}
 	if err := root.UnmarshalBinary(signedLogRoot.LogRoot); err != nil {
 		return nil, err
@@ -427,10 +427,9 @@ func createLogEntry(params entries.CreateLogEntryParams) (models.LogEntry, middl
 			if attVal != nil {
 				go func() {
 					if err := storeAttestation(context.WithoutCancel(ctx), attKey, attVal); err != nil {
-						// entryIDstruct.UUID
-						log.ContextLogger(ctx).Debugf("error storing attestation: %s", err)
+						log.Debugf(ctx, "error storing attestation: %s", err)
 					} else {
-						log.ContextLogger(ctx).Debugf("stored attestation for uuid %s with filename %s", entryIDstruct.UUID, attKey)
+						log.Debugf(ctx, "stored attestation for uuid %s with filename %s", entryIDstruct.UUID, attKey)
 					}
 				}()
 			} else {
@@ -696,7 +695,7 @@ func retrieveLogEntryByIndex(ctx context.Context, logIndex int) (models.LogEntry
 	if err != nil {
 		return nil, fmt.Errorf("getting log client for tree %d: %w", tid, err)
 	}
-	log.ContextLogger(ctx).Debugf("Retrieving resolved index %v from TreeID %v", resolvedIndex, tid)
+	log.Debugf(ctx, "Retrieving resolved index %v from TreeID %v", resolvedIndex, tid)
 
 	resp := tc.GetLeafAndProofByIndex(ctx, resolvedIndex)
 	switch resp.Status {
@@ -720,7 +719,7 @@ func retrieveLogEntryByIndex(ctx context.Context, logIndex int) (models.LogEntry
 // If a tree ID is specified, look in that tree
 // Otherwise, look through all inactive and active shards
 func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, error) {
-	log.ContextLogger(ctx).Debugf("Retrieving log entry %v", entryUUID)
+	log.Debugf(ctx, "Retrieving log entry %v", entryUUID)
 
 	uuid, err := sharding.GetUUIDFromIDString(entryUUID)
 	if err != nil {
@@ -755,7 +754,7 @@ func retrieveLogEntry(ctx context.Context, entryUUID string) (models.LogEntry, e
 }
 
 func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.LogEntry, error) {
-	log.ContextLogger(ctx).Debugf("Retrieving log entry %v from tree %d", uuid, tid)
+	log.Debugf(ctx, "Retrieving log entry %v from tree %d", uuid, tid)
 
 	// Reject tree IDs not in the configured shard set before they reach the
 	// Trillian client cache or backend.
@@ -772,7 +771,7 @@ func retrieveUUIDFromTree(ctx context.Context, uuid string, tid int64) (models.L
 	if err != nil {
 		return models.LogEntry{}, fmt.Errorf("getting log client for tree %d: %w", tid, err)
 	}
-	log.ContextLogger(ctx).Debugf("Attempting to retrieve UUID %v from TreeID %v", uuid, tid)
+	log.Debugf(ctx, "Attempting to retrieve UUID %v from TreeID %v", uuid, tid)
 
 	resp := tc.GetLeafAndProofByHash(ctx, hashValue)
 	switch resp.Status {

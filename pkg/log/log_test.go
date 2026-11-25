@@ -143,3 +143,97 @@ func TestContextLogger(t *testing.T) {
 		}
 	})
 }
+
+func TestIsDebugEnabled(t *testing.T) {
+	origLogger := Logger
+	t.Cleanup(func() {
+		Logger = origLogger
+	})
+
+	Logger = nil
+	if IsDebugEnabled() {
+		t.Fatalf("expected IsDebugEnabled() == false when Logger is nil")
+	}
+
+	infoCore, _ := observer.New(zap.InfoLevel)
+	Logger = zap.New(infoCore).Sugar()
+	if IsDebugEnabled() {
+		t.Fatalf("expected IsDebugEnabled() == false at InfoLevel")
+	}
+
+	debugCore, _ := observer.New(zap.DebugLevel)
+	Logger = zap.New(debugCore).Sugar()
+	if !IsDebugEnabled() {
+		t.Fatalf("expected IsDebugEnabled() == true at DebugLevel")
+	}
+}
+
+func TestDebugHelpers(t *testing.T) {
+	origLogger := Logger
+	origPrefix := traceStringPrefix
+	t.Cleanup(func() {
+		Logger = origLogger
+		traceStringPrefix = origPrefix
+	})
+
+	traceStringPrefix = ""
+	ctx := WithRequestID(context.Background(), "req-debug")
+
+	t.Run("disabled at InfoLevel", func(t *testing.T) {
+		core, logs := observer.New(zap.InfoLevel)
+		Logger = zap.New(core).Sugar()
+
+		Debug(ctx, "ignored")
+		Debugf(ctx, "ignored %d", 42)
+		if logs.Len() != 0 {
+			t.Fatalf("expected 0 log entries at InfoLevel, got %d", logs.Len())
+		}
+	})
+
+	t.Run("enabled at DebugLevel", func(t *testing.T) {
+		core, logs := observer.New(zap.DebugLevel)
+		Logger = zap.New(core).Sugar()
+
+		Debug(ctx, "hello")
+		Debugf(ctx, "count %d", 7)
+		entries := logs.All()
+		if len(entries) != 2 {
+			t.Fatalf("expected 2 log entries at DebugLevel, got %d", len(entries))
+		}
+		if entries[0].Message != "hello" {
+			t.Fatalf("unexpected first message: %q", entries[0].Message)
+		}
+		if entries[1].Message != "count 7" {
+			t.Fatalf("unexpected second message: %q", entries[1].Message)
+		}
+		if _, exists := entries[0].ContextMap()["operation"]; !exists {
+			t.Fatalf("expected operation field on Debug log")
+		}
+	})
+}
+
+func BenchmarkContextLogger(b *testing.B) {
+	origLogger := Logger
+	origPrefix := traceStringPrefix
+	b.Cleanup(func() {
+		Logger = origLogger
+		traceStringPrefix = origPrefix
+	})
+
+	ConfigureLogger("prod", "projects/project-rekor/traces")
+	ctx := WithRequestID(context.Background(), "122399bb012526bf9d97c30fb2afe723/12817094456274136198;o=1")
+
+	b.Run("debugf_helper_disabled", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			Debugf(ctx, "log entry %d", 1)
+		}
+	})
+
+	b.Run("unguarded_context_logger", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			ContextLogger(ctx).Debugf("log entry %d", 1)
+		}
+	})
+}

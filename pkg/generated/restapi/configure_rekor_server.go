@@ -216,6 +216,9 @@ type zapLogEntry struct {
 }
 
 func (z *zapLogEntry) Write(status, bytes int, _ http.Header, elapsed time.Duration, extra any) {
+	if !log.IsDebugEnabled() {
+		return
+	}
 	var fields []any
 
 	// follows https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry as a convention
@@ -276,7 +279,7 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 		ctx := r.Context()
 		r = r.WithContext(log.WithRequestID(ctx, middleware.GetReqID(ctx)))
 		defer func() {
-			_ = log.ContextLogger(ctx).Sync()
+			_ = log.Logger.Sync()
 		}()
 
 		returnHandler.ServeHTTP(w, r)
@@ -368,9 +371,11 @@ func logAndServeError(w http.ResponseWriter, r *http.Request, err error) {
 			}
 		}
 	}
-	requestFields := map[string]any{}
-	if decodeErr := mapstructure.Decode(r, &requestFields); decodeErr == nil {
-		log.ContextLogger(ctx).Debug(requestFields)
+	if log.IsDebugEnabled() {
+		requestFields := map[string]any{}
+		if decodeErr := mapstructure.Decode(r, &requestFields); decodeErr == nil {
+			log.ContextLogger(ctx).Debug(requestFields)
+		}
 	}
 	errors.ServeError(w, r, err)
 }
@@ -416,7 +421,9 @@ func recoverer(next http.Handler) http.Handler {
 				}
 
 				if isNetworkError {
-					log.ContextLogger(ctx).With(fields...).Debugf("client connection closed: %v", rvr)
+					if log.IsDebugEnabled() {
+						log.ContextLogger(ctx).With(fields...).Debugf("client connection closed: %v", rvr)
+					}
 				} else {
 					log.ContextLogger(ctx).With(fields...).Errorf("panic detected: %v", rvr)
 				}
