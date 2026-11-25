@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ghcr.io/sigstore/scaffolding/trillian_log_signer:v1.8.0@sha256:7932dc61c586878d3d92bd6e14551e358a9d6dfc95f4ec5af2f49eea23d7d942 AS server
+FROM ghcr.io/sigstore/scaffolding/trillian_log_signer:v1.8.0-batched-queue@sha256:525804ae02e391a84d6150cae9ceafb43a3f4ede07d1261ca566f1b53b43cd65 AS server
 
 FROM golang:1.27.3@sha256:e519d3b0a5b285e5aa53ab9eef02bc6bbb9cb04608389b743a136a9ce75f0d1e AS deploy
 
