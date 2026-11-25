@@ -127,7 +127,7 @@ jobs:
           persist-credentials: false
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: ${{ env.GOVERSION }}
           cache: false
@@ -152,7 +152,7 @@ jobs:
           persist-credentials: false
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: ${{ env.GOVERSION }}
           cache: false
@@ -173,7 +173,7 @@ jobs:
     steps:
       - name: Set up Homebrew
         id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@63a2d4d8d4193eab3e62b1b782ff3ab8408f5b29
+        uses: Homebrew/actions/setup-homebrew@ceec4e8419bb3c97ce96e9dda7738499ed5f869d
       - name: download minisign
         run: |
           brew install minisign
@@ -182,7 +182,7 @@ jobs:
           persist-credentials: false
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: ${{ env.GOVERSION }}
           cache: false
@@ -222,7 +222,7 @@ jobs:
     steps:
       - name: Set up Homebrew
         id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@63a2d4d8d4193eab3e62b1b782ff3ab8408f5b29
+        uses: Homebrew/actions/setup-homebrew@ceec4e8419bb3c97ce96e9dda7738499ed5f869d
       - name: download minisign
         run: |
           brew install minisign
@@ -231,7 +231,7 @@ jobs:
           persist-credentials: false
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: ${{ env.GOVERSION }}
           cache: false
@@ -269,7 +269,7 @@ jobs:
     steps:
       - name: Set up Homebrew
         id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@63a2d4d8d4193eab3e62b1b782ff3ab8408f5b29
+        uses: Homebrew/actions/setup-homebrew@ceec4e8419bb3c97ce96e9dda7738499ed5f869d
       - name: download minisign
         run: |
           brew install minisign
@@ -280,7 +280,7 @@ jobs:
         run: docker compose build
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: ${{ env.GOVERSION }}
           cache: false
@@ -307,7 +307,7 @@ jobs:
         run: docker compose build
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: ${{ env.GOVERSION }}
           cache: false
@@ -334,7 +334,7 @@ jobs:
         run: docker compose build
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: ${{ env.GOVERSION }}
           cache: false
@@ -371,7 +371,7 @@ jobs:
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: ${{ env.GOVERSION }}
           check-latest: true
