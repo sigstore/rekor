@@ -42,6 +42,7 @@ func FileOrURLReadCloser(ctx context.Context, url string, content []byte) (io.Re
 			return nil, err
 		}
 		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			_ = resp.Body.Close()
 			return nil, fmt.Errorf("error received while fetching artifact '%v': %v", url, resp.Status)
 		}
 
