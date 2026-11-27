@@ -17,11 +17,15 @@ package ssh
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/sha512"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/crypto/ssh"
 )
 
 var (
@@ -297,6 +301,40 @@ func TestRoundTrip(t *testing.T) {
 		})
 	}
 
+}
+
+func TestRejectRSASHA1(t *testing.T) {
+	data := []byte("my good data to be signed!")
+
+	s, err := ssh.ParsePrivateKey([]byte(sshPrivateKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+	as, ok := s.(ssh.AlgorithmSigner)
+	if !ok {
+		t.Fatal("expected an algorithm signer")
+	}
+
+	mh := sha512.Sum512(data)
+	signedData := ssh.Marshal(MessageWrapper{
+		Namespace:     "file",
+		HashAlgorithm: defaultHashAlgorithm,
+		Hash:          string(mh[:]),
+	})
+	signedData = append([]byte(magicHeader), signedData...)
+
+	sig, err := as.SignWithAlgorithm(rand.Reader, signedData, ssh.KeyAlgoRSA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	armored := Armor(sig, s.PublicKey())
+
+	if err := Verify(bytes.NewReader(data), armored, []byte(sshPublicKey)); err == nil {
+		t.Error("expected error for ssh-rsa (SHA-1) signature")
+	}
+	if _, err := NewSignature(bytes.NewReader(armored)); err == nil {
+		t.Error("expected error for ssh-rsa (SHA-1) signature")
+	}
 }
 
 func write(t *testing.T, d []byte, fp ...string) string {
